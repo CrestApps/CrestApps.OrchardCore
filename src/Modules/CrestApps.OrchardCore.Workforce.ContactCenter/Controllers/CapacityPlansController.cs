@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -29,6 +31,8 @@ public sealed class CapacityPlansController : Controller
     private readonly PlanningGroupManager _groupManager;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<CapacityPlanEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -41,6 +45,8 @@ public sealed class CapacityPlansController : Controller
     /// <param name="groupManager">The planning group manager.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public CapacityPlansController(
         IAuthorizationService authorizationService,
@@ -49,6 +55,8 @@ public sealed class CapacityPlansController : Controller
         PlanningGroupManager groupManager,
         IClock clock,
         INotifier notifier,
+        IDisplayManager<CapacityPlanEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<CapacityPlansController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
@@ -57,6 +65,8 @@ public sealed class CapacityPlansController : Controller
         _groupManager = groupManager;
         _clock = clock;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -161,6 +171,8 @@ public sealed class CapacityPlansController : Controller
 
         await PopulateAsync(model);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
+
         return View(model);
     }
 
@@ -180,6 +192,7 @@ public sealed class CapacityPlansController : Controller
         }
 
         var isNew = string.IsNullOrEmpty(form.Id);
+        form.Editor = await _displayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
         var item = isNew ? await _manager.NewAsync() : await _manager.FindByIdAsync(form.Id);
 
         if (item is null)

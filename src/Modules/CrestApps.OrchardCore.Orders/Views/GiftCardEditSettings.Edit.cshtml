@@ -1,0 +1,26 @@
+@model GiftCardEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Expires">
+    <label asp-for="Expires" class="ocat-label">@T["Expires"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Expires" type="datetime-local" class="form-control" />
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Note">
+    <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+    <div class="ocat-end">
+        <input asp-for="Note" class="form-control" />
+        <span class="hint">@T["For the store only."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="IsEnabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsEnabled" class="form-check-input" />
+            <label asp-for="IsEnabled" class="form-check-label">@T["Enabled"]</label>
+        </div>
+        <span class="hint dashed">@T["Clear it to stop the card paying for anything, without changing its balance."]</span>
+    </div>
+</div>

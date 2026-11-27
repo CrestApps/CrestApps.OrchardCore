@@ -1,0 +1,57 @@
+@model DispatchSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="CreateVisitsForNewWorkOrders" />
+            <label class="form-check-label" asp-for="CreateVisitsForNewWorkOrders">@T["Give each new work order an unscheduled visit"]</label>
+            <span class="hint dashed">@T["Turn it off to make visits only from the work order's page."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ArrivalWindowMinutes" class="ocat-label">@T["Arrival window (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ArrivalWindowMinutes" class="form-control" type="number" min="0" max="720" step="15" />
+        <span asp-validation-for="ArrivalWindowMinutes" class="text-danger"></span>
+        <span class="hint">@T["The window promised to the customer, around the start. 0 promises the start time itself."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="BufferMinutes" class="ocat-label">@T["Buffer between visits (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="BufferMinutes" class="form-control" type="number" min="0" max="120" />
+        <span asp-validation-for="BufferMinutes" class="text-danger"></span>
+        <span class="hint">@T["Kept free next to each visit, on top of the travel time."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="HorizonDays" class="ocat-label">@T["Look ahead (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="HorizonDays" class="form-control" type="number" min="1" max="60" />
+        <span asp-validation-for="HorizonDays" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="TechnicianCapabilities" class="ocat-label">@T["Dispatch staff with"]</label>
+    <div class="ocat-end">
+        <select asp-for="TechnicianCapabilities" asp-items="Model.CapabilityOptions" class="form-select" multiple size="4" style="max-width: 24rem"></select>
+        <span class="hint">@T["Staff members with any of these capabilities are the technicians on the board, in suggestions, the optimizer and the technician pickers. Dispatchers can show others on the board with its filter. Capabilities are kept under Staff > Capabilities."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+    <div class="ocat-end">
+        <input asp-for="TimeZoneId" class="form-control" placeholder="@T["The site's time zone"]" />
+        <span asp-validation-for="TimeZoneId" class="text-danger"></span>
+        <span class="hint">@T["The times on the board, the visit pages and the notices, such as America/New_York."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="AtRiskMinutes" class="ocat-label">@T["At risk after (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="AtRiskMinutes" class="form-control" type="number" min="0" max="240" />
+        <span asp-validation-for="AtRiskMinutes" class="text-danger"></span>
+        <span class="hint">@T["A visit not started, or running over, by this much is flagged on the board."]</span>
+    </div>
+</div>

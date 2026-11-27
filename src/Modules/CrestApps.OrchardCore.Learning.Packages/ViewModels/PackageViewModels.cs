@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Learning.Packages.Core.Services;
 using CrestApps.OrchardCore.Learning.Packages.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Learning.Packages.ViewModels;
 
@@ -61,6 +62,10 @@ public class PackageUploadViewModel
 
     /// <summary>Gets or sets whether the person may change the learning package settings.</summary>
     public bool CanManageSettings { get; set; }
+
+    /// <summary>Gets or sets the editor the display drivers build: its fields in cards.</summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

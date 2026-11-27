@@ -54,7 +54,15 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, TelnyxSmsSettings settings, BuildEditorContext context)
     {
-        return Initialize<TelnyxSmsSettingsViewModel>("TelnyxSmsSettings_Edit", model =>
+        return Combine(
+            BuildCard("TelnyxSmsSettingsProvider_Edit", site, settings, S["Provider"], "10"),
+            BuildCard("TelnyxSmsSettingsWebhook_Edit", site, settings, S["Webhook"], "20"),
+            BuildCard("TelnyxSmsSettingsAdvanced_Edit", site, settings, S["Advanced"], "30"));
+    }
+
+    private ShapeResult BuildCard(string shapeType, ISite site, TelnyxSmsSettings settings, string cardName, string cardPosition)
+    {
+        return Initialize<TelnyxSmsSettingsViewModel>(shapeType, model =>
             {
                 model.IsEnabled = settings.IsEnabled;
                 model.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ApiKey);
@@ -63,7 +71,7 @@ public sealed class TelnyxSmsSettingsDisplayDriver : SiteDisplayDriver<TelnyxSms
                 model.ApiBaseUrl = settings.ApiBaseUrl;
                 model.WebhookUrl = BuildWebhookUrl(site);
             })
-            .Location("Content:5#Telnyx;20")
+            .Location(l => l.Zone("Content", "5").Tab(S["Telnyx"], "20").Card(cardName, cardPosition))
             .OnGroup(SettingsGroupId)
             .RenderWhen(() => _authorizationService.AuthorizeAsync(
                 _httpContextAccessor.HttpContext?.User,

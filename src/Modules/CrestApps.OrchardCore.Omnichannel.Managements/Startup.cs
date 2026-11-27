@@ -75,6 +75,7 @@ public sealed class Startup : StartupBase
         services.AddResourceConfiguration<ResourceManagementOptionsConfiguration>();
 
         services.AddDisplayDriver<OmnichannelActivityBatch, OmnichannelActivityBatchDisplayDriver>();
+        services.AddDisplayDriver<ConvertLeadViewModel, ConvertLeadDisplayDriver>();
 
         services.AddScoped<ActivityHandlerDescriber>();
         services.TryAddScoped<AIActivityStarter>();

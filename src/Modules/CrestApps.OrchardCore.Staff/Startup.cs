@@ -21,6 +21,7 @@ using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Staff.Navigation;
 using CrestApps.OrchardCore.Staff.Recipes;
 using CrestApps.OrchardCore.Staff.Services;
+using CrestApps.OrchardCore.Staff.ViewModels;
 using CrestApps.OrchardCore.Users.Core;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -62,6 +63,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<StaffMember, StaffMemberDisplayDriver>();
         services.AddDisplayDriver<StaffMember, StaffProfileDisplayDriver>();
         services.AddDisplayDriver<StaffCapabilityInfo, StaffCapabilityRowDisplayDriver>();
+        services.AddDisplayDriver<StaffCapabilityEditViewModel, StaffCapabilityEditDisplayDriver>();
         services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.Overview, LocalizationSource.Create<Startup>("Overview"), "fa-solid fa-id-card", 0);
         services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.History, LocalizationSource.Create<Startup>("Employment history"), "fa-solid fa-clock-rotate-left", 1000);
         services.AddDisplayDriver<User, UserStaffDisplayDriver>();

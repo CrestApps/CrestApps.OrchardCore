@@ -1,0 +1,35 @@
+@model ChildTenantEditViewModel
+
+<div class="ocat-wrapper">
+    <span class="ocat-label ocat-label-required">@T["Start from"]</span>
+    <div class="ocat-end">
+        @if (Model.Recipes.Count == 0)
+        {
+            <div class="alert alert-warning mb-0">@T["No setup recipe is available. Ask the platform administrator to allow one."]</div>
+        }
+        else
+        {
+            <div class="row row-cols-1 row-cols-md-2 g-2">
+                @foreach (var recipe in Model.Recipes)
+                {
+                    var id = $"recipe-{recipe.Value}";
+                    <div class="col">
+                        <label class="card h-100 th-recipe" for="@id">
+                            <div class="card-body d-flex gap-2">
+                                <input class="form-check-input mt-1" type="radio" name="RecipeName" id="@id" value="@recipe.Value" @(recipe.Value == Model.RecipeName ? "checked" : null) required />
+                                <span>
+                                    <span class="fw-semibold d-block">@recipe.Text</span>
+                                    @if (Model.RecipeDescriptions.TryGetValue(recipe.Value, out var description) && !string.IsNullOrEmpty(description))
+                                    {
+                                        <span class="small text-muted">@description</span>
+                                    }
+                                </span>
+                            </div>
+                        </label>
+                    </div>
+                }
+            </div>
+        }
+        <span asp-validation-for="RecipeName" class="text-danger"></span>
+    </div>
+</div>

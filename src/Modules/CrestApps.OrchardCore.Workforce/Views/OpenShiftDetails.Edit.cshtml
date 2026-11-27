@@ -1,0 +1,16 @@
+@model OpenShiftEditViewModel
+
+<div class="ocat-wrapper"><label asp-for="TeamId" class="ocat-label ocat-label-required">@T["Team"]</label><div class="ocat-end"><select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem"><option value="">@T["Choose a team"]</option></select></div></div>
+<div class="ocat-wrapper"><label asp-for="Date" class="ocat-label ocat-label-required">@T["Day"]</label><div class="ocat-end"><input asp-for="Date" type="date" class="form-control" style="max-width: 12rem" /></div></div>
+<div class="ocat-wrapper">
+    <label asp-for="TemplateId" class="ocat-label">@T["Template"]</label>
+    <div class="ocat-end">
+        <div class="d-flex align-items-center gap-2">
+            <select asp-for="TemplateId" asp-items="Model.TemplateOptions" class="form-select" style="max-width: 24rem">
+                <option value="">@T["None"]</option>
+            </select>
+            <button type="submit" name="applyTemplate" value="true" class="btn btn-outline-secondary btn-sm text-nowrap">@T["Use its times"]</button>
+        </div>
+        <span class="hint">@T["A worker needs the template's skills to take the shift."]</span>
+    </div>
+</div>

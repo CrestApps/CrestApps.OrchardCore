@@ -1,0 +1,21 @@
+@model TicketDeskViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Business hours"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("HoursSchedulePicker", new { name = Html.NameFor(m => m.HoursScheduleId).ToString(), selectedValue = Model.HoursScheduleId, emptyText = T["Around the clock"].Value })
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ServiceLevelPolicyId" class="ocat-label">@T["Service-level policy"]</label>
+    <div class="ocat-end">
+        <select asp-for="ServiceLevelPolicyId" asp-items="Model.Policies" class="form-select">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["Used when the ticket's type names no policy. Policies are written under Content › Service Levels, for tickets."]</span>
+    </div>
+</div>

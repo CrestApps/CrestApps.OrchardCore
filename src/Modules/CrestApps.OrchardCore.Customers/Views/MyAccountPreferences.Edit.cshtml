@@ -1,0 +1,11 @@
+@model MyAccountViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AcceptsMarketing" type="checkbox" class="form-check-input" />
+            <label asp-for="AcceptsMarketing" class="form-check-label">@T["Send me news and offers"]</label>
+        </div>
+        <span class="hint dashed">@T["Messages about your orders and payments are always sent."]</span>
+    </div>
+</div>

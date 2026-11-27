@@ -53,7 +53,7 @@ internal sealed class PostgreSQLAIDataSourceDisplayDriver : DisplayDriver<AIData
             model.HasConnectionString = ProtectedSettingExtensions.HasSecret(metadata.ConnectionString);
             model.HasDefaultConnectionString = HasDefaultConnectionString;
             model.UseDefaultConnectionString = HasDefaultConnectionString && !model.HasConnectionString;
-        }).Location("Content:11");
+        }).Location(l => l.Zone("Content", "11").Card(S["Connection"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)

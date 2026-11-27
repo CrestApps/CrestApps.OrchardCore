@@ -50,7 +50,7 @@ internal sealed class AIToolInstanceDeploymentStepDisplayDriver : DisplayDriver<
                 IsSelected = step.InstanceIds?.Contains(x.ItemId) ?? false,
             }).OrderBy(x => x.DisplayText)
             .ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["AI Tool Instances"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstanceDeploymentStep step, UpdateEditorContext context)

@@ -59,7 +59,7 @@ public sealed class AIMemorySettingsDisplayDriver : SiteDisplayDriver<AIMemorySe
             model.TopN = settings.TopN;
             model.IndexProfiles = (await _indexProfileStore.GetByTypeAsync(MemoryConstants.IndexingTaskType))
             .Select(x => new SelectListItem(x.Name, x.Name));
-        }).Location("Content:6%Memory;1")
+        }).Location(l => l.Zone("Content", "6").Card(S["Memory"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }

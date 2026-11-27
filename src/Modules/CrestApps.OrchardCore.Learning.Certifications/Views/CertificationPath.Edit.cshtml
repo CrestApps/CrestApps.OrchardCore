@@ -1,59 +1,12 @@
 @model CertificationPathViewModel
 
-@functions {
-    private string KindOf(CertificationRequirementRow row) => row.Kind ?? CertificationsConstants.RequirementKinds.CourseCompleted;
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Earned" class="form-check-input" /><label asp-for="Earned" class="form-check-label">@T["People earn this certification by completing courses and passing assessments"]</label><span class="hint dashed">@T["The site issues the certificate when the requirements are met, with a verification page, and opens renewal before it expires."]</span></div></div></div>
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Issue certificates now"]</label><span class="hint dashed">@T["Turn off to stop issuing while you change the requirements; the people on the path keep their place."]</span></div></div></div>
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="StartsOnFirstRequirement" class="form-check-input" /><label asp-for="StartsOnFirstRequirement" class="form-check-label">@T["Meeting a requirement starts the path"]</label><span class="hint dashed">@T["Otherwise a manager starts people on the path by hand. Completions before the path existed never start it on their own."]</span></div></div></div>
+
+@if (!string.IsNullOrEmpty(Model.PathId))
+{
+    <div class="ocat-wrapper"><div class="ocat-end-offset">
+        <a class="btn btn-sm btn-outline-secondary" asp-controller="CertificationPaths" asp-action="People" asp-route-id="@Model.PathId" asp-route-area="CrestApps.OrchardCore.Learning.Certifications"><i class="fa-solid fa-users" aria-hidden="true"></i> @T["People on this path"]</a>
+    </div></div>
 }
-
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Earned through learning"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Earned" class="form-check-input" /><label asp-for="Earned" class="form-check-label">@T["People earn this certification by completing courses and passing assessments"]</label><span class="hint dashed">@T["The site issues the certificate when the requirements are met, with a verification page, and opens renewal before it expires."]</span></div></div></div>
-        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Issue certificates now"]</label><span class="hint dashed">@T["Turn off to stop issuing while you change the requirements; the people on the path keep their place."]</span></div></div></div>
-
-        <div class="ocat-wrapper"><label asp-for="Join" class="ocat-label">@T["Requirements needed"]</label><div class="ocat-end">
-            <select asp-for="Join" class="form-select" style="max-width: 16rem">
-                <option value="@RequirementJoin.All">@T["All of them"]</option>
-                <option value="@RequirementJoin.Any">@T["Any one of them"]</option>
-            </select>
-        </div></div>
-
-        <div class="ocat-wrapper"><label class="ocat-label">@T["First certificate"]</label><div class="ocat-end">
-            <span asp-validation-for="InitialRequirements"></span>
-            @await Html.PartialAsync("CertificationRequirementRows", (Rows: Model.InitialRequirements, Name: nameof(Model.InitialRequirements), Model: Model))
-        </div></div>
-
-        <div class="ocat-wrapper"><label class="ocat-label">@T["Renewal"]</label><div class="ocat-end">
-            <span asp-validation-for="RenewalRequirements"></span>
-            @await Html.PartialAsync("CertificationRequirementRows", (Rows: Model.RenewalRequirements, Name: nameof(Model.RenewalRequirements), Model: Model))
-            <span class="hint">@T["Leave empty to renew with the same requirements as the first certificate. A minimum grade is a percent from 0 to 100."]</span>
-        </div></div>
-
-        <div class="ocat-wrapper"><label asp-for="ReferenceDate" class="ocat-label">@T["Expiry counted from"]</label><div class="ocat-end">
-            <select asp-for="ReferenceDate" class="form-select" style="max-width: 22rem">
-                <option value="@CertificationReferenceDate.CompletionDate">@T["The day the requirements are met"]</option>
-                <option value="@CertificationReferenceDate.ExpiryDate">@T["The previous expiry (keeps the anniversary)"]</option>
-                <option value="@CertificationReferenceDate.FixedDate">@T["A fixed day of the year"]</option>
-            </select>
-            <span class="hint">@T["How long a certificate lasts comes from \"Valid for (months)\" above."]</span>
-        </div></div>
-
-        <div class="ocat-wrapper"><label class="ocat-label">@T["Fixed day"]</label><div class="ocat-end d-flex gap-2 flex-wrap">
-            <div class="input-group" style="max-width: 10rem"><span class="input-group-text">@T["Month"]</span><input asp-for="FixedMonth" type="number" min="1" max="12" class="form-control" /></div>
-            <div class="input-group" style="max-width: 10rem"><span class="input-group-text">@T["Day"]</span><input asp-for="FixedDay" type="number" min="1" max="31" class="form-control" /></div>
-            <div class="input-group" style="max-width: 18rem"><span class="input-group-text">@T["Shortest first period (months)"]</span><input asp-for="MinimumIntervalMonths" type="number" min="0" class="form-control" /></div>
-            <span asp-validation-for="FixedMonth"></span>
-        </div></div>
-
-        <div class="ocat-wrapper"><label asp-for="RenewalWindowDays" class="ocat-label">@T["Renewal opens (days before expiry)"]</label><div class="ocat-end"><input asp-for="RenewalWindowDays" type="number" min="0" class="form-control" style="max-width: 10rem" /><span asp-validation-for="RenewalWindowDays"></span></div></div>
-        <div class="ocat-wrapper"><label asp-for="GracePeriodDays" class="ocat-label">@T["Grace period (days after expiry)"]</label><div class="ocat-end"><input asp-for="GracePeriodDays" type="number" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["After the grace period, the person starts over with the first-certificate requirements."]</span></div></div>
-        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="StartsOnFirstRequirement" class="form-check-input" /><label asp-for="StartsOnFirstRequirement" class="form-check-label">@T["Meeting a requirement starts the path"]</label><span class="hint dashed">@T["Otherwise a manager starts people on the path by hand. Completions before the path existed never start it on their own."]</span></div></div></div>
-        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="EnrollOnRenewal" class="form-check-input" /><label asp-for="EnrollOnRenewal" class="form-check-label">@T["Enroll the holder in the renewal courses when renewal opens"]</label></div></div></div>
-
-        @if (!string.IsNullOrEmpty(Model.PathId))
-        {
-            <div class="ocat-wrapper"><div class="ocat-end-offset">
-                <a class="btn btn-sm btn-outline-secondary" asp-controller="CertificationPaths" asp-action="People" asp-route-id="@Model.PathId" asp-route-area="CrestApps.OrchardCore.Learning.Certifications"><i class="fa-solid fa-users" aria-hidden="true"></i> @T["People on this path"]</a>
-            </div></div>
-        }
-    </div>
-</div>

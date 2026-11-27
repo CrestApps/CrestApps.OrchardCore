@@ -70,4 +70,10 @@ public class ShiftTemplateEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> SkillOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, whose fields are grouped in cards by the placement of its shapes.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public global::OrchardCore.DisplayManagement.IShape Editor { get; set; }
 }

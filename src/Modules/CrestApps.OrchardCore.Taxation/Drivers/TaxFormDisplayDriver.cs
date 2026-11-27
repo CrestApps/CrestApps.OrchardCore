@@ -126,64 +126,88 @@ internal sealed class TaxFormDisplayDriver : DisplayDriver<TaxForm>
         return Editor(form, model, context.IsNew);
     }
 
-    private ShapeResult Editor(TaxForm form, TaxFormViewModel typed, bool isNew)
-        => Initialize<TaxFormViewModel>("TaxFormFields_Edit", async model =>
-        {
-            var statement = form.Statement ?? new TaxFormStatement();
-            var sourceName = string.IsNullOrEmpty(form.Source) ? _sources.Sources.FirstOrDefault()?.Name : form.Source;
-            var source = _sources.Sources.FirstOrDefault(candidate => string.Equals(candidate.Name, sourceName, StringComparison.OrdinalIgnoreCase));
+    private CombinedResult Editor(TaxForm form, TaxFormViewModel typed, bool isNew)
+    {
+        var sourceName = string.IsNullOrEmpty(form.Source) ? _sources.Sources.FirstOrDefault()?.Name : form.Source;
+        var hasRecipients = _sources.Sources.FirstOrDefault(candidate => string.Equals(candidate.Name, sourceName, StringComparison.OrdinalIgnoreCase))?.HasRecipients ?? true;
 
-            model.Name = typed?.Name ?? form.Name;
-            model.DisplayName = typed?.DisplayName ?? form.DisplayName;
-            model.Description = typed?.Description ?? form.Description;
-            model.Source = sourceName;
-            model.Jurisdiction = typed?.Jurisdiction ?? form.Jurisdiction;
-            model.Period = form.Period.ToString();
-            model.HasRecipientStatements = form.HasRecipientStatements;
-            model.StatementPerJurisdiction = form.StatementPerJurisdiction;
-            model.RecipientCondition = typed?.RecipientCondition ?? form.RecipientCondition;
-            model.MissingTaxIdNote = typed?.MissingTaxIdNote ?? form.MissingTaxIdNote;
-            model.Enabled = form.Enabled;
-            model.StatementName = statement.Name;
-            model.StatementTitle = statement.Title;
-            model.StatementCopy = statement.Copy;
-            model.TaxIdLabel = statement.TaxIdLabel;
-            model.TaxIdFormat = statement.TaxIdFormat;
-            model.FilerTaxIdLabel = statement.FilerTaxIdLabel;
-            model.FilerAccountJurisdiction = statement.FilerAccountJurisdiction;
-            model.FileName = statement.FileName;
-            model.Fields = typed?.Fields ?? [.. form.Fields.Select(field => new TaxFormFieldViewModel
+        return Combine(
+            Initialize<TaxFormViewModel>("TaxFormFields_Edit", async model =>
             {
-                Number = field.Number,
-                Label = field.Label,
-                Level = field.Level.ToString(),
-                Formula = field.Formula,
-                AddToFiling = field.AddToFiling,
-                AcceptsReportedAmounts = field.AcceptsReportedAmounts,
-                Print = field.Print.ToString(),
-            })];
-            model.Values = typed?.Values ?? [.. form.Values
-                .OrderBy(value => value.Name, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(value => value.Year)
-                .Select(value => new TaxFormValueViewModel { Name = value.Name, Year = value.Year, Amount = value.Amount })];
-            model.Checks = typed?.Checks ?? [.. form.Checks.Select(check => new TaxFormCheckViewModel { Condition = check.Condition, Note = check.Note })];
-            model.IsUsed = !isNew && !string.IsNullOrEmpty(form.Name) && await IsUsedAsync(form);
-            model.IsNew = isNew;
-            model.HasRecipients = source?.HasRecipients ?? true;
-            model.HasPeriod = source?.HasPeriod ?? true;
-            model.RequiresJurisdiction = source?.RequiresJurisdiction ?? true;
-            model.Sources = [.. _sources.Sources.Select(candidate => new SelectListItem(_localizerFactory.Localize(candidate.DisplayName).Value, candidate.Name, string.Equals(candidate.Name, sourceName, StringComparison.OrdinalIgnoreCase)))];
-            model.ReportedAmountsLabel = source?.ReportedAmountsLabel is { } label ? _localizerFactory.Localize(label).Value : null;
-            model.Functions = [.. _functions.For(sourceName).Functions
-                .Where(function => !function.IsAggregate)
+                Populate(model, form, typed, isNew);
 
-                // A source without recipients has nothing for the functions that read them.
-                .Where(function => model.HasRecipients || function.Name is not ("RECIPIENTS" or "TOTAL"))
-                .OrderBy(function => function.Category == TaxFormFunctions.Category ? 1 : IsBuiltIn(function.Category) ? 2 : 0)
-                .ThenBy(function => function.Category, StringComparer.Ordinal)
-                .ThenBy(function => function.Name, StringComparer.Ordinal)
-                .Select(function => (function.Category, function.Signature, function.Description))];
-        }).Location("Content:1");
+                model.IsUsed = !isNew && !string.IsNullOrEmpty(form.Name) && await IsUsedAsync(form);
+            }).Location(l => l.Zone("Content", "1").Card(S["The Form"], "10")),
+            Initialize<TaxFormViewModel>("TaxFormRecipients_Edit", model => Populate(model, form, typed, isNew))
+                .Location(l => l.Zone("Content", "2").Card(S["Recipients"], "20"))
+                .RenderWhen(() => Task.FromResult(hasRecipients)),
+            Initialize<TaxFormViewModel>("TaxFormFieldList_Edit", model => Populate(model, form, typed, isNew))
+                .Location(l => l.Zone("Content", "3").Card(S["Fields"], "30")),
+            Initialize<TaxFormViewModel>("TaxFormValues_Edit", model => Populate(model, form, typed, isNew))
+                .Location(l => l.Zone("Content", "4").Card(S["Yearly Values"], "40")),
+            Initialize<TaxFormViewModel>("TaxFormChecks_Edit", model => Populate(model, form, typed, isNew))
+                .Location(l => l.Zone("Content", "5").Card(S["Checks"], "50")),
+            Initialize<TaxFormViewModel>("TaxFormStatement_Edit", model => Populate(model, form, typed, isNew))
+                .Location(l => l.Zone("Content", "6").Card(S["A Recipient's Statement"], "60"))
+                .RenderWhen(() => Task.FromResult(hasRecipients)));
+    }
+
+    private void Populate(TaxFormViewModel model, TaxForm form, TaxFormViewModel typed, bool isNew)
+    {
+        var statement = form.Statement ?? new TaxFormStatement();
+        var sourceName = string.IsNullOrEmpty(form.Source) ? _sources.Sources.FirstOrDefault()?.Name : form.Source;
+        var source = _sources.Sources.FirstOrDefault(candidate => string.Equals(candidate.Name, sourceName, StringComparison.OrdinalIgnoreCase));
+
+        model.Name = typed?.Name ?? form.Name;
+        model.DisplayName = typed?.DisplayName ?? form.DisplayName;
+        model.Description = typed?.Description ?? form.Description;
+        model.Source = sourceName;
+        model.Jurisdiction = typed?.Jurisdiction ?? form.Jurisdiction;
+        model.Period = form.Period.ToString();
+        model.HasRecipientStatements = form.HasRecipientStatements;
+        model.StatementPerJurisdiction = form.StatementPerJurisdiction;
+        model.RecipientCondition = typed?.RecipientCondition ?? form.RecipientCondition;
+        model.MissingTaxIdNote = typed?.MissingTaxIdNote ?? form.MissingTaxIdNote;
+        model.Enabled = form.Enabled;
+        model.StatementName = statement.Name;
+        model.StatementTitle = statement.Title;
+        model.StatementCopy = statement.Copy;
+        model.TaxIdLabel = statement.TaxIdLabel;
+        model.TaxIdFormat = statement.TaxIdFormat;
+        model.FilerTaxIdLabel = statement.FilerTaxIdLabel;
+        model.FilerAccountJurisdiction = statement.FilerAccountJurisdiction;
+        model.FileName = statement.FileName;
+        model.Fields = typed?.Fields ?? [.. form.Fields.Select(field => new TaxFormFieldViewModel
+        {
+            Number = field.Number,
+            Label = field.Label,
+            Level = field.Level.ToString(),
+            Formula = field.Formula,
+            AddToFiling = field.AddToFiling,
+            AcceptsReportedAmounts = field.AcceptsReportedAmounts,
+            Print = field.Print.ToString(),
+        })];
+        model.Values = typed?.Values ?? [.. form.Values
+            .OrderBy(value => value.Name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(value => value.Year)
+            .Select(value => new TaxFormValueViewModel { Name = value.Name, Year = value.Year, Amount = value.Amount })];
+        model.Checks = typed?.Checks ?? [.. form.Checks.Select(check => new TaxFormCheckViewModel { Condition = check.Condition, Note = check.Note })];
+        model.IsNew = isNew;
+        model.HasRecipients = source?.HasRecipients ?? true;
+        model.HasPeriod = source?.HasPeriod ?? true;
+        model.RequiresJurisdiction = source?.RequiresJurisdiction ?? true;
+        model.Sources = [.. _sources.Sources.Select(candidate => new SelectListItem(_localizerFactory.Localize(candidate.DisplayName).Value, candidate.Name, string.Equals(candidate.Name, sourceName, StringComparison.OrdinalIgnoreCase)))];
+        model.ReportedAmountsLabel = source?.ReportedAmountsLabel is { } label ? _localizerFactory.Localize(label).Value : null;
+        model.Functions = [.. _functions.For(sourceName).Functions
+            .Where(function => !function.IsAggregate)
+
+            // A source without recipients has nothing for the functions that read them.
+            .Where(function => model.HasRecipients || function.Name is not ("RECIPIENTS" or "TOTAL"))
+            .OrderBy(function => function.Category == TaxFormFunctions.Category ? 1 : IsBuiltIn(function.Category) ? 2 : 0)
+            .ThenBy(function => function.Category, StringComparer.Ordinal)
+            .ThenBy(function => function.Name, StringComparer.Ordinal)
+            .Select(function => (function.Category, function.Signature, function.Description))];
+    }
 
     private async Task<bool> IsUsedAsync(TaxForm form)
     {

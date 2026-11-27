@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Calendars.ViewModels;
 
@@ -32,4 +33,10 @@ public class CalendarCategoryEditViewModel
     /// </summary>
     [BindNever]
     public bool CanShare { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

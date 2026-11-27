@@ -1,0 +1,30 @@
+@model CapacityPlanEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" required />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="PlanningGroupId" class="ocat-label ocat-label-required">@T["Planning group"]</label>
+    <div class="ocat-end">
+        <select asp-for="PlanningGroupId" asp-items="Model.PlanningGroupOptions" class="form-select" required>
+            <option value="">@T["Choose a planning group"]</option>
+        </select>
+        <span class="hint">@T["Its shrinkage and highest occupancy turn the work into agents."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="StartDate" class="ocat-label ocat-label-required">@T["First week"]</label>
+    <div class="ocat-end">
+        <input asp-for="StartDate" type="date" class="form-control" required style="max-width: 12rem" />
+        <span class="hint">@T["The plan starts on its Monday."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Weeks" class="ocat-label">@T["Weeks"]</label>
+    <div class="ocat-end">
+        <input asp-for="Weeks" type="number" min="1" max="78" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>

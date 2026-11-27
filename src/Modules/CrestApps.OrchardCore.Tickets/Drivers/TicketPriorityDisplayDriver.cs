@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -10,6 +11,17 @@ namespace CrestApps.OrchardCore.Tickets.Drivers;
 /// </summary>
 internal sealed class TicketPriorityDisplayDriver : TicketSettingsDisplayDriverBase<TicketPriority>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TicketPriorityDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TicketPriorityDisplayDriver(IStringLocalizer<TicketPriorityDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc/>
     protected override string Column => "Rank";
 
@@ -20,7 +32,7 @@ internal sealed class TicketPriorityDisplayDriver : TicketSettingsDisplayDriverB
             model.Name = priority.Name;
             model.Rank = priority.Rank;
             model.Color = priority.Color;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(TicketPriority priority, UpdateEditorContext context)

@@ -1,0 +1,83 @@
+@model InvoiceEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
+    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Currency" class="form-control text-uppercase" maxlength="3" autocomplete="off" placeholder="USD" />
+        <span class="hint">@T["Left empty, the customer's currency is used."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="IssueDate">
+    <label asp-for="IssueDate" class="ocat-label">@T["Issue date"]</label>
+    <div class="ocat-limited">
+        <input asp-for="IssueDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+        <span class="hint">@T["The date printed on the invoice. Left empty, it is dated the day it is issued. The due date is worked out from it."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PaymentTermId">
+    <label asp-for="PaymentTermId" class="ocat-label">@T["Payment term"]</label>
+    <div class="ocat-end">
+        <select asp-for="PaymentTermId" asp-items="Model.PaymentTerms" class="form-select">
+            <option value="">@T["The customer's term, else the default"]</option>
+        </select>
+        <span class="hint">@T["Sets the due date when the invoice is issued."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="PricesIncludeTax" />
+            <label class="form-check-label" asp-for="PricesIncludeTax">@T["Prices include tax"]</label>
+            <span class="hint dashed">@T["The prices typed are tax-inclusive, and the tax is worked out of them."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowPartialPayment" />
+            <label class="form-check-label" asp-for="AllowPartialPayment">@T["Let the customer pay part of it"]</label>
+            <span class="hint dashed">@T["The customer can pay any amount up to what is due from the invoice's pay link."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AutoCharge" />
+            <label class="form-check-label" asp-for="AutoCharge">@T["Charge the customer's saved card"]</label>
+            <span class="hint dashed">@T["When issued, the invoice is charged to the customer's default saved card: at once when it is due, or on its due date. A declined card is tried again on the retry schedule of the transaction settings; when no card can be charged, the invoice is e-mailed to the customer to pay instead."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="LateFeesExempt" />
+            <label class="form-check-label" asp-for="LateFeesExempt">@T["No late fees"]</label>
+            <span class="hint dashed">@T["No late fee is charged on this invoice when it is overdue, whatever the late-fee policies say."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PurchaseOrderNumber">
+    <label asp-for="PurchaseOrderNumber" class="ocat-label">@T["Purchase order"]</label>
+    <div class="ocat-end">
+        <input asp-for="PurchaseOrderNumber" class="form-control" maxlength="100" autocomplete="off" />
+        <span class="hint">@T["The customer's purchase order number, printed on the invoice."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Reference">
+    <label asp-for="Reference" class="ocat-label">@T["Reference"]</label>
+    <div class="ocat-end">
+        <input asp-for="Reference" class="form-control" maxlength="100" autocomplete="off" />
+        <span class="hint">@T["Your own reference, such as a job or project. Printed on the invoice and searchable."]</span>
+    </div>
+</div>

@@ -32,7 +32,7 @@ internal sealed class CertificationDisplayDriver : DisplayDriver<Certification>
             model.RequiresDocument = certification.RequiresDocument;
             model.ReminderDays = string.Join(", ", certification.ReminderDays);
             model.Enabled = certification.Enabled;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["Certification"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Certification certification, UpdateEditorContext context)

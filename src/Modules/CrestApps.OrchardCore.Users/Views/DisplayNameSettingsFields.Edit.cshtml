@@ -1,0 +1,35 @@
+@using CrestApps.OrchardCore.Users.Core.ViewModels
+
+@model EditDisplayNameSettingPartViewModel
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="DisplayName" class="ocat-label">@T["Display name"]</label>
+    <div class="ocat-limited">
+        <select asp-for="DisplayName" class="form-select" asp-items="Model.PropertyTypes"></select>
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="FirstName" class="ocat-label">@T["First name"]</label>
+    <div class="ocat-limited">
+        <select asp-for="FirstName" class="form-select" asp-items="Model.PropertyTypes"></select>
+        <span asp-validation-for="FirstName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="MiddleName" class="ocat-label">@T["Middle name"]</label>
+    <div class="ocat-limited">
+        <select asp-for="MiddleName" class="form-select" asp-items="Model.PropertyTypes"></select>
+        <span asp-validation-for="MiddleName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="LastName" class="ocat-label">@T["Last name"]</label>
+    <div class="ocat-limited">
+        <select asp-for="LastName" class="form-select" asp-items="Model.PropertyTypes"></select>
+        <span asp-validation-for="LastName" class="text-danger"></span>
+    </div>
+</div>

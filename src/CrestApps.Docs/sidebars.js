@@ -131,6 +131,7 @@ const sidebars = {
                 'user-manual/voicemail',
                 'user-manual/call-recordings',
                 'user-manual/messaging',
+                'user-manual/messaging-routing-rules',
                 'user-manual/live-dashboard',
                 'user-manual/reports',
                 {

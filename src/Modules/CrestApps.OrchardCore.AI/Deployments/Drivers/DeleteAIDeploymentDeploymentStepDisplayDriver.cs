@@ -44,7 +44,7 @@ internal sealed class DeleteAIDeploymentDeploymentStepDisplayDriver : DisplayDri
             model.IncludeAll = step.IncludeAll;
             model.DeploymentNames = step.DeploymentNames;
             model.AllDeploymentName = (await _deploymentsCatalog.GetAllAsync()).Select(d => d.Name).Order().ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Delete AI Deployments"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(DeleteAIDeploymentDeploymentStep step, UpdateEditorContext context)

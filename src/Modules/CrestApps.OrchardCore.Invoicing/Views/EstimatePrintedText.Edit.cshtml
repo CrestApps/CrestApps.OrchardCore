@@ -1,0 +1,33 @@
+@model EstimateEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Notes">
+    <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Notes" rows="2" class="form-control" maxlength="4000"></textarea>
+        <span class="hint">@T["Left empty, the default notes from the invoicing settings are printed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Terms">
+    <label asp-for="Terms" class="ocat-label">@T["Terms"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Terms" rows="2" class="form-control" maxlength="4000"></textarea>
+        <span class="hint">@T["Left empty, the default terms from the invoicing settings are printed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Footer">
+    <label asp-for="Footer" class="ocat-label">@T["Footer"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Footer" rows="2" class="form-control" maxlength="4000"></textarea>
+        <span class="hint">@T["Left empty, the default footer from the invoicing settings is printed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="InternalNote">
+    <label asp-for="InternalNote" class="ocat-label">@T["Internal note"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="InternalNote" rows="2" class="form-control" maxlength="4000"></textarea>
+        <span class="hint">@T["Seen by staff only, never printed."]</span>
+    </div>
+</div>

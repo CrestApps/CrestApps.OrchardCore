@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Roles.Core.Models;
 using CrestApps.OrchardCore.Roles.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
@@ -14,13 +15,19 @@ internal sealed class RolePickerPartSettingsDisplayDriver : ContentTypePartDefin
 {
     private readonly RoleManager<IRole> _roleManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RolePickerPartSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="roleManager">The role manager.</param>
-    public RolePickerPartSettingsDisplayDriver(RoleManager<IRole> roleManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public RolePickerPartSettingsDisplayDriver(
+        RoleManager<IRole> roleManager,
+        IStringLocalizer<RolePickerPartSettingsDisplayDriver> stringLocalizer)
     {
         _roleManager = roleManager;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
@@ -39,7 +46,7 @@ internal sealed class RolePickerPartSettingsDisplayDriver : ContentTypePartDefin
                 .Order()
                 .Select(x => new SelectListItem(x, x))
                 .ToArray();
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Settings"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)

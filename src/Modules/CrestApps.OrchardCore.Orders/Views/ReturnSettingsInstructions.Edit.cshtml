@@ -1,0 +1,9 @@
+@model ReturnSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Instructions" class="ocat-label">@T["Return instructions"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Instructions" rows="4" class="form-control" placeholder="@T["Send the items to: Returns, 1 Main St, Seattle WA 98101. Use a tracked service."]"></textarea>
+        <span class="hint">@T["Emailed to the buyer when you approve a return, and shown on their order."]</span>
+    </div>
+</div>

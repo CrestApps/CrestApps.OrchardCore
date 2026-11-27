@@ -23,6 +23,7 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
+using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Transactions.Controllers;
 
@@ -50,6 +51,8 @@ public sealed class PaymentsAdminController : Controller
     private readonly INotifier _notifier;
     private readonly TransactionDisplayText _displayText;
     private readonly ILogger _logger;
+    private readonly IDisplayManager<RefundRequestViewModel> _editorManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -65,6 +68,8 @@ public sealed class PaymentsAdminController : Controller
     /// <param name="notifier">The notifier used to surface outcomes.</param>
     /// <param name="displayText">The labels for stored states and payment methods.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="editorManager">The display manager that builds the refund editor.</param>
+    /// <param name="updateModelAccessor">The accessor of the model updater.</param>
     /// <param name="htmlLocalizer">The html localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public PaymentsAdminController(
@@ -76,6 +81,8 @@ public sealed class PaymentsAdminController : Controller
         INotifier notifier,
         TransactionDisplayText displayText,
         ILogger<PaymentsAdminController> logger,
+        IDisplayManager<RefundRequestViewModel> editorManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<PaymentsAdminController> htmlLocalizer,
         IStringLocalizer<PaymentsAdminController> stringLocalizer)
     {
@@ -87,6 +94,8 @@ public sealed class PaymentsAdminController : Controller
         _notifier = notifier;
         _displayText = displayText;
         _logger = logger;
+        _editorManager = editorManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -206,12 +215,16 @@ public sealed class PaymentsAdminController : Controller
         var alreadyRefunded = await GetRefundedTotalAsync(attempt);
         var settled = attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount;
 
-        return View(new RefundRequestViewModel
+        var model = new RefundRequestViewModel
         {
             Attempt = attempt,
             AlreadyRefunded = alreadyRefunded,
             Amount = CurrencyScale.Round(Math.Max(0m, settled - alreadyRefunded), attempt.Currency),
-        });
+        };
+
+        model.Editor = await _editorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>
@@ -235,6 +248,9 @@ public sealed class PaymentsAdminController : Controller
             return NotFound();
         }
 
+        model.Attempt = attempt;
+        model.Editor = await _editorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         var alreadyRefunded = await GetRefundedTotalAsync(attempt);
         var settled = attempt.ConfirmedAmount + attempt.ConfirmedTaxAmount;
         var remaining = CurrencyScale.Round(Math.Max(0m, settled - alreadyRefunded), attempt.Currency);
@@ -252,8 +268,8 @@ public sealed class PaymentsAdminController : Controller
 
         if (!ModelState.IsValid)
         {
-            model.Attempt = attempt;
             model.AlreadyRefunded = alreadyRefunded;
+            model.Editor = await _editorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
             return View(model);
         }

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Learning.Classes.ViewModels;
 
@@ -162,6 +163,11 @@ public class ClassSessionEditViewModel
 
     [BindNever]
     public IList<SelectListItem> WaitlistModeOptions { get; set; } = [];
+    /// <summary>
+    /// Gets or sets the editor the display drivers build: its fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -179,6 +185,12 @@ public class ClassSessionCancelViewModel
 
     [BindNever]
     public int Taken { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor the display drivers build: its fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

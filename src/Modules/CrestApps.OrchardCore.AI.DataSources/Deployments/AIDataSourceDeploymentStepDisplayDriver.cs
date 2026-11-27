@@ -47,7 +47,7 @@ internal sealed class AIDataSourceDeploymentStepDisplayDriver : DisplayDriver<De
                 IsSelected = step.SourceIds?.Contains(x.ItemId) ?? false
             }).OrderBy(x => x.DisplayText)
         .ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["AI Data Sources"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSourceDeploymentStep step, UpdateEditorContext context)

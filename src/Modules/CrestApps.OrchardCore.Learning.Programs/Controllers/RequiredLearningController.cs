@@ -15,6 +15,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -36,6 +37,9 @@ public sealed class RequiredLearningController : Controller
     private readonly LearnerUserLookup _users;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<RequiredLearningEditViewModel> _editDisplayManager;
+    private readonly IDisplayManager<RequiredLearningExemptViewModel> _exemptDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -48,6 +52,9 @@ public sealed class RequiredLearningController : Controller
         LearnerUserLookup users,
         ILocalClock localClock,
         INotifier notifier,
+        IDisplayManager<RequiredLearningEditViewModel> editDisplayManager,
+        IDisplayManager<RequiredLearningExemptViewModel> exemptDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<RequiredLearningController> htmlLocalizer,
         IStringLocalizer<RequiredLearningController> stringLocalizer)
     {
@@ -58,6 +65,9 @@ public sealed class RequiredLearningController : Controller
         _users = users;
         _localClock = localClock;
         _notifier = notifier;
+        _editDisplayManager = editDisplayManager;
+        _exemptDisplayManager = exemptDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -130,6 +140,8 @@ public sealed class RequiredLearningController : Controller
 
         await PopulateAsync(model);
 
+        model.Editor = await _editDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -152,6 +164,10 @@ public sealed class RequiredLearningController : Controller
         {
             return NotFound();
         }
+
+        await PopulateAsync(model);
+
+        model.Editor = await _editDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(model.Id));
 
         var userIds = new List<string>();
 
@@ -220,8 +236,6 @@ public sealed class RequiredLearningController : Controller
                 return RedirectToAction(nameof(Index));
             }
         }
-
-        await PopulateAsync(model);
 
         return View(model);
     }
@@ -397,7 +411,11 @@ public sealed class RequiredLearningController : Controller
             return NotFound();
         }
 
-        return View(await ExemptModelAsync(assignment, new RequiredLearningExemptViewModel { AssignmentId = id }));
+        var model = await ExemptModelAsync(assignment, new RequiredLearningExemptViewModel { AssignmentId = id });
+
+        model.Editor = await _exemptDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View(model);
     }
 
     /// <summary>
@@ -420,6 +438,10 @@ public sealed class RequiredLearningController : Controller
             return NotFound();
         }
 
+        await ExemptModelAsync(assignment, model);
+
+        model.Editor = await _exemptDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         if (string.IsNullOrWhiteSpace(model.Reason))
         {
             ModelState.AddModelError(nameof(model.Reason), S["Say why the person is exempt."]);
@@ -432,7 +454,7 @@ public sealed class RequiredLearningController : Controller
 
         if (!ModelState.IsValid)
         {
-            return View(await ExemptModelAsync(assignment, model));
+            return View(model);
         }
 
         var exemption = new RequiredLearningExemption { Reason = model.Reason, GrantedBy = User.Identity?.Name };

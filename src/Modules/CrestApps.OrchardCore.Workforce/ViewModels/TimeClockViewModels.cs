@@ -31,7 +31,7 @@ public sealed class KioskViewModel
 /// <summary>
 /// The time clock policy editor.
 /// </summary>
-public sealed class TimeClockPolicyEditViewModel
+public class TimeClockPolicyEditViewModel
 {
     public string Id { get; set; }
 
@@ -89,6 +89,12 @@ public sealed class TimeClockPolicyEditViewModel
 
     [BindNever]
     public IList<SelectListItem> CalendarOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, whose fields are grouped in cards by the placement of its shapes.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public global::OrchardCore.DisplayManagement.IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -106,7 +112,7 @@ public class WorkforcePayCodeWindowViewModel
 /// <summary>
 /// The kiosk editor.
 /// </summary>
-public sealed class TimeClockKioskEditViewModel
+public class TimeClockKioskEditViewModel
 {
     public string Id { get; set; }
 
@@ -121,6 +127,12 @@ public sealed class TimeClockKioskEditViewModel
 
     [BindNever]
     public IList<SelectListItem> TeamOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, whose fields are grouped in cards by the placement of its shapes.
+    /// </summary>
+    [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+    public global::OrchardCore.DisplayManagement.IShape Editor { get; set; }
 }
 
 /// <summary>

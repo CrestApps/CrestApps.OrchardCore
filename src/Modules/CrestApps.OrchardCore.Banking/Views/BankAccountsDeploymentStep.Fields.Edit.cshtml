@@ -1,12 +1,12 @@
 @model BankAccountsDeploymentStepViewModel
 
-<h5>@T["Bank accounts"]</h5>
-
-<div class="mb-3" asp-validation-class-for="IncludeSensitiveData">
-    <div class="form-check">
-        <input asp-for="IncludeSensitiveData" class="form-check-input" />
-        <label asp-for="IncludeSensitiveData" class="form-check-label">@T["Include the account numbers"]</label>
-        <span asp-validation-for="IncludeSensitiveData" class="text-danger"></span>
+<div class="ocat-wrapper" asp-validation-class-for="IncludeSensitiveData">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeSensitiveData" class="form-check-input" />
+            <label asp-for="IncludeSensitiveData" class="form-check-label">@T["Include the account numbers"]</label>
+            <span asp-validation-for="IncludeSensitiveData" class="text-danger"></span>
+        </div>
         <span class="hint dashed">@T["The routing and account numbers are written in clear text, so the importing site can protect them with its own keys. Every exported number is recorded in the Audit Trail. Keep the file safe and delete it after the import."]</span>
     </div>
 </div>

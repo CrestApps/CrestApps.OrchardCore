@@ -50,7 +50,7 @@ internal sealed class AIProfileTemplateA2AConnectionsDisplayDriver : DisplayDriv
                 IsSelected = a2aMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-        }).Location("Content:4#Capabilities;8")
+        }).Location(l => l.Zone("Content", "4").Tab(S["Capabilities"], "8").Card(S["A2A Connections"], "30"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

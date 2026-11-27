@@ -38,6 +38,13 @@ public sealed class DeclineConversationTaskDisplayDriver : ActivityDisplayDriver
         => model.Reason = activity.Reason;
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(DeclineConversationTask activity, BuildEditorContext context)
+    {
+        return Initialize<DeclineConversationTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Decline"], "10"));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(DeclineConversationTask activity, UpdateEditorContext context)
     {
         var model = new DeclineConversationTaskViewModel();

@@ -84,50 +84,67 @@ internal sealed class ConnectedDataSetDisplayDriver : DisplayDriver<ConnectedDat
 
     public override IDisplayResult Edit(ConnectedDataSet dataSet, BuildEditorContext context)
     {
-        return Initialize<ConnectedDataSetFieldsViewModel>("ConnectedDataSetFields_Edit", async model =>
-        {
-            var connection = await _resolver.GetConnectionAsync(dataSet);
-            var descriptor = await _resolver.GetConnectorAsync(dataSet);
-
-            model.DisplayText = dataSet.DisplayText;
-            model.Name = dataSet.Name;
-            model.Description = dataSet.Description;
-            model.Resource = dataSet.Resource;
-            model.AccessMode = dataSet.AccessMode;
-            model.IsEnabled = dataSet.IsEnabled;
-            model.DefaultDateField = dataSet.DefaultDateField;
-            model.RefreshIntervalMinutes = dataSet.Refresh?.IntervalMinutes;
-            model.RefreshMode = dataSet.Refresh?.Mode ?? DataSetRefreshMode.Full;
-            model.IncrementalField = dataSet.Refresh?.IncrementalField;
-            model.SchemaChangePolicy = dataSet.Refresh?.SchemaChangePolicy ?? DataSetSchemaChangePolicy.Accept;
-            model.IsNew = context.IsNew;
-            model.ConnectionDisplayText = connection?.DisplayText ?? S["(missing connection)"];
-            model.ConnectorDisplayName = descriptor?.DisplayName.Value ?? connection?.Connector;
-            model.SupportsLive = descriptor?.Supports(DataConnectorCapabilities.Live) == true;
-            model.SupportsImport = descriptor?.Supports(DataConnectorCapabilities.Import) == true;
-            model.SupportsIncremental = descriptor?.Supports(DataConnectorCapabilities.IncrementalImport) == true;
-            model.Import = dataSet.Import;
-            model.PermissionName = string.IsNullOrEmpty(dataSet.Name) ? null : DataConnectorPermissions.CreateReadPermission(dataSet.Name).Name;
-            model.FieldTypes = Enum.GetValues<DataFieldType>().Select(type => new SelectListItem(type.ToString(), type.ToString())).ToArray();
-            model.Fields =
-            [
-                .. (dataSet.Fields ?? []).Select(field => new ConnectedDataFieldViewModel
-                {
-                    Name = field.Name,
-                    SourceName = field.SourceName,
-                    DisplayName = field.DisplayName,
-                    Type = field.Type,
-                    SourceType = field.SourceType,
-                    IsIdentifier = field.IsIdentifier,
-                    IsIncluded = field.IsIncluded,
-                }),
-            ];
-
-            if (connection is not null && descriptor?.Supports(DataConnectorCapabilities.Discovery) == true)
+        // The editor is one shape for each card, each a copy of the data set's values. The connector's own settings
+        // are cards of the drivers of each connector.
+        return Combine(
+            Initialize<ConnectedDataSetFieldsViewModel>("ConnectedDataSetFields_Edit", model => FillAsync(model, dataSet, context))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<ConnectedDataSetFieldsViewModel>("ConnectedDataSetSource_Edit", async model =>
             {
-                (model.Resources, model.DiscoveryError) = await DiscoverAsync(connection);
-            }
-        }).Location("Content:1");
+                await FillAsync(model, dataSet, context);
+
+                var connection = await _resolver.GetConnectionAsync(dataSet);
+                var descriptor = await _resolver.GetConnectorAsync(dataSet);
+
+                if (connection is not null && descriptor?.Supports(DataConnectorCapabilities.Discovery) == true)
+                {
+                    (model.Resources, model.DiscoveryError) = await DiscoverAsync(connection);
+                }
+            }).Location(l => l.Zone("Content", "2").Card(S["Source"], "20")),
+            Initialize<ConnectedDataSetFieldsViewModel>("ConnectedDataSetFieldList_Edit", model => FillAsync(model, dataSet, context))
+                .Location(l => l.Zone("Content", "6").Card(S["Fields"], "40")),
+            Initialize<ConnectedDataSetFieldsViewModel>("ConnectedDataSetRefresh_Edit", model => FillAsync(model, dataSet, context))
+                .Location(l => l.Zone("Content", "7").Card(S["Refresh"], "50")));
+    }
+
+    private async ValueTask FillAsync(ConnectedDataSetFieldsViewModel model, ConnectedDataSet dataSet, BuildEditorContext context)
+    {
+        var connection = await _resolver.GetConnectionAsync(dataSet);
+        var descriptor = await _resolver.GetConnectorAsync(dataSet);
+
+        model.DisplayText = dataSet.DisplayText;
+        model.Name = dataSet.Name;
+        model.Description = dataSet.Description;
+        model.Resource = dataSet.Resource;
+        model.AccessMode = dataSet.AccessMode;
+        model.IsEnabled = dataSet.IsEnabled;
+        model.DefaultDateField = dataSet.DefaultDateField;
+        model.RefreshIntervalMinutes = dataSet.Refresh?.IntervalMinutes;
+        model.RefreshMode = dataSet.Refresh?.Mode ?? DataSetRefreshMode.Full;
+        model.IncrementalField = dataSet.Refresh?.IncrementalField;
+        model.SchemaChangePolicy = dataSet.Refresh?.SchemaChangePolicy ?? DataSetSchemaChangePolicy.Accept;
+        model.IsNew = context.IsNew;
+        model.ConnectionDisplayText = connection?.DisplayText ?? S["(missing connection)"];
+        model.ConnectorDisplayName = descriptor?.DisplayName.Value ?? connection?.Connector;
+        model.SupportsLive = descriptor?.Supports(DataConnectorCapabilities.Live) == true;
+        model.SupportsImport = descriptor?.Supports(DataConnectorCapabilities.Import) == true;
+        model.SupportsIncremental = descriptor?.Supports(DataConnectorCapabilities.IncrementalImport) == true;
+        model.Import = dataSet.Import;
+        model.PermissionName = string.IsNullOrEmpty(dataSet.Name) ? null : DataConnectorPermissions.CreateReadPermission(dataSet.Name).Name;
+        model.FieldTypes = Enum.GetValues<DataFieldType>().Select(type => new SelectListItem(type.ToString(), type.ToString())).ToArray();
+        model.Fields =
+        [
+            .. (dataSet.Fields ?? []).Select(field => new ConnectedDataFieldViewModel
+            {
+                Name = field.Name,
+                SourceName = field.SourceName,
+                DisplayName = field.DisplayName,
+                Type = field.Type,
+                SourceType = field.SourceType,
+                IsIdentifier = field.IsIdentifier,
+                IsIncluded = field.IsIncluded,
+            }),
+        ];
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ConnectedDataSet dataSet, UpdateEditorContext context)

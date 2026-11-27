@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.Deployment;
@@ -171,9 +172,14 @@ internal sealed class LearningSubmissionsDeploymentStepDisplayDriver : DisplayDr
 {
     private readonly ISession _session;
 
-    public LearningSubmissionsDeploymentStepDisplayDriver(ISession session)
+    internal readonly IStringLocalizer S;
+
+    public LearningSubmissionsDeploymentStepDisplayDriver(
+        ISession session,
+        IStringLocalizer<LearningSubmissionsDeploymentStepDisplayDriver> stringLocalizer)
     {
         _session = session;
+        S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(LearningSubmissionsDeploymentStep step, BuildDisplayContext context)
@@ -191,7 +197,7 @@ internal sealed class LearningSubmissionsDeploymentStepDisplayDriver : DisplayDr
                     .ListAsync())
                 .Select(index => new SelectListItem(index.DisplayText, index.ContentItemId, index.ContentItemId == step.CourseworkId))
                 .ToList();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Coursework Submissions"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(LearningSubmissionsDeploymentStep step, UpdateEditorContext context)
     {

@@ -1,0 +1,25 @@
+@model MerchantTaxRegistrationViewModel
+@using System.Globalization
+
+<div class="ocat-wrapper">
+    <label asp-for="EffectiveFrom" class="ocat-label">@T["Effective from"]</label>
+    <div class="ocat-end">
+        <input asp-for="EffectiveFrom" type="date" class="form-control" style="max-width: 12rem" value="@Model.EffectiveFrom?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="EffectiveTo" class="ocat-label">@T["Effective to"]</label>
+    <div class="ocat-end">
+        <input asp-for="EffectiveTo" type="date" class="form-control" style="max-width: 12rem" value="@Model.EffectiveTo?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" />
+        <span asp-validation-for="EffectiveTo" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ThresholdAmount" class="ocat-label">@T["Sales threshold"]</label>
+    <div class="ocat-end">
+        <input asp-for="ThresholdAmount" type="number" step="any" min="0" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["The sales into the jurisdiction above which the business must collect the tax (economic nexus), or empty to collect from the first sale."]</span>
+    </div>
+</div>

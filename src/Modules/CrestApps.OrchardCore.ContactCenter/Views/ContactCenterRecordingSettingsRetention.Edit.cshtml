@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model ContactCenterRecordingSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="RetentionDays">
+    <label asp-for="RetentionDays" class="ocat-label">@T["Retention (days)"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" asp-for="RetentionDays" class="form-control" />
+        <span asp-validation-for="RetentionDays" class="text-danger"></span>
+        <span class="hint">@T["The number of days a captured recording is retained before it becomes eligible for erasure. Zero retains recordings indefinitely."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="LegalHoldByDefault" class="form-check-input" />
+            <label asp-for="LegalHoldByDefault" class="form-check-label">@T["Apply legal hold by default"]</label>
+            <span class="hint dashed">@T["When enabled, captured recordings begin under legal hold and are exempt from retention-driven and subject-request erasure until the hold is released."]</span>
+        </div>
+    </div>
+</div>

@@ -1,8 +1,7 @@
 @model CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.OmnichannelContactImportOptionsViewModel
 
 <div class="ocat-wrapper">
-    <div class="ocat-label">@T["Import options"]</div>
-    <div class="ocat-end">
+    <div class="ocat-end-offset">
         <div class="form-check">
             <input type="checkbox" class="form-check-input" asp-for="IgnoreDuplicateByPhoneNumber" />
             <label class="form-check-label" asp-for="IgnoreDuplicateByPhoneNumber">@T["Ignore duplicate by phone number"]</label>
@@ -23,60 +22,76 @@
                 </div>
             </div>
         }
-        else if (Model.CrmEnabled)
-        {
-            <div class="ms-4 mt-1">
-                <label asp-for="DuplicateScope" class="form-label">@T["Compare with"]</label>
-                <select asp-for="DuplicateScope" class="form-select">
-                    <option value="@CrestApps.OrchardCore.Omnichannel.Managements.Models.ContactImportDuplicateScope.AllContacts">@T["Every contact"]</option>
-                    <option value="@CrestApps.OrchardCore.Omnichannel.Managements.Models.ContactImportDuplicateScope.SameType">@T["Contacts of this type only"]</option>
-                    <option value="@CrestApps.OrchardCore.Omnichannel.Managements.Models.ContactImportDuplicateScope.AllRecords">@T["Every contact and lead"]</option>
-                </select>
-                <span class="hint">@T["Leads are left out by default, so a customer who was once a lead can still be imported."]</span>
-            </div>
-        }
-
-        <div class="mt-3">
-            <label asp-for="SelectedCountryCode" class="form-label ocat-label-required">@T["Lead country"]</label>
-            <select asp-for="SelectedCountryCode" asp-items="Model.AvailableCountries" class="form-select" required></select>
-            <span asp-validation-for="SelectedCountryCode" class="text-danger"></span>
-            <span class="hint dashed">@T["Select the default country for non-E.164 phone numbers in this file. Imports for content types with OmnichannelContactPart should contain leads from one country per file unless every phone number in the file already uses E.164. The same normalized phone numbers are also used to infer a lead time zone when one is not provided in the file."]</span>
-        </div>
-
-        @if (Model.IsLeadType)
-        {
-            <div class="mt-3">
-                <label asp-for="LeadListName" class="form-label">@T["List name"]</label>
-                <input asp-for="LeadListName" class="form-control" />
-                <span class="hint">@T["Stamped on every lead in the file that has no list of its own, so the whole list can be loaded, reported on and cleaned up together."]</span>
-            </div>
-            <div class="mt-3">
-                <label asp-for="LeadSourceId" class="form-label">@T["Lead source"]</label>
-                <select asp-for="LeadSourceId" asp-items="Model.LeadSources" class="form-select">
-                    <option value="">@T["None"]</option>
-                </select>
-                <span class="hint">@T["Stamped on every lead in the file that has no source of its own, for example Purchased list or Trade show."]</span>
-            </div>
-            <div class="mt-3">
-                <label asp-for="LeadStatusId" class="form-label">@T["Lead status"]</label>
-                <select asp-for="LeadStatusId" asp-items="Model.LeadStatuses" class="form-select">
-                    <option value="">@T["Default status"]</option>
-                </select>
-            </div>
-            <div class="mt-3">
-                <label class="form-label">@T["Lead owner"]</label>
-                @await Component.InvokeAsync("UserPicker", new
-                {
-                    audience = "Staff",
-                    name = Html.NameFor(m => m.LeadOwnerId).ToString(),
-                    selectedValues = string.IsNullOrEmpty(Model.LeadOwnerId) ? Array.Empty<string>() : new[] { Model.LeadOwnerId },
-                    valueType = "userId",
-                    multiple = false,
-                    buttonText = T["Select an owner"].Value,
-                    searchPlaceholder = T["Search users"].Value,
-                    smallButton = false,
-                })
-            </div>
-        }
     </div>
 </div>
+
+@if (!Model.IsLeadType && Model.CrmEnabled)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="DuplicateScope" class="ocat-label">@T["Compare with"]</label>
+        <div class="ocat-end">
+            <select asp-for="DuplicateScope" class="form-select">
+                <option value="@CrestApps.OrchardCore.Omnichannel.Managements.Models.ContactImportDuplicateScope.AllContacts">@T["Every contact"]</option>
+                <option value="@CrestApps.OrchardCore.Omnichannel.Managements.Models.ContactImportDuplicateScope.SameType">@T["Contacts of this type only"]</option>
+                <option value="@CrestApps.OrchardCore.Omnichannel.Managements.Models.ContactImportDuplicateScope.AllRecords">@T["Every contact and lead"]</option>
+            </select>
+            <span class="hint">@T["Leads are left out by default, so a customer who was once a lead can still be imported."]</span>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="SelectedCountryCode">
+    <label asp-for="SelectedCountryCode" class="ocat-label ocat-label-required">@T["Lead country"]</label>
+    <div class="ocat-end">
+        <select asp-for="SelectedCountryCode" asp-items="Model.AvailableCountries" class="form-select" required></select>
+        <span asp-validation-for="SelectedCountryCode" class="text-danger"></span>
+        <span class="hint">@T["Select the default country for non-E.164 phone numbers in this file. Imports for content types with OmnichannelContactPart should contain leads from one country per file unless every phone number in the file already uses E.164. The same normalized phone numbers are also used to infer a lead time zone when one is not provided in the file."]</span>
+    </div>
+</div>
+
+@if (Model.IsLeadType)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="LeadListName" class="ocat-label">@T["List name"]</label>
+        <div class="ocat-end">
+            <input asp-for="LeadListName" class="form-control" />
+            <span class="hint">@T["Stamped on every lead in the file that has no list of its own, so the whole list can be loaded, reported on and cleaned up together."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="LeadSourceId" class="ocat-label">@T["Lead source"]</label>
+        <div class="ocat-end">
+            <select asp-for="LeadSourceId" asp-items="Model.LeadSources" class="form-select">
+                <option value="">@T["None"]</option>
+            </select>
+            <span class="hint">@T["Stamped on every lead in the file that has no source of its own, for example Purchased list or Trade show."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="LeadStatusId" class="ocat-label">@T["Lead status"]</label>
+        <div class="ocat-end">
+            <select asp-for="LeadStatusId" asp-items="Model.LeadStatuses" class="form-select">
+                <option value="">@T["Default status"]</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Lead owner"]</label>
+        <div class="ocat-end">
+            @await Component.InvokeAsync("UserPicker", new
+            {
+                audience = "Staff",
+                name = Html.NameFor(m => m.LeadOwnerId).ToString(),
+                selectedValues = string.IsNullOrEmpty(Model.LeadOwnerId) ? Array.Empty<string>() : new[] { Model.LeadOwnerId },
+                valueType = "userId",
+                multiple = false,
+                buttonText = T["Select an owner"].Value,
+                searchPlaceholder = T["Search users"].Value,
+                smallButton = false,
+            })
+        </div>
+    </div>
+}

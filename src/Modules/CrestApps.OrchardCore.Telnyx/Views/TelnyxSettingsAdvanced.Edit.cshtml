@@ -1,0 +1,8 @@
+@model TelnyxSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="ApiBaseUrl">
+    <label asp-for="ApiBaseUrl" class="ocat-label">@T["API base URL override (optional)"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="ApiBaseUrl" placeholder="https://api.telnyx.com/v2/" />
+    </div>
+</div>

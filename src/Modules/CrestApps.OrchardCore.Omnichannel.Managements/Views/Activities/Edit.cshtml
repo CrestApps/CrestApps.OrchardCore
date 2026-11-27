@@ -43,14 +43,7 @@
         </div>
     </div>
 
-    <div class="card mb-3">
-        <div class="card-header">
-            @T["Activity"]
-        </div>
-        <div class="card-body">
-            @await DisplayAsync(Model.Activity)
-        </div>
-    </div>
+    @await DisplayAsync(Model.Activity)
 
     <div class="action-bar-bottom">
         <button class="btn btn-primary" type="submit">@T["Save"]</button>

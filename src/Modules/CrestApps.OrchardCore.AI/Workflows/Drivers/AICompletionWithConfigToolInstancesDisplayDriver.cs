@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Tools.Services;
 using CrestApps.OrchardCore.AI.ViewModels;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Activities;
@@ -21,13 +22,19 @@ public sealed class AICompletionWithConfigToolInstancesDisplayDriver : DisplayDr
 {
     private readonly IAIToolInstanceAccessor _instanceAccessor;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AICompletionWithConfigToolInstancesDisplayDriver"/> class.
     /// </summary>
     /// <param name="instanceAccessor">The accessor used to resolve the instances the current user may assign.</param>
-    public AICompletionWithConfigToolInstancesDisplayDriver(IAIToolInstanceAccessor instanceAccessor)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AICompletionWithConfigToolInstancesDisplayDriver(
+        IAIToolInstanceAccessor instanceAccessor,
+        IStringLocalizer<AICompletionWithConfigToolInstancesDisplayDriver> stringLocalizer)
     {
         _instanceAccessor = instanceAccessor;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(AICompletionWithConfigTask activity, BuildEditorContext context)
@@ -54,7 +61,7 @@ public sealed class AICompletionWithConfigToolInstancesDisplayDriver : DisplayDr
                 })
                 .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
-        }).Location("Content:4#Capabilities;3");
+        }).Location(l => l.Zone("Content", "4").Tab(S["Capabilities"], "3").Card(S["Tools"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

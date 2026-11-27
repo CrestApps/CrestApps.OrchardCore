@@ -78,7 +78,10 @@
 
     const toggle = (selector, visible) => {
         document.querySelectorAll(selector).forEach((element) => {
-            element.classList.toggle('d-none', !visible);
+            // A marker of a card hides the whole card, not only its rows.
+            const target = element.hasAttribute('data-subject-card') ? (element.closest('fieldset') || element) : element;
+
+            target.classList.toggle('d-none', !visible);
         });
     };
 

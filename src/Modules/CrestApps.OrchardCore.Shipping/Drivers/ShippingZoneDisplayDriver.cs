@@ -59,46 +59,10 @@ internal sealed class ShippingZoneDisplayDriver : DisplayDriver<ShippingZone>
 
     public override IDisplayResult Edit(ShippingZone zone, BuildEditorContext context)
         => Combine(
-            Initialize<ShippingZoneViewModel>("ShippingZoneFields_Edit", async model =>
-            {
-                model.IsNew = context.IsNew;
-                model.Name = zone.Name;
-                model.Position = zone.Position;
-                model.RestOfWorld = zone.RestOfWorld;
-                model.Countries = [.. zone.Countries];
-                model.Regions = [.. zone.Regions];
-
-                var countries = await _countryService.GetCountriesAsync();
-
-                model.AllCountries = countries
-                    .Select(country => new SelectListItem(country.Name, country.Code, zone.Countries.Contains(country.Code, StringComparer.OrdinalIgnoreCase)))
-                    .ToArray();
-
-                // Each chosen country with regions can be narrowed to some of them.
-                var countryRegions = new List<ShippingZoneCountryRegions>();
-
-                foreach (var code in zone.Countries)
-                {
-                    var format = await _formatProvider.GetFormatAsync(code);
-
-                    if (format?.Regions is not { Count: > 0 } regions)
-                    {
-                        continue;
-                    }
-
-                    countryRegions.Add(new ShippingZoneCountryRegions
-                    {
-                        CountryCode = code,
-                        CountryName = countries.FirstOrDefault(country => string.Equals(country.Code, code, StringComparison.OrdinalIgnoreCase))?.Name ?? code,
-                        Regions = regions
-                            .Select(region => (Value: $"{code}-{region.Code}", region.Name))
-                            .Select(region => new SelectListItem(region.Name, region.Value, zone.Regions.Contains(region.Value, StringComparer.OrdinalIgnoreCase)))
-                            .ToArray(),
-                    });
-                }
-
-                model.CountryRegions = countryRegions;
-            }).Location("Content:1"),
+            Initialize<ShippingZoneViewModel>("ShippingZoneFields_Edit", model => FillAsync(model, zone, context, includeCoverage: false))
+                .Location(l => l.Zone("Content", "1").Card(S["Zone"], "10")),
+            Initialize<ShippingZoneViewModel>("ShippingZoneFieldsCoverage_Edit", model => FillAsync(model, zone, context, includeCoverage: true))
+                .Location(l => l.Zone("Content", "2").Card(S["Coverage"], "20")),
             Initialize<ShippingZoneMethodsViewModel>("ShippingZoneMethods_Edit", model =>
             {
                 model.Zone = zone;
@@ -113,8 +77,55 @@ internal sealed class ShippingZoneDisplayDriver : DisplayDriver<ShippingZone>
                         Summary = Summarize(method),
                     })
                     .ToArray();
-            }).Location("Content:10")
+            }).Location(l => l.Zone("Content", "10").Card(S["Shipping Methods"], "30"))
             .RenderWhen(() => Task.FromResult(!context.IsNew)));
+
+    // Every card of the page binds the same view model; only the coverage card needs the countries and their regions.
+    private async ValueTask FillAsync(ShippingZoneViewModel model, ShippingZone zone, BuildEditorContext context, bool includeCoverage)
+    {
+        model.IsNew = context.IsNew;
+        model.Name = zone.Name;
+        model.Position = zone.Position;
+        model.RestOfWorld = zone.RestOfWorld;
+        model.Countries = [.. zone.Countries];
+        model.Regions = [.. zone.Regions];
+
+        if (!includeCoverage)
+        {
+            return;
+        }
+
+        var countries = await _countryService.GetCountriesAsync();
+
+        model.AllCountries = countries
+            .Select(country => new SelectListItem(country.Name, country.Code, zone.Countries.Contains(country.Code, StringComparer.OrdinalIgnoreCase)))
+            .ToArray();
+
+        // Each chosen country with regions can be narrowed to some of them.
+        var countryRegions = new List<ShippingZoneCountryRegions>();
+
+        foreach (var code in zone.Countries)
+        {
+            var format = await _formatProvider.GetFormatAsync(code);
+
+            if (format?.Regions is not { Count: > 0 } regions)
+            {
+                continue;
+            }
+
+            countryRegions.Add(new ShippingZoneCountryRegions
+            {
+                CountryCode = code,
+                CountryName = countries.FirstOrDefault(country => string.Equals(country.Code, code, StringComparison.OrdinalIgnoreCase))?.Name ?? code,
+                Regions = regions
+                    .Select(region => (Value: $"{code}-{region.Code}", region.Name))
+                    .Select(region => new SelectListItem(region.Name, region.Value, zone.Regions.Contains(region.Value, StringComparer.OrdinalIgnoreCase)))
+                    .ToArray(),
+            });
+        }
+
+        model.CountryRegions = countryRegions;
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ShippingZone zone, UpdateEditorContext context)
     {

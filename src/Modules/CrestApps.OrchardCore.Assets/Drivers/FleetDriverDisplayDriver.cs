@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Assets.Models;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Assets.Drivers;
 
@@ -9,9 +10,16 @@ namespace CrestApps.OrchardCore.Assets.Drivers;
 /// </summary>
 internal sealed class FleetDriverDisplayDriver : DisplayDriver<Asset>
 {
+    internal readonly IStringLocalizer S;
+
+    public FleetDriverDisplayDriver(IStringLocalizer<FleetDriverDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(Asset asset, BuildEditorContext context)
         => Initialize<FleetDriverViewModel>("AssetFleetDriver_Edit", model => model.DefaultDriverWorkerId = asset.Fleet?.DefaultDriverWorkerId)
-            .Location("Content:6")
+            .Location(l => l.Zone("Content", "7").Card(S["Fleet"], "60"))
             .RenderWhen(() => Task.FromResult(asset.Fleet is not null));
 
     public override async Task<IDisplayResult> UpdateAsync(Asset asset, UpdateEditorContext context)

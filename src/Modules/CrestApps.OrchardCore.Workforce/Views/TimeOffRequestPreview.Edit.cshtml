@@ -1,0 +1,47 @@
+@model TimeOffRequestEditViewModel
+@{
+    var preview = Model.Preview;
+}
+
+@foreach (var problem in preview.Problems)
+{
+    <div class="text-danger mb-1"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@problem</div>
+}
+@if (preview.Problems.Count == 0)
+{
+    <p class="mb-2">
+        @switch (preview.Outcome)
+        {
+            case TimeOffRequestStatus.Approved:
+                <span class="badge text-bg-success fw-normal">@T["Approved at once"]</span> @T["It fits the allotment, which approves on its own."]
+                break;
+            case TimeOffRequestStatus.Waitlisted:
+                <span class="badge text-bg-warning fw-normal">@T["Waitlisted"]</span> @T["As many people as may be off already are on some of these days."]
+                break;
+            default:
+                <span class="badge text-bg-secondary fw-normal">@T["Waits for a manager"]</span>
+                break;
+        }
+    </p>
+}
+<table class="table table-sm mb-2" style="max-width: 32rem">
+    <thead><tr><th>@T["Day"]</th><th class="text-end">@T["Counts"]</th></tr></thead>
+    <tbody>
+        @foreach (var day in preview.Days)
+        {
+            <tr class="@(day.Amount == 0 ? "text-muted" : null)">
+                <td>@day.Date.ToString("ddd d MMM")@if (preview.FullDates.Contains(day.Date)) {<span class="badge ta-badge fw-normal ms-2">@T["Full"]</span>}</td>
+                <td class="text-end"><partial name="_TimeOffAmount" model="(day.Amount, preview.Type?.Unit ?? TimeOffUnit.Hours)" /></td>
+            </tr>
+        }
+    </tbody>
+    <tfoot><tr><th>@T["In all"]</th><th class="text-end"><partial name="_TimeOffAmount" model="(preview.Amount, preview.Type?.Unit ?? TimeOffUnit.Hours)" /></th></tr></tfoot>
+</table>
+@if (preview.Balance is not null)
+{
+    <p class="mb-1">@T["Balance under '{0}' on the first day:", preview.Balance.Policy.Name] <strong><partial name="_TimeOffAmount" model="(preview.Balance.Available, preview.Balance.Type?.Unit ?? TimeOffUnit.Hours)" /></strong> @T["available"], <partial name="_TimeOffAmount" model="(preview.Balance.Available - preview.Amount, preview.Balance.Type?.Unit ?? TimeOffUnit.Hours)" /> @T["after this request."]</p>
+}
+@if (preview.OverlappingShifts > 0)
+{
+    <p class="mb-0 text-warning"><i class="fa-solid fa-calendar-xmark me-1" aria-hidden="true"></i>@T.Plural(preview.OverlappingShifts, "It overlaps 1 published shift.", "It overlaps {0} published shifts.", preview.OverlappingShifts)</p>
+}

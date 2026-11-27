@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -20,10 +21,16 @@ public sealed class TaxCalculationSettingsDisplayDriver : SiteDisplayDriver<TaxC
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
-    public TaxCalculationSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    internal readonly IStringLocalizer S;
+
+    public TaxCalculationSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IStringLocalizer<TaxCalculationSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     protected override string SettingsGroupId
@@ -33,7 +40,7 @@ public sealed class TaxCalculationSettingsDisplayDriver : SiteDisplayDriver<TaxC
         => Initialize<TaxCalculationSettingsViewModel>("TaxCalculationSettings_Edit", model =>
         {
             model.RoundingLevel = settings.RoundingLevel;
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Rounding"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TaxationPermissions.ManageTaxation))
         .OnGroup(SettingsGroupId);
 

@@ -12,7 +12,11 @@
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
-<p class="hint">@T["Each level includes the ones above it. The calendar's owner and calendar administrators always manage it."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Each level includes the ones above it. The calendar's owner and calendar administrators always manage it."]</span>
+    </div>
+</div>
 
 @foreach (var level in levels)
 {

@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Tickets.ContactCenter.Models;
 using CrestApps.OrchardCore.Tickets.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Tickets.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -16,9 +17,14 @@ internal sealed class TicketDeskQueueDisplayDriver : DisplayDriver<TicketDesk>
 {
     private readonly IActivityQueueManager _queues;
 
-    public TicketDeskQueueDisplayDriver(IActivityQueueManager queues)
+    internal readonly IStringLocalizer S;
+
+    public TicketDeskQueueDisplayDriver(
+        IActivityQueueManager queues,
+        IStringLocalizer<TicketDeskQueueDisplayDriver> stringLocalizer)
     {
         _queues = queues;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(TicketDesk desk, BuildEditorContext context)
@@ -30,7 +36,7 @@ internal sealed class TicketDeskQueueDisplayDriver : DisplayDriver<TicketDesk>
             model.Queues = [.. (await _queues.GetEnabledAsync())
                 .OrderBy(queue => queue.Name, StringComparer.CurrentCultureIgnoreCase)
                 .Select(queue => new SelectListItem(queue.Name, queue.ItemId, queue.ItemId == current))];
-        }).Location("Content:7");
+        }).Location(l => l.Zone("Content", "7").Card(S["Contact Center"], "90"));
 
     public override async Task<IDisplayResult> UpdateAsync(TicketDesk desk, UpdateEditorContext context)
     {

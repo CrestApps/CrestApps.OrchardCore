@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
+using CrestApps.OrchardCore.ContactCenter.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.RoutingRules;
 using CrestApps.OrchardCore.Teams.Models;
@@ -48,7 +49,40 @@ public sealed class MessagingRoutingCandidateResolverTests
     }
 
     [Fact]
-    public async Task AQueueSource_WithNoQueueAtAll_HasNobody()
+    public async Task QueueSignedIn_WithNoQueueAtAll_ReadsTheAgentsSignedInToAnyQueue()
+    {
+        var harness = new Harness();
+        harness.All =
+        [
+            Agent("a1", "u1", AgentPresenceStatus.Available, queueIds: ["sales"]),
+            Agent("a2", "u2", AgentPresenceStatus.Break, queueIds: ["support"]),
+            Agent("a3", "u3", AgentPresenceStatus.Offline, queueIds: ["sales"]),
+            Agent("a4", "u4", AgentPresenceStatus.Available),
+        ];
+
+        var candidates = await harness.Resolver.ResolveAsync(Rule(MessagingRoutingCandidateSources.QueueSignedIn), conversationQueueId: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["a1", "a2"], candidates.Agents.Select(agent => agent.ItemId));
+        Assert.Empty(candidates.RequiredSkills);
+    }
+
+    [Fact]
+    public async Task QueueMembers_WithNoQueueAtAll_ReadsTheAgentsEntitledToAnyQueue()
+    {
+        var harness = new Harness();
+        harness.All =
+        [
+            Agent("a1", "u1", AgentPresenceStatus.Offline, allowedQueueIds: ["sales"]),
+            Agent("a2", "u2", AgentPresenceStatus.Available),
+        ];
+
+        var candidates = await harness.Resolver.ResolveAsync(Rule(MessagingRoutingCandidateSources.QueueMembers), conversationQueueId: null, TestContext.Current.CancellationToken);
+
+        Assert.Equal(["a1"], candidates.Agents.Select(agent => agent.ItemId));
+    }
+
+    [Fact]
+    public async Task AQueueSource_WithNoQueueAtAllAndNoAgentsInAnyQueue_HasNobody()
     {
         var harness = new Harness();
 
@@ -156,6 +190,16 @@ public sealed class MessagingRoutingCandidateResolverTests
     private static AgentProfile Agent(string agentId, string userId)
         => new() { ItemId = agentId, UserId = userId };
 
+    private static AgentProfile Agent(string agentId, string userId, AgentPresenceStatus presence, string[] queueIds = null, string[] allowedQueueIds = null)
+        => new()
+        {
+            ItemId = agentId,
+            UserId = userId,
+            PresenceStatus = presence,
+            QueueIds = queueIds ?? [],
+            AllowedQueueIds = allowedQueueIds ?? [],
+        };
+
     private sealed class Harness
     {
         private readonly Dictionary<string, AgentProfile> _byUserId = new(StringComparer.Ordinal);
@@ -167,6 +211,8 @@ public sealed class MessagingRoutingCandidateResolverTests
                 .ReturnsAsync((string queueId, CancellationToken _) => SignedIn.TryGetValue(queueId, out var list) ? list : []);
             agents.Setup(manager => manager.GetMembersForQueueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string queueId, CancellationToken _) => Members.TryGetValue(queueId, out var list) ? list : []);
+            agents.Setup(manager => manager.GetAllAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(() => All);
             agents.Setup(manager => manager.FindByUserIdAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .ReturnsAsync((string userId, CancellationToken _) => _byUserId.GetValueOrDefault(userId));
 
@@ -194,6 +240,8 @@ public sealed class MessagingRoutingCandidateResolverTests
 
             Resolver = new MessagingRoutingCandidateResolver(agents.Object, queues.Object, memberships.Object, users.Object, clock.Object);
         }
+
+        public IReadOnlyCollection<AgentProfile> All { get; set; } = [];
 
         public Dictionary<string, AgentProfile[]> SignedIn { get; } = new(StringComparer.Ordinal);
 

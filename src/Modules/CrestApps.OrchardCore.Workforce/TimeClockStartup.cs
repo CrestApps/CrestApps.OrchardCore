@@ -51,7 +51,9 @@ public sealed class TimeClockStartup : StartupBase
             .AddIndexProvider<PayrollExportBatchIndexProvider>();
 
         services.AddDisplayDriver<TimeClockPolicy, TimeClockPolicyRowDisplayDriver>();
+        services.AddDisplayDriver<TimeClockPolicyEditViewModel, TimeClockPolicyEditDisplayDriver>();
         services.AddDisplayDriver<TimeClockKiosk, TimeClockKioskRowDisplayDriver>();
+        services.AddDisplayDriver<TimeClockKioskEditViewModel, TimeClockKioskEditDisplayDriver>();
         services.AddDisplayDriver<TimesheetRowViewModel, TimesheetRowDisplayDriver>();
         services.AddDisplayDriver<AttendanceRowViewModel, AttendanceRowDisplayDriver>();
         services.AddDisplayDriver<PayrollExportBatch, PayrollExportBatchRowDisplayDriver>();

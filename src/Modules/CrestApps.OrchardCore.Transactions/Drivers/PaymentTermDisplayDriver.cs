@@ -52,24 +52,32 @@ public sealed class PaymentTermDisplayDriver : DisplayDriver<PaymentTerm>
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(PaymentTerm term, BuildEditorContext context)
-        => Initialize<PaymentTermViewModel>("PaymentTermFields_Edit", model =>
-        {
-            model.Name = term.Name;
-            model.Description = term.Description;
-            model.Kind = term.Kind;
-            model.Days = term.Days;
-            model.DayOfMonth = term.DayOfMonth;
-            model.DiscountPercent = term.DiscountPercent;
-            model.DiscountDays = term.DiscountDays;
-            model.Enabled = term.Enabled;
-            model.KindOptions =
-            [
-                new SelectListItem(S["Due on receipt"], nameof(PaymentTermKind.DueOnReceipt), term.Kind == PaymentTermKind.DueOnReceipt),
-                new SelectListItem(S["A number of days after the issue date"], nameof(PaymentTermKind.NetDays), term.Kind == PaymentTermKind.NetDays),
-                new SelectListItem(S["End of the month, plus a number of days"], nameof(PaymentTermKind.EndOfMonth), term.Kind == PaymentTermKind.EndOfMonth),
-                new SelectListItem(S["A day of the next month"], nameof(PaymentTermKind.DayOfNextMonth), term.Kind == PaymentTermKind.DayOfNextMonth),
-            ];
-        }).Location("Content:1");
+    {
+        ShapeResult Card(string shapeType, string position, LocalizedString card, string cardPosition)
+            => Initialize<PaymentTermViewModel>(shapeType, model =>
+            {
+                model.Name = term.Name;
+                model.Description = term.Description;
+                model.Kind = term.Kind;
+                model.Days = term.Days;
+                model.DayOfMonth = term.DayOfMonth;
+                model.DiscountPercent = term.DiscountPercent;
+                model.DiscountDays = term.DiscountDays;
+                model.Enabled = term.Enabled;
+                model.KindOptions =
+                [
+                    new SelectListItem(S["Due on receipt"], nameof(PaymentTermKind.DueOnReceipt), term.Kind == PaymentTermKind.DueOnReceipt),
+                    new SelectListItem(S["A number of days after the issue date"], nameof(PaymentTermKind.NetDays), term.Kind == PaymentTermKind.NetDays),
+                    new SelectListItem(S["End of the month, plus a number of days"], nameof(PaymentTermKind.EndOfMonth), term.Kind == PaymentTermKind.EndOfMonth),
+                    new SelectListItem(S["A day of the next month"], nameof(PaymentTermKind.DayOfNextMonth), term.Kind == PaymentTermKind.DayOfNextMonth),
+                ];
+            }).Location(l => l.Zone("Content", position).Card(card, cardPosition));
+
+        return Combine(
+            Card("PaymentTermDetails_Edit", "1", S["Term"], "10"),
+            Card("PaymentTermDue_Edit", "1.1", S["When It Is Due"], "20"),
+            Card("PaymentTermDiscount_Edit", "1.2", S["Early-Payment Discount"], "30"));
+    }
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(PaymentTerm term, UpdateEditorContext context)

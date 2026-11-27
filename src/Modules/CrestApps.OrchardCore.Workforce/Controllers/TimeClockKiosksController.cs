@@ -10,6 +10,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -28,6 +30,8 @@ public sealed class TimeClockKiosksController : Controller
     private readonly INotifier _notifier;
     private readonly ITeamManager _teamManager;
     private readonly ITimeClockService _timeClock;
+    private readonly IDisplayManager<TimeClockKioskEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -42,6 +46,8 @@ public sealed class TimeClockKiosksController : Controller
     /// <param name="timeClock">The time clock.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     public TimeClockKiosksController(
         IAuthorizationService authorizationService,
         ITimeClockKioskManager manager,
@@ -49,7 +55,9 @@ public sealed class TimeClockKiosksController : Controller
         ITeamManager teamManager,
         ITimeClockService timeClock,
         IHtmlLocalizer<TimeClockKiosksController> htmlLocalizer,
-        IStringLocalizer<TimeClockKiosksController> stringLocalizer)
+        IStringLocalizer<TimeClockKiosksController> stringLocalizer,
+        IDisplayManager<TimeClockKioskEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor)
     {
         _authorizationService = authorizationService;
         _manager = manager;
@@ -58,6 +66,8 @@ public sealed class TimeClockKiosksController : Controller
         _timeClock = timeClock;
         H = htmlLocalizer;
         S = stringLocalizer;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
     }
 
     /// <summary>
@@ -121,6 +131,8 @@ public sealed class TimeClockKiosksController : Controller
 
         await PopulateAsync(model);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -138,6 +150,8 @@ public sealed class TimeClockKiosksController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
         var isNew = string.IsNullOrEmpty(model.Id);
         var item = isNew ? await _manager.NewAsync() : await _manager.FindByIdAsync(model.Id);
@@ -164,6 +178,8 @@ public sealed class TimeClockKiosksController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateAsync(model);
+
+            model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
             return View(model);
         }

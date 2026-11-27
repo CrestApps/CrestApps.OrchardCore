@@ -13,6 +13,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -31,6 +33,8 @@ public sealed class ShiftTemplatesController : Controller
     private readonly ITeamManager _teamManager;
     private readonly ISkillManager _skillManager;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ShiftTemplateEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -46,6 +50,8 @@ public sealed class ShiftTemplatesController : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     public ShiftTemplatesController(
         IAuthorizationService authorizationService,
         IShiftTemplateManager templateManager,
@@ -54,7 +60,9 @@ public sealed class ShiftTemplatesController : Controller
         ISkillManager skillManager,
         INotifier notifier,
         IHtmlLocalizer<ShiftTemplatesController> htmlLocalizer,
-        IStringLocalizer<ShiftTemplatesController> stringLocalizer)
+        IStringLocalizer<ShiftTemplatesController> stringLocalizer,
+        IDisplayManager<ShiftTemplateEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor)
     {
         _authorizationService = authorizationService;
         _templateManager = templateManager;
@@ -64,6 +72,8 @@ public sealed class ShiftTemplatesController : Controller
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
     }
 
     /// <summary>
@@ -140,6 +150,8 @@ public sealed class ShiftTemplatesController : Controller
 
         await PopulateAsync(model, codes);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -157,6 +169,8 @@ public sealed class ShiftTemplatesController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
         var isNew = string.IsNullOrEmpty(model.Id);
         var template = isNew
@@ -210,6 +224,8 @@ public sealed class ShiftTemplatesController : Controller
         if (!ModelState.IsValid)
         {
             await PopulateAsync(model, codes);
+
+            model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
             return View(model);
         }

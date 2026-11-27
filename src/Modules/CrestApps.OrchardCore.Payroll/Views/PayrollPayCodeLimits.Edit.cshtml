@@ -1,0 +1,41 @@
+@model PayrollPayCodeViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="PeriodLimit">
+    <label asp-for="PeriodLimit" class="ocat-label">@T["Per pay period"]</label>
+    <div class="ocat-end">
+        <input asp-for="PeriodLimit" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span asp-validation-for="PeriodLimit" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="YearLimits">
+    <label class="ocat-label">@T["Per year"]</label>
+    <div class="ocat-end">
+        <table class="table table-sm mb-1" style="max-width: 26rem">
+            <thead>
+                <tr>
+                    <th scope="col">@T["From"]</th>
+                    <th scope="col">@T["Amount"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.YearLimits.Count; i++)
+                {
+                    <tr>
+                        <td><input asp-for="YearLimits[i].EffectiveFrom" type="date" class="form-control form-control-sm" aria-label="@T["From"]" /></td>
+                        <td><input asp-for="YearLimits[i].Amount" class="form-control form-control-sm" inputmode="decimal" aria-label="@T["Amount"]" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <span asp-validation-for="YearLimits" class="text-danger"></span>
+        <span class="hint">@T["The most taken or paid in a calendar year, from a day on: add a row when the limit changes for a new year. Leave a row empty to remove it."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="LifetimeLimit">
+    <label asp-for="LifetimeLimit" class="ocat-label">@T["Ever"]</label>
+    <div class="ocat-end">
+        <input asp-for="LifetimeLimit" class="form-control" inputmode="decimal" style="max-width: 10rem" />
+        <span asp-validation-for="LifetimeLimit" class="text-danger"></span>
+        <span class="hint">@T["Amounts with a dot for decimals. A pay item can have lower limits and a goal of its own."]</span>
+    </div>
+</div>

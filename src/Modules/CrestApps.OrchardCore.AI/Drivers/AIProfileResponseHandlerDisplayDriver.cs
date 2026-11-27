@@ -52,7 +52,7 @@ internal sealed class AIProfileResponseHandlerDisplayDriver : DisplayDriver<AIPr
             .Select(h => new SelectListItem(h.Name, h.Name))
             .OrderBy(x => x.Text)
             .ToList();
-        }).Location("Content:9%General;1");
+        }).Location(l => l.Zone("Content", "9").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

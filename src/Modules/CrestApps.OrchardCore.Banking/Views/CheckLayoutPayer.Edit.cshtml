@@ -1,0 +1,12 @@
+@model CheckLayoutViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="PayerName">
+    <label asp-for="PayerName" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="PayerName" data-designer-payer="PayerName" class="form-control" maxlength="255" />
+    </div>
+</div>
+@* The designer reads the payer's address from these fields for its preview. *@
+<div data-designer-payer-address>
+    @await DisplayAsync(Model.PayerAddressEditor)
+</div>

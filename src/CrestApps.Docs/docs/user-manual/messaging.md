@@ -87,6 +87,8 @@ Browsing other admin pages does not count as being at the inbox: queues set to r
 
 The **Queue distribution** of a text entry point decides who is given a new conversation. With **Shared pool (claim to own)**, every agent of the queue sees it and the first to claim it owns it. With **Routed**, the conversation is pushed to one available agent whose inbox is open and who has the fewest conversations. If that agent does not pick it up within five minutes, it is routed to another agent; after two such re-routes it returns to the shared pool, so it is never lost.
 
+A conversation nobody owns, such as the reply to a text a workflow or a broadcast sent without naming an agent, is not handled by queue distribution. Your administrator can give those to an agent automatically with [routing rules](messaging-routing-rules.md). An agent is picked only while their **Available** switch, at the top of the inbox, is on and the **Inbox** is open.
+
 ### Send and receive attachments
 
 Each channel accepts its own kinds of files. SMS takes pictures (JPEG, PNG, GIF and WebP); hover over the attach button to see what the conversation's channel accepts. Anything else is refused.

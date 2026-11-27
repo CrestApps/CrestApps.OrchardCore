@@ -1,0 +1,8 @@
+@using CrestApps.OrchardCore.Learning.Pipelines
+@model EnrollLearnersStepViewModel
+
+<div class="mb-3 form-check">
+    <input asp-for="IgnorePrerequisites" class="form-check-input" />
+    <label asp-for="IgnorePrerequisites" class="form-check-label">@T["Enroll learners who have not completed the prerequisite courses"]</label>
+</div>
+<p class="hint">@T["Rows that cannot be enrolled go to the Rejected output with the reason. Running the pipeline again adds no second enrollment."]</p>

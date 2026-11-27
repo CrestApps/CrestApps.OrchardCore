@@ -1,0 +1,27 @@
+@model RotationEditViewModel
+@{
+    var days = new[] { T["Mon"], T["Tue"], T["Wed"], T["Thu"], T["Fri"], T["Sat"], T["Sun"] };
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="WorkerIds" class="ocat-label">@T["Workers"]</label>
+    <div class="ocat-end">
+        <select asp-for="WorkerIds" asp-items="Model.WorkerOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+        @if (Model.Workers.Count > 0)
+        {
+            <ul class="list-unstyled small text-muted mt-2 mb-0">
+                @foreach (var worker in Model.Workers)
+                {
+                    <li>@T["{0} started week 1 on {1}", worker.Name, worker.StartDate.ToString("d")]</li>
+                }
+            </ul>
+        }
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="StartDate" class="ocat-label">@T["New workers start"]</label>
+    <div class="ocat-end">
+        <input asp-for="StartDate" type="date" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["The day workers you add now start week 1. Workers already following it keep their day."]</span>
+    </div>
+</div>

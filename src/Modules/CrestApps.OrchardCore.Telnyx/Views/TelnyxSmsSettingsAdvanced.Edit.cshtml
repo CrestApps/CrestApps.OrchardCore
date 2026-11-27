@@ -1,0 +1,12 @@
+@model CrestApps.OrchardCore.Telnyx.ViewModels.TelnyxSmsSettingsViewModel
+
+<div data-telnyx-sms-card>
+    <div class="ocat-wrapper" asp-validation-class-for="ApiBaseUrl">
+        <label asp-for="ApiBaseUrl" class="ocat-label">@T["API base URL"]</label>
+        <div class="ocat-end">
+            <input asp-for="ApiBaseUrl" class="form-control" placeholder="https://api.telnyx.com/v2/" />
+            <span asp-validation-for="ApiBaseUrl" class="text-danger"></span>
+            <span class="hint">@T["Optional override for the Telnyx REST API base address."]</span>
+        </div>
+    </div>
+</div>

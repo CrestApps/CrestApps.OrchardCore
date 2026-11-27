@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Inventory.Recipes;
 using CrestApps.OrchardCore.Inventory.Reports;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Inventory.Services;
+using CrestApps.OrchardCore.Inventory.ViewModels;
 using CrestApps.OrchardCore.Inventory.Workflows;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Orders.Core.Services;
@@ -261,6 +262,7 @@ public sealed class PurchaseOrdersStartup : StartupBase
         services.AddScoped<IPurchaseOrderStore, PurchaseOrderStore>();
         services.AddScoped<PurchaseOrderReceiver>();
         services.AddDisplayDriver<PurchaseOrder, PurchaseOrderDisplayDriver>();
+        services.AddDisplayDriver<PurchaseOrderEditViewModel, PurchaseOrderEditDisplayDriver>();
         services.AddNavigationProvider<PurchaseOrdersAdminMenu>();
     }
 

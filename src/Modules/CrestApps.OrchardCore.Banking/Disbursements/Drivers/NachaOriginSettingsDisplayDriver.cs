@@ -48,7 +48,7 @@ internal sealed class NachaOriginSettingsDisplayDriver : DisplayDriver<BankAccou
             model.CompanyIdentification = settings.CompanyIdentification;
             model.CompanyEntryDescription = settings.CompanyEntryDescription;
             model.IncludeOffset = settings.IncludeOffset;
-        }).Location("Content:20");
+        }).Location(l => l.Zone("Content", "20").Card(S["Bank File (ACH)"], "50"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(BankAccount account, UpdateEditorContext context)

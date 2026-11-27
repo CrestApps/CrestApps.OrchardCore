@@ -24,4 +24,10 @@ public class NumberSeriesSettingsViewModel
     /// </summary>
     [BindNever]
     public string Today { get; set; }
+
+    /// <summary>
+    /// Gets or sets which of the <see cref="Series"/> the shape being rendered shows: each series has a card of its own.
+    /// </summary>
+    [BindNever]
+    public int Index { get; set; }
 }

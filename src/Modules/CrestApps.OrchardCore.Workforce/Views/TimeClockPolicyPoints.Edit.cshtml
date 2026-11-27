@@ -1,0 +1,47 @@
+@model TimeClockPolicyEditViewModel
+
+<div class="ocat-wrapper"><div class="ocat-end-offset"><span class="hint">@T["Points each exception earns. Excused exceptions earn none. Leave all empty for no points."]</span></div></div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="points-Late">@T["Late start"]</label>
+    <div class="ocat-end">
+        <input class="form-control" type="number" step="0.5" min="0" name="Points[Late]" id="points-Late" value="@(Model.Points.TryGetValue("Late", out var pointsLate) ? pointsLate?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="points-EarlyOut">@T["Early finish"]</label>
+    <div class="ocat-end">
+        <input class="form-control" type="number" step="0.5" min="0" name="Points[EarlyOut]" id="points-EarlyOut" value="@(Model.Points.TryGetValue("EarlyOut", out var pointsEarlyOut) ? pointsEarlyOut?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="points-MissedPunch">@T["Missed punch"]</label>
+    <div class="ocat-end">
+        <input class="form-control" type="number" step="0.5" min="0" name="Points[MissedPunch]" id="points-MissedPunch" value="@(Model.Points.TryGetValue("MissedPunch", out var pointsMissedPunch) ? pointsMissedPunch?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="points-NoShow">@T["No-show"]</label>
+    <div class="ocat-end">
+        <input class="form-control" type="number" step="0.5" min="0" name="Points[NoShow]" id="points-NoShow" value="@(Model.Points.TryGetValue("NoShow", out var pointsNoShow) ? pointsNoShow?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="points-UnscheduledAbsence">@T["Unscheduled absence"]</label>
+    <div class="ocat-end">
+        <input class="form-control" type="number" step="0.5" min="0" name="Points[UnscheduledAbsence]" id="points-UnscheduledAbsence" value="@(Model.Points.TryGetValue("UnscheduledAbsence", out var pointsUnscheduledAbsence) ? pointsUnscheduledAbsence?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="points-LongMeal">@T["Long meal"]</label>
+    <div class="ocat-end">
+        <input class="form-control" type="number" step="0.5" min="0" name="Points[LongMeal]" id="points-LongMeal" value="@(Model.Points.TryGetValue("LongMeal", out var pointsLongMeal) ? pointsLongMeal?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="points-OutsideGeofence">@T["Away from the site"]</label>
+    <div class="ocat-end">
+        <input class="form-control" type="number" step="0.5" min="0" name="Points[OutsideGeofence]" id="points-OutsideGeofence" value="@(Model.Points.TryGetValue("OutsideGeofence", out var pointsOutsideGeofence) ? pointsOutsideGeofence?.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : null)" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper"><label asp-for="PointsWindowDays" class="ocat-label">@T["Points count for"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="PointsWindowDays" type="number" step="1" min="1" max="3650" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["days"]</span></div></div></div>
+<div class="ocat-wrapper"><label asp-for="PointsThreshold" class="ocat-label">@T["Tell the manager at"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="PointsThreshold" type="number" step="0.5" min="0" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["points"]</span></div><span class="hint">@T["Optional. When a worker&#39;s points reach this, their line manager is told in My Work."]</span></div></div>

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.NLWeb.Services;
 using CrestApps.OrchardCore.NLWeb.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -23,20 +24,25 @@ internal sealed class NLWebAISettingsDisplayDriver : SiteDisplayDriver<NLWebSett
     private readonly IAuthorizationService _authorizationService;
     private readonly IAIDeploymentManager _deploymentManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="NLWebAISettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="deploymentManager">The AI deployment manager.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public NLWebAISettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IAIDeploymentManager deploymentManager)
+        IAIDeploymentManager deploymentManager,
+        IStringLocalizer<NLWebAISettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _deploymentManager = deploymentManager;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -61,7 +67,7 @@ internal sealed class NLWebAISettingsDisplayDriver : SiteDisplayDriver<NLWebSett
             model.AllowGenerate = settings.AllowGenerate;
             model.DeploymentName = settings.DeploymentName;
             model.Deployments = deployments;
-        }).Location("Content:5")
+        }).Location(l => l.Zone("Content", "5").Card(S["Artificial Intelligence"], "30"))
         .OnGroup(SettingsGroupId);
     }
 

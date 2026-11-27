@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -81,13 +82,20 @@ internal sealed class UserCohortsDeploymentSource : DeploymentSourceBase<UserCoh
 
 internal sealed class UserCohortsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, UserCohortsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public UserCohortsDeploymentStepDisplayDriver(IStringLocalizer<UserCohortsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(UserCohortsDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("UserCohortsDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("UserCohortsDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(UserCohortsDeploymentStep step, BuildEditorContext context)
-        => View("UserCohortsDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("UserCohortsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Cohorts"], "10"));
 }
 
 internal sealed class UserCohortsDeploymentStepSchema : DeploymentStepSchemaDefinitionBase

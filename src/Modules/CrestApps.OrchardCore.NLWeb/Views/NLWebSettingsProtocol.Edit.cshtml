@@ -1,0 +1,21 @@
+@model NLWebSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowCrossOrigin" />
+            <label class="form-check-label" asp-for="AllowCrossOrigin">@T["Allow calls from other sites"]</label>
+            <span class="hint dashed">@T["When enabled, pages and browser agents on other sites can call the endpoints. Their calls are always anonymous."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="AllowLegacyRequests" />
+            <label class="form-check-label" asp-for="AllowLegacyRequests">@T["Accept the original protocol"]</label>
+            <span class="hint dashed">@T["When enabled, the endpoint also answers the first version of NLWeb, which sends the question in the query string (GET {0}?query=...).", Model.AskUrl]</span>
+        </div>
+    </div>
+</div>

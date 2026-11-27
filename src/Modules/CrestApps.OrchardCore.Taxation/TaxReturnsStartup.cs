@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Taxation.Migrations;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Recipes;
 using CrestApps.OrchardCore.Taxation.Services;
+using CrestApps.OrchardCore.Taxation.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -44,6 +45,7 @@ public sealed class TaxReturnsStartup : StartupBase
         services.AddDisplayDriver<TaxReturnPeriodSummary, TaxReturnPeriodSummaryDisplayDriver>();
         services.AddDisplayDriver<TaxReturn, TaxReturnDisplayDriver>();
         services.AddDisplayDriver<TaxReturnPaymentEntry, TaxReturnPaymentEntryDisplayDriver>();
+        services.AddDisplayDriver<TaxReturnMarkFiledViewModel, TaxReturnMarkFiledDisplayDriver>();
         services.AddNavigationProvider<TaxReturnsAdminMenu>();
         services.AddPermissionProvider<TaxReturnsPermissionsProvider>();
     }

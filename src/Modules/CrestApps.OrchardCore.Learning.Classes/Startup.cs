@@ -45,6 +45,8 @@ public sealed class Startup : StartupBase
         services.AddScoped<ClassesAdminScope>();
         services.AddPermissionProvider<ClassesPermissionProvider>();
         services.AddDisplayDriver<ClassSessionRow, ClassSessionRowDisplayDriver>();
+        services.AddDisplayDriver<ClassSessionEditViewModel, ClassSessionEditDisplayDriver>();
+        services.AddDisplayDriver<ClassSessionCancelViewModel, ClassSessionCancelDisplayDriver>();
         services.AddDisplayDriver<ClassRosterRow, ClassRosterRowDisplayDriver>();
         services.AddDisplayDriver<ClassWaitlistRow, ClassWaitlistRowDisplayDriver>();
         services.AddSingleton<IBackgroundTask, ClassFollowUpBackgroundTask>();

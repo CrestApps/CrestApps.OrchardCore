@@ -2,8 +2,11 @@
 
 @model WizardEventViewModel
 
-<div class="mb-3">
-    <label asp-for="WizardType" class="form-label">@T["Wizard type"]</label>
-    <input asp-for="WizardType" class="form-control" />
-    <span class="hint">@T["Optionally limit this event to a specific wizard type. Leave empty to match any wizard."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="WizardType">
+    <label asp-for="WizardType" class="ocat-label">@T["Wizard type"]</label>
+    <div class="ocat-end">
+        <input asp-for="WizardType" class="form-control" />
+        <span asp-validation-for="WizardType"></span>
+        <span class="hint">@T["Optionally limit this event to a specific wizard type. Leave empty to match any wizard."]</span>
+    </div>
 </div>

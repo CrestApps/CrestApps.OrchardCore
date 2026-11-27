@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels
+
+@model SftpConnectionFieldsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Host" class="ocat-label ocat-label-required">@T["Host"]</label>
+    <div class="ocat-end">
+        <input asp-for="Host" class="form-control" />
+        <span asp-validation-for="Host" class="text-danger"></span>
+        <span class="hint">@T["The SFTP server hostname (e.g., sftp.example.com)."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Port" class="ocat-label">@T["Port"]</label>
+    <div class="ocat-end">
+        <input asp-for="Port" type="number" class="form-control" placeholder="22" />
+        <span asp-validation-for="Port" class="text-danger"></span>
+        <span class="hint">@T["The SFTP server port. Default is 22."]</span>
+    </div>
+</div>
+

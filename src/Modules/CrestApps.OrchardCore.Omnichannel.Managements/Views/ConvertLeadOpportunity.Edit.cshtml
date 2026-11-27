@@ -1,0 +1,48 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.Omnichannel.Core.Models
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model ConvertLeadViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="CreateOpportunity" class="form-check-input" type="checkbox" data-create-opportunity />
+            <label asp-for="CreateOpportunity" class="form-check-label">@T["Create an opportunity"]</label>
+            <span class="hint dashed">@T["Records the deal the lead is interested in, with the contact as its primary contact."]</span>
+        </div>
+    </div>
+</div>
+
+<div data-opportunity-panel>
+    <div class="ocat-wrapper">
+        <label asp-for="OpportunityContentType" class="ocat-label">@T["Opportunity type"]</label>
+        <div class="ocat-end">
+            <select asp-for="OpportunityContentType" asp-items="Model.OpportunityContentTypes" class="form-select">
+                <option value="">@T["Choose an opportunity type"]</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="OpportunityName" class="ocat-label">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="OpportunityName" class="form-control" />
+            <span class="hint">@T["Leave empty to name it after the company and today's date."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="OpportunityAmount" class="ocat-label">@T["Amount"]</label>
+        <div class="ocat-end">
+            <input asp-for="OpportunityAmount" type="number" min="0" step="0.01" class="form-control" />
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="OpportunityCloseDate" class="ocat-label">@T["Close date"]</label>
+        <div class="ocat-end">
+            <input asp-for="OpportunityCloseDate" type="date" class="form-control" value="@(Model.OpportunityCloseDate?.ToString("yyyy-MM-dd"))" />
+        </div>
+    </div>
+</div>

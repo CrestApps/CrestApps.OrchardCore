@@ -1,0 +1,32 @@
+@model CustomerEditViewModel
+
+<div class="ocat-wrapper" data-customer-business asp-validation-class-for="CompanyName">
+    <label asp-for="CompanyName" class="ocat-label ocat-label-required">@T["Company"]</label>
+    <div class="ocat-end">
+        <input asp-for="CompanyName" class="form-control" autocomplete="off" />
+        <span asp-validation-for="CompanyName"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" data-customer-business asp-validation-class-for="TaxId">
+    <label asp-for="TaxId" class="ocat-label">@T["Tax id"]</label>
+    <div class="ocat-end">
+        <input asp-for="TaxId" class="form-control" autocomplete="off" />
+        <span class="hint">@T["Such as a VAT number. It is shown on invoices."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" data-customer-business>
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsTaxExempt" type="checkbox" class="form-check-input" />
+            <label asp-for="IsTaxExempt" class="form-check-label">@T["Exempt from tax"]</label>
+        </div>
+        <span class="hint dashed">@T["The customer pays no tax when they check out signed in, such as a reseller or a charity you hold a certificate for."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" data-customer-business>
+    <label asp-for="TaxExemptionReason" class="ocat-label">@T["Why they are exempt"]</label>
+    <div class="ocat-end">
+        <input asp-for="TaxExemptionReason" class="form-control" autocomplete="off" />
+        <span class="hint">@T["Such as the resale certificate number, for your records."]</span>
+    </div>
+</div>

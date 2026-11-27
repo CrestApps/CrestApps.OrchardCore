@@ -7,9 +7,8 @@
      data-ai-data-source-azure-ai-search
      data-ai-data-source-azure-ai-search-api-key-value="@AzureAISearchSourceMetadata.ApiKeyAuthenticationType"
      hidden>
-    <fieldset class="ocat-wrapper">
-        <legend class="ocat-label">@T["Azure AI Search Connection"]</legend>
-        <div class="ocat-end">
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
             <div class="mb-3">
                 <label asp-for="IndexName" class="form-label ocat-label-required">@T["Index name"]</label>
                 <input asp-for="IndexName" class="form-control" />
@@ -66,5 +65,5 @@
             </div>
             </div>
         </div>
-    </fieldset>
+    </div>
 </div>

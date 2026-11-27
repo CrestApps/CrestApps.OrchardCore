@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -32,6 +34,8 @@ public sealed class PlanningGroupsController : Controller
     private readonly IActivityQueueManager _queueManager;
     private readonly ITeamManager _teamManager;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<PlanningGroupEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -43,6 +47,8 @@ public sealed class PlanningGroupsController : Controller
     /// <param name="queueManager">The queue manager.</param>
     /// <param name="teamManager">The team manager.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public PlanningGroupsController(
         IAuthorizationService authorizationService,
@@ -50,6 +56,8 @@ public sealed class PlanningGroupsController : Controller
         IActivityQueueManager queueManager,
         ITeamManager teamManager,
         INotifier notifier,
+        IDisplayManager<PlanningGroupEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<PlanningGroupsController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
@@ -57,6 +65,8 @@ public sealed class PlanningGroupsController : Controller
         _queueManager = queueManager;
         _teamManager = teamManager;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -129,6 +139,8 @@ public sealed class PlanningGroupsController : Controller
 
         await PopulateAsync(model);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -148,6 +160,7 @@ public sealed class PlanningGroupsController : Controller
         }
 
         var isNew = string.IsNullOrEmpty(model.Id);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
         var item = isNew ? await _manager.NewAsync() : await _manager.FindByIdAsync(model.Id);
 
         if (item is null)

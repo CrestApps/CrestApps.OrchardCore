@@ -70,7 +70,7 @@ public sealed class VeriphonePhoneNumberVerificationSettingsDisplayDriver : Site
         {
             viewModel.IsEnabled = settings.IsEnabled;
             viewModel.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey);
-        }).Location("Content:6#Veriphone")
+        }).Location(l => l.Zone("Content", "6").Tab(S["Veriphone"], "6").Card(S["Connection"], "10"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
             _httpContextAccessor.HttpContext?.User,

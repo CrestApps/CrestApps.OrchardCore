@@ -1,0 +1,18 @@
+@model TimeOffTypeEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Unit" class="ocat-label">@T["Counted in"]</label>
+    <div class="ocat-end">
+        <select asp-for="Unit" class="form-select" style="max-width: 12rem">
+            <option value="Hours">@T["Hours"]</option>
+            <option value="Days">@T["Days"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="HoursPerDay" class="ocat-label ocat-label-required">@T["Hours in a day"]</label>
+    <div class="ocat-end">
+        <input asp-for="HoursPerDay" type="number" step="0.25" min="0.25" max="24" class="form-control" style="max-width: 8rem" />
+        <span class="hint">@T["What a weekday counts when the worker has no shift that day. A day with shifts counts their paid time."]</span>
+    </div>
+</div>

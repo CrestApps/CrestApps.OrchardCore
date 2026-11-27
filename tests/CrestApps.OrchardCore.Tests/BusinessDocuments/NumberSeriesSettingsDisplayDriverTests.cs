@@ -138,9 +138,14 @@ public sealed class NumberSeriesSettingsDisplayDriverTests
         settings.Formats[Invoice] = new NumberSeriesFormat("INV-{yyyy}-{seq:0000}", 7, NumberSeriesReset.Yearly);
 
         // Act
-        var model = Assert.Single(await DisplayResultModels.BuildAsync<NumberSeriesSettingsViewModel>(CreateDriver().Edit(Mock.Of<ISite>(), settings, null)));
+        var models = await DisplayResultModels.BuildAsync<NumberSeriesSettingsViewModel>(CreateDriver().Edit(Mock.Of<ISite>(), settings, null));
 
-        // Assert
+        // Assert: one help shape, then one shape for each series, each at its own index.
+        Assert.Equal(3, models.Count);
+        Assert.Equal([0, 1], models.Skip(1).Select(card => card.Index));
+
+        var model = models[0];
+
         Assert.Equal("2026-11-13", model.Today);
         Assert.Equal(2, model.Series.Count);
 

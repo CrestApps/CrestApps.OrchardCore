@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Activities;
@@ -16,20 +17,26 @@ public sealed class AICompletionWithConfigPersonaDisplayDriver : DisplayDriver<I
 {
     private readonly IAIPersonaManager _personaManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AICompletionWithConfigPersonaDisplayDriver"/> class.
     /// </summary>
     /// <param name="personaManager">The persona manager, which lists the personas to pick from.</param>
-    public AICompletionWithConfigPersonaDisplayDriver(IAIPersonaManager personaManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AICompletionWithConfigPersonaDisplayDriver(
+        IAIPersonaManager personaManager,
+        IStringLocalizer<AICompletionWithConfigPersonaDisplayDriver> stringLocalizer)
     {
         _personaManager = personaManager;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
     public override IDisplayResult Edit(AICompletionWithConfigTask activity, BuildEditorContext context)
     {
         return Initialize<AIPersonaPickerViewModel>("AIPersonaPicker_Edit", model => _personaManager.PopulatePersonaPickerAsync(model, activity.Interaction))
-            .Location("Content:2.5#Content;1");
+            .Location(l => l.Zone("Content", "2.5").Tab(S["Content"], "1").Card(S["Model"], "20"));
     }
 
     /// <inheritdoc />

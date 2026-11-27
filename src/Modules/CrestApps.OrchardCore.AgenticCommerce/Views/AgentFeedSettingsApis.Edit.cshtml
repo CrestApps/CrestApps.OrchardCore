@@ -1,0 +1,98 @@
+@model CrestApps.OrchardCore.AgenticCommerce.Feeds.AgentFeedSettingsViewModel
+
+@{
+    var pushes = Model.Status?.FeedApiPushes ?? new Dictionary<string, CrestApps.OrchardCore.AgenticCommerce.Feeds.AgentFeedPushResult>();
+    var createdFeeds = Model.Status?.FeedApiFeedIds ?? new Dictionary<string, string>();
+}
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-body-secondary mb-0">@T["Agent platforms that host an Agentic Commerce Protocol feed API. The store creates its feed there, pushes every product once a day, and pushes a product again after it is published or its stock changes."]</p>
+    </div>
+</div>
+
+@for (var i = 0; i < Model.FeedApiTargets.Count; i++)
+{
+    var target = Model.FeedApiTargets[i];
+    var isNew = string.IsNullOrEmpty(target.Id);
+    var push = isNew ? null : pushes.GetValueOrDefault(target.Id);
+    var createdFeed = isNew ? null : createdFeeds.GetValueOrDefault(target.Id);
+
+    <fieldset class="border rounded p-3 mb-3">
+        <legend class="h6 float-none w-auto px-1">@(isNew ? T["Add a feed API"] : (string.IsNullOrEmpty(target.Name) ? target.BaseUrl : target.Name))</legend>
+        <input type="hidden" asp-for="FeedApiTargets[i].Id" />
+
+        <div class="ocat-wrapper">
+            <label asp-for="FeedApiTargets[i].Name" class="ocat-label">@T["Name"]</label>
+            <div class="ocat-end">
+                <input asp-for="FeedApiTargets[i].Name" class="form-control" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="FeedApiTargets[i].BaseUrl">
+            <label asp-for="FeedApiTargets[i].BaseUrl" class="ocat-label">@T["Address"]</label>
+            <div class="ocat-end">
+                <input asp-for="FeedApiTargets[i].BaseUrl" type="url" class="form-control" placeholder="https://api.example.com/acp" />
+                <span asp-validation-for="FeedApiTargets[i].BaseUrl" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="FeedApiTargets[i].BearerToken">
+            <label asp-for="FeedApiTargets[i].BearerToken" class="ocat-label">@T["API key"]</label>
+            <div class="ocat-end">
+                <input asp-for="FeedApiTargets[i].BearerToken" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(target.HasBearerToken ? T["A key is saved; enter a new one to replace it"] : T["The platform's key"])" />
+                <span asp-validation-for="FeedApiTargets[i].BearerToken" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <label asp-for="FeedApiTargets[i].FeedId" class="ocat-label">@T["Feed ID"]</label>
+            <div class="ocat-end">
+                <input asp-for="FeedApiTargets[i].FeedId" class="form-control" placeholder="@createdFeed" />
+                <span class="hint">@T["Optional. Leave it empty to have the store create a feed on the first push."]</span>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper" asp-validation-class-for="FeedApiTargets[i].TargetCountry">
+            <label asp-for="FeedApiTargets[i].TargetCountry" class="ocat-label">@T["Target country"]</label>
+            <div class="ocat-limited">
+                <input asp-for="FeedApiTargets[i].TargetCountry" class="form-control" maxlength="2" placeholder="US" />
+                <span asp-validation-for="FeedApiTargets[i].TargetCountry" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="ocat-limited-wrapper">
+            <label asp-for="FeedApiTargets[i].Currency" class="ocat-label">@T["Currency"]</label>
+            <div class="ocat-limited">
+                <input asp-for="FeedApiTargets[i].Currency" class="form-control" maxlength="3" placeholder="USD" />
+            </div>
+        </div>
+
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="FeedApiTargets[i].Enabled" type="checkbox" class="form-check-input" />
+                    <label asp-for="FeedApiTargets[i].Enabled" class="form-check-label">@T["Push products to this platform"]</label>
+                </div>
+                @if (!isNew)
+                {
+                    <div class="form-check">
+                        <input asp-for="FeedApiTargets[i].Remove" type="checkbox" class="form-check-input" />
+                        <label asp-for="FeedApiTargets[i].Remove" class="form-check-label">@T["Remove this feed API"]</label>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (push is not null)
+        {
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <span class="badge ta-badge fw-normal @(push.Succeeded ? "text-success" : "text-danger")">@(push.Succeeded ? T["Pushed"] : T["Failed"])</span>
+                    <span>@await DisplayAsync(await New.DateTime(Utc: push.FinishedUtc, Format: "g"))</span>
+                    <span class="d-block small">@push.Message</span>
+                </div>
+            </div>
+        }
+    </fieldset>
+}

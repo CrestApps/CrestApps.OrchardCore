@@ -1,435 +1,93 @@
 @model TaxFormViewModel
 
-@{
-    var fieldsName = Html.NameFor(m => m.Fields).ToString();
-    var valuesName = Html.NameFor(m => m.Values).ToString();
-    var checksName = Html.NameFor(m => m.Checks).ToString();
-
-    // A field's row: what it is, as hidden inputs the modal edits, and a summary of them.
-    async Task FieldRow(string index, TaxFormFieldViewModel field)
-    {
-        var name = $"{fieldsName}[{index}]";
-        <tr data-field-row>
-            <td class="fw-semibold" data-field-show="Number">
-                @field.Number
-            </td>
-            <td style="min-width: 11rem" data-field-show="Label">@field.Label</td>
-            <td><code class="d-inline-block text-truncate align-middle" style="max-width: 16rem" data-field-show="Formula" title="@field.Formula">@field.Formula</code></td>
-            <td style="max-width: 12rem" data-field-show="Options"></td>
-            <td class="text-end text-nowrap">
-                <input type="hidden" name="@(fieldsName).Index" value="@index" />
-                <input type="hidden" name="@(name).Number" value="@field.Number" data-field-value="Number" />
-                <input type="hidden" name="@(name).Label" value="@field.Label" data-field-value="Label" />
-                <input type="hidden" name="@(name).Level" value="@(field.Level ?? "Recipient")" data-field-value="Level" />
-                <input type="hidden" name="@(name).Formula" value="@field.Formula" data-field-value="Formula" />
-                <input type="hidden" name="@(name).AddToFiling" value="@(field.AddToFiling ? "true" : "false")" data-field-value="AddToFiling" />
-                <input type="hidden" name="@(name).AcceptsReportedAmounts" value="@(field.AcceptsReportedAmounts ? "true" : "false")" data-field-value="AcceptsReportedAmounts" />
-                <input type="hidden" name="@(name).Print" value="@(field.Print ?? "Never")" data-field-value="Print" />
-                <button type="button" class="btn btn-sm btn-primary" data-field-edit>@T["Edit"]</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="up" title="@T["Move up"]" aria-label="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="down" title="@T["Move down"]" aria-label="@T["Move down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
-                <button type="button" class="btn btn-sm btn-outline-danger" data-remove-row title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-            </td>
-        </tr>
-    }
-
-    async Task ValueRow(string index, TaxFormValueViewModel value)
-    {
-        var name = $"{valuesName}[{index}]";
-        <tr>
-            <td>
-                <input type="hidden" name="@(valuesName).Index" value="@index" />
-                <input name="@(name).Name" value="@value.Name" class="form-control form-control-sm" aria-label="@T["Name"]" />
-            </td>
-            <td><input name="@(name).Year" value="@value.Year" type="number" min="1900" max="9999" class="form-control form-control-sm" aria-label="@T["From year"]" /></td>
-            <td><input name="@(name).Amount" value="@(value.Amount?.ToString(System.Globalization.CultureInfo.InvariantCulture))" type="number" step="any" class="form-control form-control-sm" aria-label="@T["Value"]" /></td>
-            <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-remove-row title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></td>
-        </tr>
-    }
-
-    async Task CheckRow(string index, TaxFormCheckViewModel check)
-    {
-        var name = $"{checksName}[{index}]";
-        <tr>
-            <td>
-                <input type="hidden" name="@(checksName).Index" value="@index" />
-                <input name="@(name).Condition" value="@check.Condition" class="form-control form-control-sm font-monospace" aria-label="@T["Must be true"]" />
-            </td>
-            <td><input name="@(name).Note" value="@check.Note" class="form-control form-control-sm" aria-label="@T["Note when it is not"]" /></td>
-            <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-remove-row title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></td>
-        </tr>
-    }
-}
-
-<div class="card mb-3">
-    <div class="card-header">@T["The form"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="DisplayName">
-            <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Title"]</label>
-            <div class="ocat-end">
-                <input asp-for="DisplayName" class="form-control" maxlength="255" />
-                <span asp-validation-for="DisplayName" class="text-danger"></span>
-                <span class="hint">@T["What people see, such as Form 941 (quarterly federal return)."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Name">
-            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
-            <div class="ocat-end">
-                <input asp-for="Name" class="form-control" maxlength="50" style="max-width: 16rem" readonly="@Model.IsUsed" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-                <span class="hint">
-                    @if (Model.IsUsed)
-                    {
-                        @T["Filings were prepared from the form and keep its name, so it can't change."]
-                    }
-                    else
-                    {
-                        @T["The short name filings keep, such as US-941: letters, digits and dashes."]
-                    }
-                </span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Description" class="ocat-label">@T["Description"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Jurisdiction">
-            <label asp-for="Jurisdiction" class="ocat-label @(Model.RequiresJurisdiction ? "ocat-label-required" : null)">@T["Jurisdiction"]</label>
-            <div class="ocat-end">
-                <input asp-for="Jurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
-                <span asp-validation-for="Jurisdiction" class="text-danger"></span>
-                @if (Model.RequiresJurisdiction)
-                {
-                    <span class="hint">@T["A filer registered in this jurisdiction files the form, such as US, CA or CA-QC."]</span>
-                }
-                else
-                {
-                    <span class="hint">@T["The jurisdiction the form is for, such as US-MI. Leave it empty for a form any jurisdiction files."]</span>
-                }
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Source">
-            <label asp-for="Source" class="ocat-label ocat-label-required">@T["Prepared from"]</label>
-            <div class="ocat-end">
-                <select asp-for="Source" asp-items="Model.Sources" class="form-select" style="max-width: 18rem" data-reload-on-change="@(Model.IsNew ? Url.RouteUrl("TaxFormsCreate") : null)"></select>
-                <span asp-validation-for="Source" class="text-danger"></span>
-                <span class="hint">
-                    @if (Model.IsNew)
-                    {
-                        @T["The module that prepares and files the form from its own records, such as Payroll from pay statements or Tax Returns from a return's figures. It decides which functions the formulas can call, so choose it first."]
-                    }
-                    else
-                    {
-                        @T["The module that prepares and files the form from its own records, such as Payroll from pay statements or Tax Returns from a return's figures. It decides which functions the formulas can call; save the form after changing it to see its functions."]
-                    }
-                </span>
-            </div>
-        </div>
-        @if (Model.HasPeriod)
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="Period" class="ocat-label">@T["Filed for"]</label>
-                <div class="ocat-end">
-                    <select asp-for="Period" class="form-select" style="max-width: 14rem">
-                        <option value="Year">@T["A year"]</option>
-                        <option value="Quarter">@T["A quarter"]</option>
-                    </select>
-                </div>
-            </div>
-        }
-        else
-        {
-            <input type="hidden" asp-for="Period" />
-        }
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="Enabled" />
-                    <label class="form-check-label" asp-for="Enabled">@T["Filers can prepare it"]</label>
-                    <span class="hint dashed">@T["Turn a form off rather than deleting it once filings were prepared from it."]</span>
-                </div>
-            </div>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="DisplayName">
+    <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Title"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayName" class="form-control" maxlength="255" />
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+        <span class="hint">@T["What people see, such as Form 941 (quarterly federal return)."]</span>
     </div>
 </div>
-
-@if (Model.HasRecipients)
-{
-<div class="card mb-3">
-    <div class="card-header">@T["Recipients"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="HasRecipientStatements" />
-                    <label class="form-check-label" asp-for="HasRecipientStatements">@T["Each recipient gets a statement"]</label>
-                    <span class="hint dashed">@T["Such as a W-2, a 1099 or a T4 slip: kept on the filing, printed, and sent to the recipient once filed. Without it, recipient fields are only added up on the filing."]</span>
-                </div>
-                <div class="form-check mt-2">
-                    <input type="checkbox" class="form-check-input" asp-for="StatementPerJurisdiction" />
-                    <label class="form-check-label" asp-for="StatementPerJurisdiction">@T["A statement for each jurisdiction under the form's"]</label>
-                    <span class="hint dashed">@T["Such as a T4 slip for each province a person was employed in."]</span>
-                </div>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="RecipientCondition">
-            <label asp-for="RecipientCondition" class="ocat-label">@T["A recipient is reported when"]</label>
-            <div class="ocat-end">
-                <input asp-for="RecipientCondition" class="form-control font-monospace" />
-                <span class="hint">@T["A formula over the recipient fields, such as [1] >= VALUE('Threshold') OR [4] > 0. Leave it empty to report a recipient with any field that isn't zero."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="MissingTaxIdNote">
-            <label asp-for="MissingTaxIdNote" class="ocat-label">@T["Note for no tax id"]</label>
-            <div class="ocat-end">
-                <input asp-for="MissingTaxIdNote" class="form-control" />
-                <span class="hint">@T["Added to the filing for a reported recipient with no tax id on file, {0} being their name. Leave it empty to add none.", "{0}"]</span>
-            </div>
-        </div>
-    </div>
-</div>
-}
-
-<div class="card mb-3" data-tax-form-fields data-check-url="@Url.RouteUrl("TaxFormsCheckFormula")" data-source="@Model.Source">
-    <div class="card-header">@T["Fields"]</div>
-    <div class="card-body">
-        @if (Model.HasRecipients)
-        {
-            <p class="hint mb-3">@T["The form's boxes and lines. A recipient field is worked out from each reported recipient's records, a filing field from every reported recipient's records. A formula reads other fields of its level by their number in brackets, such as [5a]; a filing field also reads the recipient fields added up on the filing. Fields are worked out in the order their formulas need, so the order here is only how they are shown."]</p>
-        }
-        else
-        {
-            <p class="hint mb-3">@T["The form's boxes and lines, worked out from the source's records. A formula reads other fields by their number in brackets, such as [TotalTax]. Fields are worked out in the order their formulas need, so the order here is only how they are shown."]</p>
-        }
-
-        @foreach (var (level, title, empty) in new[]
-        {
-            ("Recipient", T["On each recipient's statement"], T["No field is on a recipient's statement yet."]),
-            ("Filing", T["On the filing"], T["No field is on the filing yet."]),
-        }.Where(level => Model.HasRecipients || level.Item1 == "Filing"))
-        {
-            @if (Model.HasRecipients)
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="50" style="max-width: 16rem" readonly="@Model.IsUsed" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">
+            @if (Model.IsUsed)
             {
-                <h6 class="mt-2">@title</h6>
+                @T["Filings were prepared from the form and keep its name, so it can't change."]
             }
-            <div class="table-responsive">
-                <table class="table table-sm table-hover align-middle mb-1" data-field-list="@level">
-                    <thead>
-                        <tr>
-                            <th class="text-nowrap" style="width: 7rem">@T["Box or line"]</th>
-                            <th>@T["Label"]</th>
-                            <th>@T["Formula"]</th>
-                            <th></th>
-                            <th class="text-end text-nowrap" style="width: 1%"><span class="visually-hidden">@T["Actions"]</span></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (var i = 0; i < Model.Fields.Count; i++)
-                        {
-                            var field = Model.Fields[i];
-
-                            if ((field.Level == "Filing" ? "Filing" : "Recipient") == level)
-                            {
-                                await FieldRow(i.ToString(System.Globalization.CultureInfo.InvariantCulture), field);
-                            }
-                        }
-                    </tbody>
-                </table>
-            </div>
-            <p class="text-muted small mb-1" data-field-empty="@level" hidden>@empty</p>
-            <button type="button" class="btn btn-sm btn-secondary mb-3" data-add-field="@level"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add field"]</button>
+            else
+            {
+                @T["The short name filings keep, such as US-941: letters, digits and dashes."]
+            }
+        </span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Jurisdiction">
+    <label asp-for="Jurisdiction" class="ocat-label @(Model.RequiresJurisdiction ? "ocat-label-required" : null)">@T["Jurisdiction"]</label>
+    <div class="ocat-end">
+        <input asp-for="Jurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
+        <span asp-validation-for="Jurisdiction" class="text-danger"></span>
+        @if (Model.RequiresJurisdiction)
+        {
+            <span class="hint">@T["A filer registered in this jurisdiction files the form, such as US, CA or CA-QC."]</span>
         }
-
-        <template data-field-template>
-            @{ await FieldRow("__index__", new TaxFormFieldViewModel()); }
-        </template>
-
+        else
+        {
+            <span class="hint">@T["The jurisdiction the form is for, such as US-MI. Leave it empty for a form any jurisdiction files."]</span>
+        }
     </div>
 </div>
-
-<div class="modal fade" id="taxFormFieldModal" tabindex="-1" aria-labelledby="taxFormFieldModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="taxFormFieldModalTitle">@T["Field"]</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row g-3">
-                    <div class="col-sm-3">
-                        <label for="taxFormFieldNumber" class="form-label">@T["Box or line"]</label>
-                        <input id="taxFormFieldNumber" class="form-control" maxlength="20" data-field-input="Number" />
-                    </div>
-                    <div class="col-sm-6">
-                        <label for="taxFormFieldLabel" class="form-label">@T["Label"]</label>
-                        <input id="taxFormFieldLabel" class="form-control" data-field-input="Label" />
-                    </div>
-                    <div class="col-sm-3" hidden="@(!Model.HasRecipients)">
-                        <label for="taxFormFieldLevel" class="form-label">@T["On"]</label>
-                        <select id="taxFormFieldLevel" class="form-select" data-field-input="Level">
-                            <option value="Recipient">@T["Each recipient's statement"]</option>
-                            <option value="Filing">@T["The filing"]</option>
-                        </select>
-                    </div>
-                    <div class="col-12">
-                        <label for="taxFormFieldFormula" class="form-label">@T["Formula"]</label>
-                        <textarea id="taxFormFieldFormula" class="form-control font-monospace" rows="4" spellcheck="false" data-field-input="Formula"></textarea>
-                        <div class="form-text" data-formula-result aria-live="polite"></div>
-                        <div class="d-flex flex-wrap gap-1 mt-2">
-                            @foreach (var (category, signature, description) in Model.Functions.Where(function => function.Category is not ("Text" or "Number" or "Date" or "Logical" or "Aggregate")))
-                            {
-                                <button type="button" class="btn btn-sm btn-outline-secondary font-monospace" title="@description" data-insert-function="@signature">@signature.Split('(')[0]</button>
-                            }
-                        </div>
-                        <details class="mt-2">
-                            <summary class="small">@T["Every function a formula can call"]</summary>
-                            <table class="table table-sm small mt-2 mb-0">
-                                <tbody>
-                                    @foreach (var (category, signature, description) in Model.Functions)
-                                    {
-                                        <tr>
-                                            <td class="font-monospace text-nowrap">@signature</td>
-                                            <td>@description <span class="badge ta-badge fw-normal ms-1">@category</span></td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </details>
-                    </div>
-                    <div class="col-sm-6" data-recipient-only>
-                        <div class="form-check form-switch">
-                            <input type="checkbox" class="form-check-input" id="taxFormFieldAddToFiling" data-field-input="AddToFiling" />
-                            <label class="form-check-label" for="taxFormFieldAddToFiling">@T["Add up on the filing"]</label>
-                            <span class="hint dashed">@T["The filing gets the people's total under the same number."]</span>
-                        </div>
-                    </div>
-                    @if (Model.ReportedAmountsLabel is not null)
-                    {
-                        <div class="col-sm-6">
-                            <div class="form-check form-switch">
-                                <input type="checkbox" class="form-check-input" id="taxFormFieldReported" data-field-input="AcceptsReportedAmounts" />
-                                <label class="form-check-label" for="taxFormFieldReported">@T["{0} report to it", Model.ReportedAmountsLabel]</label>
-                                <span class="hint dashed">@T["They name the field, and their amounts are added to the formula's."]</span>
-                            </div>
-                        </div>
-                    }
-                    else
-                    {
-                        <input type="checkbox" hidden data-field-input="AcceptsReportedAmounts" />
-                    }
-                    <div class="col-sm-6" data-recipient-only>
-                        <label for="taxFormFieldPrint" class="form-label">@T["On the printed statement"]</label>
-                        <select id="taxFormFieldPrint" class="form-select" data-field-input="Print">
-                            <option value="Never">@T["Not printed"]</option>
-                            <option value="Always">@T["Always printed"]</option>
-                            <option value="WhenNotZero">@T["Printed when not zero"]</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
-                <button type="button" class="btn btn-primary" data-field-apply>@T["Done"]</button>
-            </div>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="Source">
+    <label asp-for="Source" class="ocat-label ocat-label-required">@T["Prepared from"]</label>
+    <div class="ocat-end">
+        <select asp-for="Source" asp-items="Model.Sources" class="form-select" style="max-width: 18rem" data-reload-on-change="@(Model.IsNew ? Url.RouteUrl("TaxFormsCreate") : null)"></select>
+        <span asp-validation-for="Source" class="text-danger"></span>
+        <span class="hint">
+            @if (Model.IsNew)
+            {
+                @T["The module that prepares and files the form from its own records, such as Payroll from pay statements or Tax Returns from a return's figures. It decides which functions the formulas can call, so choose it first."]
+            }
+            else
+            {
+                @T["The module that prepares and files the form from its own records, such as Payroll from pay statements or Tax Returns from a return's figures. It decides which functions the formulas can call; save the form after changing it to see its functions."]
+            }
+        </span>
     </div>
 </div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Yearly values"]</div>
-    <div class="card-body">
-        <p class="hint mb-2">@T["Figures that change by year, such as a reporting threshold or a maximum: a formula reads VALUE('Name'), the value of the latest year at or before the filing's year."]</p>
-        <table class="table table-sm align-middle mb-2" data-rows="values">
-            <thead><tr><th>@T["Name"]</th><th style="width: 9rem">@T["From year"]</th><th style="width: 12rem">@T["Value"]</th><th style="width: 3rem"></th></tr></thead>
-            <tbody>
-                @for (var i = 0; i < Model.Values.Count; i++)
-                {
-                    await ValueRow(i.ToString(System.Globalization.CultureInfo.InvariantCulture), Model.Values[i]);
-                }
-            </tbody>
-        </table>
-        <template data-row-template="values">
-            @{ await ValueRow("__index__", new TaxFormValueViewModel()); }
-        </template>
-        <button type="button" class="btn btn-sm btn-secondary" data-add-row="values"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add value"]</button>
-    </div>
-</div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Checks"]</div>
-    <div class="card-body">
-        <p class="hint mb-2">@T["A formula over the filing fields that must be true for a filing, such as ISACCOUNT(ACCOUNT('CA'), '#########RP####'). When it isn't, its note is added to the filing."]</p>
-        <table class="table table-sm align-middle mb-2" data-rows="checks">
-            <thead><tr><th>@T["Must be true"]</th><th>@T["Note when it is not"]</th><th style="width: 3rem"></th></tr></thead>
-            <tbody>
-                @for (var i = 0; i < Model.Checks.Count; i++)
-                {
-                    await CheckRow(i.ToString(System.Globalization.CultureInfo.InvariantCulture), Model.Checks[i]);
-                }
-            </tbody>
-        </table>
-        <template data-row-template="checks">
-            @{ await CheckRow("__index__", new TaxFormCheckViewModel()); }
-        </template>
-        <button type="button" class="btn btn-sm btn-secondary" data-add-row="checks"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add check"]</button>
-    </div>
-</div>
-
-@if (Model.HasRecipients)
+@if (Model.HasPeriod)
 {
-<div class="card mb-3">
-    <div class="card-header">@T["A recipient's statement"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="StatementName" class="ocat-label">@T["Called"]</label>
-            <div class="ocat-end">
-                <input asp-for="StatementName" class="form-control" style="max-width: 20rem" />
-                <span class="hint">@T["What a recipient's statement is called where they see it, such as Form W-2 or T4 slip."]</span>
-            </div>
+    <div class="ocat-wrapper">
+        <label asp-for="Period" class="ocat-label">@T["Filed for"]</label>
+        <div class="ocat-end">
+            <select asp-for="Period" class="form-select" style="max-width: 14rem">
+                <option value="Year">@T["A year"]</option>
+                <option value="Quarter">@T["A quarter"]</option>
+            </select>
         </div>
-        <div class="ocat-wrapper">
-            <label asp-for="StatementTitle" class="ocat-label">@T["Printed title"]</label>
-            <div class="ocat-end"><input asp-for="StatementTitle" class="form-control" /></div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="StatementCopy" class="ocat-label">@T["Line under the title"]</label>
-            <div class="ocat-end"><input asp-for="StatementCopy" class="form-control" /></div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="TaxIdLabel" class="ocat-label">@T["Recipient's tax id label"]</label>
-            <div class="ocat-end"><input asp-for="TaxIdLabel" class="form-control" style="max-width: 24rem" /></div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="TaxIdFormat" class="ocat-label">@T["Masked tax id"]</label>
-            <div class="ocat-end">
-                <input asp-for="TaxIdFormat" class="form-control" style="max-width: 12rem" />
-                <span class="hint">@T["How the recipient's tax id is printed, {0} being its last characters, such as XXX-XX-{0}.", "{0}"]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="FilerTaxIdLabel" class="ocat-label">@T["Filer's number label"]</label>
-            <div class="ocat-end"><input asp-for="FilerTaxIdLabel" class="form-control" style="max-width: 24rem" /></div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="FilerAccountJurisdiction" class="ocat-label">@T["Filer's number from"]</label>
-            <div class="ocat-end">
-                <input asp-for="FilerAccountJurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
-                <span class="hint">@T["The jurisdiction of the filer's registration whose account number is printed, such as CA. Leave it empty to print the filer's tax id."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="FileName" class="ocat-label">@T["File name"]</label>
-            <div class="ocat-end">
-                <input asp-for="FileName" class="form-control" maxlength="40" style="max-width: 12rem" />
-                <span class="hint">@T["The start of the PDF's name, such as W-2 for W-2-2026.pdf."]</span>
-            </div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="Period" />
+}
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Filers can prepare it"]</label>
+            <span class="hint dashed">@T["Turn a form off rather than deleting it once filings were prepared from it."]</span>
         </div>
     </div>
 </div>
-}
-
 
 <script at="Foot">
     (() => {
@@ -443,251 +101,5 @@
             url.searchParams.set('source', source.value);
             window.location.assign(url.toString());
         });
-    })();
-
-    (() => {
-        const card = document.querySelector('[data-tax-form-fields]');
-        const modalElement = document.getElementById('taxFormFieldModal');
-
-        if (!card || !modalElement) {
-            return;
-        }
-
-        const form = card.closest('form');
-        const modal = bootstrap.Modal.getOrCreateInstance(modalElement);
-        const input = name => modalElement.querySelector(`[data-field-input="${name}"]`);
-        const result = modalElement.querySelector('[data-formula-result]');
-        const texts = {
-            addedUp: @Json.Serialize(T["Added up"].Value),
-            reported: @Json.Serialize((Model.ReportedAmountsLabel ?? T["Reported"].Value)),
-            printed: @Json.Serialize(T["Printed"].Value),
-            printedNotZero: @Json.Serialize(T["Printed when not zero"].Value),
-            noFormula: @Json.Serialize(Model.ReportedAmountsLabel is null ? T["(reported amounts)"].Value : "(" + Model.ReportedAmountsLabel.ToLowerInvariant() + ")"),
-            checking: @Json.Serialize(T["Checking the formula..."].Value),
-            failed: @Json.Serialize(T["The formula could not be checked."].Value),
-        };
-        let editing = null;
-        let isNew = false;
-        let timer = null;
-
-        const value = (row, name) => row.querySelector(`[data-field-value="${name}"]`);
-        const random = () => 'n' + Math.random().toString(36).slice(2, 10);
-
-        const badge = text => {
-            const span = document.createElement('span');
-            span.className = 'badge ta-badge fw-normal me-1';
-            span.textContent = text;
-            return span;
-        };
-
-        // Shows a row's values in its cells.
-        const show = row => {
-            const level = value(row, 'Level').value;
-            row.querySelector('[data-field-show="Number"]').textContent = value(row, 'Number').value;
-            row.querySelector('[data-field-show="Label"]').textContent = value(row, 'Label').value;
-
-            const formula = row.querySelector('[data-field-show="Formula"]');
-            formula.textContent = value(row, 'Formula').value || (value(row, 'AcceptsReportedAmounts').value === 'true' ? texts.noFormula : '');
-            formula.title = value(row, 'Formula').value;
-
-            const options = row.querySelector('[data-field-show="Options"]');
-            options.replaceChildren();
-
-            if (level === 'Recipient' && value(row, 'AddToFiling').value === 'true') {
-                options.append(badge(texts.addedUp));
-            }
-
-            if (value(row, 'AcceptsReportedAmounts').value === 'true') {
-                options.append(badge(texts.reported));
-            }
-
-            if (level === 'Recipient' && value(row, 'Print').value === 'Always') {
-                options.append(badge(texts.printed));
-            } else if (level === 'Recipient' && value(row, 'Print').value === 'WhenNotZero') {
-                options.append(badge(texts.printedNotZero));
-            }
-        };
-
-        const refreshEmpty = () => {
-            card.querySelectorAll('[data-field-list]').forEach(table => {
-                const level = table.getAttribute('data-field-list');
-                card.querySelector(`[data-field-empty="${level}"]`).hidden = table.tBodies[0].rows.length > 0;
-            });
-        };
-
-        const toggleRecipientOnly = () => {
-            const recipient = input('Level').value === 'Recipient';
-            modalElement.querySelectorAll('[data-recipient-only]').forEach(element => element.hidden = !recipient);
-        };
-
-        // Checks the formula on the server against the numbers the page has now.
-        const check = () => {
-            clearTimeout(timer);
-            timer = setTimeout(async () => {
-                const data = new FormData();
-                data.append('__RequestVerificationToken', form.querySelector('input[name="__RequestVerificationToken"]').value);
-                data.append('Source', card.getAttribute('data-source') || '');
-                data.append('Number', input('Number').value);
-                data.append('Level', input('Level').value);
-                data.append('Formula', input('Formula').value);
-
-                card.querySelectorAll('[data-field-row]').forEach(row => {
-                    if (row === editing) {
-                        return;
-                    }
-
-                    const number = value(row, 'Number').value;
-
-                    if (value(row, 'Level').value === 'Filing') {
-                        data.append('FilingNumbers', number);
-                    } else {
-                        data.append('RecipientNumbers', number);
-
-                        if (value(row, 'AddToFiling').value === 'true') {
-                            data.append('TotaledNumbers', number);
-                        }
-                    }
-                });
-
-                result.className = 'form-text';
-                result.textContent = texts.checking;
-
-                try {
-                    const response = await fetch(card.getAttribute('data-check-url'), { method: 'POST', body: data });
-                    const answer = await response.json();
-                    result.className = answer.ok ? 'form-text text-success' : 'form-text text-danger';
-                    result.textContent = (answer.ok ? '✓ ' : '✗ ') + answer.message;
-                } catch {
-                    result.className = 'form-text text-warning';
-                    result.textContent = texts.failed;
-                }
-            }, 300);
-        };
-
-        const open = (row, created) => {
-            editing = row;
-            isNew = created;
-
-            ['Number', 'Label', 'Level', 'Formula', 'Print'].forEach(name => input(name).value = value(row, name).value);
-            ['AddToFiling', 'AcceptsReportedAmounts'].forEach(name => input(name).checked = value(row, name).value === 'true');
-
-            toggleRecipientOnly();
-            check();
-            modal.show();
-        };
-
-        const add = level => {
-            const template = card.querySelector('template[data-field-template]');
-            const body = card.querySelector(`table[data-field-list="${level}"] tbody`);
-
-            body.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__index__', random()));
-
-            const row = body.lastElementChild;
-            value(row, 'Level').value = level;
-            value(row, 'Print').value = level === 'Recipient' ? 'Always' : 'Never';
-            value(row, 'AddToFiling').value = level === 'Recipient' ? 'true' : 'false';
-            open(row, true);
-        };
-
-        modalElement.querySelector('[data-field-apply]').addEventListener('click', () => {
-            if (!editing) {
-                return;
-            }
-
-            ['Number', 'Label', 'Level', 'Formula', 'Print'].forEach(name => value(editing, name).value = input(name).value.trim());
-            ['AddToFiling', 'AcceptsReportedAmounts'].forEach(name => value(editing, name).value = input(name).checked ? 'true' : 'false');
-
-            // A field moved to the other level moves to its list.
-            const level = value(editing, 'Level').value;
-            const body = card.querySelector(`table[data-field-list="${level}"] tbody`);
-
-            if (editing.parentElement !== body) {
-                body.append(editing);
-            }
-
-            show(editing);
-            isNew = false;
-            modal.hide();
-        });
-
-        // A new field closed without Done is not added.
-        modalElement.addEventListener('hidden.bs.modal', () => {
-            if (isNew && editing) {
-                editing.remove();
-            }
-
-            editing = null;
-            isNew = false;
-            refreshEmpty();
-        });
-
-        input('Level').addEventListener('change', () => {
-            toggleRecipientOnly();
-            check();
-        });
-        ['Number', 'Formula'].forEach(name => input(name).addEventListener('input', check));
-        input('AddToFiling').addEventListener('change', check);
-
-        modalElement.querySelectorAll('[data-insert-function]').forEach(button => button.addEventListener('click', () => {
-            const formula = input('Formula');
-            const text = button.getAttribute('data-insert-function').split('(')[0] + '(';
-            const start = formula.selectionStart ?? formula.value.length;
-            const end = formula.selectionEnd ?? formula.value.length;
-
-            formula.setRangeText(text, start, end, 'end');
-            formula.focus();
-            check();
-        }));
-
-        card.querySelectorAll('[data-add-field]').forEach(button => button.addEventListener('click', () => add(button.getAttribute('data-add-field'))));
-
-        document.querySelectorAll('[data-add-row]').forEach(button => {
-            button.addEventListener('click', () => {
-                const kind = button.getAttribute('data-add-row');
-                const template = document.querySelector(`template[data-row-template="${kind}"]`);
-                const body = document.querySelector(`table[data-rows="${kind}"] tbody`);
-
-                if (!template || !body) {
-                    return;
-                }
-
-                body.insertAdjacentHTML('beforeend', template.innerHTML.replaceAll('__index__', random()));
-                body.lastElementChild?.querySelector('input:not([type=hidden])')?.focus();
-            });
-        });
-
-        document.addEventListener('click', event => {
-            const edit = event.target.closest('[data-field-edit]');
-
-            if (edit) {
-                open(edit.closest('tr'), false);
-
-                return;
-            }
-
-            const remove = event.target.closest('[data-remove-row]');
-
-            if (remove) {
-                remove.closest('tr')?.remove();
-                refreshEmpty();
-
-                return;
-            }
-
-            const move = event.target.closest('[data-move]');
-
-            if (move) {
-                const row = move.closest('tr');
-
-                if (move.getAttribute('data-move') === 'up' && row?.previousElementSibling) {
-                    row.parentElement.insertBefore(row, row.previousElementSibling);
-                } else if (move.getAttribute('data-move') === 'down' && row?.nextElementSibling) {
-                    row.parentElement.insertBefore(row.nextElementSibling, row);
-                }
-            }
-        });
-
-        card.querySelectorAll('[data-field-row]').forEach(show);
-        refreshEmpty();
     })();
 </script>

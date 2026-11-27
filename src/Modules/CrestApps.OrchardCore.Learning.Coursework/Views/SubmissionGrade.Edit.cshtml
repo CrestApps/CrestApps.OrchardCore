@@ -1,0 +1,83 @@
+@model SubmissionGradingViewModel
+@inject IDisplayManager<CrestApps.OrchardCore.Learning.Models.GradingAssistContext> AssistDisplay
+@inject OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor UpdateModelAccessor
+
+@{
+    var regrade = Model.Submission.Status == SubmissionStatus.Graded;
+}
+
+@if (Model.LatePenaltyPercent > 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <span class="hint">@T["Handed in late (days late: {0}): the grade you give loses a late penalty of {1}%.", Model.DaysLate, Model.LatePenaltyPercent.ToString("0.##")]</span>
+        </div>
+    </div>
+}
+@if (Model.Rubric is not null)
+{
+    @foreach (var criterion in Model.Rubric.Criteria)
+    {
+        var chosen = Model.Choices.TryGetValue(criterion.Id ?? string.Empty, out var levelId) ? levelId : null;
+
+        <fieldset class="ocat-wrapper">
+            <legend class="ocat-label fs-6">@criterion.Title</legend>
+            <div class="ocat-end">
+                @if (!string.IsNullOrWhiteSpace(criterion.Description))
+                {
+                    <span class="hint d-block mb-1">@criterion.Description</span>
+                }
+                @foreach (var level in criterion.Levels)
+                {
+                    var inputId = $"choice-{criterion.Id}-{level.Id}";
+
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" id="@inputId" name="Choices[@criterion.Id]" value="@level.Id" checked="@(chosen == level.Id)" />
+                        <label class="form-check-label" for="@inputId">@(level.Points == 1 ? T["{0} (1 point)", level.Title] : T["{0} ({1} points)", level.Title, level.Points.ToString("0.##")])</label>
+                    </div>
+                }
+            </div>
+        </fieldset>
+    }
+}
+else
+{
+    <div class="ocat-wrapper" asp-validation-class-for="Points">
+        <label asp-for="Points" class="ocat-label">@T["Points"]</label>
+        <div class="ocat-end">
+            <input asp-for="Points" type="number" min="0" max="@Model.Part.MaxPoints.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.01" class="form-control" />
+            <span class="hint">@T["Out of {0}.", Model.Part.MaxPoints.ToString("0.##")]</span>
+        </div>
+    </div>
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Feedback">
+    <label asp-for="Feedback" class="ocat-label">@T["Feedback"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Feedback" rows="5" class="form-control" maxlength="@CourseworkConstants.MaxFeedbackLength"></textarea>
+        <span class="hint">@T["The learner sees it with the grade, or with the work when you return it."]</span>
+    </div>
+</div>
+
+@await DisplayAsync(await AssistDisplay.BuildDisplayAsync(new CrestApps.OrchardCore.Learning.Models.GradingAssistContext
+{
+    Kind = CrestApps.OrchardCore.Learning.Models.GradingAssistContext.SubmissionKind,
+    RecordId = Model.Submission.ItemId,
+    MaxPoints = Model.Part.MaxPoints,
+    CanEdit = Model.CanGrade,
+    PointsField = Model.Rubric is null ? Html.NameFor(m => m.Points).ToString() : null,
+    FeedbackField = Html.NameFor(m => m.Feedback).ToString(),
+    RubricFieldPrefix = Model.Rubric is null ? null : "Choices",
+    AssistedField = Html.NameFor(m => m.AIAssisted).ToString(),
+}, UpdateModelAccessor.ModelUpdater, "Detail"))
+
+@if (regrade)
+{
+    <div class="ocat-wrapper" asp-validation-class-for="Reason">
+        <label asp-for="Reason" class="ocat-label">@T["Why grade again"]</label>
+        <div class="ocat-end">
+            <input asp-for="Reason" class="form-control" maxlength="@CourseworkConstants.MaxReasonLength" />
+            <span class="hint">@T["Needed to change a grade. The earlier grade is kept with it."]</span>
+        </div>
+    </div>
+}

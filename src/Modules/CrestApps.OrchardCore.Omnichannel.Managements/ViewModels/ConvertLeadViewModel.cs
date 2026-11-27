@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.ContentManagement;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 
@@ -118,4 +119,10 @@ public class ConvertLeadViewModel
     /// </summary>
     [BindNever]
     public int FinishedActivityCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor shape, built by the display drivers of this view model, which groups the choices in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

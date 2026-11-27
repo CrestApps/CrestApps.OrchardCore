@@ -54,7 +54,7 @@ internal sealed class TeamDisplayDriver : DisplayDriver<Team>
                 .ToList();
             model.KindOptions = KindOptions(model.Kind);
             model.TimeZoneOptions = await _timeZoneSelectListProvider.GetTimeZoneOptionsAsync(model.TimeZoneId);
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Team team, UpdateEditorContext context)

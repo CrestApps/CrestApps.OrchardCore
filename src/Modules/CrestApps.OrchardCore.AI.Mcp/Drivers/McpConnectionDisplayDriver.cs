@@ -54,7 +54,7 @@ internal sealed class McpConnectionDisplayDriver : DisplayDriver<McpConnection>
         return Initialize<McpConnectionFieldsViewModel>("McpConnectionFields_Edit", model =>
         {
             model.DisplayText = connection.DisplayText;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpConnection connection, UpdateEditorContext context)

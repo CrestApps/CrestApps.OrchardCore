@@ -38,27 +38,33 @@ internal sealed class AzureSpeechDeploymentDisplayDriver : DisplayDriver<AIDeplo
             return null;
         }
 
-        return Initialize<AzureSpeechDeploymentViewModel>("AzureSpeechDeployment_Edit", model =>
+        return Combine(
+            Initialize<AzureSpeechDeploymentViewModel>("AzureSpeechDeployment_Edit", model => Populate(deployment, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Connection"], "20")),
+            Initialize<AzureSpeechDeploymentViewModel>("AzureSpeechDeploymentAuthentication_Edit", model => Populate(deployment, model))
+                .Location(l => l.Zone("Content", "5.1").Card(S["Authentication"], "30")));
+    }
+
+    private void Populate(AIDeployment deployment, AzureSpeechDeploymentViewModel model)
+    {
+        model.Endpoint = GetPropertyString(deployment, "Endpoint");
+
+        var authTypeStr = GetPropertyString(deployment, "AuthenticationType");
+
+        if (!string.IsNullOrEmpty(authTypeStr) && Enum.TryParse<AzureAuthenticationType>(authTypeStr, true, out var authType))
         {
-            model.Endpoint = GetPropertyString(deployment, "Endpoint");
+            model.AuthenticationType = authType;
+        }
 
-            var authTypeStr = GetPropertyString(deployment, "AuthenticationType");
+        model.IdentityId = GetPropertyString(deployment, "IdentityId");
+        model.HasApiKey = !string.IsNullOrEmpty(GetPropertyString(deployment, "ApiKey"));
 
-            if (!string.IsNullOrEmpty(authTypeStr) && Enum.TryParse<AzureAuthenticationType>(authTypeStr, true, out var authType))
-            {
-                model.AuthenticationType = authType;
-            }
-
-            model.IdentityId = GetPropertyString(deployment, "IdentityId");
-            model.HasApiKey = !string.IsNullOrEmpty(GetPropertyString(deployment, "ApiKey"));
-
-            model.AuthenticationTypes =
-            [
-                new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
-                new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
-                new (S["API key"], nameof(AzureAuthenticationType.ApiKey)),
-            ];
-        }).Location("Content:5");
+        model.AuthenticationTypes =
+        [
+            new (S["Default authentication"], nameof(AzureAuthenticationType.Default)),
+            new (S["Managed identity"], nameof(AzureAuthenticationType.ManagedIdentity)),
+            new (S["API key"], nameof(AzureAuthenticationType.ApiKey)),
+        ];
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)

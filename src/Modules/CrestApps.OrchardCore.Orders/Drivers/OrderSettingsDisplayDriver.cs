@@ -45,23 +45,31 @@ public sealed class OrderSettingsDisplayDriver : SiteDisplayDriver<OrderSettings
         => OrderConstants.SettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, OrderSettings settings, BuildEditorContext context)
-        => Initialize<OrderSettingsViewModel>("OrderSettings_Edit", async model =>
-        {
-            model.OrderBumpProductId = settings.OrderBumpProductId;
-            model.OrderBumpPercentOff = settings.OrderBumpPercentOff;
-            model.OrderBumpHeadline = settings.OrderBumpHeadline;
-            model.ProductSearchEndpoint = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, CouponItemSearchEndpoints.ProductsRouteName);
-            model.InitialOrderBumpJson = System.Text.Json.JsonSerializer.Serialize(string.IsNullOrEmpty(settings.OrderBumpProductId)
-                ? []
-                : (await _lookup.GetProductsAsync([settings.OrderBumpProductId])).Select(product => new { value = product.Id, text = product.Text, selected = true }));
-            model.SendConfirmations = settings.SendConfirmations;
-            model.SendRecoveryEmails = settings.SendRecoveryEmails;
-            model.RecoveryDelayHours = settings.RecoveryDelayHours;
-            model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
-            model.AllowQuoteRequests = settings.AllowQuoteRequests;
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
-        .OnGroup(SettingsGroupId);
+    {
+        ShapeResult Card(string shapeType, string position, LocalizedString card, string cardPosition)
+            => Initialize<OrderSettingsViewModel>(shapeType, async model =>
+            {
+                model.OrderBumpProductId = settings.OrderBumpProductId;
+                model.OrderBumpPercentOff = settings.OrderBumpPercentOff;
+                model.OrderBumpHeadline = settings.OrderBumpHeadline;
+                model.ProductSearchEndpoint = _linkGenerator.GetPathByName(_httpContextAccessor.HttpContext, CouponItemSearchEndpoints.ProductsRouteName);
+                model.InitialOrderBumpJson = System.Text.Json.JsonSerializer.Serialize(string.IsNullOrEmpty(settings.OrderBumpProductId)
+                    ? []
+                    : (await _lookup.GetProductsAsync([settings.OrderBumpProductId])).Select(product => new { value = product.Id, text = product.Text, selected = true }));
+                model.SendConfirmations = settings.SendConfirmations;
+                model.SendRecoveryEmails = settings.SendRecoveryEmails;
+                model.RecoveryDelayHours = settings.RecoveryDelayHours;
+                model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
+                model.AllowQuoteRequests = settings.AllowQuoteRequests;
+            }).Location(l => l.Zone("Content", position).Card(card, cardPosition))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, OrderPermissions.ManageOrders))
+            .OnGroup(SettingsGroupId);
+
+        return Combine(
+            Card("OrderSettingsEmails_Edit", "1", S["Customer Emails"], "10"),
+            Card("OrderSettingsQuotes_Edit", "1.1", S["Quotes"], "20"),
+            Card("OrderSettingsOrderBump_Edit", "1.2", S["Order Bump"], "30"));
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, OrderSettings settings, UpdateEditorContext context)
     {

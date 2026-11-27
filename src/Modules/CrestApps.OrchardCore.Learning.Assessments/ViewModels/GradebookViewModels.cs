@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 
@@ -38,6 +39,10 @@ public class GradeScaleEditViewModel
 
     /// <summary>Gets or sets the bands.</summary>
     public IList<GradeBandRowViewModel> Bands { get; set; } = [];
+
+    /// <summary>Gets or sets the editor the display drivers build: its fields in cards.</summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

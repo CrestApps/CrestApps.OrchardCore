@@ -82,46 +82,54 @@ internal sealed class FileSourceDisplayDriver : DisplayDriver<FileSource>
 
     public override IDisplayResult Edit(FileSource fileSource, BuildEditorContext context)
     {
-        return Initialize<FileSourceFieldsViewModel>("FileSourceFields_Edit", async model =>
-        {
-            model.DisplayText = fileSource.DisplayText;
-            model.AIDataSourceId = fileSource.AIDataSourceId;
-            model.Enabled = fileSource.Enabled;
-            model.ReindexIntervalMinutes = fileSource.ReindexIntervalMinutes;
+        return Combine(
+            Initialize<FileSourceFieldsViewModel>("FileSourceGeneral_Edit", model => PopulateAsync(fileSource, model))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<FileSourceFieldsViewModel>("FileSourceIngestion_Edit", model => PopulateAsync(fileSource, model))
+                .Location(l => l.Zone("Content", "1.1").Card(S["Ingestion"], "20")),
+            Initialize<FileSourceFieldsViewModel>("FileSourceFigures_Edit", model => PopulateAsync(fileSource, model))
+                .Location(l => l.Zone("Content", "1.2").Card(S["Figures"], "30")));
+    }
 
-            var metadata = fileSource.GetOrCreate<FileSourceMetadata>();
-            model.FigureMode = metadata.FigureMode;
-            model.VisionDeploymentName = metadata.VisionDeploymentName;
-            model.UtilityDeploymentName = metadata.UtilityDeploymentName;
-            model.MaxFigureDescriptionsPerDocument = metadata.MaxFigureDescriptionsPerDocument;
-            model.MaxItemsPerRun = metadata.MaxItemsPerRun;
-            model.Language = metadata.Language;
+    private async ValueTask PopulateAsync(FileSource fileSource, FileSourceFieldsViewModel model)
+    {
+        model.DisplayText = fileSource.DisplayText;
+        model.AIDataSourceId = fileSource.AIDataSourceId;
+        model.Enabled = fileSource.Enabled;
+        model.ReindexIntervalMinutes = fileSource.ReindexIntervalMinutes;
 
-            var dataSources = await _dataSourceStore.GetAsync(AIDataSourceSourceTypes.File);
+        var metadata = fileSource.GetOrCreate<FileSourceMetadata>();
+        model.FigureMode = metadata.FigureMode;
+        model.VisionDeploymentName = metadata.VisionDeploymentName;
+        model.UtilityDeploymentName = metadata.UtilityDeploymentName;
+        model.MaxFigureDescriptionsPerDocument = metadata.MaxFigureDescriptionsPerDocument;
+        model.MaxItemsPerRun = metadata.MaxItemsPerRun;
+        model.Language = metadata.Language;
 
-            model.DataSources = dataSources
-                .OrderBy(dataSource => dataSource.DisplayText, StringComparer.OrdinalIgnoreCase)
-                .Select(dataSource => new SelectListItem(dataSource.DisplayText, dataSource.ItemId))
-                .ToArray();
+        var dataSources = await _dataSourceStore.GetAsync(AIDataSourceSourceTypes.File);
 
-            model.HasDataSources = model.DataSources.Any();
+        model.DataSources = dataSources
+            .OrderBy(dataSource => dataSource.DisplayText, StringComparer.OrdinalIgnoreCase)
+            .Select(dataSource => new SelectListItem(dataSource.DisplayText, dataSource.ItemId))
+            .ToArray();
 
-            // Each menu is filtered to the slot its role needs. Offering every deployment let a model
-            // that cannot read a picture be chosen as the one that describes figures, which is not a
-            // cheaper setting -- it is one that describes nothing.
-            model.VisionDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Vision);
-            model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
+        model.HasDataSources = model.DataSources.Any();
 
-            model.HasVisionDeployments = model.VisionDeployments.Any();
-            model.HasUtilityDeployments = model.UtilityDeployments.Any();
+        // Each menu is filtered to the slot its role needs. Offering every deployment let a model
+        // that cannot read a picture be chosen as the one that describes figures, which is not a
+        // cheaper setting -- it is one that describes nothing.
+        model.VisionDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Vision);
+        model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
 
-            model.FigureModes =
-            [
-                new SelectListItem(S["Auto - describe a figure when it looks worth describing"], nameof(FigureProcessingMode.Auto)),
-                new SelectListItem(S["All - describe every figure that is kept"], nameof(FigureProcessingMode.All)),
-                new SelectListItem(S["Off - ignore figures entirely"], nameof(FigureProcessingMode.Off)),
-            ];
-        }).Location("Content:1");
+        model.HasVisionDeployments = model.VisionDeployments.Any();
+        model.HasUtilityDeployments = model.UtilityDeployments.Any();
+
+        model.FigureModes =
+        [
+            new SelectListItem(S["Auto - describe a figure when it looks worth describing"], nameof(FigureProcessingMode.Auto)),
+            new SelectListItem(S["All - describe every figure that is kept"], nameof(FigureProcessingMode.All)),
+            new SelectListItem(S["Off - ignore figures entirely"], nameof(FigureProcessingMode.Off)),
+        ];
     }
 
     public override async Task<IDisplayResult> UpdateAsync(FileSource fileSource, UpdateEditorContext context)

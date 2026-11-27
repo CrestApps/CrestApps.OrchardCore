@@ -1,4 +1,7 @@
 using System.Reflection;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
 
@@ -12,6 +15,22 @@ public sealed class CalendarTaskDisplayDriver<TActivity> : ActivityDisplayDriver
     where TActivity : CalendarTaskActivity<TActivity>, ITask
 {
     private static readonly PropertyInfo[] _modelProperties = typeof(CalendarTaskViewModel).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CalendarTaskDisplayDriver{TActivity}"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public CalendarTaskDisplayDriver(IStringLocalizer<CalendarTaskDisplayDriver<TActivity>> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<CalendarTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
 
     /// <inheritdoc />
     protected override void EditActivity(TActivity activity, CalendarTaskViewModel model)

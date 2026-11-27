@@ -50,7 +50,7 @@ internal sealed class TimeZoneMapDeploymentStepDisplayDriver : DisplayDriver<Dep
                     IsSelected = step.MapIds?.Contains(x.ItemId) ?? false,
                 })
                 .ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Time Zone Maps"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(TimeZoneMapDeploymentStep step, UpdateEditorContext context)

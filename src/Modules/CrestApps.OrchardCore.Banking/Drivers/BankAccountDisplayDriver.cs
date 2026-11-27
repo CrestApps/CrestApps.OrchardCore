@@ -77,7 +77,7 @@ internal sealed class BankAccountDisplayDriver : DisplayDriver<BankAccount>
             ownerJson = JsonSerializer.Serialize(new[] { new { value = account.Owner.ToString(), text = $"{name} ({account.Owner.Kind})" } });
         }
 
-        return Initialize<BankAccountViewModel>("BankAccountFields_Edit", model =>
+        void Populate(BankAccountViewModel model)
         {
             model.IsNew = context.IsNew;
             model.IsOwnAccount = isOwn;
@@ -105,7 +105,21 @@ internal sealed class BankAccountDisplayDriver : DisplayDriver<BankAccount>
                 new SelectListItem(S["Other"], nameof(BankAccountKind.Other), account.Kind == BankAccountKind.Other),
             ];
             model.StatusOptions = StatusOptions(account.Status);
-        }).Location("Content:1").OnGroup(context.GroupId ?? string.Empty);
+        }
+
+        var group = context.GroupId ?? string.Empty;
+
+        return Combine(
+            Initialize<BankAccountViewModel>("BankAccountFields_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["The Account"], "10"))
+                .OnGroup(group),
+            Initialize<BankAccountViewModel>("BankAccountBank_Edit", Populate)
+                .Location(l => l.Zone("Content", "2").Card(S["Bank"], "20"))
+                .OnGroup(group),
+            Initialize<BankAccountViewModel>("BankAccountVerification_Edit", Populate)
+                .Location(l => l.Zone("Content", "3").Card(S["Verification"], "30"))
+                .RenderWhen(() => Task.FromResult(!context.IsNew))
+                .OnGroup(group));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(BankAccount account, UpdateEditorContext context)

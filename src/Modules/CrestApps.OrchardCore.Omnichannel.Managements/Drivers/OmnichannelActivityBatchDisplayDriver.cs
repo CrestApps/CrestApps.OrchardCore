@@ -173,7 +173,7 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
         // The editor is read-only once a batch has loaded, so the report of what the load did sits above it: it is
         // the first thing somebody opening a loaded batch wants to know.
         return Combine(
-            View("OmnichannelActivityBatch_LoadReport", batch).Location("Content:0"),
+            View("OmnichannelActivityBatch_LoadReport", batch).Location(l => l.Zone("Content", "0").Card(S["Load Report"], "5")),
             editor);
     }
 
@@ -184,246 +184,255 @@ internal sealed class OmnichannelActivityBatchDisplayDriver : DisplayDriver<Omni
     private static bool HasLoadReport(OmnichannelActivityBatch batch)
         => batch.Status == OmnichannelActivityBatchStatus.Loaded && batch.TotalMatched.HasValue;
 
-    private ShapeResult BuildEditor(OmnichannelActivityBatch batch, BuildEditorContext context)
+    private CombinedResult BuildEditor(OmnichannelActivityBatch batch, BuildEditorContext context)
     {
-        return Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchFields_Edit", async model =>
+        // One shape per card, all bound to the same view model and prefix, so UpdateAsync binds it once.
+        return Combine(
+            Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchFields_Edit", model => PopulateAsync(batch, context, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Activity Load Settings"], "10")),
+            Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchRecordFilters_Edit", model => PopulateAsync(batch, context, model))
+                .Location(l => l.Zone("Content", "1.1").Card(S["Record Filters"], "20"))
+                .Processing<OmnichannelActivityBatchViewModel>(model =>
+                {
+                    // Read when the editor renders rather than when it is built, so every driver has placed its shapes by then.
+                    model.RecordFilters = FindRecordFilters(context.Shape);
+
+                    return Task.CompletedTask;
+                }),
+            Initialize<OmnichannelActivityBatchViewModel>("OmnichannelActivityBatchLastActivityFilters_Edit", model => PopulateAsync(batch, context, model))
+                .Location(l => l.Zone("Content", "1.2").Card(S["Last Activity Filters"], "30")));
+    }
+
+    private async ValueTask PopulateAsync(OmnichannelActivityBatch batch, BuildEditorContext context, OmnichannelActivityBatchViewModel model)
+    {
+        model.DisplayText = batch.DisplayText;
+        model.Source = string.IsNullOrEmpty(batch.Source) ? ActivitySources.Manual : batch.Source;
+        model.SourceDisplayName = GetSourceEntry(model.Source)?.DisplayName.Value ?? model.Source;
+        model.BatchId = batch.ItemId;
+        model.LoadError = batch.LoadError;
+        model.RequiresUserAssignment = GetSourceEntry(model.Source)?.RequiresUserAssignment ?? true;
+
+        // Shown in local time, because a save reads it back as local time, as the single activity form does.
+        model.ScheduleAt = context.IsNew || batch.ScheduleAt == DateTime.MinValue
+            ? (await _localClock.GetLocalNowAsync()).DateTime
+            : (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(batch.ScheduleAt, DateTimeKind.Utc))).DateTime;
+        model.SubjectContentType = batch.SubjectContentType;
+        model.ContactContentType = batch.ContactContentType;
+        model.CampaignId = batch.CampaignId;
+        model.Channel = batch.Channel;
+        model.ChannelEndpointId = batch.ChannelEndpointId;
+        model.IsDialerSource = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase);
+        model.DialerProfileId = batch.DialerProfileId;
+        model.UserIds = batch.UserIds;
+        model.IncludeDoNoCalls = batch.IncludeDoNoCalls;
+        model.IncludeDoNoSms = batch.IncludeDoNoSms;
+        model.IncludeDoNoEmail = batch.IncludeDoNoEmail;
+        model.PreventDuplicates = context.IsNew || batch.PreventDuplicates;
+        model.Instructions = batch.Instructions;
+        model.UrgencyLevel = batch.UrgencyLevel;
+        model.LeadCreatedFrom = batch.LeadCreatedFrom;
+        model.LeadCreatedTo = batch.LeadCreatedTo;
+        model.OnlyPublishedLeads = context.IsNew || batch.OnlyPublishedLeads;
+        model.Limit = batch.Limit;
+        model.PhoneNumber = batch.PhoneNumber;
+        model.PhoneNumberMatchType = batch.PhoneNumberMatchType;
+        model.TimeZoneIds = batch.TimeZoneIds ?? [];
+        model.LastActivitySubjectContentType = batch.LastActivitySubjectContentType;
+        model.LastActivityDispositionId = batch.LastActivityDispositionId;
+        model.LastActivityAttempts = batch.LastActivityAttempts;
+
+        var subjectContentTypes = new List<SelectListItem>();
+        var contactContentTypes = new List<SelectListItem>();
+
+        foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
         {
-            model.DisplayText = batch.DisplayText;
-            model.Source = string.IsNullOrEmpty(batch.Source) ? ActivitySources.Manual : batch.Source;
-            model.SourceDisplayName = GetSourceEntry(model.Source)?.DisplayName.Value ?? model.Source;
-            model.BatchId = batch.ItemId;
-            model.LoadError = batch.LoadError;
-            model.RequiresUserAssignment = GetSourceEntry(model.Source)?.RequiresUserAssignment ?? true;
+            subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
+        }
 
-            // Shown in local time, because a save reads it back as local time, as the single activity form does.
-            model.ScheduleAt = context.IsNew || batch.ScheduleAt == DateTime.MinValue
-                ? (await _localClock.GetLocalNowAsync()).DateTime
-                : (await _localClock.ConvertToLocalAsync(DateTime.SpecifyKind(batch.ScheduleAt, DateTimeKind.Utc))).DateTime;
-            model.SubjectContentType = batch.SubjectContentType;
-            model.ContactContentType = batch.ContactContentType;
-            model.CampaignId = batch.CampaignId;
-            model.Channel = batch.Channel;
-            model.ChannelEndpointId = batch.ChannelEndpointId;
-            model.IsDialerSource = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase);
-            model.DialerProfileId = batch.DialerProfileId;
-            model.UserIds = batch.UserIds;
-            model.IncludeDoNoCalls = batch.IncludeDoNoCalls;
-            model.IncludeDoNoSms = batch.IncludeDoNoSms;
-            model.IncludeDoNoEmail = batch.IncludeDoNoEmail;
-            model.PreventDuplicates = context.IsNew || batch.PreventDuplicates;
-            model.Instructions = batch.Instructions;
-            model.UrgencyLevel = batch.UrgencyLevel;
-            model.LeadCreatedFrom = batch.LeadCreatedFrom;
-            model.LeadCreatedTo = batch.LeadCreatedTo;
-            model.OnlyPublishedLeads = context.IsNew || batch.OnlyPublishedLeads;
-            model.Limit = batch.Limit;
-            model.PhoneNumber = batch.PhoneNumber;
-            model.PhoneNumberMatchType = batch.PhoneNumberMatchType;
-            model.TimeZoneIds = batch.TimeZoneIds ?? [];
-            model.LastActivitySubjectContentType = batch.LastActivitySubjectContentType;
-            model.LastActivityDispositionId = batch.LastActivityDispositionId;
-            model.LastActivityAttempts = batch.LastActivityAttempts;
+        await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
 
-            var subjectContentTypes = new List<SelectListItem>();
-            var contactContentTypes = new List<SelectListItem>();
+        // With the CRM feature on, the picker shows contacts and leads in their own groups, so choosing a list of
+        // leads is a deliberate choice. Without it there are no lead types and the list reads as it always did.
+        var leadGroup = new SelectListGroup { Name = S["Leads"] };
+        var contactGroup = new SelectListGroup { Name = S["Contacts"] };
+        var hasLeadTypes = _contentTypeProvider.GetLeadContentTypes().Count > 0;
 
-            foreach (var contentType in await _subjectFlowSettingsService.GetConfiguredSubjectTypesAsync())
+        foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
+        {
+            if (_contentTypeProvider.IsContactContentType(contentType.Name))
             {
-                subjectContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name));
-            }
-
-            await _contentTypeProvider.EnsureInitializedAsync(_contentDefinitionManager);
-
-            // With the CRM feature on, the picker shows contacts and leads in their own groups, so choosing a list of
-            // leads is a deliberate choice. Without it there are no lead types and the list reads as it always did.
-            var leadGroup = new SelectListGroup { Name = S["Leads"] };
-            var contactGroup = new SelectListGroup { Name = S["Contacts"] };
-            var hasLeadTypes = _contentTypeProvider.GetLeadContentTypes().Count > 0;
-
-            foreach (var contentType in await _contentDefinitionManager.ListTypeDefinitionsAsync())
-            {
-                if (_contentTypeProvider.IsContactContentType(contentType.Name))
+                contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name)
                 {
-                    contactContentTypes.Add(new SelectListItem(contentType.DisplayName, contentType.Name)
-                    {
-                        Group = !hasLeadTypes ? null : _contentTypeProvider.IsLeadContentType(contentType.Name) ? leadGroup : contactGroup,
-                    });
-                }
-            }
-
-            model.DialerProfiles = await _optionsProvider.GetDialerProfileOptionsAsync(model.DialerProfileId, S["Select a dialer profile"]);
-
-            if (model.RequiresUserAssignment && batch.UserIds is { Length: > 0 })
-            {
-                var users = (await _session.Query<User, UserIndex>(x => x.UserId.IsIn(batch.UserIds)).ListAsync())
-                    .OrderBy(user => Array.FindIndex(batch.UserIds, itemId => string.Equals(itemId, user.UserId, StringComparison.OrdinalIgnoreCase)));
-
-                var selectedUsers = new List<SelectListItem>();
-
-                foreach (var user in users)
-                {
-                    var displayName = await _displayNameProvider.GetAsync(user);
-
-                    selectedUsers.Add(new SelectListItem(displayName, user.UserId));
-                }
-
-                model.SelectedUsers = selectedUsers;
-            }
-
-            model.UrgencyLevels =
-            [
-                new(S["Normal"], nameof(ActivityUrgencyLevel.Normal)),
-                new(S["Very low"], nameof(ActivityUrgencyLevel.VeryLow)),
-                new(S["Low"], nameof(ActivityUrgencyLevel.Low)),
-                new(S["Medium"], nameof(ActivityUrgencyLevel.Medium)),
-                new(S["High"], nameof(ActivityUrgencyLevel.High)),
-                new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
-            ];
-
-            model.PhoneNumberMatchTypes =
-            [
-                new(S["Contains"], nameof(PhoneNumberMatchType.Contains)),
-                new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
-                new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
-                new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
-            ];
-
-            model.TimeZones = (await _timeZoneSelectListProvider.GetTimeZoneSelectListAsync())
-                .Select(x => new SelectListItem(x.Value, x.Key)
-                {
-                    Selected = model.TimeZoneIds?.Contains(x.Key, StringComparer.OrdinalIgnoreCase) == true,
+                    Group = !hasLeadTypes ? null : _contentTypeProvider.IsLeadContentType(contentType.Name) ? leadGroup : contactGroup,
                 });
-
-            var allDispositions = await _dispositionsCatalog.GetAllAsync();
-            var dispositionItems = new List<SelectListItem>
-            {
-                new(S["Any disposition"], ""),
-            };
-
-            foreach (var disposition in allDispositions.OrderBy(d => d.Name))
-            {
-                dispositionItems.Add(new SelectListItem(disposition.Name, disposition.ItemId));
             }
+        }
 
-            model.Dispositions = dispositionItems;
+        model.DialerProfiles = await _optionsProvider.GetDialerProfileOptionsAsync(model.DialerProfileId, S["Select a dialer profile"]);
 
-            model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
-            model.ContactContentTypes = contactContentTypes
-                .OrderBy(x => x.Group == null ? string.Empty : x.Group.Name)
-                .ThenBy(x => x.Text);
-
-            var campaignItems = new List<SelectListItem>
-            {
-                new(S["No campaign"], ""),
-            };
-
-            foreach (var campaign in (await _campaignCatalog.GetAllAsync()).OrderBy(campaign => campaign.DisplayText))
-            {
-                campaignItems.Add(new SelectListItem(campaign.DisplayText, campaign.ItemId));
-            }
-
-            model.Campaigns = campaignItems;
-
-            var isAutomaticSource = string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase);
-            model.ShowAIProfile = isAutomaticSource && _aiProfileManager is not null;
-
-            if (model.ShowAIProfile)
-            {
-                model.AIProfileId = batch.AIProfileId;
-                model.AIProfiles = await GetAIProfileOptionsAsync(batch.AIProfileId);
-                model.AllowAIToUpdateContact = batch.AllowAIToUpdateContact;
-                model.AllowAIToUpdateSubject = batch.AllowAIToUpdateSubject;
-                model.UseCallAmbience = batch.UseCallAmbience;
-                model.ResponseDelayMode = batch.ResponseDelayMode;
-                model.ResponseDelaySeconds = batch.ResponseDelaySeconds;
-                model.ResponseDelayJitterSeconds = batch.ResponseDelayJitterSeconds;
-                model.ResponseDelayModes =
-                [
-                    new(S["No delay"], nameof(OmnichannelResponseDelayMode.None)),
-                    new(S["Fixed"], nameof(OmnichannelResponseDelayMode.Fixed)),
-                    new(S["Random (base ± jitter)"], nameof(OmnichannelResponseDelayMode.Random)),
-                ];
-
-                model.CadenceId = batch.CadenceId;
-
-                var cadenceItems = new List<SelectListItem>
-                {
-                    new(S["No follow-up cadence"], ""),
-                };
-
-                foreach (var schedule in (await _cadenceCatalog.GetAllAsync())
-                    .Where(schedule => schedule.Enabled)
-                    .OrderBy(schedule => schedule.DisplayText))
-                {
-                    cadenceItems.Add(new SelectListItem(schedule.DisplayText ?? schedule.ItemId, schedule.ItemId)
-                    {
-                        Selected = string.Equals(schedule.ItemId, batch.CadenceId, StringComparison.OrdinalIgnoreCase),
-                    });
-                }
-
-                model.Cadences = cadenceItems;
-                model.BusinessHoursCalendarId = batch.BusinessHoursCalendarId;
-
-                // The business-hours picker is available only when a feature provides schedules (Business Hours).
-                // A tenant without the business-hours feature has no calendars, and neither has one that has the
-                // feature but has defined none. Both cases hide the picker rather than showing one with nothing
-                // in it, and both treat conversations as always open.
-                var calendars = await _businessHoursGate.GetCalendarOptionsAsync();
-
-                var calendarItems = new List<SelectListItem>
-                {
-                    new(S["Always open (no restriction)"], ""),
-                };
-
-                foreach (var calendar in calendars)
-                {
-                    calendarItems.Add(new SelectListItem(calendar.Name, calendar.Id)
-                    {
-                        Selected = string.Equals(calendar.Id, batch.BusinessHoursCalendarId, StringComparison.OrdinalIgnoreCase),
-                    });
-                }
-
-                model.BusinessHoursCalendars = calendarItems;
-                model.ShowBusinessHoursCalendar = calendars.Count > 0;
-            }
-
-            // The channels the enabled features create activities on: Phone and SMS always, and each channel feature's
-            // own (Email, for one) when it is enabled.
-            model.Channels = _activityChannelOptions.Channels.Values
-                .Select(channel => new SelectListItem(channel.DisplayName.Value, channel.Channel))
-                .ToList();
-
-            var isDialerLoad = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase);
-            var channelEndpointItems = new List<SelectListItem>
-            {
-                new(isDialerLoad ? S["Default caller ID"] : S["No address"], ""),
-            };
-
-            // Only addresses used on one of those channels can reach contacts on a load's channel, and a dialer load only
-            // calls. Each address says what it is used for, so the editor offers only those used for the channel picked.
-            foreach (var endpoint in (await _channelEndpointsCatalog.GetAllAsync())
-                .Where(endpoint => endpoint.HasCapability(OmnichannelConstants.Channels.Phone) ||
-                    (!isDialerLoad && _activityChannelOptions.Channels.Keys.Any(endpoint.HasCapability)))
-                .OrderBy(endpoint => endpoint.DisplayText))
-            {
-                var text = string.IsNullOrWhiteSpace(endpoint.DisplayText) || endpoint.DisplayText == endpoint.Value
-                    ? endpoint.Value
-                    : $"{endpoint.DisplayText} ({endpoint.Value})";
-                channelEndpointItems.Add(new SelectListItem(text, endpoint.ItemId, endpoint.ItemId == model.ChannelEndpointId));
-                model.ChannelEndpointCapabilities[endpoint.ItemId] = string.Join(",", endpoint.GetCapabilities());
-            }
-
-            model.ChannelEndpoints = channelEndpointItems;
-
-            model.SelectedUsers ??= [];
-        }).Location("Content:1")
-        .Processing<OmnichannelActivityBatchViewModel>(model =>
+        if (model.RequiresUserAssignment && batch.UserIds is { Length: > 0 })
         {
-            // Read when the editor renders rather than when it is built, so every driver has placed its shapes by then.
-            model.RecordFilters = FindRecordFilters(context.Shape);
+            var users = (await _session.Query<User, UserIndex>(x => x.UserId.IsIn(batch.UserIds)).ListAsync())
+                .OrderBy(user => Array.FindIndex(batch.UserIds, itemId => string.Equals(itemId, user.UserId, StringComparison.OrdinalIgnoreCase)));
 
-            return Task.CompletedTask;
-        });
+            var selectedUsers = new List<SelectListItem>();
+
+            foreach (var user in users)
+            {
+                var displayName = await _displayNameProvider.GetAsync(user);
+
+                selectedUsers.Add(new SelectListItem(displayName, user.UserId));
+            }
+
+            model.SelectedUsers = selectedUsers;
+        }
+
+        model.UrgencyLevels =
+        [
+            new(S["Normal"], nameof(ActivityUrgencyLevel.Normal)),
+            new(S["Very low"], nameof(ActivityUrgencyLevel.VeryLow)),
+            new(S["Low"], nameof(ActivityUrgencyLevel.Low)),
+            new(S["Medium"], nameof(ActivityUrgencyLevel.Medium)),
+            new(S["High"], nameof(ActivityUrgencyLevel.High)),
+            new(S["Very high"], nameof(ActivityUrgencyLevel.VeryHigh)),
+        ];
+
+        model.PhoneNumberMatchTypes =
+        [
+            new(S["Contains"], nameof(PhoneNumberMatchType.Contains)),
+            new(S["Exact match"], nameof(PhoneNumberMatchType.Exact)),
+            new(S["Begins with"], nameof(PhoneNumberMatchType.BeginsWith)),
+            new(S["Ends with"], nameof(PhoneNumberMatchType.EndsWith)),
+        ];
+
+        model.TimeZones = (await _timeZoneSelectListProvider.GetTimeZoneSelectListAsync())
+            .Select(x => new SelectListItem(x.Value, x.Key)
+            {
+                Selected = model.TimeZoneIds?.Contains(x.Key, StringComparer.OrdinalIgnoreCase) == true,
+            });
+
+        var allDispositions = await _dispositionsCatalog.GetAllAsync();
+        var dispositionItems = new List<SelectListItem>
+        {
+            new(S["Any disposition"], ""),
+        };
+
+        foreach (var disposition in allDispositions.OrderBy(d => d.Name))
+        {
+            dispositionItems.Add(new SelectListItem(disposition.Name, disposition.ItemId));
+        }
+
+        model.Dispositions = dispositionItems;
+
+        model.SubjectContentTypes = subjectContentTypes.OrderBy(x => x.Text);
+        model.ContactContentTypes = contactContentTypes
+            .OrderBy(x => x.Group == null ? string.Empty : x.Group.Name)
+            .ThenBy(x => x.Text);
+
+        var campaignItems = new List<SelectListItem>
+        {
+            new(S["No campaign"], ""),
+        };
+
+        foreach (var campaign in (await _campaignCatalog.GetAllAsync()).OrderBy(campaign => campaign.DisplayText))
+        {
+            campaignItems.Add(new SelectListItem(campaign.DisplayText, campaign.ItemId));
+        }
+
+        model.Campaigns = campaignItems;
+
+        var isAutomaticSource = string.Equals(model.Source, ActivitySources.Automatic, StringComparison.OrdinalIgnoreCase);
+        model.ShowAIProfile = isAutomaticSource && _aiProfileManager is not null;
+
+        if (model.ShowAIProfile)
+        {
+            model.AIProfileId = batch.AIProfileId;
+            model.AIProfiles = await GetAIProfileOptionsAsync(batch.AIProfileId);
+            model.AllowAIToUpdateContact = batch.AllowAIToUpdateContact;
+            model.AllowAIToUpdateSubject = batch.AllowAIToUpdateSubject;
+            model.UseCallAmbience = batch.UseCallAmbience;
+            model.ResponseDelayMode = batch.ResponseDelayMode;
+            model.ResponseDelaySeconds = batch.ResponseDelaySeconds;
+            model.ResponseDelayJitterSeconds = batch.ResponseDelayJitterSeconds;
+            model.ResponseDelayModes =
+            [
+                new(S["No delay"], nameof(OmnichannelResponseDelayMode.None)),
+                new(S["Fixed"], nameof(OmnichannelResponseDelayMode.Fixed)),
+                new(S["Random (base ± jitter)"], nameof(OmnichannelResponseDelayMode.Random)),
+            ];
+
+            model.CadenceId = batch.CadenceId;
+
+            var cadenceItems = new List<SelectListItem>
+            {
+                new(S["No follow-up cadence"], ""),
+            };
+
+            foreach (var schedule in (await _cadenceCatalog.GetAllAsync())
+                .Where(schedule => schedule.Enabled)
+                .OrderBy(schedule => schedule.DisplayText))
+            {
+                cadenceItems.Add(new SelectListItem(schedule.DisplayText ?? schedule.ItemId, schedule.ItemId)
+                {
+                    Selected = string.Equals(schedule.ItemId, batch.CadenceId, StringComparison.OrdinalIgnoreCase),
+                });
+            }
+
+            model.Cadences = cadenceItems;
+            model.BusinessHoursCalendarId = batch.BusinessHoursCalendarId;
+
+            // The business-hours picker is available only when a feature provides schedules (Business Hours).
+            // A tenant without the business-hours feature has no calendars, and neither has one that has the
+            // feature but has defined none. Both cases hide the picker rather than showing one with nothing
+            // in it, and both treat conversations as always open.
+            var calendars = await _businessHoursGate.GetCalendarOptionsAsync();
+
+            var calendarItems = new List<SelectListItem>
+            {
+                new(S["Always open (no restriction)"], ""),
+            };
+
+            foreach (var calendar in calendars)
+            {
+                calendarItems.Add(new SelectListItem(calendar.Name, calendar.Id)
+                {
+                    Selected = string.Equals(calendar.Id, batch.BusinessHoursCalendarId, StringComparison.OrdinalIgnoreCase),
+                });
+            }
+
+            model.BusinessHoursCalendars = calendarItems;
+            model.ShowBusinessHoursCalendar = calendars.Count > 0;
+        }
+
+        // The channels the enabled features create activities on: Phone and SMS always, and each channel feature's
+        // own (Email, for one) when it is enabled.
+        model.Channels = _activityChannelOptions.Channels.Values
+            .Select(channel => new SelectListItem(channel.DisplayName.Value, channel.Channel))
+            .ToList();
+
+        var isDialerLoad = string.Equals(model.Source, ActivitySources.Dialer, StringComparison.OrdinalIgnoreCase);
+        var channelEndpointItems = new List<SelectListItem>
+        {
+            new(isDialerLoad ? S["Default caller ID"] : S["No address"], ""),
+        };
+
+        // Only addresses used on one of those channels can reach contacts on a load's channel, and a dialer load only
+        // calls. Each address says what it is used for, so the editor offers only those used for the channel picked.
+        foreach (var endpoint in (await _channelEndpointsCatalog.GetAllAsync())
+            .Where(endpoint => endpoint.HasCapability(OmnichannelConstants.Channels.Phone) ||
+                (!isDialerLoad && _activityChannelOptions.Channels.Keys.Any(endpoint.HasCapability)))
+            .OrderBy(endpoint => endpoint.DisplayText))
+        {
+            var text = string.IsNullOrWhiteSpace(endpoint.DisplayText) || endpoint.DisplayText == endpoint.Value
+                ? endpoint.Value
+                : $"{endpoint.DisplayText} ({endpoint.Value})";
+            channelEndpointItems.Add(new SelectListItem(text, endpoint.ItemId, endpoint.ItemId == model.ChannelEndpointId));
+            model.ChannelEndpointCapabilities[endpoint.ItemId] = string.Join(",", endpoint.GetCapabilities());
+        }
+
+        model.ChannelEndpoints = channelEndpointItems;
+
+        model.SelectedUsers ??= [];
     }
 
     /// <summary>

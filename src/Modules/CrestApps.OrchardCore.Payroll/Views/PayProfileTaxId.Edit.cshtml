@@ -1,0 +1,45 @@
+@model PayProfileViewModel
+
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["On file"]</span>
+    <div class="ocat-end">
+        @if (string.IsNullOrEmpty(Model.TaxIdHint))
+        {
+            <span class="form-control-plaintext text-muted">@T["None yet"]</span>
+        }
+        else
+        {
+            <span class="form-control-plaintext font-monospace">@Model.TaxIdHint</span>
+            @if (Model.CanRevealTaxId)
+            {
+                <button type="submit" class="btn btn-sm btn-outline-secondary" formaction="@Url.Action("TaxId", "PayProfiles", new { area = "CrestApps.OrchardCore.Payroll", id = Model.ProfileId })" formnovalidate>@T["Show the full number"]</button>
+            }
+        }
+    </div>
+</div>
+@if (Model.SameTaxIdStaff.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-warning mb-0">@T["The same tax id is on file for: {0}.", string.Join(", ", Model.SameTaxIdStaff)]</div>
+        </div>
+    </div>
+}
+<div class="ocat-wrapper">
+    <label asp-for="TaxId" class="ocat-label">@T["New tax id"]</label>
+    <div class="ocat-end">
+        <input asp-for="TaxId" type="password" class="form-control" style="max-width: 16rem" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore />
+        <span class="hint">@T["Kept protected: only the last characters show. Leave it empty to keep the number on file."]</span>
+    </div>
+</div>
+@if (!string.IsNullOrEmpty(Model.TaxIdHint))
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="RemoveTaxId" type="checkbox" class="form-check-input" />
+                <label asp-for="RemoveTaxId" class="form-check-label">@T["Remove the tax id"]</label>
+            </div>
+        </div>
+    </div>
+}

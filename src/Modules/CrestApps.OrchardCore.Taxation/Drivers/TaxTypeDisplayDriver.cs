@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -9,6 +10,13 @@ namespace CrestApps.OrchardCore.Taxation.Drivers;
 
 internal sealed class TaxTypeDisplayDriver : DisplayDriver<TaxType>
 {
+    internal readonly IStringLocalizer S;
+
+    public TaxTypeDisplayDriver(IStringLocalizer<TaxTypeDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(TaxType type, BuildDisplayContext context)
     {
         // The row's classes and attributes are rendered on its row element, in both admin list layouts.
@@ -41,7 +49,7 @@ internal sealed class TaxTypeDisplayDriver : DisplayDriver<TaxType>
             model.IsNew = context.IsNew;
             model.Name = type.Name;
             model.Description = type.Description;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(TaxType type, UpdateEditorContext context)

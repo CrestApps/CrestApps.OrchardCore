@@ -1,0 +1,33 @@
+@model TaxFormViewModel
+
+@{
+    var checksName = Html.NameFor(m => m.Checks).ToString();
+
+    async Task CheckRow(string index, TaxFormCheckViewModel check)
+    {
+        var name = $"{checksName}[{index}]";
+        <tr>
+            <td>
+                <input type="hidden" name="@(checksName).Index" value="@index" />
+                <input name="@(name).Condition" value="@check.Condition" class="form-control form-control-sm font-monospace" aria-label="@T["Must be true"]" />
+            </td>
+            <td><input name="@(name).Note" value="@check.Note" class="form-control form-control-sm" aria-label="@T["Note when it is not"]" /></td>
+            <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-remove-row title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></td>
+        </tr>
+    }
+}
+
+<p class="hint mb-2">@T["A formula over the filing fields that must be true for a filing, such as ISACCOUNT(ACCOUNT('CA'), '#########RP####'). When it isn't, its note is added to the filing."]</p>
+<table class="table table-sm align-middle mb-2" data-rows="checks">
+    <thead><tr><th>@T["Must be true"]</th><th>@T["Note when it is not"]</th><th style="width: 3rem"></th></tr></thead>
+    <tbody>
+        @for (var i = 0; i < Model.Checks.Count; i++)
+        {
+            await CheckRow(i.ToString(System.Globalization.CultureInfo.InvariantCulture), Model.Checks[i]);
+        }
+    </tbody>
+</table>
+<template data-row-template="checks">
+    @{ await CheckRow("__index__", new TaxFormCheckViewModel()); }
+</template>
+<button type="button" class="btn btn-sm btn-secondary" data-add-row="checks"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add check"]</button>

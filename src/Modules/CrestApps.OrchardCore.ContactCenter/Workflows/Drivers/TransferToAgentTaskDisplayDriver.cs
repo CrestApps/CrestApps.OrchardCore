@@ -32,6 +32,13 @@ public sealed class TransferToAgentTaskDisplayDriver : ActivityDisplayDriver<Tra
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(TransferToAgentTask activity, BuildEditorContext context)
+    {
+        return Initialize<TransferToAgentTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(TransferToAgentTask activity, TransferToAgentTaskViewModel model)
     {
         model.ActivityItemId = activity.ActivityItemId;

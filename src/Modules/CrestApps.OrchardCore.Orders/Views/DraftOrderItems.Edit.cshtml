@@ -1,0 +1,74 @@
+@model DraftOrderEditViewModel
+
+@using CrestApps.OrchardCore.Products.Core.Services
+
+@if (Model.Lines.Count == 0)
+{
+    <div class="text-muted">@T["No items yet. Find products below, then update the order to price them."]</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Product"]</th>
+                    <th scope="col" class="text-end">@T["Quantity"]</th>
+                    <th scope="col" class="text-end">@T["Price each"]</th>
+                    <th scope="col" class="text-end">@T["Amount"]</th>
+                    <th scope="col" class="text-center">@T["Remove"]</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Lines.Count; i++)
+                {
+                    var line = Model.Lines[i];
+
+                    <tr>
+                        <td>
+                            <input type="hidden" name="Lines[@i].LineId" value="@line.LineId" />
+                            <input type="hidden" name="Lines[@i].ContentItemId" value="@line.ContentItemId" />
+                            <div>@line.Title</div>
+                            @if (line.Variants.Count > 0)
+                            {
+                                <select name="Lines[@i].VariantId" class="form-select form-select-sm mt-1 w-auto" aria-label="@T["Variant of {0}", line.Title]">
+                                    <option value="">@T["Choose a variant"]</option>
+                                    @foreach (var variant in line.Variants)
+                                    {
+                                        <option value="@variant.Value" selected="@variant.Selected">@variant.Text</option>
+                                    }
+                                </select>
+                            }
+                            else if (!string.IsNullOrEmpty(line.VariantId))
+                            {
+                                <input type="hidden" name="Lines[@i].VariantId" value="@line.VariantId" />
+                            }
+                            @if (!string.IsNullOrEmpty(line.Problem))
+                            {
+                                <div class="small text-danger mt-1">@line.Problem</div>
+                            }
+                        </td>
+                        <td class="text-end">
+                            <input type="number" name="Lines[@i].Quantity" value="@line.Quantity" min="1" class="form-control form-control-sm d-inline-block text-end" style="width: 6rem;" aria-label="@T["Quantity of {0}", line.Title]" />
+                        </td>
+                        <td class="text-end">
+                            <input type="number" name="Lines[@i].UnitPrice" value="@line.UnitPrice" min="0" step="0.01" class="form-control form-control-sm d-inline-block text-end" style="width: 8rem;" placeholder="@(line.CatalogUnitPrice?.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture))" aria-label="@T["Price each of {0}", line.Title]" />
+                        </td>
+                        <td class="text-end text-nowrap">@(line.LineTotal is { } total ? ProductPriceFormatter.Format(total, Model.Currency) : "—")</td>
+                        <td class="text-center">
+                            <input type="checkbox" name="Lines[@i].Remove" value="true" class="form-check-input" aria-label="@T["Remove {0}", line.Title]" />
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr>
+                    <th scope="row" colspan="3" class="text-end">@T["Subtotal"]</th>
+                    <th class="text-end text-nowrap">@ProductPriceFormatter.Format(Model.Subtotal, Model.Currency)</th>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+    <div class="small text-muted mt-2">@T["Shipping and tax are added when the buyer pays."]</div>
+}

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -6,6 +7,13 @@ namespace CrestApps.OrchardCore.Calendars.Deployments;
 
 internal sealed class CalendarsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, CalendarsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public CalendarsDeploymentStepDisplayDriver(IStringLocalizer<CalendarsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(CalendarsDeploymentStep step, BuildDisplayContext context)
     {
         return CombineAsync(
@@ -19,7 +27,7 @@ internal sealed class CalendarsDeploymentStepDisplayDriver : DisplayDriver<Deplo
         {
             model.IncludeEvents = step.IncludeEvents;
             model.IncludeCategories = step.IncludeCategories;
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Calendars"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CalendarsDeploymentStep step, UpdateEditorContext context)

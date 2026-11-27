@@ -434,6 +434,7 @@ public sealed class ApprovalsAuthorizationTests
             Access(),
             TestSecurity.Granting(grants ?? [ApprovalsPermissions.ViewApprovalRequests, ApprovalsPermissions.ManageApprovalRequests]),
             display.Object,
+            new Mock<global::OrchardCore.DisplayManagement.IDisplayManager<global::CrestApps.OrchardCore.Approvals.ViewModels.ApprovalDecideViewModel>>().Object,
             new Mock<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>().Object,
             new CrestApps.OrchardCore.Tests.Modules.Reports.Designer.PassThroughStringLocalizerFactory(),
             new RecordingNotifier(),

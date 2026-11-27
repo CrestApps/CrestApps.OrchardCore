@@ -39,7 +39,7 @@ public sealed class AICompletionWithConfigTaskDisplayDriver : ActivityDisplayDri
         {
             model.PromptTemplate = activity.PromptTemplate;
             model.ResultPropertyName = activity.ResultPropertyName;
-        }).Location("Content:1#Content;1");
+        }).Location(l => l.Zone("Content", "1").Tab(S["Content"], "1").Card(S["Prompt"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

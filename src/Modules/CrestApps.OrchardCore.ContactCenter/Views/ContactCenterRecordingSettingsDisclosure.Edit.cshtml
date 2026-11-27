@@ -1,0 +1,67 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model ContactCenterRecordingSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="hint">@T["Tell callers the call is recorded, in words your legal team approves. The platform says it word for word on inbound calls and automated voice agent calls; on any other call, the agent is shown it to read out and confirm. Each disclosure is logged with the time and the words used."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="EnableRecordingDisclosure" class="form-check-input" />
+            <label asp-for="EnableRecordingDisclosure" class="form-check-label">@T["Tell callers the call is recorded"]</label>
+            <span class="hint dashed">@T["When unchecked, no disclosure is given, and the entry point welcome messages and AI profile instructions are the only notice callers get."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="RecordingDisclosureText">
+    <label asp-for="RecordingDisclosureText" class="ocat-label">@T["Disclosure"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="RecordingDisclosureText" class="form-control" rows="2" maxlength="@ContactCenterRecordingSettings.MaxRecordingDisclosureLength"></textarea>
+        <span asp-validation-for="RecordingDisclosureText" class="text-danger"></span>
+        <span class="hint">@T["Keep it to a sentence or two, for example: \"This call may be recorded for quality assurance and training purposes.\""]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="DiscloseOnInboundCalls" class="form-check-input" />
+            <label asp-for="DiscloseOnInboundCalls" class="form-check-label">@T["Say it to inbound callers"]</label>
+            <span class="hint dashed">@T["Spoken to a caller on an entry point before its welcome message, menu or queue, even when the entry point has no welcome message. Callers sent straight to voicemail or turned away do not hear it."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="DiscloseOnAIVoiceCalls" class="form-check-input" />
+            <label asp-for="DiscloseOnAIVoiceCalls" class="form-check-label">@T["Have automated voice agents say it first"]</label>
+            <span class="hint dashed">@T["Turn-based calls speak it ahead of the profile's opening line. A realtime call's opening is written by the model, which is told to say the disclosure first, word for word; check a few call transcripts to confirm it does."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="PromptAgentsToDisclose" class="form-check-input" />
+            <label asp-for="PromptAgentsToDisclose" class="form-check-label">@T["Ask agents to say it when the caller has not heard it"]</label>
+            <span class="hint dashed">@T["On an outbound call, or an inbound call that reached the agent without the entry point's announcement, the agent workspace shows the disclosure with a button the agent presses once they have read it out."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="RequireExplicitConsent" class="form-check-input" />
+            <label asp-for="RequireExplicitConsent" class="form-check-label">@T["Do not record until the caller has heard the disclosure"]</label>
+            <span class="hint dashed">@T["With the all-parties consent model, a call starts recording only once the disclosure has been spoken to the caller or the agent has confirmed giving it. Automated voice agent calls and soft phone calls made outside the Contact Center are not recorded while this is on."]</span>
+        </div>
+    </div>
+</div>

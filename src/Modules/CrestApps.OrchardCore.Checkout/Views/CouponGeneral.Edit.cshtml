@@ -1,0 +1,47 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="radio" asp-for="Method" value="@CouponMethod.Code" id="Method_Code" class="form-check-input" data-coupon-method />
+            <label for="Method_Code" class="form-check-label">@T["The customer enters a code"]</label>
+        </div>
+        <div class="form-check">
+            <input type="radio" asp-for="Method" value="@CouponMethod.Automatic" id="Method_Automatic" class="form-check-input" data-coupon-method />
+            <label for="Method_Automatic" class="form-check-label">@T["Automatically, on every order that qualifies"]</label>
+        </div>
+        <span class="hint dashed">@T["No code to enter. The buyer sees the description at checkout."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Code">
+    <label asp-for="Code" class="ocat-label">@T["Code"]</label>
+    <div class="ocat-end">
+        <input asp-for="Code" class="form-control" autocomplete="off" />
+        <span asp-validation-for="Code"></span>
+        <span class="hint" data-coupon-methods="@CouponMethod.Code">@T["What the customer types. Matched without case sensitivity."]</span>
+        <span class="hint" data-coupon-methods="@CouponMethod.Automatic">@T["Optional. Nobody types it; it names the discount's uses. Leave it blank to have one made up."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OnlyGeneratedCodes" data-coupon-methods="@CouponMethod.Code">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="OnlyGeneratedCodes" class="form-check-input" />
+            <label asp-for="OnlyGeneratedCodes" class="form-check-label">@T["Only the generated codes work"]</label>
+        </div>
+        <span class="hint dashed">@T["This code is then refused; use it to name the campaign, and generate unique codes for it below."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <input asp-for="Description" class="form-control" />
+        <span asp-validation-for="Description"></span>
+        <span class="hint">@T["Shown on the customer's invoice."]</span>
+    </div>
+</div>

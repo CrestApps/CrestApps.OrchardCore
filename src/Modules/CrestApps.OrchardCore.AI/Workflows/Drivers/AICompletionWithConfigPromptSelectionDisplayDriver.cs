@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
 using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Workflows.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Activities;
@@ -18,13 +19,19 @@ public sealed class AICompletionWithConfigPromptSelectionDisplayDriver : Display
 {
     private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AICompletionWithConfigPromptSelectionDisplayDriver"/> class.
     /// </summary>
     /// <param name="promptTemplateSelectionService">The prompt template selection service.</param>
-    public AICompletionWithConfigPromptSelectionDisplayDriver(PromptTemplateSelectionService promptTemplateSelectionService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AICompletionWithConfigPromptSelectionDisplayDriver(
+        PromptTemplateSelectionService promptTemplateSelectionService,
+        IStringLocalizer<AICompletionWithConfigPromptSelectionDisplayDriver> stringLocalizer)
     {
         _promptTemplateSelectionService = promptTemplateSelectionService;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(AICompletionWithConfigTask activity, BuildEditorContext context)
@@ -44,7 +51,7 @@ public sealed class AICompletionWithConfigPromptSelectionDisplayDriver : Display
         {
             promptSelectionModel.PromptTemplates = model.PromptTemplates;
             promptSelectionModel.AvailablePrompts = model.AvailablePrompts;
-        }).Location("Content:3#Content;1");
+        }).Location(l => l.Zone("Content", "3").Tab(S["Content"], "1").Card(S["Prompt"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

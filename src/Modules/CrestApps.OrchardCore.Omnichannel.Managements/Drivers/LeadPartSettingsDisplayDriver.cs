@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
@@ -14,12 +15,18 @@ internal sealed class LeadPartSettingsDisplayDriver : ContentTypePartDefinitionD
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="LeadPartSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
-    public LeadPartSettingsDisplayDriver(IContentDefinitionManager contentDefinitionManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public LeadPartSettingsDisplayDriver(
+        IContentDefinitionManager contentDefinitionManager,
+        IStringLocalizer<LeadPartSettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _contentDefinitionManager = contentDefinitionManager;
     }
 
@@ -43,7 +50,7 @@ internal sealed class LeadPartSettingsDisplayDriver : ContentTypePartDefinitionD
                 .OrderBy(definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .Select(definition => new SelectListItem(definition.DisplayName, definition.Name, definition.Name == settings.DefaultOpportunityContentType))
                 .ToList();
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Settings"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)

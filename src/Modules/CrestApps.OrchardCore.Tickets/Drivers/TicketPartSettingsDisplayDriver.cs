@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
@@ -31,13 +32,16 @@ internal sealed class TicketPartSettingsDisplayDriver : ContentTypePartDefinitio
     private readonly global::YesSql.ISession _session;
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
+    internal readonly IStringLocalizer S;
+
     public TicketPartSettingsDisplayDriver(
         ICatalog<TicketDesk> desks,
         ICatalog<TicketPriority> priorities,
         IServiceLevelPolicyManager policies,
         IServiceProvider services,
         global::YesSql.ISession session,
-        IContentDefinitionManager contentDefinitionManager)
+        IContentDefinitionManager contentDefinitionManager,
+        IStringLocalizer<TicketPartSettingsDisplayDriver> stringLocalizer)
     {
         _desks = desks;
         _priorities = priorities;
@@ -45,6 +49,7 @@ internal sealed class TicketPartSettingsDisplayDriver : ContentTypePartDefinitio
         _services = services;
         _session = session;
         _contentDefinitionManager = contentDefinitionManager;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
@@ -71,7 +76,7 @@ internal sealed class TicketPartSettingsDisplayDriver : ContentTypePartDefinitio
             {
                 model.Skills = [.. (await skills.GetEnabledAsync()).OrderBy(skill => skill.Name, StringComparer.CurrentCultureIgnoreCase).Select(skill => new SelectListItem(skill.Name, skill.ItemId, model.RequiredSkillIds.Contains(skill.ItemId)))];
             }
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Settings"], "20"));
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)
     {

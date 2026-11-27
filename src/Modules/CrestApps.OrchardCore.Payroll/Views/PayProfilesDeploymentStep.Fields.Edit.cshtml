@@ -1,12 +1,12 @@
 @model CrestApps.OrchardCore.Payroll.Deployments.PayProfilesDeploymentStepViewModel
 
-<h5>@T["Pay profiles and pay items"]</h5>
-
-<div class="mb-3" asp-validation-class-for="IncludeSensitiveData">
-    <div class="form-check">
-        <input asp-for="IncludeSensitiveData" class="form-check-input" />
-        <label asp-for="IncludeSensitiveData" class="form-check-label">@T["Include the tax ids"]</label>
-        <span asp-validation-for="IncludeSensitiveData" class="text-danger"></span>
-        <span class="hint dashed">@T["Tax ids are written in clear text, so the importing site can protect them with its own keys. Every exported tax id is recorded. Keep the file safe and delete it after the import."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="IncludeSensitiveData">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeSensitiveData" class="form-check-input" />
+            <label asp-for="IncludeSensitiveData" class="form-check-label">@T["Include the tax ids"]</label>
+            <span asp-validation-for="IncludeSensitiveData" class="text-danger"></span>
+            <span class="hint dashed">@T["Tax ids are written in clear text, so the importing site can protect them with its own keys. Every exported tax id is recorded. Keep the file safe and delete it after the import."]</span>
+        </div>
     </div>
 </div>

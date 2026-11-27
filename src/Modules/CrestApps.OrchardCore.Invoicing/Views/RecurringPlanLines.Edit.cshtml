@@ -1,0 +1,3 @@
+@model RecurringPlanEditViewModel
+
+<partial name="_DocumentLinesEditor" model='DocumentLinesEditorViewModel.For(Model, T["The lines of each invoice. Write {{ period.start }}, {{ period.end }}, {{ period.month }} or {{ period.year }} in a name or description to print the period a run bills, such as Hosting {{ period.month }} {{ period.year }}. Amounts are worked out as you type, and the tax when you save."].Value, T["Total"].Value)' />

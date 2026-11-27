@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -18,8 +19,13 @@ public sealed class SmsEndpointProviderDisplayDriver : DisplayDriver<Omnichannel
 {
     private readonly IOptionsMonitor<SmsProviderOptions> _smsProviderOptions;
 
-    public SmsEndpointProviderDisplayDriver(IOptionsMonitor<SmsProviderOptions> smsProviderOptions)
+    internal readonly IStringLocalizer S;
+
+    public SmsEndpointProviderDisplayDriver(
+        IOptionsMonitor<SmsProviderOptions> smsProviderOptions,
+        IStringLocalizer<SmsEndpointProviderDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _smsProviderOptions = smsProviderOptions;
     }
 
@@ -38,7 +44,7 @@ public sealed class SmsEndpointProviderDisplayDriver : DisplayDriver<Omnichannel
                 .Select(entry => new SelectListItem(entry.Key, entry.Key))
                 .OrderBy(item => item.Text)
                 .ToArray();
-        }).Location("Content:1%Text messages;3");
+        }).Location(l => l.Zone("Content", "1").Card(S["Text Messages"], "3"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelChannelEndpoint endpoint, UpdateEditorContext context)

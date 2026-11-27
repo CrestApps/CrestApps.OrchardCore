@@ -1,0 +1,9 @@
+@model CheckEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+    <div class="ocat-end">
+        <input asp-for="Reason" class="form-control" maxlength="500" />
+        <span class="hint">@T["Optional, such as a wrong amount or a misspelled name. It is kept in the history of the change."]</span>
+    </div>
+</div>

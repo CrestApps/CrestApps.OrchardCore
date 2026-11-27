@@ -1,0 +1,17 @@
+@model RequiredLearningExemptViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Reason">
+    <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+    <div class="ocat-limited">
+        <textarea asp-for="Reason" class="form-control" rows="3" required></textarea>
+        <span class="hint">@T["Such as prior learning or a certificate from elsewhere. It is kept with the exemption."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label for="evidence" class="ocat-label">@T["Evidence"]</label>
+    <div class="ocat-limited">
+        <input type="file" id="evidence" name="evidence" class="form-control" />
+        <span class="hint">@T["Optional, up to 10 MB. It is kept privately: only the person and people who can exempt can open it."]</span>
+    </div>
+</div>

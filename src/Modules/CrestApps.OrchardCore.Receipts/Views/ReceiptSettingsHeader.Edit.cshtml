@@ -1,0 +1,19 @@
+@model ReceiptSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="HeaderTitle">
+    <label asp-for="HeaderTitle" class="ocat-label">@T["Header title"]</label>
+    <div class="ocat-end">
+        <input asp-for="HeaderTitle" class="form-control" />
+        <span asp-validation-for="HeaderTitle"></span>
+        <span class="hint">@T["The heading printed at the top of every receipt. Leave empty to use the default \"Payment receipt\" heading."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="LogoUrl">
+    <label asp-for="LogoUrl" class="ocat-label">@T["Logo URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="LogoUrl" class="form-control" />
+        <span asp-validation-for="LogoUrl"></span>
+        <span class="hint">@T["The URL of the logo shown at the top of the receipt."]</span>
+    </div>
+</div>

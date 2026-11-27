@@ -1,3 +1,6 @@
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.Banking.Checks.Workflows;
@@ -7,6 +10,18 @@ namespace CrestApps.OrchardCore.Banking.Checks.Workflows;
 /// </summary>
 public sealed class MarkStaleChecksTaskDisplayDriver : ActivityDisplayDriver<MarkStaleChecksTask, MarkStaleChecksTaskViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    public MarkStaleChecksTaskDisplayDriver(IStringLocalizer<MarkStaleChecksTaskDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(MarkStaleChecksTask activity, BuildEditorContext context)
+        => Initialize<MarkStaleChecksTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivity(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Stale Checks"], "10"));
+
     /// <inheritdoc />
     protected override void EditActivity(MarkStaleChecksTask activity, MarkStaleChecksTaskViewModel model)
     {

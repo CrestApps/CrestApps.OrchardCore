@@ -27,38 +27,44 @@ public sealed class ProductPartSettingsDisplayDriver : ContentTypePartDefinition
 
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
     {
-        return Initialize<ProductPartSettingsViewModel>("ProductPartSettings_Edit", async model =>
-        {
-            var settings = contentTypePartDefinition.GetSettings<ProductPartSettings>();
+        return Combine(
+            Initialize<ProductPartSettingsViewModel>("ProductPartSettings_Edit", model => FillAsync(model, contentTypePartDefinition))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<ProductPartSettingsViewModel>("ProductPartSettingsPricing_Edit", model => FillAsync(model, contentTypePartDefinition))
+                .Location(l => l.Zone("Content", "2").Card(S["Pricing"], "20")));
+    }
 
-            model.Type = settings.Type;
-            model.DefaultCurrency = settings.DefaultCurrency;
-            model.SalesMode = settings.SalesMode;
-            model.PriceDisplay = settings.PriceDisplay;
-            model.OnRequestLabel = settings.OnRequestLabel;
-            model.AllowPriceDisplayOverride = settings.AllowPriceDisplayOverride;
-            model.PriceOptional = settings.PriceOptional;
-            model.SalesModes =
-            [
-                new SelectListItem(S["Purchasable: every product can be bought online"], nameof(ProductSalesMode.Purchasable)),
-                new SelectListItem(S["Listing only: products are listed but never sold online"], nameof(ProductSalesMode.ListingOnly)),
-                new SelectListItem(S["Per item: each product decides"], nameof(ProductSalesMode.PerItem)),
-            ];
-            model.PriceDisplays =
-            [
-                new SelectListItem(S["Show the price"], nameof(ProductPriceDisplay.Show)),
-                new SelectListItem(S["Show on request (a label instead of the price)"], nameof(ProductPriceDisplay.OnRequest)),
-                new SelectListItem(S["Hide the price"], nameof(ProductPriceDisplay.Hidden)),
-            ];
-            model.Types =
-            [
-                new SelectListItem(S["Undefined"], nameof(ProductType.Undefined)),
-                new SelectListItem(S["Good"], nameof(ProductType.Good)),
-                new SelectListItem(S["Service"], nameof(ProductType.Service)),
-                new SelectListItem(S["Digital"], nameof(ProductType.Digital)),
-            ];
-            model.Currencies = await BuildCurrencyOptionsAsync(model.DefaultCurrency);
-        }).Location("Content");
+    private async ValueTask FillAsync(ProductPartSettingsViewModel model, ContentTypePartDefinition contentTypePartDefinition)
+    {
+        var settings = contentTypePartDefinition.GetSettings<ProductPartSettings>();
+
+        model.Type = settings.Type;
+        model.DefaultCurrency = settings.DefaultCurrency;
+        model.SalesMode = settings.SalesMode;
+        model.PriceDisplay = settings.PriceDisplay;
+        model.OnRequestLabel = settings.OnRequestLabel;
+        model.AllowPriceDisplayOverride = settings.AllowPriceDisplayOverride;
+        model.PriceOptional = settings.PriceOptional;
+        model.SalesModes =
+        [
+            new SelectListItem(S["Purchasable: every product can be bought online"], nameof(ProductSalesMode.Purchasable)),
+            new SelectListItem(S["Listing only: products are listed but never sold online"], nameof(ProductSalesMode.ListingOnly)),
+            new SelectListItem(S["Per item: each product decides"], nameof(ProductSalesMode.PerItem)),
+        ];
+        model.PriceDisplays =
+        [
+            new SelectListItem(S["Show the price"], nameof(ProductPriceDisplay.Show)),
+            new SelectListItem(S["Show on request (a label instead of the price)"], nameof(ProductPriceDisplay.OnRequest)),
+            new SelectListItem(S["Hide the price"], nameof(ProductPriceDisplay.Hidden)),
+        ];
+        model.Types =
+        [
+            new SelectListItem(S["Undefined"], nameof(ProductType.Undefined)),
+            new SelectListItem(S["Good"], nameof(ProductType.Good)),
+            new SelectListItem(S["Service"], nameof(ProductType.Service)),
+            new SelectListItem(S["Digital"], nameof(ProductType.Digital)),
+        ];
+        model.Currencies = await BuildCurrencyOptionsAsync(model.DefaultCurrency);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)

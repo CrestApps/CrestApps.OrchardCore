@@ -1,0 +1,34 @@
+@model TaxFormViewModel
+
+@{
+    var valuesName = Html.NameFor(m => m.Values).ToString();
+
+    async Task ValueRow(string index, TaxFormValueViewModel value)
+    {
+        var name = $"{valuesName}[{index}]";
+        <tr>
+            <td>
+                <input type="hidden" name="@(valuesName).Index" value="@index" />
+                <input name="@(name).Name" value="@value.Name" class="form-control form-control-sm" aria-label="@T["Name"]" />
+            </td>
+            <td><input name="@(name).Year" value="@value.Year" type="number" min="1900" max="9999" class="form-control form-control-sm" aria-label="@T["From year"]" /></td>
+            <td><input name="@(name).Amount" value="@(value.Amount?.ToString(System.Globalization.CultureInfo.InvariantCulture))" type="number" step="any" class="form-control form-control-sm" aria-label="@T["Value"]" /></td>
+            <td class="text-end"><button type="button" class="btn btn-sm btn-outline-danger" data-remove-row title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></td>
+        </tr>
+    }
+}
+
+<p class="hint mb-2">@T["Figures that change by year, such as a reporting threshold or a maximum: a formula reads VALUE('Name'), the value of the latest year at or before the filing's year."]</p>
+<table class="table table-sm align-middle mb-2" data-rows="values">
+    <thead><tr><th>@T["Name"]</th><th style="width: 9rem">@T["From year"]</th><th style="width: 12rem">@T["Value"]</th><th style="width: 3rem"></th></tr></thead>
+    <tbody>
+        @for (var i = 0; i < Model.Values.Count; i++)
+        {
+            await ValueRow(i.ToString(System.Globalization.CultureInfo.InvariantCulture), Model.Values[i]);
+        }
+    </tbody>
+</table>
+<template data-row-template="values">
+    @{ await ValueRow("__index__", new TaxFormValueViewModel()); }
+</template>
+<button type="button" class="btn btn-sm btn-secondary" data-add-row="values"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add value"]</button>

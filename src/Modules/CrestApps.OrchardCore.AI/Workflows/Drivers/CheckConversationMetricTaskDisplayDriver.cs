@@ -70,6 +70,16 @@ public sealed class CheckConversationMetricTaskDisplayDriver : ActivityDisplayDr
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(CheckConversationMetricTask activity, BuildEditorContext context)
+    {
+        return Combine(
+            Initialize<CheckConversationMetricTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Metric"], "10")),
+            Initialize<CheckConversationMetricTaskViewModel>("CheckConversationMetricTaskCondition_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Condition"], "20")));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(CheckConversationMetricTask activity, UpdateEditorContext context)
     {
         var model = new CheckConversationMetricTaskViewModel();

@@ -10,6 +10,7 @@ using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.PayLater.Drivers;
 
@@ -25,6 +26,8 @@ public sealed class PayLaterSettingsDisplayDriver : SiteDisplayDriver<PayLaterSe
     protected override string SettingsGroupId
         => PayLaterConstants.SettingsGroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PayLaterSettingsDisplayDriver"/> class.
     /// </summary>
@@ -34,8 +37,10 @@ public sealed class PayLaterSettingsDisplayDriver : SiteDisplayDriver<PayLaterSe
     public PayLaterSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        IStringLocalizer<PayLaterSettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _serviceProvider = serviceProvider;
@@ -55,7 +60,7 @@ public sealed class PayLaterSettingsDisplayDriver : SiteDisplayDriver<PayLaterSe
             {
                 model.PaymentTerms = [.. (await terms.GetEnabledAsync()).Select(term => new SelectListItem(term.Name, term.ItemId))];
             }
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Pay Later"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
         .OnGroup(SettingsGroupId);
     }

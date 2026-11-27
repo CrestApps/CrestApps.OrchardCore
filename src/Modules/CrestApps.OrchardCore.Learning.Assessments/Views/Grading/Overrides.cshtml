@@ -57,53 +57,9 @@
 </div>
 
 <form method="post" asp-action="AddOverride" asp-route-quizId="@Model.QuizId">
-    <div class="card mb-3">
-        <div class="card-header">@T["Give an override"]</div>
-        <div class="card-body">
-            <div asp-validation-summary="ModelOnly"></div>
-            <div class="ocat-wrapper" asp-validation-class-for="UserName">
-                <label asp-for="UserName" class="ocat-label">@T["Learner (user name)"]</label>
-                <div class="ocat-end">
-                    <input asp-for="UserName" class="form-control" required />
-                    <span asp-validation-for="UserName"></span>
-                </div>
-            </div>
-            <div class="ocat-wrapper" asp-validation-class-for="ExtraMinutes">
-                <label asp-for="ExtraMinutes" class="ocat-label">@T["Extra minutes"]</label>
-                <div class="ocat-end ocat-end-sm">
-                    <input asp-for="ExtraMinutes" type="number" min="0" class="form-control" />
-                    <span asp-validation-for="ExtraMinutes"></span>
-                </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label asp-for="ExtraAttempts" class="ocat-label">@T["Extra attempts"]</label>
-                <div class="ocat-end ocat-end-sm">
-                    <input asp-for="ExtraAttempts" type="number" min="0" class="form-control" />
-                </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label asp-for="Opens" class="ocat-label">@T["Opens instead"]</label>
-                <div class="ocat-end">
-                    <input asp-for="Opens" type="datetime-local" class="form-control" />
-                </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label asp-for="Closes" class="ocat-label">@T["Closes instead"]</label>
-                <div class="ocat-end">
-                    <input asp-for="Closes" type="datetime-local" class="form-control" />
-                    <span class="hint">@T["In your time zone. Leave empty to keep the quiz window."]</span>
-                </div>
-            </div>
-            <div class="ocat-wrapper" asp-validation-class-for="Reason">
-                <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
-                <div class="ocat-end">
-                    <input asp-for="Reason" class="form-control" required maxlength="500" />
-                    <span asp-validation-for="Reason"></span>
-                    <span class="hint">@T["Such as an accessibility accommodation or an illness. It is kept with the override."]</span>
-                </div>
-            </div>
-        </div>
-    </div>
+    <div asp-validation-summary="ModelOnly"></div>
+
+    @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
         <button type="submit" class="btn btn-primary">@T["Give the override"]</button>

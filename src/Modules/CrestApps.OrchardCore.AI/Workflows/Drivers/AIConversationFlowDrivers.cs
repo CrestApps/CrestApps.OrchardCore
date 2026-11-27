@@ -46,6 +46,16 @@ public sealed class AIConversationStageTaskDisplayDriver : ActivityDisplayDriver
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(AIConversationStageTask activity, BuildEditorContext context)
+    {
+        return Combine(
+            Initialize<AIConversationStageTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Stage"], "10")),
+            Initialize<AIConversationStageTaskViewModel>("AIConversationStageTaskWaysOut_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Ways Out"], "20")));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(AIConversationStageTask activity, UpdateEditorContext context)
     {
         var model = new AIConversationStageTaskViewModel();

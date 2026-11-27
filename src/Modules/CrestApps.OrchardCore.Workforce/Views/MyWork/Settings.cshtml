@@ -37,51 +37,13 @@
     </div>
 </div>
 
-<div class="card mb-3">
-    <div class="card-body">
-        <h2 class="h5">@T["What I hear about"]</h2>
-        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/settings")">
-            <fieldset class="mb-3">
-                <legend class="form-label h6">@T["How"]</legend>
-                <div class="form-check"><input class="form-check-input" type="checkbox" checked disabled id="channel-inbox" /><label class="form-check-label" for="channel-inbox">@T["My Work notifications"] <span class="text-muted small">@T["(always on)"]</span></label></div>
-                @foreach (var channel in Model.Channels)
-                {
-                    <div class="form-check"><input class="form-check-input" type="checkbox" name="channels" value="@channel.Value" id="channel-@channel.Value" checked="@channel.Enabled" /><label class="form-check-label" for="channel-@channel.Value">@channel.Label</label></div>
-                }
-            </fieldset>
-            <fieldset class="mb-3">
-                <legend class="form-label h6">@T["About"]</legend>
-                @foreach (var kind in Model.Kinds)
-                {
-                    <div class="form-check"><input class="form-check-input" type="checkbox" name="kinds" value="@kind.Value" id="kind-@kind.Value" checked="@kind.Enabled" /><label class="form-check-label" for="kind-@kind.Value">@kind.Label</label></div>
-                }
-                <div class="form-text">@T["Turned-off topics still show here in My Work."]</div>
-            </fieldset>
-            <fieldset class="mb-3">
-                <legend class="form-label h6">@T["Reminders"]</legend>
-                <label for="reminder-minutes" class="form-label">@T["Remind me of a shift"]</label>
-                <select id="reminder-minutes" name="reminderMinutes" class="form-select" style="max-width: 18rem">
-                    @foreach (var (minutes, label) in new[] { (0, T["Never"].Value), (15, T["15 minutes before"].Value), (30, T["30 minutes before"].Value), (60, T["1 hour before"].Value), (120, T["2 hours before"].Value), (240, T["4 hours before"].Value) })
-                    {
-                        <option value="@minutes" selected="@(minutes == Model.ReminderMinutes)">@label</option>
-                    }
-                </select>
-            </fieldset>
-            <fieldset class="mb-3">
-                <legend class="form-label h6">@T["Quiet hours"]</legend>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <label for="quiet-start" class="visually-hidden">@T["From"]</label>
-                    <input id="quiet-start" name="quietStart" type="time" class="form-control" style="max-width: 9rem" value="@Model.QuietStart" />
-                    <span>@T["to"]</span>
-                    <label for="quiet-end" class="visually-hidden">@T["To"]</label>
-                    <input id="quiet-end" name="quietEnd" type="time" class="form-control" style="max-width: 9rem" value="@Model.QuietEnd" />
-                </div>
-                <div class="form-text">@T["Nothing is pushed to my phone or emailed in these hours; it all still shows here in My Work. Leave both empty for none."]</div>
-            </fieldset>
-            <button type="submit" class="btn btn-success">@T["Save"]</button>
-        </form>
+<form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/settings")" class="mb-3">
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-success">@T["Save"]</button>
     </div>
-</div>
+</form>
 
 <div class="card mb-3" id="calendar">
     <div class="card-body">

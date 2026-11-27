@@ -89,9 +89,16 @@ internal sealed class MessagingRoutingRuleDisplayDriver : DisplayDriver<Messagin
     /// <inheritdoc/>
     public override IDisplayResult Edit(MessagingRoutingRule rule, BuildEditorContext context)
     {
-        // One shape for the whole editor, so the option lists are read once; the view groups the fields in cards.
-        return Initialize<MessagingRoutingRuleViewModel>("MessagingRoutingRuleFields_Edit", model => PopulateAsync(model, rule, context.IsNew))
-            .Location("Content:1");
+        // One shape per card; each reads only the option lists its own fields need.
+        return Combine(
+            Initialize<MessagingRoutingRuleViewModel>("MessagingRoutingRuleGeneral_Edit", model => PopulateAsync(model, rule, context.IsNew))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<MessagingRoutingRuleViewModel>("MessagingRoutingRuleTriggers_Edit", model => PopulateAsync(model, rule, context.IsNew))
+                .Location(l => l.Zone("Content", "2").Card(S["When the Rule Applies"], "20")),
+            Initialize<MessagingRoutingRuleViewModel>("MessagingRoutingRuleScope_Edit", model => PopulateScopeAsync(model, rule, context.IsNew))
+                .Location(l => l.Zone("Content", "3").Card(S["Conversations the Rule Takes"], "30")),
+            Initialize<MessagingRoutingRuleViewModel>("MessagingRoutingRuleCandidates_Edit", model => PopulateCandidatesAsync(model, rule, context.IsNew))
+                .Location(l => l.Zone("Content", "4").Card(S["Who Gets the Conversation"], "40")));
     }
 
     /// <inheritdoc/>
@@ -131,7 +138,28 @@ internal sealed class MessagingRoutingRuleDisplayDriver : DisplayDriver<Messagin
         return Edit(rule, context);
     }
 
-    private async ValueTask PopulateAsync(MessagingRoutingRuleViewModel model, MessagingRoutingRule rule, bool isNew)
+    private static ValueTask PopulateAsync(MessagingRoutingRuleViewModel model, MessagingRoutingRule rule, bool isNew)
+    {
+        PopulateFields(model, rule, isNew);
+
+        return ValueTask.CompletedTask;
+    }
+
+    private async ValueTask PopulateScopeAsync(MessagingRoutingRuleViewModel model, MessagingRoutingRule rule, bool isNew)
+    {
+        PopulateFields(model, rule, isNew);
+
+        await PopulateScopeListsAsync(model);
+    }
+
+    private async ValueTask PopulateCandidatesAsync(MessagingRoutingRuleViewModel model, MessagingRoutingRule rule, bool isNew)
+    {
+        PopulateFields(model, rule, isNew);
+
+        await PopulateCandidateListsAsync(model);
+    }
+
+    private static void PopulateFields(MessagingRoutingRuleViewModel model, MessagingRoutingRule rule, bool isNew)
     {
         model.DisplayText = rule.DisplayText;
         model.Description = rule.Description;
@@ -154,7 +182,10 @@ internal sealed class MessagingRoutingRuleDisplayDriver : DisplayDriver<Messagin
         model.Strategy = rule.Strategy ?? MessagingRoutingRuleStrategies.RoundRobin;
         model.OnlyAvailableAgents = rule.OnlyAvailableAgents;
         model.RespectMaxConcurrent = rule.RespectMaxConcurrent;
+    }
 
+    private async Task PopulateScopeListsAsync(MessagingRoutingRuleViewModel model)
+    {
         var channels = _channelResolver.GetAll();
 
         model.AvailableChannels = channels
@@ -199,13 +230,7 @@ internal sealed class MessagingRoutingRuleDisplayDriver : DisplayDriver<Messagin
 
         model.AvailableServiceAddresses = addresses;
 
-        var queues = (await _queueManager.GetAllAsync())
-            .OrderBy(queue => queue.Name, StringComparer.OrdinalIgnoreCase)
-            .ToArray();
-
-        model.AvailableQueues = queues
-            .Select(queue => new SelectListItem(queue.Name, queue.ItemId, model.QueueIds.Contains(queue.ItemId, StringComparer.Ordinal)))
-            .ToList();
+        await PopulateQueuesAsync(model);
 
         model.AvailableCampaigns = _campaigns is null
             ? []
@@ -213,6 +238,23 @@ internal sealed class MessagingRoutingRuleDisplayDriver : DisplayDriver<Messagin
                 .OrderBy(campaign => campaign.DisplayText, StringComparer.OrdinalIgnoreCase)
                 .Select(campaign => new SelectListItem(campaign.DisplayText, campaign.ItemId, model.CampaignIds.Contains(campaign.ItemId, StringComparer.Ordinal)))
                 .ToList();
+
+    }
+
+    private async Task PopulateQueuesAsync(MessagingRoutingRuleViewModel model)
+    {
+        var queues = (await _queueManager.GetAllAsync())
+            .OrderBy(queue => queue.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        model.AvailableQueues = queues
+            .Select(queue => new SelectListItem(queue.Name, queue.ItemId, model.QueueIds.Contains(queue.ItemId, StringComparer.Ordinal)))
+            .ToList();
+    }
+
+    private async Task PopulateCandidateListsAsync(MessagingRoutingRuleViewModel model)
+    {
+        await PopulateQueuesAsync(model);
 
         model.AvailableTeams = (await _teamManager.GetAllAsync())
             .OrderBy(team => team.Name, StringComparer.OrdinalIgnoreCase)

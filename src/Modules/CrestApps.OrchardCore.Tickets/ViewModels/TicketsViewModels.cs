@@ -248,7 +248,7 @@ public sealed record TicketTypeChoice(string Value, string Text, string Descript
 /// <summary>
 /// The new-ticket page: the ticket type's editor and the ticket's own values.
 /// </summary>
-public sealed class TicketCreateViewModel
+public class TicketCreateViewModel
 {
     /// <summary>
     /// Gets or sets the category.
@@ -346,10 +346,25 @@ public sealed class TicketCreateViewModel
     public List<SelectListItem> Priorities { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the editor of the ticket type's fields.
+    /// Gets or sets the editor of the ticket type's fields. It is the ticket type's content editor, which is not grouped
+    /// in cards.
     /// </summary>
     [BindNever]
     public IShape Editor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the cards above the ticket type's fields (who it is for, where it goes), built by the display drivers
+    /// of <see cref="TicketCreateViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape RequestEditor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the cards below the ticket type's fields (the first message, protected information), built by the
+    /// display drivers of <see cref="TicketCreateViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape MessageEditor { get; set; }
 
     /// <summary>
     /// Gets or sets whether files can be attached.

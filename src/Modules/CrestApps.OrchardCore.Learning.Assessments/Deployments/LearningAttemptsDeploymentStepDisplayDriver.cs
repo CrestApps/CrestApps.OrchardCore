@@ -4,6 +4,7 @@ using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using YesSql;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Deployments;
@@ -12,9 +13,14 @@ internal sealed class LearningAttemptsDeploymentStepDisplayDriver : DisplayDrive
 {
     private readonly global::YesSql.ISession _session;
 
-    public LearningAttemptsDeploymentStepDisplayDriver(global::YesSql.ISession session)
+    internal readonly IStringLocalizer S;
+
+    public LearningAttemptsDeploymentStepDisplayDriver(
+        global::YesSql.ISession session,
+        IStringLocalizer<LearningAttemptsDeploymentStepDisplayDriver> stringLocalizer)
     {
         _session = session;
+        S = stringLocalizer;
     }
 
     public override Task<IDisplayResult> DisplayAsync(LearningAttemptsDeploymentStep step, BuildDisplayContext context)
@@ -34,7 +40,7 @@ internal sealed class LearningAttemptsDeploymentStepDisplayDriver : DisplayDrive
                 .ListAsync();
 
             model.QuizOptions = quizzes.Select(quiz => new SelectListItem(quiz.DisplayText, quiz.ContentItemId, quiz.ContentItemId == step.QuizId)).ToList();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Quiz Attempts"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(LearningAttemptsDeploymentStep step, UpdateEditorContext context)
     {

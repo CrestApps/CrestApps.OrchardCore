@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Tickets.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
@@ -16,9 +17,14 @@ internal sealed class TicketFieldCustomerSettingsDisplayDriver : ContentPartFiel
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
 
-    public TicketFieldCustomerSettingsDisplayDriver(IContentDefinitionManager contentDefinitionManager)
+    internal readonly IStringLocalizer S;
+
+    public TicketFieldCustomerSettingsDisplayDriver(
+        IContentDefinitionManager contentDefinitionManager,
+        IStringLocalizer<TicketFieldCustomerSettingsDisplayDriver> stringLocalizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(ContentPartFieldDefinition model, BuildEditorContext context)
@@ -29,7 +35,7 @@ internal sealed class TicketFieldCustomerSettingsDisplayDriver : ContentPartFiel
         }
 
         return Initialize<TicketFieldCustomerSettingsViewModel>("TicketFieldCustomerSettings_Edit", viewModel =>
-            viewModel.CustomerEditable = model.GetSettings<TicketFieldCustomerSettings>().CustomerEditable).Location("Content:25");
+            viewModel.CustomerEditable = model.GetSettings<TicketFieldCustomerSettings>().CustomerEditable).Location(l => l.Zone("Content", "25").Card(S["Portal"], "25"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentPartFieldDefinition model, UpdatePartFieldEditorContext context)

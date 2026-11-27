@@ -79,7 +79,7 @@ public sealed class SubscriptionOnboardingSettingsDisplayDriver : SiteDisplayDri
             model.DatabaseProviders = _databaseProviders
                 .Where(provider => !string.Equals(provider.Value, SubscriptionOnboardingSettings.DefaultDatabaseProvider, StringComparison.OrdinalIgnoreCase))
                 .Select(provider => new SelectListItem(provider.Name, provider.Value));
-        }).Location("Content:5#Tenant Onboarding:5")
+        }).Location(l => l.Zone("Content", "5").Tab(S["Tenant Onboarding"], "5").Card(S["Database"], "10"))
         .OnGroup(SettingsGroupId);
     }
 

@@ -1,0 +1,53 @@
+@model CheckLayoutViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="PrintMicr">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="PrintMicr" class="form-check-input" data-designer-micr />
+            <label asp-for="PrintMicr" class="form-check-label">@T["Print the check line"]</label>
+            <span class="hint dashed">@T["The routing, account and check numbers at the bottom of the check, in the E-13B font. Banks read it with magnetic toner. Leave it off on pre-printed checks."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="MicrFontFile">
+    <label asp-for="MicrFontFile" class="ocat-label">@T["Check line font"]</label>
+    <div class="ocat-end">
+        <input asp-for="MicrFontFile" class="form-control" type="file" accept=".ttf" />
+        <span asp-validation-for="MicrFontFile" class="text-danger"></span>
+        @if (Model.HasMicrFont)
+        {
+            <div class="form-check mt-1">
+                <input asp-for="RemoveMicrFont" class="form-check-input" />
+                <label asp-for="RemoveMicrFont" class="form-check-label">@T["Remove the stored font"]</label>
+            </div>
+        }
+        else
+        {
+            <div class="text-warning small mt-1">@T["No check line font is uploaded. The check line can't print until you upload a TrueType MICR E-13B font you are licensed to use."]</div>
+        }
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="MicrSymbolCharacters">
+    <label asp-for="MicrSymbolCharacters" class="ocat-label">@T["Symbol characters"]</label>
+    <div class="ocat-end">
+        <input asp-for="MicrSymbolCharacters" class="form-control" maxlength="4" />
+        <span asp-validation-for="MicrSymbolCharacters" class="text-danger"></span>
+        <span class="hint">@T["The four characters the font draws the transit, amount, on-us and dash symbols on, in that order. Most fonts use ABCD."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="MicrFontSize">
+    <label asp-for="MicrFontSize" class="ocat-label">@T["Font size"]</label>
+    <div class="ocat-end">
+        <input asp-for="MicrFontSize" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="MicrFontSize" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="UseAuxiliaryOnUs">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="UseAuxiliaryOnUs" class="form-check-input" />
+            <label asp-for="UseAuxiliaryOnUs" class="form-check-label">@T["Business check format"]</label>
+            <span class="hint dashed">@T["The check number prints left of the routing number. Off, it prints after the account number, as on personal checks."]</span>
+        </div>
+    </div>
+</div>

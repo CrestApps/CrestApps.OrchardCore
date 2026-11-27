@@ -48,7 +48,7 @@ public sealed class LearningPackageContentHostSettingsDisplayDriver : SiteDispla
         => Initialize<LearningPackageContentHostSettingsViewModel>("LearningPackageContentHostSettings_Edit", model =>
         {
             model.BaseUrl = settings.BaseUrl;
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Package Content Host"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, LearningPackagesPermissions.ManageLearningPackageSettings))
         .OnGroup(SettingsGroupId);
 

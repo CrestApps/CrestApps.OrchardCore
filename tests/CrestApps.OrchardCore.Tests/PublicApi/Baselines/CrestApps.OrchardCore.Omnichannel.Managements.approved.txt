@@ -619,7 +619,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Controllers
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class LeadsController : Microsoft.AspNetCore.Mvc.Controller
     {
-        public LeadsController(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionService conversionService, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadMatchFinder matchFinder, YesSql.ISession session, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.LeadsController> htmlLocalizer) { }
+        public LeadsController(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.Omnichannel.Core.Services.ILeadConversionService conversionService, CrestApps.OrchardCore.Omnichannel.Managements.Services.LeadMatchFinder matchFinder, YesSql.ISession session, OrchardCore.DisplayManagement.Notify.INotifier notifier, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Managements.ViewModels.ConvertLeadViewModel> displayManager, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Controllers.LeadsController> htmlLocalizer) { }
         [OrchardCore.Admin.Admin("omnichannel/leads/{contentItemId}/convert", "OmnichannelLeadConvert")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Convert(string contentItemId) { }
         [Microsoft.AspNetCore.Mvc.ActionName("Convert")]
@@ -800,7 +800,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Drivers
 {
     public sealed class NationalDoNotCallRegistryImportOptionsDisplayDriver : OrchardCore.DisplayManagement.Handlers.DisplayDriver<CrestApps.OrchardCore.ContentTransfer.Models.ImportContent>
     {
-        public NationalDoNotCallRegistryImportOptionsDisplayDriver(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.DncRegistry.INationalDoNotCallRegistry> registries, OrchardCore.Settings.ISiteService siteService) { }
+        public NationalDoNotCallRegistryImportOptionsDisplayDriver(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.DncRegistry.INationalDoNotCallRegistry> registries, OrchardCore.Settings.ISiteService siteService, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Drivers.NationalDoNotCallRegistryImportOptionsDisplayDriver> stringLocalizer) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> EditAsync(CrestApps.OrchardCore.ContentTransfer.Models.ImportContent model, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.ContentTransfer.Models.ImportContent model, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
@@ -1739,6 +1739,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IList<Microsoft.AspNetCore.Mvc.Rendering.SelectListItem> ContactContentTypes { get; set; }
         public bool CreateOpportunity { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public OrchardCore.DisplayManagement.IShape Editor { get; set; }
         public string ExistingAccountItemId { get; set; }
         public string ExistingContactItemId { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
@@ -2457,12 +2459,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers
     public sealed class ConvertLeadTaskDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.ConvertLeadTaskViewModel>
     {
         public ConvertLeadTaskDisplayDriver(OrchardCore.ContentManagement.Metadata.IContentDefinitionManager contentDefinitionManager, OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers.ConvertLeadTaskDisplayDriver> stringLocalizer) { }
+        public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask activity, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         protected override System.Threading.Tasks.ValueTask EditActivityAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask activity, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.ConvertLeadTaskViewModel model) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.ConvertLeadTask activity, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
     public sealed class CreateAIActivityTaskDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.CreateAIActivityTaskViewModel>
     {
         public CreateAIActivityTaskDisplayDriver(CrestApps.Core.AI.Profiles.IAIProfileStore profileStore, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointStore endpointStore, OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers.CreateAIActivityTaskDisplayDriver> stringLocalizer) { }
+        public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask activity, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         protected override System.Threading.Tasks.ValueTask EditActivityAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask activity, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.CreateAIActivityTaskViewModel model) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.CreateAIActivityTask activity, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }
@@ -2473,6 +2477,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers
     public sealed class UpdateContactTaskDisplayDriver : OrchardCore.Workflows.Display.ActivityDisplayDriver<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.UpdateContactTask, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.UpdateContactTaskViewModel>
     {
         public UpdateContactTaskDisplayDriver(OrchardCore.Liquid.ILiquidTemplateManager liquidTemplateManager, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Drivers.UpdateContactTaskDisplayDriver> stringLocalizer) { }
+        public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.UpdateContactTask activity, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         protected override void EditActivity(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.UpdateContactTask activity, CrestApps.OrchardCore.Omnichannel.Managements.Workflows.ViewModels.UpdateContactTaskViewModel model) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Omnichannel.Managements.Workflows.Models.UpdateContactTask activity, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
     }

@@ -1,0 +1,54 @@
+@model TaxRuleViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="JurisdictionId" class="ocat-label">@T["Jurisdiction"]</label>
+    <div class="ocat-end">
+        <select asp-for="JurisdictionId" asp-items="Model.Jurisdictions" class="form-select"></select>
+        <span class="hint">@T["The jurisdiction the rule belongs to."]</span>
+        <span asp-validation-for="JurisdictionId" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CategoryCode" class="ocat-label">@T["Category"]</label>
+    <div class="ocat-end">
+        <select asp-for="CategoryCode" asp-items="Model.Categories" class="form-select"></select>
+        <span class="hint">@T["The tax category the rule applies to. Leave as Any category to match every category."]</span>
+        <span asp-validation-for="CategoryCode" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="CustomerType" class="ocat-label">@T["Customer type"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <select asp-for="CustomerType" asp-items="Model.CustomerTypes" class="form-select ocat-limited"></select>
+        <span asp-validation-for="CustomerType" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MinimumAmount" class="ocat-label">@T["Minimum amount"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="MinimumAmount" type="number" step="0.01" class="form-control ocat-limited" />
+        <span asp-validation-for="MinimumAmount" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaximumAmount" class="ocat-label">@T["Maximum amount"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="MaximumAmount" type="number" step="0.01" class="form-control ocat-limited" />
+        <span asp-validation-for="MaximumAmount" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ThresholdBasis" class="ocat-label">@T["Amounts compared with"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <select asp-for="ThresholdBasis" class="form-select ocat-limited">
+            <option value="@CrestApps.OrchardCore.Taxation.Models.TaxThresholdBasis.Item">@T["Each item"]</option>
+            <option value="@CrestApps.OrchardCore.Taxation.Models.TaxThresholdBasis.Order">@T["The whole order"]</option>
+        </select>
+        <span class="hint">@T["The whole order suits an import duty charged only on orders above a value, such as 150."]</span>
+    </div>
+</div>

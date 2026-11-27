@@ -6,6 +6,8 @@ using Json.Schema;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -198,13 +200,26 @@ public sealed class CredentialAwardedEventDisplayDriver : ActivityDisplayDriver<
 {
     private readonly ICredentialDefinitionCatalog _definitions;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="CredentialAwardedEventDisplayDriver"/> class.
     /// </summary>
     /// <param name="definitions">The definitions.</param>
-    public CredentialAwardedEventDisplayDriver(ICredentialDefinitionCatalog definitions)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public CredentialAwardedEventDisplayDriver(
+        ICredentialDefinitionCatalog definitions,
+        IStringLocalizer<CredentialAwardedEventDisplayDriver> stringLocalizer)
     {
         _definitions = definitions;
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override IDisplayResult Edit(CredentialAwardedEvent activity, BuildEditorContext context)
+    {
+        return Initialize<CredentialAwardedEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Trigger"], "10"));
     }
 
     /// <inheritdoc/>
@@ -226,6 +241,24 @@ public sealed class CredentialAwardedEventDisplayDriver : ActivityDisplayDriver<
 /// </summary>
 public sealed class AwardCredentialTaskDisplayDriver : ActivityDisplayDriver<AwardCredentialTask, AwardCredentialTaskViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AwardCredentialTaskDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AwardCredentialTaskDisplayDriver(IStringLocalizer<AwardCredentialTaskDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc/>
+    public override IDisplayResult Edit(AwardCredentialTask activity, BuildEditorContext context)
+    {
+        return Initialize<AwardCredentialTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Task"], "10"));
+    }
+
     /// <inheritdoc/>
     protected override void EditActivity(AwardCredentialTask activity, AwardCredentialTaskViewModel model)
     {

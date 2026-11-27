@@ -1,0 +1,46 @@
+@model TicketBoardViewModel
+
+@{
+    var columnsName = Html.NameFor(m => m.Columns).ToString();
+    var columnsId = Html.IdFor(m => m.Columns).ToString();
+    var teamFieldId = Html.IdFor(m => m.SharedWithTeamId).ToString();
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<style asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.BoardStyle"></style>
+<script asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.BoardEditorScript" at="Foot"></script>
+
+<div class="ocat-wrapper" data-board-sharing role="radiogroup" aria-label="@T["Who it is for"]">
+    <span class="ocat-label">@T["Shared with"]</span>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="Sharing" value="@TicketBoardSharing.Personal" id="board-sharing-personal" />
+            <label class="form-check-label" for="board-sharing-personal">@T["Only me"]</label>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="Sharing" value="@TicketBoardSharing.Team" id="board-sharing-team" disabled="@(!Model.CanShare)" />
+            <label class="form-check-label" for="board-sharing-team">@T["A team"]</label>
+        </div>
+        <div class="ms-4 mb-2" data-board-team>
+            <label class="visually-hidden" for="@teamFieldId">@T["Team"]</label>
+            @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.SharedWithTeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.SharedWithTeamId) ? Array.Empty<string>() : new[] { Model.SharedWithTeamId } })
+            <span asp-validation-for="SharedWithTeamId" class="text-danger"></span>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" asp-for="Sharing" value="@TicketBoardSharing.Everybody" id="board-sharing-everybody" disabled="@(!Model.CanShare)" />
+            <label class="form-check-label" for="board-sharing-everybody">@T["Everybody who works on tickets"]</label>
+        </div>
+        <span asp-validation-for="Sharing" class="text-danger"></span>
+        <span class="hint">
+            @if (Model.CanShare)
+            {
+                @T["Everyone who opens the board sees only the tickets they may already see."]
+            }
+            else
+            {
+                @T["You may keep boards for yourself; sharing a board takes the Manage shared ticket boards permission."]
+            }
+        </span>
+    </div>
+</div>

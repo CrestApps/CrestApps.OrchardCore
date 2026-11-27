@@ -1,0 +1,14 @@
+@model WorkOrderEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Earliest" class="ocat-label">@T["Not before"]</label>
+    <div class="ocat-end">
+        <input asp-for="Earliest" type="datetime-local" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Latest" class="ocat-label">@T["Not after"]</label>
+    <div class="ocat-end">
+        <input asp-for="Latest" type="datetime-local" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>

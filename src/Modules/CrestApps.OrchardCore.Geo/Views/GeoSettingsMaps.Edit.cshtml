@@ -1,0 +1,29 @@
+@model GeoSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="TileUrl" class="ocat-label">@T["Tile address"]</label>
+    <div class="ocat-end">
+        <input asp-for="TileUrl" class="form-control" />
+        <span class="hint">@T["With {0}, {1} and {2}. The OpenStreetMap tile server is only for trying things out: a live site must use its own tiles or a commercial tile service, under the OpenStreetMap tile usage policy.", "{z}", "{x}", "{y}"]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TileAttribution" class="ocat-label">@T["Attribution"]</label>
+    <div class="ocat-end">
+        <input asp-for="TileAttribution" class="form-control" />
+        <span class="hint">@T["Shown in the corner of every map, as the tile source requires."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultLatitude" class="ocat-label">@T["Maps start at"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="DefaultLatitude" type="number" min="-90" max="90" step="any" class="form-control" style="max-width: 10rem" aria-label="@T["Latitude"]" placeholder="@T["Latitude"]" />
+            <input asp-for="DefaultLongitude" type="number" min="-180" max="180" step="any" class="form-control" style="max-width: 10rem" aria-label="@T["Longitude"]" placeholder="@T["Longitude"]" />
+            <input asp-for="DefaultZoom" type="number" min="1" max="19" class="form-control" style="max-width: 7rem" aria-label="@T["Zoom"]" placeholder="@T["Zoom"]" />
+        </div>
+        <span class="hint">@T["The latitude, longitude and zoom of a map with nothing on it yet."]</span>
+    </div>
+</div>

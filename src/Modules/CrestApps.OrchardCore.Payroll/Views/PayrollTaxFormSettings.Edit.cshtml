@@ -1,40 +1,35 @@
 @model PayrollTaxFormSettingsViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Payroll"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Workers" class="ocat-label">@T["Pay of"]</label>
-            <div class="ocat-end">
-                <select asp-for="Workers" class="form-select" style="max-width: 18rem">
-                    <option value="Employees">@T["Employees"]</option>
-                    <option value="Contractors">@T["Contractors"]</option>
-                    <option value="Everyone">@T["Employees and contractors"]</option>
-                </select>
-            </div>
+<div class="ocat-wrapper">
+    <label asp-for="Workers" class="ocat-label">@T["Pay of"]</label>
+    <div class="ocat-end">
+        <select asp-for="Workers" class="form-select" style="max-width: 18rem">
+            <option value="Employees">@T["Employees"]</option>
+            <option value="Contractors">@T["Contractors"]</option>
+            <option value="Everyone">@T["Employees and contractors"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="PeopleJurisdiction" class="ocat-label">@T["Only people taxed in"]</label>
+    <div class="ocat-end">
+        <input asp-for="PeopleJurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
+        <span class="hint">@T["Leave it empty to report everyone; CA-QC reports only people with a tax line of Quebec or under it."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="ListJurisdictionAmounts" />
+            <label class="form-check-label" asp-for="ListJurisdictionAmounts">@T["List the income taxes below the country"]</label>
+            <span class="hint dashed">@T["Such as a W-2's boxes 15 to 20: the wages and income tax of each state and locality a person paid, with the employer's account there, printed as rows."]</span>
         </div>
-        <div class="ocat-wrapper">
-            <label asp-for="PeopleJurisdiction" class="ocat-label">@T["Only people taxed in"]</label>
-            <div class="ocat-end">
-                <input asp-for="PeopleJurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
-                <span class="hint">@T["Leave it empty to report everyone; CA-QC reports only people with a tax line of Quebec or under it."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input type="checkbox" class="form-check-input" asp-for="ListJurisdictionAmounts" />
-                    <label class="form-check-label" asp-for="ListJurisdictionAmounts">@T["List the income taxes below the country"]</label>
-                    <span class="hint dashed">@T["Such as a W-2's boxes 15 to 20: the wages and income tax of each state and locality a person paid, with the employer's account there, printed as rows."]</span>
-                </div>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="PayCodeFieldPrefix" class="ocat-label">@T["Pay code prefix"]</label>
-            <div class="ocat-end">
-                <input asp-for="PayCodeFieldPrefix" class="form-control" maxlength="20" style="max-width: 10rem" />
-                <span class="hint">@T["The start of the name a pay code keeps for a field that pay codes report to, such as W2: for W2:12D. Leave it empty to use the form's name and a colon."]</span>
-            </div>
-        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="PayCodeFieldPrefix" class="ocat-label">@T["Pay code prefix"]</label>
+    <div class="ocat-end">
+        <input asp-for="PayCodeFieldPrefix" class="form-control" maxlength="20" style="max-width: 10rem" />
+        <span class="hint">@T["The start of the name a pay code keeps for a field that pay codes report to, such as W2: for W2:12D. Leave it empty to use the form's name and a colon."]</span>
     </div>
 </div>

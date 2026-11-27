@@ -48,6 +48,13 @@ public sealed class SendSignedWebhookTaskDisplayDriver : ActivityDisplayDriver<S
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(SendSignedWebhookTask activity, BuildEditorContext context)
+    {
+        return Initialize<SendSignedWebhookTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Webhook"], "10"));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(SendSignedWebhookTask activity, UpdateEditorContext context)
     {
         var model = new SendSignedWebhookTaskViewModel();

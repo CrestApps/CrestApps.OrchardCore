@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Tickets.Categories;
 using CrestApps.OrchardCore.Tickets.Core.Services;
+using CrestApps.OrchardCore.Tickets.Drivers;
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Tickets.ViewModels;
@@ -57,6 +58,7 @@ public sealed class TicketsController : Controller
     private readonly IContentManager _contentManager;
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly IContentItemDisplayManager _contentItemDisplayManager;
+    private readonly IDisplayManager<TicketCreateViewModel> _createDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IPartyDirectory _parties;
     private readonly IShapeFactory _shapeFactory;
@@ -101,6 +103,7 @@ public sealed class TicketsController : Controller
         IContentManager contentManager,
         IContentDefinitionManager contentDefinitionManager,
         IContentItemDisplayManager contentItemDisplayManager,
+        IDisplayManager<TicketCreateViewModel> createDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IPartyDirectory parties,
         IShapeFactory shapeFactory,
@@ -121,6 +124,7 @@ public sealed class TicketsController : Controller
         _contentManager = contentManager;
         _contentDefinitionManager = contentDefinitionManager;
         _contentItemDisplayManager = contentItemDisplayManager;
+        _createDisplayManager = createDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _parties = parties;
         _shapeFactory = shapeFactory;
@@ -368,6 +372,7 @@ public sealed class TicketsController : Controller
         }
 
         model.Editor = await _contentItemDisplayManager.BuildEditorAsync(ticket, _updateModelAccessor.ModelUpdater, isNew: true);
+        await BuildCreateCardsAsync(model);
 
         return View(model);
     }
@@ -390,6 +395,10 @@ public sealed class TicketsController : Controller
 
         var cancellationToken = HttpContext.RequestAborted;
         var ticket = await _contentManager.NewAsync(model.ContentType);
+
+        // The fields of the form's own cards are read first, so what other modules add to them is validated with them.
+        model.RequestEditor = await _createDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true, TicketCreateEditDisplayDriver.RequestGroup, string.Empty);
+        model.MessageEditor = await _createDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true, TicketCreateEditDisplayDriver.MessageGroup, string.Empty);
 
         // The category goes on the item before its editor is read, so the type's field rules on the category apply.
         var category = await TicketCategoryForm.ApplyAsync(_serviceProvider.GetService<ITicketCategoryService>(), ticket, model.CategoryId, customersOnly: false);
@@ -1420,6 +1429,13 @@ public sealed class TicketsController : Controller
     }
 
     // Fills the new-ticket form's choices; false when the type isn't a ticket type or the user may create in no desk.
+    // The cards of the new-ticket form that sit above and below the ticket type's own editor.
+    private async Task BuildCreateCardsAsync(TicketCreateViewModel model)
+    {
+        model.RequestEditor = await _createDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true, TicketCreateEditDisplayDriver.RequestGroup, string.Empty);
+        model.MessageEditor = await _createDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true, TicketCreateEditDisplayDriver.MessageGroup, string.Empty);
+    }
+
     private async Task<bool> PrepareCreateAsync(TicketCreateViewModel model)
     {
         var cancellationToken = HttpContext.RequestAborted;

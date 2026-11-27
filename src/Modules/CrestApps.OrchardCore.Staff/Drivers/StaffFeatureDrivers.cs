@@ -26,12 +26,15 @@ internal sealed class StaffSkillsDisplayDriver : SkillSubjectSkillsDisplayDriver
         ISkillManager skillManager,
         ISkillAssignmentService assignmentService,
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
-        : base(skillManager, assignmentService, httpContextAccessor, authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer<StaffSkillsDisplayDriver> stringLocalizer)
+        : base(skillManager, assignmentService, httpContextAccessor, authorizationService, stringLocalizer)
     {
     }
 
     protected override string ShapeType => "StaffMemberSkills_Edit";
+
+    protected override string CardPosition => "40";
 
     protected override SkillSubject GetSubject(StaffMember model, bool isNew)
         => SkillSubject.Staff(model.ItemId);
@@ -145,7 +148,8 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
         // Pay rates are private: until the editor confirms their password, the card is the prompt and saving leaves them.
         if (await StaffPayPrivacy.DecideAsync(_httpContextAccessor.HttpContext) != StaffPayVisibility.Show)
         {
-            return Dynamic(StaffPayPrivacy.PromptShape, shape => { shape.ConfirmUrl = StaffPayPrivacy.ConfirmUrl(_httpContextAccessor.HttpContext); });
+            return Dynamic(StaffPayPrivacy.PromptShape, shape => { shape.ConfirmUrl = StaffPayPrivacy.ConfirmUrl(_httpContextAccessor.HttpContext); })
+                .Location(l => l.Zone("Content", "20").Card(S["Pay"], "60"));
         }
 
         var pay = staff.TryGet<StaffPayRates>(out var rates) ? rates : new StaffPayRates();
@@ -288,7 +292,7 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
         return Editor(model);
     }
 
-    private ShapeResult Editor(StaffPayViewModel values)
+    private CombinedResult Editor(StaffPayViewModel values)
     {
         var rates = (values.Rates ?? []).ToList();
         var salaries = (values.Salaries ?? []).ToList();
@@ -303,7 +307,7 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
             salaries.Add(new StaffSalaryRowViewModel());
         }
 
-        return Initialize<StaffPayViewModel>("StaffMemberPay_Edit", model =>
+        void Populate(StaffPayViewModel model)
         {
             model.PayBasis = values.PayBasis;
             model.Currency = values.Currency;
@@ -311,7 +315,16 @@ internal sealed class StaffPayDisplayDriver : DisplayDriver<StaffMember>
             model.CommissionRate = values.CommissionRate;
             model.Rates = rates;
             model.Salaries = salaries;
-        }).Location("Content:20");
+        }
+
+        // One shape per card, all of the same pay values, so the fields are bound once.
+        return Combine(
+            Initialize<StaffPayViewModel>("StaffMemberPay_Edit", Populate)
+                .Location(l => l.Zone("Content", "20").Card(S["Pay"], "60")),
+            Initialize<StaffPayViewModel>("StaffMemberPayRates_Edit", Populate)
+                .Location(l => l.Zone("Content", "21").Card(S["Pay Rates"], "65")),
+            Initialize<StaffPayViewModel>("StaffMemberPaySalaries_Edit", Populate)
+                .Location(l => l.Zone("Content", "22").Card(S["Salary"], "70")));
     }
 
     private async Task<bool> CanManagePayAsync()
@@ -346,13 +359,16 @@ internal sealed class StaffBadgeDisplayDriver : DisplayDriver<StaffMember>
 {
     private readonly IStaffBadgeService _badgeService;
 
-    public StaffBadgeDisplayDriver(IStaffBadgeService badgeService)
+    internal readonly IStringLocalizer S;
+
+    public StaffBadgeDisplayDriver(IStaffBadgeService badgeService, IStringLocalizer<StaffBadgeDisplayDriver> stringLocalizer)
     {
         _badgeService = badgeService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(StaffMember staff, BuildEditorContext context)
-        => Initialize<StaffBadgeViewModel>("StaffMemberBadge_Edit", model => model.HasPin = _badgeService.HasPin(staff)).Location("Content:21");
+        => Initialize<StaffBadgeViewModel>("StaffMemberBadge_Edit", model => model.HasPin = _badgeService.HasPin(staff)).Location(l => l.Zone("Content", "21").Card(S["Badge"], "80"));
 
     public override async Task<IDisplayResult> UpdateAsync(StaffMember staff, UpdateEditorContext context)
     {

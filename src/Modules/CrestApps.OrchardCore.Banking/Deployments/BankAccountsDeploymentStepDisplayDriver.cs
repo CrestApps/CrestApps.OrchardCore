@@ -34,7 +34,8 @@ internal sealed class BankAccountsDeploymentStepDisplayDriver : DisplayDriver<De
 
     public override IDisplayResult Edit(BankAccountsDeploymentStep step, BuildEditorContext context)
     {
-        return Initialize<BankAccountsDeploymentStepViewModel>("BankAccountsDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData).Location("Content");
+        return Initialize<BankAccountsDeploymentStepViewModel>("BankAccountsDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData)
+            .Location(l => l.Zone("Content", "1").Card(S["Bank Accounts"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(BankAccountsDeploymentStep step, UpdateEditorContext context)

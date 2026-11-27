@@ -1,0 +1,58 @@
+@model TicketBoardViewModel
+
+@{
+    var columnsName = Html.NameFor(m => m.Columns).ToString();
+    var columnsId = Html.IdFor(m => m.Columns).ToString();
+    var teamFieldId = Html.IdFor(m => m.SharedWithTeamId).ToString();
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<style asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.BoardStyle"></style>
+<script asp-name="@CrestApps.OrchardCore.Tickets.Services.TicketsResourceConfiguration.BoardEditorScript" at="Foot"></script>
+
+<div class="ocat-wrapper">
+    <label asp-for="DeskIds" class="ocat-label">@T["Desks"]</label>
+    <div class="ocat-end">
+        <select asp-for="DeskIds" asp-items="Model.Desks" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every desk"]"></select>
+        <span class="hint">@T["Leave empty to show every desk the viewer may see."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Teams"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.TeamIds).ToString(), selectedValues = Model.TeamIds, multiple = true, buttonText = T["Every team"].Value })
+        <span class="hint">@T["Leave empty to show the tickets of every team."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ContentTypes" class="ocat-label">@T["Ticket types"]</label>
+    <div class="ocat-end">
+        <select asp-for="ContentTypes" asp-items="Model.Types" class="selectpicker show-tick" multiple data-width="100%" title="@T["Every ticket type"]"></select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Assignee" class="ocat-label">@T["Assigned to"]</label>
+    <div class="ocat-end">
+        <select asp-for="Assignee" class="form-select">
+            <option value="">@T["Anybody"]</option>
+            <option value="@TicketAssignees.Me">@T["The user looking"]</option>
+            <option value="@TicketAssignees.Unassigned">@T["Nobody"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Sort" class="ocat-label">@T["Cards in order of"]</label>
+    <div class="ocat-end">
+        <select asp-for="Sort" class="form-select">
+            <option value="@TicketSort.Updated">@T["Recently updated first"]</option>
+            <option value="@TicketSort.Created">@T["Newest first"]</option>
+            <option value="@TicketSort.Due">@T["Soonest due first"]</option>
+            <option value="@TicketSort.Priority">@T["Most urgent first"]</option>
+        </select>
+    </div>
+</div>

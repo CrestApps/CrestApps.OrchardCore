@@ -61,6 +61,8 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<CredentialsAdminMenu>();
         services.TryAddScoped<LearnerUserLookup>();
         services.AddDisplayDriver<CredentialAwardRow, CredentialAwardRowDisplayDriver>();
+        services.AddDisplayDriver<AwardCredentialViewModel, AwardCredentialDisplayDriver>();
+        services.AddDisplayDriver<RevokeCredentialViewModel, RevokeCredentialDisplayDriver>();
         services.AddPersonalDataContributor<CredentialsPersonalDataContributor>();
         services.AddScoped<IEnrollmentReviewActionProvider, CredentialReviewActionProvider>();
     }

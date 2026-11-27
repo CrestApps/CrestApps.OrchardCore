@@ -65,6 +65,6 @@ public sealed class SmsEndpointProviderDisplayDriverTests
 
         options.TryAddProvider("Twilio", new SmsProviderTypeOptions(providerType) { IsEnabled = true });
 
-        return new SmsEndpointProviderDisplayDriver(new TestOptionsMonitor<SmsProviderOptions>(options));
+        return new SmsEndpointProviderDisplayDriver(new TestOptionsMonitor<SmsProviderOptions>(options), RecipeRoundTrip.Localizer<SmsEndpointProviderDisplayDriver>());
     }
 }

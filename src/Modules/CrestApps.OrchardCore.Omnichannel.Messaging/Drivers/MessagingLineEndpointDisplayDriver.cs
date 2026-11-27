@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -19,15 +20,20 @@ internal sealed class MessagingLineEndpointDisplayDriver : DisplayDriver<Omnicha
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly OmnichannelAddressOptions _addressOptions;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MessagingLineEndpointDisplayDriver"/> class.
     /// </summary>
     /// <param name="channelResolver">The enabled messaging channels.</param>
     /// <param name="addressOptions">The address types and capabilities.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public MessagingLineEndpointDisplayDriver(
         IMessagingChannelResolver channelResolver,
-        IOptions<OmnichannelAddressOptions> addressOptions)
+        IOptions<OmnichannelAddressOptions> addressOptions,
+        IStringLocalizer<MessagingLineEndpointDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _channelResolver = channelResolver;
         _addressOptions = addressOptions.Value;
     }
@@ -42,20 +48,19 @@ internal sealed class MessagingLineEndpointDisplayDriver : DisplayDriver<Omnicha
             return null;
         }
 
-        // The card is the one the channel's capability groups its settings on ("Text messages" for SMS), so the agents
-        // sit beside the rest of that channel's settings for the address. A card is matched by the name it is placed
-        // on, which the channel's own drivers write untranslated, so the capability's untranslated name is used here
-        // too; its translation would put the agents on a card of their own on a site in another language.
+        // The card is the one the channel's capability groups its settings on ("Text Messages" for SMS, "Email" for
+        // email), so the agents sit beside the rest of that channel's settings for the address. A card is matched by the
+        // name it is placed on, which is the same text the channel's own drivers place their settings under.
         var cardName = channels
-            .Select(channel => _addressOptions.Capabilities.TryGetValue(channel, out var capability) ? capability.CardName?.Name : null)
-            .FirstOrDefault(name => !string.IsNullOrEmpty(name)) ?? "Text messages";
+            .Select(channel => _addressOptions.Capabilities.TryGetValue(channel, out var capability) ? capability.CardName?.Value : null)
+            .FirstOrDefault(name => !string.IsNullOrEmpty(name)) ?? S["Text Messages"].Value;
 
         return Initialize<MessagingLineEndpointViewModel>("MessagingLineEndpoint_Edit", model =>
         {
             model.TextingUserIds = [.. MessagingLines.GetUserIds(endpoint)];
             model.ServedCapabilities = string.Join(",", channels);
             model.ChannelNames = string.Join(", ", channels.Select(channel => _channelResolver.Get(channel)?.DisplayName.Value ?? channel));
-        }).Location($"Content:2%{cardName};3");
+        }).Location(l => l.Zone("Content", "2").Card(cardName, "3"));
     }
 
     /// <inheritdoc/>

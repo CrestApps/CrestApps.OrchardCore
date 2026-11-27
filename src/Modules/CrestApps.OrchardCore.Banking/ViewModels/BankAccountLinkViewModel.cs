@@ -46,6 +46,12 @@ public class BankAccountLinkViewModel
     public string HolderName { get; set; }
 
     /// <summary>
+    /// Gets or sets the editor of the page's fields, built by display drivers so they are grouped in cards by placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
+    /// <summary>
     /// Gets or sets the provider's shape, which runs the browser part.
     /// </summary>
     [BindNever]

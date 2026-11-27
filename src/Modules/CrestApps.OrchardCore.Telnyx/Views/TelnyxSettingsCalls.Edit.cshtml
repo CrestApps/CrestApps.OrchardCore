@@ -1,0 +1,58 @@
+@model TelnyxSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DefaultOutboundCallerId">
+    <label asp-for="DefaultOutboundCallerId" class="ocat-label">@T["Default outbound caller id"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="DefaultOutboundCallerId" asp-items="Model.CallerIdOptions">
+            <option value="">@T["None"]</option>
+        </select>
+        <span class="hint">@T["The number presented on outbound calls (a Telnyx-owned number), picked from the Omnichannel Addresses used for voice calls. Connect suggests one from your account; change it here anytime. A dialer profile's Caller ID replaces it for the calls that profile places, and a caller sent on from a phone menu to an outside number is shown as the number they dialled."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EchoTestDestination">
+    <label asp-for="EchoTestDestination" class="ocat-label">@T["Audio test destination"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="EchoTestDestination" placeholder="+15551234567" />
+        <span class="hint">@T["Optional. A Telnyx number or SIP URI that echoes audio back. Enables the soft phone's diagnostics 'Run audio test' action (and the health canary) to verify round-trip audio without a second person."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="OrphanedCallHandling">
+    <label asp-for="OrphanedCallHandling" class="ocat-label">@T["Calls with no local record"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="OrphanedCallHandling">
+            <option value="@TelnyxOrphanedCallHandling.Report">@T["Report"]</option>
+            <option value="@TelnyxOrphanedCallHandling.EndCall">@T["End call"]</option>
+        </select>
+        <span class="hint">@T["What to do when this connection has a call up that the platform has no interaction for - one placed immediately before a restart. Report records it and leaves it connected; End call speaks an apology and hangs up. Reporting is the default because an orphaned call may still be a conversation that is working."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AnsweringMachineDetection">
+    <label asp-for="AnsweringMachineDetection" class="ocat-label">@T["Answering machine detection"]</label>
+    <div class="ocat-end">
+        <select class="form-select" asp-for="AnsweringMachineDetection">
+            <option value="@TelnyxAnsweringMachineDetection.Premium">@T["Premium"]</option>
+            <option value="@TelnyxAnsweringMachineDetection.Standard">@T["Standard"]</option>
+            <option value="@TelnyxAnsweringMachineDetection.Disabled">@T["Off"]</option>
+        </select>
+        <span class="hint">@T["How an automated call learns whether a person or a voicemail answered, so a voicemail is left one message after its tone instead of being talked to. Premium and Standard are billed by Telnyx per call. With detection off, a voicemail is still recognised from its greeting or from a line nobody speaks on."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TtsVoice">
+    <label asp-for="TtsVoice" class="ocat-label">@T["Text-to-speech voice"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="TtsVoice" placeholder="@TelnyxConstants.Speech.DefaultVoice" />
+        <span class="hint">@T["The voice phone menus, the voicemail greeting and a queue's callback offer are spoken in: female, male, or a Telnyx voice name in the form Provider.Model.VoiceId, such as AWS.Polly.Joanna-Neural. Leave blank for {0}.", TelnyxConstants.Speech.DefaultVoice]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="TtsLanguage">
+    <label asp-for="TtsLanguage" class="ocat-label">@T["Text-to-speech language"]</label>
+    <div class="ocat-end">
+        <input type="text" class="form-control" asp-for="TtsLanguage" placeholder="@TelnyxConstants.Speech.DefaultLanguage" />
+        <span class="hint">@T["The language those prompts are spoken in, such as en-US or es-ES. Telnyx ignores it for AWS Polly voices, which have a language of their own. Leave blank for {0}.", TelnyxConstants.Speech.DefaultLanguage]</span>
+    </div>
+</div>

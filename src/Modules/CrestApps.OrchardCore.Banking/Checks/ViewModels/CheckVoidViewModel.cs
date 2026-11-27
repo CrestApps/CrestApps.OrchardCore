@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Banking.Checks.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Banking.Checks.ViewModels;
 
@@ -23,4 +24,10 @@ public class CheckVoidViewModel
     /// </summary>
     [BindNever]
     public CheckRecord Check { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of the page's fields, built by display drivers so they are grouped in cards by placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

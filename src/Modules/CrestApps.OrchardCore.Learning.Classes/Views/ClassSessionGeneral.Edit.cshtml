@@ -1,0 +1,55 @@
+@model ClassSessionEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Title">
+    <label asp-for="Title" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Title" class="form-control" maxlength="255" />
+        <span class="hint">@T["The name learners see, such as the class name with its month. Empty uses the class name."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Meetings">
+    <span class="ocat-label">@T["Meetings"]</span>
+    <div class="ocat-end">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-1">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Date"]</th>
+                        <th scope="col">@T["Starts"]</th>
+                        <th scope="col">@T["Ends"]</th>
+                        <th scope="col">@T["Ends on"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Meetings.Count; i++)
+                    {
+                        var meeting = Model.Meetings[i];
+
+                        <tr>
+                            <td><input type="date" name="Meetings[@i].Date" value="@(meeting.Date?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" aria-label="@T["Date of meeting {0}", i + 1]" /></td>
+                            <td><input type="time" name="Meetings[@i].Start" value="@(meeting.Start?.ToString(@"hh\:mm"))" class="form-control form-control-sm" aria-label="@T["Start of meeting {0}", i + 1]" /></td>
+                            <td>
+                                <input type="time" name="Meetings[@i].End" value="@(meeting.End?.ToString(@"hh\:mm"))" class="form-control form-control-sm" aria-label="@T["End of meeting {0}", i + 1]" />
+                                <span asp-validation-for="Meetings[i].End"></span>
+                            </td>
+                            <td><input type="date" name="Meetings[@i].EndDate" value="@(meeting.EndDate?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" aria-label="@T["End date of meeting {0}", i + 1]" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <span asp-validation-for="Meetings"></span>
+        <button type="submit" name="addMeeting" value="true" formnovalidate class="btn btn-sm btn-secondary"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add a meeting"]</button>
+        <span class="hint d-block">@T["One registration covers every meeting. Times are in your time zone. Leave Ends on empty for a meeting that ends the day it starts. Clear a meeting's date to remove it."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Capacity">
+    <label asp-for="Capacity" class="ocat-label">@T["Capacity"]</label>
+    <div class="ocat-end">
+        <input asp-for="Capacity" type="number" min="1" class="form-control" />
+        <span asp-validation-for="Capacity"></span>
+        <span class="hint">@T["How many learners can register."]</span>
+    </div>
+</div>

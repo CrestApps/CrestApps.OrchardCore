@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.ViewModels;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -18,8 +19,13 @@ internal sealed class TwilioSmsWebhookSettingsDisplayDriver : DisplayDriver<ISit
 
     private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public TwilioSmsWebhookSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor)
+    internal readonly IStringLocalizer S;
+
+    public TwilioSmsWebhookSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<TwilioSmsWebhookSettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _httpContextAccessor = httpContextAccessor;
     }
 
@@ -30,9 +36,10 @@ internal sealed class TwilioSmsWebhookSettingsDisplayDriver : DisplayDriver<ISit
             {
                 model.WebhookUrl = BuildWebhookUrl(site);
             })
-            // Orchard Core places its Twilio editor at Content:5 in the Twilio tab. This comes before it, and the view
-            // then moves the address to the top of that editor's collapsible settings, as the Telnyx settings show it.
-            .Location("Content:4#Twilio")
+            // Orchard Core places its Twilio editor at Content:5 in the Twilio provider card of the Twilio tab. This comes
+            // before it, in the same card, and the view then moves the address to the top of that editor's collapsible
+            // settings, as the Telnyx settings show it.
+            .Location(l => l.Zone("Content", "4").Tab(S["Twilio"]).Card(S["Twilio provider"], "10"))
             .OnGroup(SmsSettingsGroupId);
     }
 

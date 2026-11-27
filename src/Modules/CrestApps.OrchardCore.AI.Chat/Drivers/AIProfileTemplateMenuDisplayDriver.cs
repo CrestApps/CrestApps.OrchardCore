@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Chat.Models;
 using CrestApps.OrchardCore.AI.Chat.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -13,6 +14,17 @@ namespace CrestApps.OrchardCore.AI.Chat.Drivers;
 /// </summary>
 public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfileTemplate>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileTemplateMenuDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIProfileTemplateMenuDisplayDriver(IStringLocalizer<AIProfileTemplateMenuDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
     {
         return Initialize<AIProfileMenuViewModel>("AIProfileMenu_Edit", model =>
@@ -26,7 +38,7 @@ public sealed class AIProfileTemplateMenuDisplayDriver : DisplayDriver<AIProfile
                 var profileMetadata = template.GetOrCreate<ProfileTemplateMetadata>();
                 model.IsOnAdminMenu = profileMetadata.ProfileType == AIProfileType.Chat;
             }
-        }).Location("Content:7%General;1")
+        }).Location(l => l.Zone("Content", "7").Card(S["General"], "1"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

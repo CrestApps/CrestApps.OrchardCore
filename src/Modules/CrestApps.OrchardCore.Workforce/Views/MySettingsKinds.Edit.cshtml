@@ -1,0 +1,11 @@
+@model MySettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        @foreach (var kind in Model.Kinds)
+        {
+            <div class="form-check"><input class="form-check-input" type="checkbox" name="kinds" value="@kind.Value" id="kind-@kind.Value" checked="@kind.Enabled" /><label class="form-check-label" for="kind-@kind.Value">@kind.Label</label></div>
+        }
+        <span class="hint dashed">@T["Turned-off topics still show here in My Work."]</span>
+    </div>
+</div>
