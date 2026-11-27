@@ -86,6 +86,11 @@
     </div>
 </div>
 
+@if (Model.Sections is not null)
+{
+    @await DisplayAsync(Model.Sections)
+}
+
 @if (Model.Children.Count > 0)
 {
     <div class="card mb-3"><div class="card-body">

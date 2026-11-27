@@ -67,6 +67,11 @@ internal sealed class AssetDisplayDriver : DisplayDriver<Asset>
             }).Location(l => l.Zone("Content", "4").Card(S["Type Details"], "40")),
             Initialize<AssetEditViewModel>("AssetDocuments_Edit", model => FillValues(model, asset, context))
                 .Location(l => l.Zone("Content", "5").Card(S["Documents"], "50")),
+            Initialize<AssetEditViewModel>("AssetVehicle_Edit", async model =>
+            {
+                FillValues(model, asset, context);
+                await FillTypeAsync(model);
+            }).Location(l => l.Zone("Content", "6").Card(S["Vehicle"], "55")),
             Initialize<AssetEditViewModel>("AssetFleet_Edit", async model =>
             {
                 FillValues(model, asset, context);
@@ -113,6 +118,7 @@ internal sealed class AssetDisplayDriver : DisplayDriver<Asset>
         model.Type = types.FirstOrDefault(type => type.ItemId == model.AssetTypeId);
         model.TypeOptions = [.. types.Select(type => new SelectListItem(type.Name, type.ItemId, type.ItemId == model.AssetTypeId))];
         model.ShowFleet = _fleet && model.Type is not null && _fleetCategories.Contains(model.Type.Category);
+        model.ShowVehicle = HasVehicleDetails(model.Type);
     }
 
     private async Task FillOwnerAsync(AssetEditViewModel model)
@@ -151,13 +157,20 @@ internal sealed class AssetDisplayDriver : DisplayDriver<Asset>
             StringComparer.OrdinalIgnoreCase);
         asset.Documents = [.. (model.Documents ?? string.Empty).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
+        // A vehicle's plate and VIN are kept with or without Fleet; booking, stock, capacity and fuel are Fleet's. Both are
+        // for the business's own vehicles and equipment.
+        if (HasVehicleDetails(type) && model.OwnerKind == AssetOwnerKind.Internal)
+        {
+            asset.Fleet ??= new AssetFleet();
+            asset.Fleet.Plate = Blank(model.Plate);
+            asset.Fleet.Vin = Blank(model.Vin);
+        }
+
         if (_fleet && type is not null && _fleetCategories.Contains(type.Category) && model.OwnerKind == AssetOwnerKind.Internal)
         {
             asset.Fleet ??= new AssetFleet();
             asset.Fleet.Schedulable = model.Schedulable;
             asset.Fleet.CarriesStock = model.CarriesStock;
-            asset.Fleet.Plate = Blank(model.Plate);
-            asset.Fleet.Vin = Blank(model.Vin);
             asset.Fleet.Capacity = Blank(model.Capacity);
             asset.Fleet.FuelType = Blank(model.FuelType);
         }
@@ -188,6 +201,9 @@ internal sealed class AssetDisplayDriver : DisplayDriver<Asset>
             GeocodeSource = same ? existing.GeocodeSource : null,
         };
     }
+
+    private bool HasVehicleDetails(AssetType type)
+        => type is not null && (type.Category == AssetCategory.Vehicle || (_fleet && _fleetCategories.Contains(type.Category)));
 
     private static string Blank(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

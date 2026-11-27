@@ -32,9 +32,13 @@ Assets are the things you service or use: your own vans, equipment and tools, an
 4. Enter when it was installed and its warranty, and fill in the values its type records.
 5. Select **Save**. The asset's page opens.
 
-Search the list by name, number or serial number, and filter it by type and state.
+Search the list by name, number or serial number, and filter it by category, type and state.
 
 A contact's page lists the assets they own. **Add an asset** there starts one with the contact as its owner, and **All** lists every asset they own.
+
+A vehicle the business owns has a **Vehicle** section for its plate and VIN.
+
+An asset that other records point to, such as one whose purchase is in the books or a vehicle that trips were driven in, can't be deleted. Set its state to **Retired** instead; the page says what points to it.
 
 ## Record a meter reading
 
@@ -46,6 +50,6 @@ With **Fleet** on, a vehicle, equipment or tool the business owns has a **Fleet*
 
 - **Book it for visits** gives it its own Equipment calendar, which refuses two bookings at once.
 - **It carries stock** gives it its own Inventory location, so the parts it carries are counted, and parts used on a job come off it.
-- Enter its plate, VIN, capacity and fuel.
+- Enter its capacity and fuel.
 
 A van's stock location doesn't show among the locations on **Settings** → **Inventory**, and orders are never taken from it.

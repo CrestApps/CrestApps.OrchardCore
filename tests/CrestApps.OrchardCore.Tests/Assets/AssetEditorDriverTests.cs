@@ -41,10 +41,11 @@ public sealed class AssetEditorDriverTests
         {
             var result = ((IDisplayDriver<Asset>)CreateDriver(services, fleet: true)).BuildEditorAsync(asset, BuildContext(isNew: false));
 
-            // One shape for each card: Details, Owner and Place, Installation and Warranty, Type Details, Documents and Fleet.
+            // One shape for each card: Details, Owner and Place, Installation and Warranty, Type Details, Documents, Vehicle
+            // and Fleet.
             var models = await DisplayResultModels.BuildAsync<AssetEditViewModel>(await result);
 
-            Assert.Equal(6, models.Count);
+            Assert.Equal(7, models.Count);
 
             // Every card fills the asset's values; the Details card also carries the type.
             Assert.All(models, card => Assert.Equal("asset-1", card.AssetId));
@@ -60,6 +61,7 @@ public sealed class AssetEditorDriverTests
         Assert.Equal("AB12 CDE", model.Plate);
         Assert.True(model.Schedulable);
         Assert.True(model.ShowFleet);
+        Assert.True(model.ShowVehicle);
         Assert.Equal(type.ItemId, model.Type.ItemId);
         Assert.Equal([type.ItemId], model.TypeOptions.Where(option => option.Selected).Select(option => option.Value));
     }
@@ -107,6 +109,43 @@ public sealed class AssetEditorDriverTests
     }
 
     [Fact]
+    public async Task Driver_KeepsAVehiclesPlateAndVin_WithoutFleet()
+    {
+        // Arrange
+        await using var harness = await AssetsTests.CreateAsync();
+        var type = await AddVehicleTypeAsync(harness);
+        var asset = new Asset();
+        var posted = new AssetEditViewModel
+        {
+            AssetTypeId = type.ItemId,
+            Name = "Van 5",
+            Plate = " 8ABC123 ",
+            Vin = "1FTBW2CM5HKA12345",
+            Schedulable = true,
+            CarriesStock = true,
+        };
+        var context = PostedFormUpdateModel.CreateContext(posted, isNew: true);
+
+        // Act
+        var model = await harness.RunAsync(async services =>
+        {
+            var driver = (IDisplayDriver<Asset>)CreateDriver(services, fleet: false);
+
+            await driver.UpdateEditorAsync(asset, context);
+
+            return (await DisplayResultModels.BuildAsync<AssetEditViewModel>(await driver.BuildEditorAsync(asset, BuildContext(isNew: false))))[0];
+        }, commit: false);
+
+        // Assert: the plate and VIN are kept; booking and stock are Fleet's, which is off.
+        Assert.Equal("8ABC123", asset.Fleet.Plate);
+        Assert.Equal("1FTBW2CM5HKA12345", asset.Fleet.Vin);
+        Assert.False(asset.Fleet.Schedulable);
+        Assert.False(asset.Fleet.CarriesStock);
+        Assert.True(model.ShowVehicle);
+        Assert.False(model.ShowFleet);
+    }
+
+    [Fact]
     public void TheBuiltInDriver_IsRegistered()
     {
         // Arrange
@@ -138,9 +177,9 @@ public sealed class AssetEditorDriverTests
 
         // Assert
         // The editor is one shape for each card; the other module's section is placed at Content:5, so it sits by position
-        // among the cards (after Documents, which holds the same position, and before Fleet).
+        // among the cards (after Documents, which holds the same position, and before Vehicle and Fleet).
         Assert.Equal(
-            ["AssetFields_Edit", "AssetOwner_Edit", "AssetWarranty_Edit", "AssetAttributes_Edit", "AssetDocuments_Edit", ExtraSectionDisplayDriver<Asset>.ShapeType, "AssetFleet_Edit"],
+            ["AssetFields_Edit", "AssetOwner_Edit", "AssetWarranty_Edit", "AssetAttributes_Edit", "AssetDocuments_Edit", ExtraSectionDisplayDriver<Asset>.ShapeType, "AssetVehicle_Edit", "AssetFleet_Edit"],
             shapes.Select(shape => shape.Metadata.Type));
         Assert.Equal("Boiler", Assert.IsAssignableFrom<AssetEditViewModel>(shapes[0]).Name);
         Assert.All(shapes.Where(shape => shape.Metadata.Type != ExtraSectionDisplayDriver<Asset>.ShapeType), shape => Assert.Equal(nameof(Asset), shape.Metadata.Prefix));
