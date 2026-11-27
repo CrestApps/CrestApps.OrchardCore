@@ -110,6 +110,12 @@ internal sealed class EditorField
     /// Gets or sets the fields of a nested object.
     /// </summary>
     public List<EditorField> Children { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets a value indicating whether a text field holds a list written as JSON text, such as
+    /// <c>["en-US","fr-FR"]</c>, as a script on the page posts it. A list given for it is posted as that text.
+    /// </summary>
+    public bool JsonText { get; set; }
 }
 
 /// <summary>

@@ -89,7 +89,13 @@ internal sealed class SendEstimateTool : InvoiceAIToolBase
 
         if (!result.Succeeded)
         {
-            MarkSessionClosed(services);
+            // Only a refused send command discards the session's work, and then the estimate is still a draft. An
+            // estimate that was sent but couldn't be e-mailed (no address, e-mail off) kept the session, so later
+            // changes in the message can still be saved.
+            if (sent.Status == EstimateStatus.Draft)
+            {
+                MarkSessionClosed(services);
+            }
 
             return Json(new
             {

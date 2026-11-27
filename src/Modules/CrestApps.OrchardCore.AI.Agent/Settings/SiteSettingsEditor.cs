@@ -36,6 +36,16 @@ internal static class SiteSettingsEditor
     // The wrapper a settings driver adds to the page when saving it reloads the tenant.
     private const string ReloadWarningWrapper = "Settings_Wrapper__Reload";
 
+    // Settings pages whose driver fills its editor from other properties than the ones it binds on save (a script on
+    // the page writes the bound ones), so the editor reads them as null. Their current values come from the saved
+    // settings instead, so the tools show them and a save posts them back unchanged. The Cultures page shows a list of
+    // cultures and posts SupportedCultures as JSON text and DefaultCulture from it.
+    private static readonly UnshownField[] _unshownFields =
+    [
+        new("LocalizationSettings", "SupportedCultures", "LocalizationSettings", "SupportedCultures", JsonText: true),
+        new("LocalizationSettings", "DefaultCulture", "LocalizationSettings", "DefaultCulture", JsonText: false),
+    ];
+
     /// <summary>
     /// Whether a settings group is a custom settings content type, whose editor is a content item editor that this
     /// tool does not replay.
@@ -73,6 +83,11 @@ internal static class SiteSettingsEditor
         var shape = await displayManager.BuildEditorAsync(site, updater, false, groupId);
         var editor = Capture(services, shape);
 
+        if (editor is not null)
+        {
+            FillUnshownFields(site, editor);
+        }
+
         if (editor is null || editor.Sections.Count == 0)
         {
             var logger = services.GetService<ILoggerFactory>()?.CreateLogger(typeof(SiteSettingsEditor));
@@ -90,6 +105,35 @@ internal static class SiteSettingsEditor
         }
 
         return editor;
+    }
+
+    private static void FillUnshownFields(ISite site, SettingsEditor editor)
+    {
+        foreach (var entry in _unshownFields)
+        {
+            var section = editor.Sections.FirstOrDefault(s =>
+                string.Equals(s.Name, entry.Section, StringComparison.Ordinal) ||
+                s.Name.EndsWith($".{entry.Section}", StringComparison.Ordinal));
+
+            if (section is null || !section.Fields.Any(field => field.Kind == EditorFieldKind.Value && field.Name == entry.Field))
+            {
+                continue;
+            }
+
+            if (entry.JsonText)
+            {
+                EditorReplay.MarkJsonText(section, entry.Field);
+            }
+
+            if (section.Values[entry.Field] is not null || site.Properties?[entry.SettingsKey]?[entry.Property] is not { } saved)
+            {
+                continue;
+            }
+
+            section.Values[entry.Field] = entry.JsonText
+                ? JsonValue.Create(saved.ToJsonString())
+                : saved.DeepClone();
+        }
     }
 
     private static string DescribeZones(IShape shape)
@@ -182,6 +226,16 @@ internal static class SiteSettingsEditor
     public static List<string> GetChangedFields(SettingsEditor before, SettingsEditor after)
         => EditorReplay.GetChangedFields(before, after);
 }
+
+/// <summary>
+/// A field of a settings page that its editor doesn't fill, read from the saved site settings instead.
+/// </summary>
+/// <param name="Section">The section, the form prefix without <c>ISite.</c>.</param>
+/// <param name="Field">The field of the view model.</param>
+/// <param name="SettingsKey">The key of the settings object in the site's properties.</param>
+/// <param name="Property">The property of the settings object.</param>
+/// <param name="JsonText">Whether the page posts the field as a list written as JSON text.</param>
+internal sealed record UnshownField(string Section, string Field, string SettingsKey, string Property, bool JsonText);
 
 /// <summary>
 /// The editor of one settings group, read from the view models its display drivers filled.

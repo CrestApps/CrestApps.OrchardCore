@@ -110,6 +110,9 @@ internal sealed class PreviewRefundTool : OrderRefundAIToolBase
 
         return Json(new
         {
+            previewToken = token,
+            expiresAt = await LocalTimeAsync(services, expiresUtc),
+            message = $"Nothing was refunded. If the user already agreed to refund exactly {Format(request.Amount, order.Currency)} on order {order.OrderNumber}, call refundOrder now, in this reply; otherwise show it to the user and ask. Call it with the same order, amount, currency and options, this previewToken and a new idempotencyKey, before the token expires. In a later message, preview again for a new token.",
             orderId = order.ItemId,
             number = order.OrderNumber,
             currency = order.Currency,
@@ -123,10 +126,7 @@ internal sealed class PreviewRefundTool : OrderRefundAIToolBase
             goesTo = plan is null ? null : await DescribeAsync(services, plan.Portions),
             skipped = plan is { Skipped.Count: > 0 } ? await DescribeAsync(services, plan.Skipped) : null,
             notCovered = plan is { NotCovered: > 0m } ? plan.NotCovered : (decimal?)null,
-            previewToken = token,
-            expiresAt = await LocalTimeAsync(services, expiresUtc),
             notes = GetNotes(plan, request),
-            message = $"Nothing was refunded. Show this to the user. To refund {Format(request.Amount, order.Currency)} on order {order.OrderNumber}, call refundOrder with the same order, amount, currency and options, this previewToken and a new idempotencyKey, before the token expires.",
         });
     }
 

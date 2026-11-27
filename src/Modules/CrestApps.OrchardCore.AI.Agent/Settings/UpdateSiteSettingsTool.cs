@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Settings;
@@ -162,14 +163,31 @@ public sealed class UpdateSiteSettingsTool : AIFunction
         var updater = new FormValuesModelUpdater(services, httpContext, formValues);
         var shellReleaseManager = services.GetRequiredService<IShellReleaseManager>();
 
-        var shape = await services.GetRequiredService<IDisplayManager<ISite>>().UpdateEditorAsync(site, updater, false, groupId);
+        IShape shape;
+
+        try
+        {
+            shape = await services.GetRequiredService<IDisplayManager<ISite>>().UpdateEditorAsync(site, updater, false, groupId);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A settings editor that can't read a value throws, such as one that wants a list and is given text.
+            shellReleaseManager.SuspendReleaseRequest();
+            services.GetService<ILoggerFactory>()?.CreateLogger<UpdateSiteSettingsTool>()
+                .LogWarning(ex, "AI tool '{ToolName}' could not save the settings page '{GroupId}'.", TheName, groupId);
+
+            return $"Nothing was saved: the '{groupId}' settings page couldn't read the values ({ex.GetType().Name}: {ex.Message}). Check each value has the form getSiteSettings shows in its schema (a list where it says a list) and try again.";
+        }
+
         var after = SiteSettingsEditor.Capture(services, shape);
 
         if (after is null)
         {
             shellReleaseManager.SuspendReleaseRequest();
 
-            return $"Nothing was saved: no settings page '{groupId}' was found that you can manage.";
+            // The page was found before the save (before has sections), so this isn't a missing page: the editor
+            // returned nothing to read back, which a settings driver does when it fails on a value.
+            return $"Nothing was saved: the '{groupId}' settings page didn't accept the values and returned no editor to read back. Check each value has the form getSiteSettings shows in its schema (a list where it says a list); the site's log has the details.";
         }
 
         if (!updater.ModelState.IsValid)
@@ -203,6 +221,12 @@ public sealed class UpdateSiteSettingsTool : AIFunction
         }
 
         await siteService.UpdateSiteSettingsAsync(site);
+
+        // Read the page back from the saved settings, as reopening it would: the editor shapes the update returned can
+        // still hold the values from before the save, which made the tool answer "changed: []" with the old values.
+        after = await SiteSettingsEditor.BuildAsync(services, httpContext, site, groupId) is { Sections.Count: > 0 } saved
+            ? saved
+            : after;
 
         return AgentToolResults.Json(new
         {

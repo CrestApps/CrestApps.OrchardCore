@@ -381,7 +381,11 @@ internal static class EditorReplay
                     kind = EditorFieldKind.Secret;
                 }
 
-                fields.Add(new EditorField(property.PropertyName, kind, property));
+                fields.Add(new EditorField(property.PropertyName, kind, property)
+                {
+                    // A text the page fills with a list as JSON text, as a script on the page writes it.
+                    JsonText = kind == EditorFieldKind.Value && value is string text && TryReadJsonTextList(text, out _),
+                });
                 values[property.PropertyName] = ToNode(value, property.ModelType);
 
                 continue;
@@ -573,9 +577,24 @@ internal static class EditorReplay
                     break;
 
                 default:
+                    if (field.JsonText && change.Value is JsonArray list)
+                    {
+                        // The page posts this list as JSON text, as its script writes it.
+                        target[field.Name] = list.ToJsonString();
+                        break;
+                    }
+
                     if (change.Value is JsonObject or JsonArray)
                     {
                         errors.Add($"'{path}.{field.Name}' takes a single value.");
+                        break;
+                    }
+
+                    if (field.JsonText &&
+                        change.Value is JsonValue jsonText &&
+                        (!jsonText.TryGetValue<string>(out var given) || !TryReadJsonTextList(given, out _)))
+                    {
+                        errors.Add($"'{path}.{field.Name}' takes a list, such as [\"en-US\",\"fr-FR\"], or that list written as JSON text.");
                         break;
                     }
 
@@ -672,6 +691,7 @@ internal static class EditorReplay
                 EditorFieldKind.Object => value is JsonObject nested
                     ? DescribeObject(field.Children, nested)
                     : null,
+                _ when field.JsonText && value is JsonValue jsonText && jsonText.TryGetValue<string>(out var text) && TryReadJsonTextList(text, out var list) => list,
                 _ => value?.DeepClone(),
             };
         }
@@ -776,12 +796,20 @@ internal static class EditorReplay
                 break;
 
             default:
-                schema = ValueSchema(field.Metadata);
+                schema = field.JsonText
+                    ? new JsonObject
+                    {
+                        ["type"] = "array",
+                        ["items"] = new JsonObject { ["type"] = "string" },
+                    }
+                    : ValueSchema(field.Metadata);
 
                 break;
         }
 
-        var description = GetDescription(field.Metadata);
+        var description = field.JsonText
+            ? JoinDescription("A list. The page stores it as JSON text, such as [\"en-US\",\"fr-FR\"]; give the list.", GetDescription(field.Metadata))
+            : GetDescription(field.Metadata);
 
         if (!string.IsNullOrEmpty(description))
         {
@@ -789,6 +817,62 @@ internal static class EditorReplay
         }
 
         return schema;
+    }
+
+    private static string JoinDescription(string first, string second)
+        => string.IsNullOrEmpty(second) ? first : $"{first} {second}";
+
+    /// <summary>
+    /// Marks a text field of a section as one that holds a list written as JSON text, for a page whose editor doesn't
+    /// show its current value, so the value can't be recognized.
+    /// </summary>
+    /// <param name="section">The section.</param>
+    /// <param name="fieldName">The field.</param>
+    /// <returns><see langword="true"/> when the section has that text field.</returns>
+    public static bool MarkJsonText(EditorSection section, string fieldName)
+    {
+        ArgumentNullException.ThrowIfNull(section);
+
+        var field = section.Fields.FirstOrDefault(f => f.Kind == EditorFieldKind.Value &&
+            string.Equals(f.Name, fieldName, StringComparison.Ordinal) &&
+            (f.Metadata?.UnderlyingOrModelType ?? typeof(string)) == typeof(string));
+
+        if (field is null)
+        {
+            return false;
+        }
+
+        field.JsonText = true;
+
+        return true;
+    }
+
+    /// <summary>
+    /// Reads a list of values written as JSON text, such as <c>["en-US","fr-FR"]</c>.
+    /// </summary>
+    private static bool TryReadJsonTextList(string text, out JsonArray list)
+    {
+        list = null;
+
+        if (string.IsNullOrWhiteSpace(text) || !text.TrimStart().StartsWith('['))
+        {
+            return false;
+        }
+
+        try
+        {
+            if (JsonNode.Parse(text) is JsonArray parsed && parsed.All(item => item is null or JsonValue))
+            {
+                list = parsed;
+
+                return true;
+            }
+        }
+        catch (JsonException)
+        {
+        }
+
+        return false;
     }
 
     private static JsonObject ValueSchema(ModelMetadata metadata)

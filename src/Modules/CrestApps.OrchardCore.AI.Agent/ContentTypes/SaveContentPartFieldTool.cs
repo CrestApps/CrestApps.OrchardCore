@@ -187,6 +187,15 @@ public sealed class SaveContentPartFieldTool : AIFunction
             {
                 return $"The field '{name}' could not be added to the part '{partName}'.";
             }
+
+            // A part named after a content type is that type's own part, as the admin's Add Field does on a type: it is
+            // attached to the type, or the field is in a part no type has and missing from the type's items.
+            var ownType = await contentDefinitionManager.LoadTypeDefinitionAsync(partName);
+
+            if (ownType is not null && !ownType.Parts.Any(typePart => string.Equals(typePart.Name, partName, StringComparison.Ordinal)))
+            {
+                await contentDefinitionService.AddPartToTypeAsync(partName, partName);
+            }
         }
         else
         {

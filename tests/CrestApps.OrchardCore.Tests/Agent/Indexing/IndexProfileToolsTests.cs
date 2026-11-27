@@ -5,6 +5,8 @@ using OrchardCore.Elasticsearch.Core.Models;
 using OrchardCore.Elasticsearch.Models;
 using OrchardCore.Entities;
 using OrchardCore.Indexing.Core.Models;
+using OrchardCore.Infrastructure.Entities;
+using OrchardCore.Lucene.Models;
 
 namespace CrestApps.OrchardCore.Tests.Agent.Indexing;
 
@@ -237,7 +239,7 @@ public sealed class IndexProfileToolsTests
 
         Assert.True(json.GetProperty("saved").GetBoolean());
         Assert.True(json.GetProperty("created").GetBoolean());
-        Assert.Contains("not finished yet", json.GetProperty("note").GetString(), StringComparison.Ordinal);
+        Assert.Contains("starts when this reply ends", json.GetProperty("note").GetString(), StringComparison.Ordinal);
         Assert.Equal("Lucene", created.ProviderName);
         Assert.Equal("news", created.IndexName);
         Assert.Equal(new[] { "Article", "BlogPost" }, metadata.IndexedContentTypes);
@@ -246,7 +248,8 @@ public sealed class IndexProfileToolsTests
 
         // The order of the Create action of the Indexes page: validate, store, create the physical index, synchronize.
         Assert.Same(created, Assert.Single(harness.IndexProfiles.Validated));
-        Assert.Equal(new[] { "Create:news", "Synchronize:news" }, harness.IndexProfiles.Calls);
+        // The synchronization is queued for when the message ends (IndexProfileSynchronization), not run as an HTTP background job.
+        Assert.Equal(new[] { "Create:news" }, harness.IndexProfiles.Calls);
         Assert.Equal(new[] { "Create:news" }, harness.LuceneIndexes.Calls);
     }
 
@@ -393,6 +396,51 @@ public sealed class IndexProfileToolsTests
         Assert.Equal(new[] { "Update:blog posts" }, harness.IndexProfiles.Calls);
     }
 
+    [Fact]
+    public async Task SaveIndexProfile_ByNameAloneForALuceneProfileWithoutAnAnalyzer_GivesItTheDefaultAnalyzer()
+    {
+        // Arrange
+        var harness = new SearchToolHarness();
+
+        harness.Blog.Alter<LuceneIndexMetadata>(metadata => metadata.AnalyzerName = null);
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveIndexProfileTool(), services, new()
+        {
+            ["name"] = "blog",
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+
+        Assert.True(json.GetProperty("saved").GetBoolean());
+        Assert.Equal("standardanalyzer", json.GetProperty("analyzerSet").GetString());
+        Assert.Contains("rebuildIndexProfile", json.GetProperty("note").GetString(), StringComparison.Ordinal);
+        Assert.Equal("standardanalyzer", harness.Blog.GetOrCreate<LuceneIndexMetadata>().AnalyzerName);
+        Assert.Equal(new[] { "Update:blog" }, harness.IndexProfiles.Calls);
+    }
+
+    [Fact]
+    public async Task SaveIndexProfile_ByNameAloneForAProfileWithAnAnalyzer_SavesNothing()
+    {
+        // Arrange
+        var harness = new SearchToolHarness();
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SaveIndexProfileTool(), services, new()
+        {
+            ["name"] = "blog",
+        });
+
+        // Assert
+        Assert.StartsWith("Nothing was saved: give a new name (with id), indexedContentTypes, culture or indexLatest", result, StringComparison.Ordinal);
+        harness.VerifyNothingChangedOrRan();
+    }
+
     [Theory]
     [InlineData("providerName", "Elasticsearch")]
     [InlineData("type", "Custom")]
@@ -437,8 +485,9 @@ public sealed class IndexProfileToolsTests
 
         Assert.Equal(new[] { "blog-1", "products-1" }, json.GetProperty("started").EnumerateArray().Select(item => item.GetProperty("id").GetString()));
         Assert.False(json.GetProperty("reset").GetBoolean());
-        Assert.Contains("not finished yet", json.GetProperty("note").GetString(), StringComparison.Ordinal);
-        Assert.Equal(new[] { "Synchronize:blog", "Synchronize:products" }, harness.IndexProfiles.Calls);
+        Assert.Contains("starts when this reply ends", json.GetProperty("note").GetString(), StringComparison.Ordinal);
+        // Queued for when the message ends (IndexProfileSynchronization), not run as an HTTP background job.
+        Assert.Empty(harness.IndexProfiles.Calls);
     }
 
     [Fact]
@@ -460,7 +509,7 @@ public sealed class IndexProfileToolsTests
         Assert.True(AgentToolTestContext.ReadJson(result).GetProperty("reset").GetBoolean());
 
         // The order of the Reset action of the Indexes page. The physical index is kept.
-        Assert.Equal(new[] { "Reset:blog", "Update:blog", "Synchronize:blog" }, harness.IndexProfiles.Calls);
+        Assert.Equal(new[] { "Reset:blog", "Update:blog" }, harness.IndexProfiles.Calls);
         Assert.Empty(harness.LuceneIndexes.Calls);
     }
 
@@ -528,10 +577,10 @@ public sealed class IndexProfileToolsTests
 
         Assert.Equal("blog-1", Assert.Single(json.GetProperty("rebuilt").EnumerateArray()).GetProperty("id").GetString());
         Assert.False(json.TryGetProperty("failed", out _));
-        Assert.Contains("not finished yet", json.GetProperty("note").GetString(), StringComparison.Ordinal);
+        Assert.Contains("starts when this reply ends", json.GetProperty("note").GetString(), StringComparison.Ordinal);
 
         // The order of the Rebuild action of the Indexes page, under the lock the indexing of this index takes.
-        Assert.Equal(new[] { "Reset:blog", "Update:blog", "Synchronize:blog" }, harness.IndexProfiles.Calls);
+        Assert.Equal(new[] { "Reset:blog", "Update:blog" }, harness.IndexProfiles.Calls);
         Assert.Equal(new[] { "Rebuild:blog" }, harness.LuceneIndexes.Calls);
         Assert.Equal(new[] { "IndexingService-blog-1" }, harness.Lock.Keys);
         Assert.Equal(1, harness.Lock.Released);

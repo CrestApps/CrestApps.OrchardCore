@@ -129,7 +129,7 @@ public sealed class RebuildIndexProfileTool : AIFunction
 
                 if (await indexManager.RebuildAsync(indexProfile))
                 {
-                    await indexProfileManager.SynchronizeAsync(indexProfile);
+                    IndexProfileSynchronization.Queue(indexProfile);
 
                     rebuilt.Add(new
                     {
@@ -161,7 +161,7 @@ public sealed class RebuildIndexProfileTool : AIFunction
                 ? failed
                 : null,
             note = rebuilt.Count > 0
-                ? "The physical index of each rebuilt index profile was deleted and created again, empty. Indexing was started in the background and is not finished yet: search results are incomplete until it is."
+                ? "The physical index of each rebuilt index profile was deleted and created again, empty. Indexing starts when this reply ends, and search results are incomplete until it finishes: search them in a later message."
                 : null,
         });
     }

@@ -154,6 +154,19 @@ internal sealed class DraftEstimateTool : InvoiceAIToolBase
             return earlier;
         }
 
+        var contactName = Read(arguments, "customerName");
+        var contactEmail = Read(arguments, "customerEmail");
+
+        // The estimate is e-mailed and printed from its bill-to contact. Given only a party, take its name and e-mail
+        // as the page's picker does, or sendEstimate has no address and the converted invoice shows no customer.
+        if (!party.IsEmpty && (contactName is null || contactEmail is null) && services.GetService<IPartyDirectory>() is { } directory)
+        {
+            var contact = await directory.GetContactInfoAsync(party, cancellationToken);
+
+            contactName ??= contact?.Name;
+            contactEmail ??= contact?.Email;
+        }
+
         var settings = await services.GetRequiredService<ISiteService>().GetSettingsAsync<InvoicingSettings>();
         var estimates = services.GetRequiredService<IEstimateManager>();
         var estimate = await estimates.NewAsync(cancellationToken: cancellationToken);
@@ -162,8 +175,8 @@ internal sealed class DraftEstimateTool : InvoiceAIToolBase
         var model = new EstimateEditViewModel
         {
             BillTo = party.IsEmpty ? null : party.ToString(),
-            ContactName = Read(arguments, "customerName"),
-            ContactEmail = Read(arguments, "customerEmail"),
+            ContactName = contactName,
+            ContactEmail = contactEmail,
             Currency = Read(arguments, "currency") ?? settings.DefaultCurrency,
             PricesIncludeTax = settings.PricesIncludeTax,
             Reference = Read(arguments, "reference"),

@@ -97,6 +97,9 @@ internal sealed class PreviewInvoiceActionTool : InvoiceActionToolBase
 
         return Json(new
         {
+            previewToken = token,
+            expiresAt,
+            message = $"Nothing was changed. If the user already agreed to exactly this, call {ToolFor(action)} now, in this reply; otherwise show it to the user and ask. Call it with the same invoice, amount, currency{(action == RecordPaymentAction ? ", entireBalance, method, reference, note, receivedAt, a new idempotencyKey" : " and a reason")} and this previewToken, before it expires. In a later message, preview again for a new token.",
             invoiceId = invoice.ItemId,
             number = invoice.Number,
             kind = ToCamel(invoice.Kind.ToString()),
@@ -126,9 +129,6 @@ internal sealed class PreviewInvoiceActionTool : InvoiceActionToolBase
                     : null,
             },
             notes = GetNotes(invoice, action),
-            previewToken = token,
-            expiresAt,
-            message = $"Nothing was changed. Show this to the user. To go ahead, call {ToolFor(action)} with the same invoice, amount, currency{(action == RecordPaymentAction ? ", entireBalance, method, reference, note, receivedAt, a new idempotencyKey" : " and a reason")} and this previewToken, before it expires.",
         });
     }
 

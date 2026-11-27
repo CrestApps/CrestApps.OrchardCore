@@ -97,7 +97,7 @@ public sealed class SynchronizeIndexProfileTool : AIFunction
                 await indexProfileManager.UpdateAsync(indexProfile);
             }
 
-            await indexProfileManager.SynchronizeAsync(indexProfile);
+            IndexProfileSynchronization.Queue(indexProfile);
         }
 
         return AgentToolResults.Json(new
@@ -110,8 +110,8 @@ public sealed class SynchronizeIndexProfileTool : AIFunction
             }),
             reset,
             note = reset
-                ? "Each index was set to index every item again from the beginning, and the synchronization was started in the background. It is not finished yet: results stay as they were until an item is indexed again."
-                : "The synchronization was started in the background. It is not finished yet.",
+                ? "Each index was set to index every item again from the beginning, and the synchronization starts when this reply ends. Results stay as they were until an item is indexed again."
+                : "The synchronization starts when this reply ends: search the index in a later message.",
         });
     }
 }

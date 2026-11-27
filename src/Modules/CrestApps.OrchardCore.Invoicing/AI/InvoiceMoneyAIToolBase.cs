@@ -36,6 +36,8 @@ internal abstract class InvoiceMoneyAIToolBase : InvoiceAIToolBase
     /// </summary>
     public const string PreviewPurpose = "invoicing-money-preview";
 
+    private static readonly TimeSpan _previewDraftLifetime = TimeSpan.FromDays(1);
+
     /// <summary>
     /// The longest idempotency key.
     /// </summary>
@@ -267,6 +269,48 @@ internal abstract class InvoiceMoneyAIToolBase : InvoiceAIToolBase
     /// <returns>The key, or <see langword="null"/> when it is missing or longer than <see cref="MaxKeyLength"/>.</returns>
     protected static string ReadKey(AIFunctionArguments arguments)
         => Read(arguments, "idempotencyKey") is { Length: <= MaxKeyLength } key ? key : null;
+
+    /// <summary>
+    /// Remembers that a preview started a draft for the caller, so that previewing again, in a later message, replaces
+    /// the caller's own draft instead of refusing it as someone else's work. Kept for a day.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <param name="caller">The caller.</param>
+    /// <param name="draftId">The id of the draft the preview started.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    protected static async Task RememberPreviewDraftAsync(IServiceProvider services, ClaimsPrincipal caller, string draftId, CancellationToken cancellationToken)
+    {
+        if (services.GetService<IDistributedCache>() is not { } cache)
+        {
+            return;
+        }
+
+        await cache.SetStringAsync(PreviewDraftKey(services, caller, draftId), draftId, new DistributedCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = _previewDraftLifetime,
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// Returns whether a preview of the caller started the draft, as <see cref="RememberPreviewDraftAsync"/> recorded.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <param name="caller">The caller.</param>
+    /// <param name="draftId">The id of the draft.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns><see langword="true"/> when the caller's own preview started it.</returns>
+    protected static async Task<bool> IsPreviewDraftAsync(IServiceProvider services, ClaimsPrincipal caller, string draftId, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(draftId) || services.GetService<IDistributedCache>() is not { } cache)
+        {
+            return false;
+        }
+
+        return string.Equals(await cache.GetStringAsync(PreviewDraftKey(services, caller, draftId), cancellationToken), draftId, StringComparison.Ordinal);
+    }
+
+    private static string PreviewDraftKey(IServiceProvider services, ClaimsPrincipal caller, string draftId)
+        => $"{PreviewPurpose}:draft|{GetScope(services, caller)}|{draftId}";
 
     private static string GetScope(IServiceProvider services, ClaimsPrincipal caller)
         => $"{services.GetService<ShellSettings>()?.Name}|ai-tool:invoicing-money|{CallerId(caller)}";

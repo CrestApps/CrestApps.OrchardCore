@@ -88,6 +88,75 @@ public sealed class SiteSettingsToolsTests
     }
 
     [Fact]
+    public async Task GetSiteSettings_ForAPageWhoseEditorDoesNotShowItsValues_ReadsThemFromTheSavedSettings()
+    {
+        // Arrange: as Orchard Core's Cultures page, the editor leaves SupportedCultures and DefaultCulture empty.
+        var harness = new SiteAdministrationToolHarness();
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new GetSiteSettingsTool(), services, new() { ["groupId"] = CulturesGroupId });
+
+        // Assert
+        var section = Assert.Single(AgentToolTestContext.ReadJson(result).GetProperty("sections").EnumerateArray());
+        var values = section.GetProperty("values");
+        var schema = section.GetProperty("schema").GetProperty("properties").GetProperty("SupportedCultures");
+
+        Assert.Equal(new[] { "en-US" }, values.GetProperty("SupportedCultures").EnumerateArray().Select(culture => culture.GetString()));
+        Assert.Equal("en-US", values.GetProperty("DefaultCulture").GetString());
+        Assert.Equal("array", schema.GetProperty("type").GetString());
+        Assert.Contains("JSON text", schema.GetProperty("description").GetString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task UpdateSiteSettings_GivenAListForAFieldStoredAsJsonText_PostsItAsJsonText_AndReadsTheSavedValuesBack()
+    {
+        // Arrange
+        var harness = new SiteAdministrationToolHarness();
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new UpdateSiteSettingsTool(), services, new()
+        {
+            ["groupId"] = CulturesGroupId,
+            ["changes"] = JsonNode.Parse("""{ "ISite.LocalizationSettings": { "SupportedCultures": ["en-US", "fr-FR"] } }"""),
+        });
+
+        // Assert
+        var json = AgentToolTestContext.ReadJson(result);
+        var stored = harness.StoredSettings[nameof(LocalizationSettings)];
+        var values = Assert.Single(json.GetProperty("sections").EnumerateArray()).GetProperty("values");
+
+        Assert.True(json.GetProperty("saved").GetBoolean());
+        Assert.Equal(new[] { "en-US", "fr-FR" }, stored[nameof(LocalizationSettings.SupportedCultures)].AsArray().Select(culture => culture.GetValue<string>()));
+
+        // The default culture wasn't given: the current one was posted back, not cleared.
+        Assert.Equal("en-US", stored[nameof(LocalizationSettings.DefaultCulture)].GetValue<string>());
+        Assert.Equal("ISite.LocalizationSettings.SupportedCultures", Assert.Single(json.GetProperty("changed").EnumerateArray()).GetString());
+        Assert.Equal(new[] { "en-US", "fr-FR" }, values.GetProperty("SupportedCultures").EnumerateArray().Select(culture => culture.GetString()));
+    }
+
+    [Fact]
+    public async Task UpdateSiteSettings_GivenTextThatIsNotAListForAFieldStoredAsJsonText_SavesNothing()
+    {
+        // Arrange
+        var harness = new SiteAdministrationToolHarness();
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new UpdateSiteSettingsTool(), services, new()
+        {
+            ["groupId"] = CulturesGroupId,
+            ["changes"] = JsonNode.Parse("""{ "ISite.LocalizationSettings": { "SupportedCultures": "en-US,fr-FR" } }"""),
+        });
+
+        // Assert
+        Assert.StartsWith("Nothing was saved: ", result, StringComparison.Ordinal);
+        Assert.Contains("takes a list", result, StringComparison.Ordinal);
+        Assert.Equal(0, harness.SiteSaves);
+    }
+
+    [Fact]
     public async Task UpdateSiteSettings_WhenTheDriverRejectsAValue_ReturnsItsErrorAndSavesNothing()
     {
         // Arrange

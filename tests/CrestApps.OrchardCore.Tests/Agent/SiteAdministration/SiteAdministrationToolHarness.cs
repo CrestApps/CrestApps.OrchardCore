@@ -1,6 +1,8 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Tests.Doubles;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
@@ -40,6 +42,11 @@ internal sealed class SiteAdministrationToolHarness
     /// </summary>
     public const string GroupId = "test";
 
+    /// <summary>
+    /// The settings group of the cultures driver, whose editor doesn't show the values it posts.
+    /// </summary>
+    public const string CulturesGroupId = "cultures";
+
     public SiteAdministrationToolHarness()
     {
         StoredSettings = new JsonObject
@@ -50,6 +57,11 @@ internal sealed class SiteAdministrationToolHarness
                 [nameof(TestSettings.ShowBanner)] = false,
                 [nameof(TestSettings.PageSize)] = 10,
                 [nameof(TestSettings.ApiKey)] = Canary + "-api-key",
+            },
+            [nameof(LocalizationSettings)] = new JsonObject
+            {
+                [nameof(LocalizationSettings.SupportedCultures)] = new JsonArray("en-US"),
+                [nameof(LocalizationSettings.DefaultCulture)] = "en-US",
             },
         };
 
@@ -184,6 +196,7 @@ internal sealed class SiteAdministrationToolHarness
         services.AddMvcCore().AddDataAnnotations();
         services.AddEditorDisplayManagement();
         services.AddScoped<IDisplayDriver<ISite>, TestSettingsDisplayDriver>();
+        services.AddScoped<IDisplayDriver<ISite>, CulturesSettingsDisplayDriver>();
 
         var siteService = new Mock<ISiteService>();
         siteService.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(() => CreateSite());
@@ -335,6 +348,51 @@ internal sealed class SiteAdministrationToolHarness
         }
     }
 
+    /// <summary>
+    /// The settings of the cultures driver, stored under the key Orchard Core's Cultures page uses.
+    /// </summary>
+    public sealed class LocalizationSettings
+    {
+        public string[] SupportedCultures { get; set; } = [];
+
+        public string DefaultCulture { get; set; }
+    }
+
+    /// <summary>
+    /// A settings driver written as Orchard Core's Cultures page is: its editor shows a list of cultures and leaves the
+    /// posted fields empty (a script on the page fills them), and its save reads SupportedCultures as JSON text.
+    /// </summary>
+    public sealed class CulturesSettingsDisplayDriver : SiteDisplayDriver<LocalizationSettings>
+    {
+        protected override string SettingsGroupId => CulturesGroupId;
+
+        public override IDisplayResult Edit(ISite site, LocalizationSettings settings, BuildEditorContext context)
+        {
+            return Initialize<CulturesSettingsViewModel>("CulturesSettings_Edit", model =>
+            {
+                model.Shown = settings.SupportedCultures;
+            }).Location("Content:1")
+            .OnGroup(CulturesGroupId);
+        }
+
+        public override async Task<IDisplayResult> UpdateAsync(ISite site, LocalizationSettings settings, UpdateEditorContext context)
+        {
+            var model = new CulturesSettingsViewModel();
+
+            await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+            // As Orchard Core's driver: anything but JSON text throws.
+            var cultures = JsonSerializer.Deserialize<string[]>(model.SupportedCultures);
+
+            settings.SupportedCultures = cultures;
+            settings.DefaultCulture = cultures.Contains(model.DefaultCulture)
+                ? model.DefaultCulture
+                : cultures.FirstOrDefault();
+
+            return Edit(site, settings, context);
+        }
+    }
+
     public sealed class TestAdminMenuStep : DeploymentStep
     {
         public TestAdminMenuStep()
@@ -444,4 +502,17 @@ public class TestSettingsViewModel
     public int PageSize { get; set; }
 
     public string ApiKey { get; set; }
+}
+
+/// <summary>
+/// The editor view model of the cultures driver: the page shows <see cref="Shown"/> and posts the other two.
+/// </summary>
+public class CulturesSettingsViewModel
+{
+    public string SupportedCultures { get; set; }
+
+    public string DefaultCulture { get; set; }
+
+    [BindNever]
+    public string[] Shown { get; set; }
 }

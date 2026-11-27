@@ -75,7 +75,9 @@ public sealed class ListSitemapsTool : AIFunction
             return AIToolCallerAuthorization.NotAllowedMessage;
         }
 
-        var sitemaps = await services.GetRequiredService<ISitemapManager>().GetSitemapsAsync();
+        // The sitemaps as this scope has them: GetSitemapsAsync reads the cached document, which doesn't have a sitemap
+        // saveSitemap stored earlier in the same message until that message ends.
+        var sitemaps = await services.GetRequiredService<ISitemapManager>().LoadSitemapsAsync();
 
         if (arguments.TryGetFirstString("search", out var search))
         {

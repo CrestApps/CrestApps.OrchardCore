@@ -1657,8 +1657,51 @@ Main moved the admin edit forms into cards and updated Orchard Core to 4.0.0-pre
 - Two Data Connectors drivers (`DataConnectionDisplayDriver`, `MediaFilesConnectionDisplayDriver`) get their string localizer back for main's card titles.
 - **Editor capture** (`Editors/EditorReplay.cs`). Some drivers now build one view model as several card shapes with one prefix, each filling only its own fields; the AI test case editor is one. Capture read the first card only, so `saveRecord` saw the other cards' fields as empty: it refused to save a test case, and on another editor it could have saved those fields blank. Now a field the earlier cards left at the view model's default takes its value from the card that fills it. Tested in `CompiledShapeCaptureTests` and `AIQualityRecordKindsTests`.
 
+## Fixes from the UI test on a tenant with every tool (2026-11-27)
+
+The admin chat was run against about 350 tools on a tenant with 196 features on. These fixes are in the tools this pull request adds; the full test log stays outside the repo.
+
+- **Index tools.**
+  - `saveIndexProfile` gives a new Lucene or Elasticsearch profile the provider's default analyzer, as the admin editor does. Without one, Lucene's query parser threw a NullReferenceException on every search.
+  - `searchIndex` turns a provider exception into an answer, and doesn't search a Lucene profile without an analyzer (one made before the fix above): it says to save the profile again, which gives it the default analyzer.
+  - `saveIndexProfile`, `rebuildIndexProfile` and `synchronizeIndexProfile` queue the synchronization with `DeferredWork` (`IndexProfileSynchronization`) instead of `IIndexProfileManager.SynchronizeAsync`, whose HTTP background job waits for the request's HTTP context to be released. A SignalR chat call never releases it, so the job was always skipped and a rebuilt index stayed empty.
+- **Preview tokens.** The invoice action, credit note, refund and transaction action previews put the token first, and say to act now when the user already agreed. In a later message the model had lost the token and previewed again, or made one up.
+  - `previewCreditNote` replaces the draft that the caller's own earlier preview started, instead of refusing it as a draft "someone started".
+- **Estimates.**
+  - `draftEstimate` fills the bill-to contact from the party, so `sendEstimate` has an address and the converted invoice shows the customer.
+  - `sendEstimate` no longer blocks later saves in the message when only the e-mail failed.
+- **Smaller fixes:**
+  - `updateSiteSettings` names a settings page that fails on a value, and reads the page back after saving.
+  - The site settings tools handle a field that a page posts as JSON text (Localization > Cultures' `SupportedCultures`): they show it as a list, take a list for it, and read a page whose editor doesn't show its values (Cultures) from the saved settings.
+  - `saveContentPartField` attaches a type's own part to the type.
+  - `listSitemaps` lists a sitemap saved earlier in the same message.
+  - `updateWorkOrder` links a product line given by SKU to its stock item, and gives the lines it adds an ID.
+
+Found in CrestApps.Core, to fix there:
+- The security preamble makes the model refuse the AI configuration tools.
+- Core system tools count toward the scoping limit.
+- `listAvailableAgents` lists agents a profile doesn't expose.
+- Stored tool results are cut to 4,000 characters.
+- Temperature is sent to Reasoning deployments.
+- Read-only calls in an approval batch ask for approval.
+
 ## Bugs found in main's code (reported, not fixed)
 
+- **Tool pickers past the form limit (from the UI test).** The profile, template, post-session, workflow activity, MCP server and WebMcp tool pickers post a hidden ID and a hidden "false" for every tool, ticked or not. With about 500 tools a profile posts over 1,024 values (ASP.NET Core's default), and every save fails with HTTP 400 before the antiforgery token is read. **This pull request's tools reach that count, so it needs fixing before or with it.** A fix: post one value per ticked tool.
+- **Writes not seen in the same scope (from the UI test).** `Catalog<T>` reads the cached document, which only has a change once the scope ends; so do `StaffCapabilityService` and other document services. In the chat every tool call of a message shares one scope, so a record saved earlier in the message isn't found (business hours, staff capabilities), and Report Builder's tools refuse to touch a report changed earlier in the message.
+- **`DocumentCatalog` filters (from #1336).** `PageAsync` filters names, display texts and sources with `With<INameAwareIndex>` and the like, which makes YesSql join a table named after the interface ("no such table: …_INameAwareIndex_…"). Name search on the admin lists built on it fails, as `listRecords` with a query does.
+- **Draft orders without a currency.** On a store without a shopper currency (Markets off, no store currency), `CartService.PriceAsync` leaves the cart's currency null, so the admin draft order editor and `saveDraftOrder` make an order whose invoice can't be issued ("Choose the currency of the invoice").
+- **Recipe imports from the chat.** `ImportRecipeBaseTool` answers "Recipe was successfully imported" for an import it only queued, and runs a step no module has without a word: a workflow sent as a 'Workflow' step instead of 'WorkflowType' was reported as created.
+- **Inventory after a product save.** `InventoryContentHandler` creates a product's stock item only when the scope ends, so the inventory tools say a product saved earlier in the message has none.
+- **Older AI tools:**
+  - `getContentItemById` reads only the published version and checks no item permission.
+  - `getUserInfo` reports `IsLockedOut` from `IsLockoutEnabled`.
+  - `sendNotification` answers "not sent" when the site notification was made (it only counts the other methods) and wants a user ID.
+  - The content definition tools serialize with `ReferenceHandler.Preserve` (`$id`/`$values` markup).
+  - `draftInvoice` bills a guest instead of the customer with that e-mail.
+  - `createCalendarEvent` and `moveCalendarEvent` return the stored record, not `getCalendarEvent`'s shape.
+  - Several tools answer "does not exists".
+- **Agent templates.** The content, workflow, AI operations and calendar agent templates set a temperature, which reasoning deployments refuse (HTTP 400).
 - **Fulfillment.** `FulfillmentAdminController.Send` and `SendAgain` do not check that the order is paid; the card only hides its button. A posted Send for an unpaid order records requests that settle as Needs attention (not paid) and notify every shipper. The engine itself never sends an unpaid order to a partner.
 - **Invoicing tools shipped with main.** `InvoicingToolBase.IsAllowedAsync` (used by `findInvoices`, `summarizeReceivables`, `draftInvoice` and `sendInvoiceReminder`) reads the caller from `HttpContext` only, so those tools refuse callers on chat connections without one. `sendInvoiceReminder` e-mails the customer but is registered without `RequireApproval()`. `draftInvoice`'s line schema has no property descriptions and no `additionalProperties: false`, and `findInvoices` has no paging or `truncated` flag.
 - **Statements.** `StatementsAdminController.Send` e-mails a customer statement with **View invoices** only; it should probably need **Manage invoices**, as `sendInvoiceStatement` does.
@@ -1668,6 +1711,7 @@ Main moved the admin edit forms into cards and updated Orchard Core to 4.0.0-pre
 - **Record sources.** `WorkOrderRecordSource` and `ContentItemRecordSource` describe a record without checking who reads it. The service-level tools therefore return a title only for a record its kind's access provider grants to the caller.
 - **Content tools.** `getContentItemById` (`AI.Agent/Contents/GetContentTool.cs`) and `createOrUpdateContentItem` (`CreateOrUpdateContentTool.cs`) make no content authorization call, and `isDraft: false` publishes. With them on a profile, a caller can read a restricted knowledge article in full or publish an article.
 - **Content definitions (found in the UI test).** A type made with `applyContentTypeDefinitionFromRecipe` is not visible to other tools until the message ends.
+- **Work order lines added on edit (found in the UI test).** `WorkOrderService.UpdateAsync` gives no ID to a line added after the work order was created, which the admin page does too (`_LineRows.cshtml` posts the line's ID, empty for a new row). The editor keeps what was used only on lines with an ID, so parts used on such a line are probably lost on its next save. To confirm.
 - **Content search (found in the UI test).** `searchForContentItems` returned unrelated items for a term that matched one menu, and not the menu.
 - **Users and conversations (found in the UI test).** `getUserInfo` returns the raw user object; a model read its `IsLockoutEnabled` as "locked out" (`getUser` reports `lockedOut`). `listAIConversations` and `viewAIConversation` return raw UTC times.
 

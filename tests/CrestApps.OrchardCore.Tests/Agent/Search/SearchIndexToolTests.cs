@@ -1,6 +1,9 @@
 using CrestApps.OrchardCore.AI.Agent.Search;
 using CrestApps.OrchardCore.Tests.Agent.Indexing;
 using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
+using OrchardCore.Infrastructure.Entities;
+using OrchardCore.Lucene.Models;
 using OrchardCore.Search.Abstractions;
 
 namespace CrestApps.OrchardCore.Tests.Agent.Search;
@@ -162,6 +165,29 @@ public sealed class SearchIndexToolTests
 
         // Assert
         Assert.StartsWith("The search was not run: the provider 'Lucene' could not search the index 'blog'.", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task SearchIndex_ForALuceneIndexWithoutAnAnalyzer_SaysHowToRepairItWithoutSearching()
+    {
+        // Arrange
+        var harness = CreateHarness();
+
+        // A profile saveIndexProfile made before it set the default analyzer: Lucene's query parser throws without one.
+        harness.Blog.Alter<LuceneIndexMetadata>(metadata => metadata.AnalyzerName = null);
+
+        using var services = harness.Build();
+
+        // Act
+        var result = await AgentToolTestContext.InvokeAsync(new SearchIndexTool(), services, new()
+        {
+            ["terms"] = "orchard",
+        });
+
+        // Assert
+        Assert.StartsWith("The search was not run: the index 'blog' has no analyzer", result, StringComparison.Ordinal);
+        Assert.Contains("saveIndexProfile with the name 'blog'", result, StringComparison.Ordinal);
+        Assert.Empty(harness.LuceneSearch.Searches);
     }
 
     private static SearchToolHarness CreateHarness()

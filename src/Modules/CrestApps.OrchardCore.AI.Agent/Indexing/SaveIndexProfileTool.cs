@@ -78,7 +78,7 @@ public sealed class SaveIndexProfileTool : AIFunction
     public override string Name => TheName;
 
     /// <inheritdoc/>
-    public override string Description => "Creates an index profile for a provider and type (for example Lucene and Content) or updates an existing one by id or name. Creating also creates the physical index and starts indexing in the background; the index name, provider and type cannot be changed afterwards. An update changes the name and, for a Content index, the indexed content types, the culture and latest or published. The analyzer and the other settings of the provider are changed on the admin page of the index.";
+    public override string Description => "Creates an index profile for a provider and type (for example Lucene and Content) or updates an existing one by id or name. Creating also creates the physical index and starts indexing in the background; the index name, provider and type cannot be changed afterwards. An update changes the name and, for a Content index, the indexed content types, the culture and latest or published; it also gives a Lucene index without an analyzer the default one, so saving such an index by its name alone repairs it. The analyzer and the other settings of the provider are changed on the admin page of the index.";
 
     /// <inheritdoc/>
     public override JsonElement JsonSchema => _jsonSchema;
@@ -220,6 +220,15 @@ public sealed class SaveIndexProfileTool : AIFunction
             [nameof(IndexProfile.Type)] = source.Type,
         };
 
+        // The admin editor of a Lucene or Elasticsearch index gives it the provider's default analyzer when none is
+        // chosen, but the profile handlers only copy one that is given. Without one, searching the index fails.
+        var defaultAnalyzer = IndexProfileAnalyzers.GetDefault(source.ProviderName);
+
+        if (defaultAnalyzer is not null)
+        {
+            data["AnalyzerName"] = defaultAnalyzer;
+        }
+
         if (changes.ContentTypes is not null)
         {
             var contentTypes = new JsonArray();
@@ -271,7 +280,7 @@ public sealed class SaveIndexProfileTool : AIFunction
             return $"Nothing was saved: the provider '{source.ProviderName}' could not create the index '{indexName}'. The site's log has the reason.";
         }
 
-        await indexProfileManager.SynchronizeAsync(indexProfile);
+        IndexProfileSynchronization.Queue(indexProfile);
 
         var localClock = services.GetRequiredService<ILocalClock>();
 
@@ -281,7 +290,7 @@ public sealed class SaveIndexProfileTool : AIFunction
             created = true,
             indexProfile = await IndexProfileContent.DescribeAsync(indexProfile, localClock),
             timeZone = await AgentToolResults.GetTimeZoneIdAsync(localClock),
-            note = "The index profile and its physical index were created. Indexing was started in the background and is not finished yet: search results are incomplete until it is.",
+            note = "The index profile and its physical index were created. Indexing starts when this reply ends, and search results are incomplete until it finishes: search it in a later message.",
         });
     }
 
@@ -314,7 +323,11 @@ public sealed class SaveIndexProfileTool : AIFunction
             return $"Nothing was saved: indexedContentTypes, culture and indexLatest are settings of a Content index, and the type of '{indexProfile.Name}' is '{indexProfile.Type}'.";
         }
 
-        if (newName is null && !changes.HasAny)
+        // A Lucene profile made without an analyzer (by this tool before it set one) can't be searched; saving it gives it
+        // the default analyzer, as its admin editor does, even when nothing else changes.
+        var analyzerMissing = IndexProfileAnalyzers.IsMissing(arguments.Services, indexProfile);
+
+        if (newName is null && !changes.HasAny && !analyzerMissing)
         {
             return $"Nothing was saved: give a new name (with id), indexedContentTypes, culture or indexLatest to change the index profile '{indexProfile.Name}'.";
         }
@@ -333,7 +346,7 @@ public sealed class SaveIndexProfileTool : AIFunction
             Properties = indexProfile.Properties?.DeepClone().AsObject() ?? [],
         };
 
-        Apply(draft, newName, changes);
+        Apply(arguments.Services, draft, newName, changes);
 
         var validation = await indexProfileManager.ValidateAsync(draft);
 
@@ -342,7 +355,7 @@ public sealed class SaveIndexProfileTool : AIFunction
             return $"Nothing was saved: {DescribeErrors(validation)}";
         }
 
-        Apply(indexProfile, newName, changes);
+        Apply(arguments.Services, indexProfile, newName, changes);
 
         await indexProfileManager.UpdateAsync(indexProfile);
 
@@ -354,18 +367,25 @@ public sealed class SaveIndexProfileTool : AIFunction
             created = false,
             indexProfile = await IndexProfileContent.DescribeAsync(indexProfile, localClock),
             timeZone = await AgentToolResults.GetTimeZoneIdAsync(localClock),
-            note = changes.HasAny
-                ? "The settings were saved. Items that are already indexed are not indexed again: use synchronizeIndexProfile with reset to index the existing items with the new settings."
+            analyzerSet = analyzerMissing
+                ? IndexProfileAnalyzers.GetDefault(indexProfile.ProviderName)
                 : null,
+            note = analyzerMissing
+                ? "The index had no analyzer, so it was given the default one and can be searched. Rebuild it with rebuildIndexProfile so every item is indexed with it, and search it in a later message."
+                : changes.HasAny
+                    ? "The settings were saved. Items that are already indexed are not indexed again: use synchronizeIndexProfile with reset to index the existing items with the new settings."
+                    : null,
         });
     }
 
-    private static void Apply(IndexProfile indexProfile, string newName, ContentChanges changes)
+    private static void Apply(IServiceProvider services, IndexProfile indexProfile, string newName, ContentChanges changes)
     {
         if (newName is not null)
         {
             indexProfile.Name = newName;
         }
+
+        IndexProfileAnalyzers.SetDefaultWhenMissing(services, indexProfile);
 
         if (!changes.HasAny)
         {

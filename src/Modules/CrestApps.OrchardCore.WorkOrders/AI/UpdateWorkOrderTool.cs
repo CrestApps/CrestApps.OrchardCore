@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.OrchardCore.Assets.Models;
+using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Integrations;
 using CrestApps.OrchardCore.WorkOrders.Models;
@@ -146,6 +147,11 @@ internal sealed class UpdateWorkOrderTool : WorkOrderToolBase
         var customers = services.GetRequiredService<WorkOrderCustomers>();
         var model = new WorkOrderEditViewModel();
 
+        // The service gives the lines of a new work order an ID, but not lines added later (on the page too). The editor
+        // rules keep what was used only on a line with an ID, so a line saved without one gets it first: its use stays a
+        // record even when the given lines leave it out.
+        GiveLinesIds(workOrder);
+
         await WorkOrderEditorRules.FillAsync(workOrder, model, localClock);
 
         if (await OverlayAsync(arguments, workOrder, model, customers, cancellationToken) is { } refused)
@@ -153,7 +159,13 @@ internal sealed class UpdateWorkOrderTool : WorkOrderToolBase
             return refused;
         }
 
+        await LinkProductLinesToStockAsync(services, model, cancellationToken);
+
         await WorkOrderEditorRules.ApplyAsync(workOrder, model, customers, localClock, services.GetRequiredService<IClock>(), cancellationToken);
+
+        // A line this tool adds gets an ID too, as the schema tells the model to give a line's id to keep it and
+        // recordWorkOrderPartUsed takes it, so two lines with the same description can be told apart.
+        GiveLinesIds(workOrder);
 
         var result = await service.UpdateAsync(workOrder, user.Identity?.Name, cancellationToken);
 
@@ -165,6 +177,33 @@ internal sealed class UpdateWorkOrderTool : WorkOrderToolBase
         }
 
         return null;
+    }
+
+    private static void GiveLinesIds(WorkOrder workOrder)
+    {
+        foreach (var line in workOrder.Lines)
+        {
+            line.Id ??= CrestApps.Core.UniqueId.GenerateId();
+        }
+    }
+
+    // A product line given by its SKU and no stock item, as a model writes it from what the user said: link it to the
+    // stock item with that SKU, as picking the product on the page does, so recordWorkOrderPartUsed takes the parts off
+    // stock instead of only noting them.
+    private static async Task LinkProductLinesToStockAsync(IServiceProvider services, WorkOrderEditViewModel model, CancellationToken cancellationToken)
+    {
+        if (model.Lines is not { Count: > 0 } || services.GetService<IStockItemStore>() is not { } stockItems)
+        {
+            return;
+        }
+
+        foreach (var line in model.Lines.Where(line => line.Kind == WorkOrderLineKind.Product && string.IsNullOrEmpty(line.StockItemId) && !string.IsNullOrWhiteSpace(line.Description)))
+        {
+            if (await stockItems.FindBySkuAsync(line.Description.Trim(), cancellationToken: cancellationToken) is { } item)
+            {
+                line.StockItemId = item.ItemId;
+            }
+        }
     }
 
     private static async Task<string> OverlayAsync(AIFunctionArguments arguments, WorkOrder workOrder, WorkOrderEditViewModel model, WorkOrderCustomers customers, CancellationToken cancellationToken)

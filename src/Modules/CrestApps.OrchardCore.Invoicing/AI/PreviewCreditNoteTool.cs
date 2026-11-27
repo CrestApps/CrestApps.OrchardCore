@@ -76,7 +76,7 @@ internal sealed class PreviewCreditNoteTool : CreditNoteAIToolBase
         },
         "replaceDraft": {
           "type": "string",
-          "description": "The id of a draft credit note already started on this invoice, to replace its lines, reason and disposition with these. It is changed only when the new credit passes every check. Only when the user says so."
+          "description": "The id of a draft credit note already started on this invoice, to replace its lines, reason and disposition with these. It is changed only when the new credit passes every check. Only when the user says so; a draft your own earlier preview started is replaced without it."
         }
       },
       "required": ["invoice"],
@@ -182,9 +182,16 @@ internal sealed class PreviewCreditNoteTool : CreditNoteAIToolBase
             return $"{Refused}: everything on invoice {invoice.Number} has been credited already.";
         }
 
-        // A draft already started on the invoice is someone's work: it is replaced only when the user says so.
+        // A draft the caller's own earlier preview started is replaced by previewing again, as the preview's message tells
+        // the model to do in a later message. Any other draft on the invoice is someone's work: it is replaced only when
+        // the user says so.
         var replaceDraft = Read(arguments, "replaceDraft");
         var existing = notes.FirstOrDefault(note => note.Status == CreditNoteStatus.Draft);
+
+        if (existing is not null && replaceDraft is null && await IsPreviewDraftAsync(services, caller, existing.ItemId, cancellationToken))
+        {
+            replaceDraft = existing.ItemId;
+        }
 
         if (existing is not null && !string.Equals(existing.ItemId, replaceDraft, StringComparison.Ordinal))
         {
@@ -194,7 +201,7 @@ internal sealed class PreviewCreditNoteTool : CreditNoteAIToolBase
                 draftTotal = existing.Totals?.Total ?? 0m,
                 currency = existing.Currency,
                 adminUrl = CreditNoteAdminPath(services, existing.ItemId),
-                message = $"{Refused}: invoice {invoice.Number} already has a draft credit note ({existing.ItemId}) someone started. Finish or delete it on its page, or, only if the user says so, call {PreviewToolName} again with replaceDraft set to its id to replace its lines, reason and disposition with these.",
+                message = $"{Refused}: invoice {invoice.Number} already has a draft credit note ({existing.ItemId}), started on its page or by another user. Finish or delete it there, or, only if the user says so, call {PreviewToolName} again with replaceDraft set to its id to replace its lines, reason and disposition with these.",
             });
         }
 
@@ -297,10 +304,17 @@ internal sealed class PreviewCreditNoteTool : CreditNoteAIToolBase
             return $"{Refused}: the invoice or its credit notes changed at the same moment. Read the invoice again in your next message.";
         }
 
+        await RememberPreviewDraftAsync(services, caller, draft.ItemId, cancellationToken);
+
         var (token, expiresAt, tokenError) = await IssuePreviewTokenAsync(services, caller, CreditNoteFingerprint(draft, limit), cancellationToken);
 
         return Json(new
         {
+            previewToken = token,
+            expiresAt,
+            message = tokenError is not null
+                ? $"The credit note was saved as a draft, but {tokenError} Nothing was issued."
+                : $"Nothing was issued. If the user already agreed to exactly this, call issueCreditNote now, in this reply; otherwise show it to the user and ask. In a later message, preview again for a new token. Call issueCreditNote with creditNoteId {draft.ItemId}, total {total.ToString(CultureInfo.InvariantCulture)}, currency {draft.Currency}, disposition {ToCamel(draft.Disposition.ToString())} and this previewToken, before it expires. Until it is issued or deleted, the draft stays on the invoice's page.",
             invoice = new
             {
                 id = invoice.ItemId,
@@ -324,11 +338,6 @@ internal sealed class PreviewCreditNoteTool : CreditNoteAIToolBase
                 adminUrl = CreditNoteAdminPath(services, draft.ItemId),
             },
             effect = DescribeEffect(draft, invoice, ledger.Transaction),
-            previewToken = token,
-            expiresAt,
-            message = tokenError is not null
-                ? $"The credit note was saved as a draft, but {tokenError} Nothing was issued."
-                : $"Nothing was issued. Show this to the user. To issue it, call issueCreditNote with creditNoteId {draft.ItemId}, total {total.ToString(CultureInfo.InvariantCulture)}, currency {draft.Currency}, disposition {ToCamel(draft.Disposition.ToString())} and this previewToken, before it expires. Until it is issued or deleted, the draft stays on the invoice's page.",
         });
     }
 

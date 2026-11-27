@@ -156,6 +156,27 @@ public sealed class PreviewCreditNoteToolTests
     }
 
     [Fact]
+    public async Task Preview_Again_ReplacesTheDraftTheCallersEarlierPreviewStarted()
+    {
+        // Arrange: the preview's message tells the model to preview again in a later message, for a new token.
+        await using var harness = await InvoicingTestHarness.CreateAsync();
+        var invoice = await InvoicingCreditToolContext.IssueInvoiceAsync(harness);
+        var first = await _context.InvokeAsync(harness, new PreviewCreditNoteTool(), PartOfTheLine(invoice, 40m));
+        var firstDraft = Assert.Single(await ListCreditNotesAsync(harness, invoice));
+
+        // Act
+        var again = await _context.InvokeAsync(harness, new PreviewCreditNoteTool(), PartOfTheLine(invoice, 30m));
+
+        // Assert: no "already has a draft" refusal; the same draft now holds the new credit.
+        Assert.Contains("previewToken", first, StringComparison.Ordinal);
+        Assert.DoesNotContain("already has a draft credit note", again, StringComparison.Ordinal);
+        Assert.Contains("previewToken", again, StringComparison.Ordinal);
+        var draft = Assert.Single(await ListCreditNotesAsync(harness, invoice));
+        Assert.Equal(firstDraft.ItemId, draft.ItemId);
+        Assert.Equal(30m, draft.Totals.Total);
+    }
+
+    [Fact]
     public async Task Preview_ThatWouldReplaceADraft_ButBreaksARule_LeavesTheDraftAsItWas()
     {
         // Arrange: a draft of the whole invoice someone started; the replacement refunds more than was paid.

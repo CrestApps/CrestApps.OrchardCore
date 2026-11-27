@@ -1,9 +1,11 @@
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
+using CrestApps.OrchardCore.AI.Agent.Indexing;
 using CrestApps.OrchardCore.AI.Agent.Queries;
 using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OrchardCore.ContentManagement;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
@@ -138,11 +140,33 @@ public sealed class SearchIndexTool : AIFunction
             return $"The search was not run: the provider '{indexProfile.ProviderName}' of the index '{indexProfile.Name}' has no search service on this site.";
         }
 
+        // Lucene builds its query parser with the profile's analyzer and throws a NullReferenceException without one, as
+        // for a profile saveIndexProfile made before it set the default analyzer. The search isn't run then, so nothing
+        // throws (a debugger would stop the whole site on the exception).
+        if (IndexProfileAnalyzers.IsMissing(services, indexProfile))
+        {
+            return $"The search was not run: the index '{indexProfile.Name}' has no analyzer, so its provider can't read the terms. Call saveIndexProfile with the name '{indexProfile.Name}' to give it the default analyzer, then rebuildIndexProfile, and search it in a later message.";
+        }
+
         var (page, pageSize) = AgentToolResults.ReadPaging(arguments);
 
         // The paging of the search page: one result more than a page, to know whether there is a next page.
         var from = (page - 1) * pageSize;
-        var searchResult = await searchService.SearchAsync(indexProfile, terms.Trim(), from, from + pageSize + 1);
+        SearchResult searchResult;
+
+        try
+        {
+            searchResult = await searchService.SearchAsync(indexProfile, terms.Trim(), from, from + pageSize + 1);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // A provider can throw instead of failing the result, as Lucene does for an index profile without an
+            // analyzer. The search page shows an error then; the tool answers so the model can tell the user.
+            arguments.Services.GetService<ILoggerFactory>()?.CreateLogger<SearchIndexTool>()
+                .LogWarning(ex, "AI tool '{ToolName}' could not search the index '{IndexName}'.", TheName, indexProfile.Name);
+
+            return $"The search was not run: the provider '{indexProfile.ProviderName}' failed to search the index '{indexProfile.Name}' ({ex.GetType().Name}). Check its analyzer and default search fields on the index's admin page, then rebuild it. The site's log has the details.";
+        }
 
         if (!searchResult.Success)
         {
