@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using CrestApps.OrchardCore.Core.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -84,7 +85,48 @@ public sealed class FileTransferEgressPolicy
     {
         if (!IsAllowed(host))
         {
-            throw new InvalidOperationException($"The host '{host?.Trim()}' {EgressNetwork.RefusedMessage}, or could not be found. To reach the site's own network, the host's operator sets {FileTransferHostOptions.SectionName}:{nameof(FileTransferHostOptions.AllowPrivateNetwork)}.");
+            throw Refused(host);
         }
     }
+
+    /// <summary>
+    /// Checks a server just before a connection to it and returns the address to connect to, so the connection reaches
+    /// the address that was checked rather than whatever the name resolves to a moment later (review 3). A name that
+    /// does not resolve now is refused, since nothing could connect to it.
+    /// </summary>
+    /// <param name="host">The host name or address.</param>
+    /// <returns>The checked address, or <see langword="null"/> when no host is given.</returns>
+    /// <exception cref="InvalidOperationException">The server is on the site's own network, or could not be found.</exception>
+    public IPAddress ResolveAllowed(string host)
+    {
+        var trimmed = host?.Trim().Trim('[', ']');
+
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return null;
+        }
+
+        IPAddress[] addresses;
+
+        try
+        {
+            addresses = IPAddress.TryParse(trimmed, out var literal)
+                ? [literal]
+                : (_resolve ?? Dns.GetHostAddresses)(trimmed);
+        }
+        catch (Exception exception) when (exception is SocketException or ArgumentException)
+        {
+            throw Refused(host);
+        }
+
+        if (addresses is not { Length: > 0 } || addresses.Any(address => EgressNetwork.IsRefused(address, _isDevelopment, _allowPrivateNetwork)))
+        {
+            throw Refused(host);
+        }
+
+        return addresses[0];
+    }
+
+    private static InvalidOperationException Refused(string host)
+        => new($"The host '{host?.Trim()}' {EgressNetwork.RefusedMessage}, or could not be found. To reach the site's own network, the host's operator sets {FileTransferHostOptions.SectionName}:{nameof(FileTransferHostOptions.AllowPrivateNetwork)}.");
 }

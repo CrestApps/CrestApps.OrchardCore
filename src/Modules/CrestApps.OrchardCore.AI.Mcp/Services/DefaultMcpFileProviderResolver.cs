@@ -103,9 +103,11 @@ public sealed class DefaultMcpFileProviderResolver : IMcpFileProviderResolver
             => NullChangeToken.Singleton;
 
         // A "." or ".." segment is left to the tenant folder's rule; any other segment that starts with a dot is hidden.
+        // Each segment is read without its surrounding spaces, as the tenant folder trims the path and Windows drops a
+        // segment's trailing spaces, so " .env" (a URI's "%20.env") is the hidden ".env" too (review 3).
         private static bool HasDotSegment(string subpath)
             => !string.IsNullOrEmpty(subpath) &&
-                subpath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries)
+                subpath.Split(['/', '\\'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
                     .Any(segment => segment.Length > 1 && segment[0] == '.' && segment != "..");
     }
 }

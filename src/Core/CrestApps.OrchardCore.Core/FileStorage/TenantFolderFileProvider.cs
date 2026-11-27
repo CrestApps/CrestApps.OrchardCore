@@ -37,9 +37,15 @@ public sealed class TenantFolderFileProvider : IFileProvider
     }
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// An entry is listed only when the folder's rule resolves it, so a link that leaves the folder is not listed: a
+    /// caller that reads a listed entry would otherwise follow it out (review 3).
+    /// </remarks>
     public IDirectoryContents GetDirectoryContents(string subpath)
     {
-        if (!_folder.TryResolve((subpath ?? string.Empty).TrimStart('/', '\\'), out var resolved, out _, allowAbsolute: false) ||
+        var relative = (subpath ?? string.Empty).TrimStart('/', '\\');
+
+        if (!_folder.TryResolve(relative, out var resolved, out _, allowAbsolute: false) ||
             !Directory.Exists(resolved))
         {
             return NotFoundDirectoryContents.Singleton;
@@ -47,7 +53,11 @@ public sealed class TenantFolderFileProvider : IFileProvider
 
         using var provider = new PhysicalFileProvider(resolved);
 
-        return provider.GetDirectoryContents(string.Empty);
+        var entries = provider.GetDirectoryContents(string.Empty)
+            .Where(entry => _folder.TryResolve(Path.Combine(relative, entry.Name), out _, out _, allowAbsolute: false))
+            .ToList();
+
+        return new TenantFolderContents(entries);
     }
 
     /// <inheritdoc/>

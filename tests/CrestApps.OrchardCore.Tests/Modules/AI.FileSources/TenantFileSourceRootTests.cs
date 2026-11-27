@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.AI.FileSources;
 using CrestApps.OrchardCore.AI.FileSources.Services;
+using CrestApps.OrchardCore.Core.FileStorage;
 using Microsoft.Extensions.Options;
 using OrchardCore.Environment.Shell;
 
@@ -210,6 +211,59 @@ public sealed class TenantFileSourceRootTests : IDisposable
     }
 
     [Fact]
+    public void ALinkWhoseTargetPassesThroughAnotherLinkThatLeavesTheRoot_IsRefused()
+    {
+        // Arrange
+        // Review 3: a link's final target was read as the path it names, so alias -> root/escape/deep read as inside the
+        // folder while escape -> outside took it out (on Unix, where the final target is not resolved further).
+        var root = _root.EnsureRoot();
+        var outside = Path.Combine(_appData, "outside");
+        Directory.CreateDirectory(Path.Combine(outside, "deep"));
+
+        if (!TryCreateDirectoryLink(Path.Combine(root, "escape"), outside) ||
+            !TryCreateDirectoryLink(Path.Combine(root, "alias"), Path.Combine(root, "escape", "deep")))
+        {
+            Assert.SkipWhen(true, "This account cannot create a directory link.");
+
+            return;
+        }
+
+        // Act
+        var accepted = _root.TryResolve("alias", out var resolved, out var reason);
+
+        // Assert
+        Assert.False(accepted, $"'alias' resolved to '{resolved}'.");
+        Assert.False(string.IsNullOrWhiteSpace(reason));
+    }
+
+    [Fact]
+    public void AListing_LeavesOutALinkThatLeavesTheRoot()
+    {
+        // Arrange
+        // Review 3: the provider listed a folder's entries without the link rule, so a caller that read a listed entry
+        // followed a link out of the folder.
+        var folder = new TenantFolder(CreateShellSettings("TenantA"), CreateShellOptions().Value, "Listed");
+        var root = folder.EnsureRoot();
+        var outside = Path.Combine(_appData, "outside");
+        Directory.CreateDirectory(outside);
+        File.WriteAllText(Path.Combine(root, "inside.txt"), "inside");
+
+        if (!TryCreateDirectoryLink(Path.Combine(root, "escape"), outside))
+        {
+            Assert.SkipWhen(true, "This account cannot create a directory link.");
+
+            return;
+        }
+
+        // Act
+        var names = new TenantFolderFileProvider(folder).GetDirectoryContents(string.Empty).Select(entry => entry.Name).ToList();
+
+        // Assert
+        Assert.Contains("inside.txt", names);
+        Assert.DoesNotContain("escape", names);
+    }
+
+    [Fact]
     public void AStoredValue_IsRelativeToTheTenantFolder()
     {
         var root = _root.EnsureRoot();
@@ -225,18 +279,22 @@ public sealed class TenantFileSourceRootTests : IDisposable
     }
 
     private TenantFileSourceRoot CreateRoot(string tenantName)
+        => new(CreateShellSettings(tenantName), CreateShellOptions());
+
+    private static ShellSettings CreateShellSettings(string tenantName)
     {
         var shellSettings = new ShellSettings().AsUninitialized();
         shellSettings.Name = tenantName;
 
-        var shellOptions = Options.Create(new ShellOptions
+        return shellSettings;
+    }
+
+    private IOptions<ShellOptions> CreateShellOptions()
+        => Options.Create(new ShellOptions
         {
             ShellsApplicationDataPath = _appData,
             ShellsContainerName = "Sites",
         });
-
-        return new TenantFileSourceRoot(shellSettings, shellOptions);
-    }
 
     /// <summary>
     /// Creates a directory link, falling back to a Windows junction when a symbolic link is not permitted.

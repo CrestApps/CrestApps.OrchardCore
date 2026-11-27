@@ -22,6 +22,7 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly PostgreSQLDataSourceOptions _options;
     private readonly ILogger<PostgreSQLAIDataSourceSourceHandler> _logger;
+    private readonly PostgreSQLConnectionGuard _connectionGuard;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PostgreSQLAIDataSourceSourceHandler"/> class.
@@ -29,19 +30,23 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
     /// <param name="dataProtectionProvider">The data protection provider.</param>
     /// <param name="options">The global PostgreSQL data source options.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="connectionGuard">The rules a connection is held to; <see langword="null"/> refuses the global
+    /// connection string and holds a data source's own one to the strictest rules.</param>
     public PostgreSQLAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<PostgreSQLDataSourceOptions> options,
-        ILogger<PostgreSQLAIDataSourceSourceHandler> logger)
+        ILogger<PostgreSQLAIDataSourceSourceHandler> logger,
+        PostgreSQLConnectionGuard connectionGuard = null)
     {
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
         _logger = logger;
+        _connectionGuard = connectionGuard ?? new PostgreSQLConnectionGuard(shellSettings: null, options: null);
     }
 
     public string SourceType => AIDataSourceSourceTypes.PostgreSQL;
 
-    public ValueTask ValidateAsync(
+    public async ValueTask ValidateAsync(
         AIDataSource dataSource,
         ValidationResultDetails result,
         CancellationToken cancellationToken = default)
@@ -53,7 +58,7 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
         {
             result.Fail(new ValidationResult("PostgreSQL source settings are required.", [nameof(PostgreSQLSourceMetadata)]));
 
-            return ValueTask.CompletedTask;
+            return;
         }
 
         if (string.IsNullOrWhiteSpace(metadata.ConnectionString) &&
@@ -66,8 +71,20 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
         {
             result.Fail(new ValidationResult("PostgreSQL table name is required.", [nameof(PostgreSQLSourceMetadata.TableName)]));
         }
+        else if (string.IsNullOrWhiteSpace(metadata.ConnectionString) &&
+            !string.IsNullOrWhiteSpace(_options.ConnectionString) &&
+            !_connectionGuard.IsApprovedTable(metadata.TableName))
+        {
+            result.Fail(new ValidationResult(PostgreSQLConnectionGuard.NotApprovedError, [nameof(PostgreSQLSourceMetadata.TableName)]));
+        }
 
-        return ValueTask.CompletedTask;
+        // The editor, the recipe step and the API all validate here, and each stores the connection string protected.
+        if (!string.IsNullOrWhiteSpace(metadata.ConnectionString) &&
+            UnprotectConnectionString(dataSource, metadata) is { } connectionString &&
+            await _connectionGuard.GetErrorAsync(connectionString, cancellationToken) is { } error)
+        {
+            result.Fail(new ValidationResult(error, [nameof(PostgreSQLSourceMetadata.ConnectionString)]));
+        }
     }
 
     public ValueTask<string> GetReferenceTypeAsync(
@@ -80,15 +97,14 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var metadata = GetMetadata(dataSource);
-        var connectionString = GetConnectionString(dataSource, metadata);
+        await using var source = await CreateDataSourceAsync(dataSource, metadata, cancellationToken);
         var quotedTableName = QuoteCompositeIdentifier(metadata.TableName);
         var sortColumn = ResolveSortColumn(dataSource);
         var offset = 0;
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            await using var connection = new NpgsqlConnection(connectionString);
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await source.OpenConnectionAsync(cancellationToken);
             await using var command = connection.CreateCommand();
             command.CommandText = $"""SELECT * FROM {quotedTableName} ORDER BY {sortColumn} LIMIT @limit OFFSET @offset""";
             command.Parameters.AddWithValue("limit", BatchSize);
@@ -130,12 +146,11 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
         }
 
         var metadata = GetMetadata(dataSource);
-        var connectionString = GetConnectionString(dataSource, metadata);
+        await using var source = await CreateDataSourceAsync(dataSource, metadata, cancellationToken);
         var quotedTableName = QuoteCompositeIdentifier(metadata.TableName);
         var keyColumn = ResolveKeyColumn(dataSource);
 
-        await using var connection = new NpgsqlConnection(connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await source.OpenConnectionAsync(cancellationToken);
         await using var command = connection.CreateCommand();
         var parameterNames = new List<string>();
 
@@ -173,9 +188,12 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
         return metadata;
     }
 
-    private string GetConnectionString(
+    // The data source a read connects through: the host's global connection string as it is, for an approved table, or
+    // the data source's own one held to the connection rules and pinned to the checked address (review 3).
+    private async Task<NpgsqlDataSource> CreateDataSourceAsync(
         AIDataSource dataSource,
-        PostgreSQLSourceMetadata metadata)
+        PostgreSQLSourceMetadata metadata,
+        CancellationToken cancellationToken)
     {
         // Data sources without their own connection string use the globally configured one.
         if (string.IsNullOrWhiteSpace(metadata.ConnectionString))
@@ -185,9 +203,20 @@ internal sealed class PostgreSQLAIDataSourceSourceHandler : IAIDataSourceSourceH
                 throw new InvalidOperationException($"No PostgreSQL connection string is available for data source '{dataSource.ItemId}'. Provide one for this data source or configure '{PostgreSQLDataSourceOptionsConfiguration.SharedConfigurationSectionName}:{nameof(PostgreSQLDataSourceOptions.ConnectionString)}'.");
             }
 
-            return _options.ConnectionString;
+            // Checked before every sync too: the host's approval may have changed since the save.
+            if (!_connectionGuard.IsApprovedTable(metadata.TableName))
+            {
+                throw new InvalidOperationException(PostgreSQLConnectionGuard.NotApprovedError);
+            }
+
+            return NpgsqlDataSource.Create(_options.ConnectionString);
         }
 
+        return await _connectionGuard.CreateDataSourceAsync(UnprotectConnectionString(dataSource, metadata), cancellationToken);
+    }
+
+    private string UnprotectConnectionString(AIDataSource dataSource, PostgreSQLSourceMetadata metadata)
+    {
         var protector = _dataProtectionProvider.CreateProtector(AIDataSourceProtectionConstants.SourceSecretPurpose);
 
         return DataProtectionHelper.Unprotect(protector, metadata.ConnectionString, _logger, "Failed to unprotect AI data source field '{FieldName}' for data source '{DataSourceId}'.", nameof(PostgreSQLSourceMetadata.ConnectionString), dataSource.ItemId);

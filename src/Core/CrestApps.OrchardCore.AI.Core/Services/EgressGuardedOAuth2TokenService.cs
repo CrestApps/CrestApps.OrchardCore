@@ -1,6 +1,8 @@
 using System.Net.Http;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
+using System.Text;
 using System.Text.Json.Serialization;
 using CrestApps.Core.AI.Services;
 using CrestApps.OrchardCore.Core.Http;
@@ -20,7 +22,7 @@ namespace CrestApps.OrchardCore.AI.Core.Services;
 /// </summary>
 internal sealed class EgressGuardedOAuth2TokenService : IOAuth2TokenService
 {
-    // The package's own cache key and expiry rules, so both share the cached tokens.
+    // The package's own expiry rules.
     private const int ExpirationBufferSeconds = 60;
 
     private readonly DefaultOAuth2TokenService _inner;
@@ -58,7 +60,7 @@ internal sealed class EgressGuardedOAuth2TokenService : IOAuth2TokenService
         ArgumentException.ThrowIfNullOrEmpty(clientId);
         ArgumentNullException.ThrowIfNull(clientCertificateBytes);
 
-        var cacheKey = $"oauth2_mtls_{tokenEndpoint}_{clientId}_{scopes}";
+        var cacheKey = GetMtlsCacheKey(tokenEndpoint, clientId, scopes, clientCertificateBytes, certificatePassword);
 
         if (_cache.TryGetValue<string>(cacheKey, out var cached))
         {
@@ -113,6 +115,28 @@ internal sealed class EgressGuardedOAuth2TokenService : IOAuth2TokenService
         _cache.Set(cacheKey, token.AccessToken, lifetime);
 
         return token.AccessToken;
+    }
+
+    /// <summary>
+    /// The cache key of an mTLS token: the endpoint, the client and the scopes, and a hash of the certificate and its
+    /// password. The memory cache is shared by every tenant, and the endpoint and client are often public, so a key
+    /// without the credential would hand one connection's token to another that names the same client with any
+    /// certificate (review 3).
+    /// </summary>
+    /// <param name="tokenEndpoint">The token endpoint.</param>
+    /// <param name="clientId">The client.</param>
+    /// <param name="scopes">The scopes.</param>
+    /// <param name="clientCertificateBytes">The client certificate.</param>
+    /// <param name="certificatePassword">The certificate's password.</param>
+    /// <returns>The key.</returns>
+    internal static string GetMtlsCacheKey(string tokenEndpoint, string clientId, string scopes, byte[] clientCertificateBytes, string certificatePassword)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        hash.AppendData(clientCertificateBytes);
+        hash.AppendData([0]);
+        hash.AppendData(Encoding.UTF8.GetBytes(certificatePassword ?? string.Empty));
+
+        return $"oauth2_mtls_{tokenEndpoint}_{clientId}_{scopes}_{Convert.ToHexString(hash.GetHashAndReset())}";
     }
 
     private sealed class TokenResponse

@@ -73,6 +73,36 @@ OrchardCore__CrestApps__AI__DataSources__PostgreSQL__ConnectionString
 
 A connection string stored on a data source always wins over the configured values.
 
+### Which tenants may use it
+
+The global connection string signs in with the host's credentials, so it reaches every table they can read, other tenants' included. The default tenant may read any table through it. Another tenant may read only the tables the host lists for it in `SharedConnectionTables` under the data source section, named as the data source names them (`table` or `schema.table`, compared by case, as PostgreSQL compares the quoted name), when a data source is saved and again before every sync. The operator lists them in the tenant's own configuration (for example `App_Data/Sites/<tenant>/appsettings.json`, or the `OrchardCore:<tenant>` section of the host's configuration), which tenant administrators can't change:
+
+```json
+{
+  "CrestApps": {
+    "AI": {
+      "DataSources": {
+        "PostgreSQL": {
+          "SharedConnectionTables": [ "tenant_a.articles" ]
+        }
+      }
+    }
+  }
+}
+```
+
+A data source on another tenant that already reads a table through the global connection string stops syncing until its table is listed, or until it is given its own connection string.
+
+## A data source's own connection string
+
+A connection string a data source stores is checked when the data source is saved (editor, API and **AIDataSource** recipe step) and again before every sync:
+
+- It names one server by its host name or address: not a list of servers, a `host:port` pair (use `Port`) or a local socket path.
+- The server may not be on the site's own network (loopback, private or link-local addresses, or a host name that resolves to one), unless the host sets `CrestApps:AI:Egress:AllowPrivateNetwork` to `true`; the cloud metadata services stay refused. The client connects to the address that was checked, not to whatever the name resolves to a moment later, and still checks the server's certificate against the host name (`SSL Mode=VerifyFull`).
+- Outside the default tenant, it may not sign in as the host. It needs a password; it may not name a file on the server (`Passfile`, `SSL Certificate`, `SSL Key`, `SSL Password` or `Root Certificate`); and the client never uses the host's Kerberos ticket or Windows account, its default password file or its default client certificate. The host can allow this for a tenant with `AllowHostIdentity` under the data source section.
+
+A data source saved before these checks that breaks one of them stops syncing until its connection string is fixed: a server on a private network needs `AllowPrivateNetwork`, and, outside the default tenant, a server that asks for no password needs a password in the connection string all the same.
+
 ## Getting started
 
 1. Enable **AI Data Sources** and **AI Data Sources - PostgreSQL**.

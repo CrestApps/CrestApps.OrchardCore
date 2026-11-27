@@ -175,6 +175,73 @@ public sealed class McpStdioTenantGuardTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetAsync(CreateConnection(command)));
     }
 
+    /// <summary>
+    /// Review 3: the allowlist compared a bare command's name without its extension, so <c>C:npx</c> (the drive's current
+    /// folder) and <c>npx.anything</c> (another program) passed for <c>npx</c>.
+    /// </summary>
+    [Theory]
+    [InlineData("C:npx")]
+    [InlineData("C:npx.cmd")]
+    [InlineData("npx.anything")]
+    [InlineData("npx.ps1")]
+    public void IsAllowed_ADriveRelativeCommandOrAnotherExtension_IsRefused(string command)
+    {
+        // Arrange
+        string[] allowedCommands = ["npx"];
+
+        // Act
+        var allowed = GuardedStdioClientTransportProvider.IsAllowed(command, allowedCommands);
+
+        // Assert
+        Assert.False(allowed);
+    }
+
+    [Theory]
+    [InlineData("npx")]
+    [InlineData("npx.cmd")]
+    [InlineData("NPX.EXE")]
+    public void IsAllowed_AnAllowedNameWithAnExecutableExtension_IsAllowed(string command)
+    {
+        // Arrange
+        string[] allowedCommands = ["npx"];
+
+        // Act
+        var allowed = GuardedStdioClientTransportProvider.IsAllowed(command, allowedCommands);
+
+        // Assert
+        Assert.True(allowed);
+    }
+
+    [Fact]
+    public async Task GetAsync_OnWindows_AWorkingDirectoryThatHoldsTheCommandsName_Refuses()
+    {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "cmd.exe, which runs the command on Windows only, looks in the working directory first.");
+
+        // Arrange
+        // Review 3: cmd.exe starts a npx.cmd the connection's working directory holds before the npx on PATH.
+        var folder = Directory.CreateTempSubdirectory("mcp-stdio-").FullName;
+
+        try
+        {
+            File.WriteAllText(Path.Combine(folder, "npx.cmd"), "@echo off");
+            var provider = CreateProvider(ShellSettings.DefaultShellName, allowedCommands: ["npx"]);
+            var connection = CreateConnection("npx");
+            connection.Put(new StdioMcpConnectionMetadata { Command = "npx", Arguments = [], WorkingDirectory = folder });
+
+            // Act
+            var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => provider.GetAsync(connection));
+
+            // Assert
+            Assert.Contains("working directory", exception.Message, StringComparison.Ordinal);
+            Assert.Equal(Path.Combine(folder, "npx.cmd"), GuardedStdioClientTransportProvider.FindShadowingFile("npx", folder));
+            Assert.Null(GuardedStdioClientTransportProvider.FindShadowingFile("node", folder));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
+    }
+
     [Fact]
     public async Task GetAsync_WithAPathThatIsListed_ReturnsATransport()
     {

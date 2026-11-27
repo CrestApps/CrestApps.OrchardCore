@@ -8,7 +8,8 @@ namespace CrestApps.OrchardCore.AI.FileTransfer.Core.Services;
 /// <summary>
 /// Holds a remote-file ingestion connector of CrestApps.Core (FTP, SFTP) to the <see cref="FileTransferEgressPolicy"/>:
 /// a file source is refused when it is saved through the catalog (the editor, the API, a recipe), and every discovery
-/// and fetch checks the server and proxy before the package connects.
+/// and fetch checks the server and proxy before the package connects, and hands the package a copy of the source that
+/// names the addresses that were checked (review 3).
 /// </summary>
 internal sealed class EgressGuardedIngestionConnector : IIngestionConnector
 {
@@ -53,26 +54,31 @@ internal sealed class EgressGuardedIngestionConnector : IIngestionConnector
     }
 
     public Task<IngestionDiscoveryResult> DiscoverAsync(IngestionSource source, string continuationToken = null, CancellationToken cancellationToken = default)
-    {
-        EnsureAllowed(source);
-
-        return _inner.DiscoverAsync(source, continuationToken, cancellationToken);
-    }
+        => _inner.DiscoverAsync(PrepareConnection(source), continuationToken, cancellationToken);
 
     public Task<IngestionItemContent> FetchAsync(IngestionSource source, string itemId, CancellationToken cancellationToken = default)
-    {
-        EnsureAllowed(source);
+        => _inner.FetchAsync(PrepareConnection(source), itemId, cancellationToken);
 
-        return _inner.FetchAsync(source, itemId, cancellationToken);
-    }
-
-    private void EnsureAllowed(IngestionSource source)
+    // The source the package connects with: a copy, so the checked addresses never replace the names the source stores
+    // (the record a catalog returns may be the one it keeps).
+    private IngestionSource PrepareConnection(IngestionSource source)
     {
+        ArgumentNullException.ThrowIfNull(source);
+
         foreach (var (_, host) in _hosts(source))
         {
             _policy.EnsureAllowed(host);
         }
 
-        _prepare?.Invoke(source, _policy);
+        if (_prepare is null)
+        {
+            return source;
+        }
+
+        var copy = (IngestionSource)Activator.CreateInstance(source.GetType());
+        source.CopyTo(copy);
+        _prepare(copy, _policy);
+
+        return copy;
     }
 }

@@ -34,6 +34,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     private readonly AIDataSourceStoredSettings _storedSettings;
     private readonly AIEgressTransport _egressTransport;
     private readonly IHttpMessageHandlerFactory _handlerFactory;
+    private readonly ElasticsearchSharedConnectionAccess _sharedConnectionAccess;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ElasticsearchAIDataSourceSourceHandler"/> class.
@@ -46,6 +47,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
     /// <param name="storedSettings">The data sources as they were stored, read in this request, so a URL a save keeps is not checked again.</param>
     /// <param name="egressTransport">The guard the cluster's requests connect through; <see langword="null"/> refuses every private address.</param>
     /// <param name="handlerFactory">Gives the data connectors' shared handler, which a data connection's requests go through.</param>
+    /// <param name="sharedConnectionAccess">Which indexes this tenant may read through the global connection; <see langword="null"/> refuses every one.</param>
     public ElasticsearchAIDataSourceSourceHandler(
         IDataProtectionProvider dataProtectionProvider,
         IOptions<ElasticsearchDataSourceOptions> options,
@@ -54,10 +56,12 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         IAIEndpointPolicy endpointPolicy = null,
         AIDataSourceStoredSettings storedSettings = null,
         AIEgressTransport egressTransport = null,
-        IHttpMessageHandlerFactory handlerFactory = null)
+        IHttpMessageHandlerFactory handlerFactory = null,
+        ElasticsearchSharedConnectionAccess sharedConnectionAccess = null)
     {
         _egressTransport = egressTransport ?? AIEgressTransport.Strict;
         _handlerFactory = handlerFactory;
+        _sharedConnectionAccess = sharedConnectionAccess;
         _dataProtectionProvider = dataProtectionProvider;
         _options = options.Value;
         _logger = logger;
@@ -70,6 +74,10 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
 
     private bool IsAllowed(string url)
         => _endpointPolicy?.IsAllowed(url) ?? AIEgress.IsAllowedEndpoint(url, isDevelopment: false, options: null);
+
+    // The global connection reads with the host's credentials, other tenants' indexes included (review 3).
+    private bool MayUseSharedConnection(string indexName)
+        => _sharedConnectionAccess?.IsApproved(indexName) == true;
 
     // A URL the save keeps as it was stored is not checked again (review 8, G7): a cluster on a private network saved
     // before the check keeps syncing, and refusing every other change would only stop it being edited.
@@ -182,6 +190,10 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
             if (string.IsNullOrWhiteSpace(metadata.IndexName))
             {
                 result.Fail(new ValidationResult("Elasticsearch index name is required.", [nameof(ElasticsearchSourceMetadata.IndexName)]));
+            }
+            else if (_options.HasConnection && !MayUseSharedConnection(metadata.IndexName))
+            {
+                result.Fail(new ValidationResult(ElasticsearchSharedConnectionAccess.NotApprovedError, [nameof(ElasticsearchSourceMetadata.IndexName)]));
             }
 
             return;
@@ -394,6 +406,12 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
 
         if (!HasStoredConnection(metadata))
         {
+            // Checked before every sync too: the host's approval may have changed since the save.
+            if (!MayUseSharedConnection(metadata.IndexName))
+            {
+                throw new InvalidOperationException(ElasticsearchSharedConnectionAccess.NotApprovedError);
+            }
+
             return (CreateConfiguredClient(), metadata);
         }
 
@@ -420,9 +438,11 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         }
         else
         {
-            // A self-managed cluster may stay on a private network (review 8, G7), but is checked when it is connected to,
-            // so it never reaches the link-local range or a cloud metadata service (review 11, C14).
-            settings = new ElasticsearchClientSettings(new SingleNodePool(new Uri(metadata.Url)), GuardedInvoker(allowPrivateNetwork: true));
+            // Only a self-managed cluster saved before the save check may stay on a private network (review 8, G7); a URL a
+            // save checked is held to that rule when it is connected to as well, so a name that answers with a public
+            // address at the save and a private one later is refused (review 3, High 2). Either way the client never
+            // reaches the link-local range or a cloud metadata service (review 11, C14).
+            settings = new ElasticsearchClientSettings(new SingleNodePool(new Uri(metadata.Url)), GuardedInvoker(allowPrivateNetwork: !dataSource.Has<ElasticsearchCheckedUrl>()));
         }
 
         if (authorizationHeader != null)
@@ -438,7 +458,8 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
         return (new ElasticsearchClient(settings), metadata);
     }
 
-    // The transport's own handler, with its TLS settings (a pinned fingerprint), connecting through the egress guard.
+    // The transport's own handler, with its TLS settings (a pinned fingerprint), connecting through the egress guard. It
+    // follows no redirect, so a cluster's answer can't send the client, and its credentials, to another address.
     private HttpRequestInvoker GuardedInvoker(bool allowPrivateNetwork)
         => new((handler, _) =>
         {
@@ -447,6 +468,7 @@ internal sealed class ElasticsearchAIDataSourceSourceHandler : IAIDataSourceSour
                 throw new InvalidOperationException("The Elasticsearch transport built a handler the egress guard cannot check.");
             }
 
+            sockets.AllowAutoRedirect = false;
             _egressTransport.Guard(sockets, allowPrivateNetwork);
 
             return sockets;

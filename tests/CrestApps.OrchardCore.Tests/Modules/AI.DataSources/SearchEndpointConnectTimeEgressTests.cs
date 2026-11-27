@@ -5,6 +5,7 @@ using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.DataSources.AzureAI.Services;
+using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
 using CrestApps.OrchardCore.Core.Http;
@@ -127,6 +128,59 @@ public sealed class SearchEndpointConnectTimeEgressTests
 
         Assert.False(response.IsValidResponse);
         Assert.True(Mentions(response.ApiCallDetails.OriginalException, EgressNetwork.RefusedMessage), response.ApiCallDetails.OriginalException?.ToString());
+    }
+
+    [Fact]
+    public async Task Elasticsearch_ASelfManagedUrlTheSaveChecked_IsRefusedWhenItLaterPointsAtTheSiteOwnNetwork()
+    {
+        // Arrange
+        // Review 3 (High 2): every self-managed cluster connected with a private network allowed, so a name that was
+        // public when the save checked it and private at sync read an internal cluster into the tenant's index.
+        using var server = new CountingServer();
+        var handler = Create<ElasticsearchAIDataSourceSourceHandler>(services => services.AddSingleton(new AIEgressTransport(Options.Create(new AIEgressOptions()))));
+        var dataSource = SelfManagedSource("ds-5", $"http://127.0.0.1:{server.Port}");
+        ElasticsearchCheckedUrlHandler.Record(dataSource, stored: null);
+
+        // Act
+        var (client, _) = await handler.ResolveAsync(dataSource, TestContext.Current.CancellationToken);
+        var response = await client.PingAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(response.IsValidResponse);
+        Assert.True(Mentions(response.ApiCallDetails.OriginalException, EgressNetwork.RefusedMessage), response.ApiCallDetails.OriginalException?.ToString());
+        Assert.Equal(0, server.Accepted);
+    }
+
+    [Fact]
+    public async Task Elasticsearch_ASelfManagedClusterSavedBeforeTheCheck_KeepsItsPrivateNetwork()
+    {
+        // Arrange
+        // A data source saved before the save check has no record of one (review 8, G7), so its cluster may stay private.
+        using var server = new CountingServer();
+        var handler = Create<ElasticsearchAIDataSourceSourceHandler>(services => services.AddSingleton(new AIEgressTransport(Options.Create(new AIEgressOptions()))));
+        var dataSource = SelfManagedSource("ds-6", $"http://127.0.0.1:{server.Port}");
+
+        // Act
+        var (client, _) = await handler.ResolveAsync(dataSource, TestContext.Current.CancellationToken);
+        var response = await client.PingAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(Mentions(response.ApiCallDetails.OriginalException, EgressNetwork.RefusedMessage), response.ApiCallDetails.OriginalException?.ToString());
+        Assert.True(server.Accepted > 0);
+    }
+
+    private static AIDataSource SelfManagedSource(string itemId, string url)
+    {
+        var dataSource = new AIDataSource { ItemId = itemId, Source = AIDataSourceSourceTypes.Elasticsearch, DisplayText = "Logs" };
+        dataSource.Put(new ElasticsearchSourceMetadata
+        {
+            EnvironmentType = ElasticsearchSourceMetadata.SelfManagedEnvironmentType,
+            Url = url,
+            AuthenticationType = ElasticsearchSourceMetadata.NoneAuthenticationType,
+            IndexName = "logs",
+        });
+
+        return dataSource;
     }
 
     [Fact]

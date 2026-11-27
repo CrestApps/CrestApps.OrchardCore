@@ -12,6 +12,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.DataSources;
@@ -222,6 +223,7 @@ public sealed class ElasticsearchDataSourceOptionsConfigurationTests
             null,
             null,
             null,
+            new ElasticsearchSharedConnectionAccess(new ShellSettings { Name = ShellSettings.DefaultShellName }, Options.Create(new ElasticsearchSharedConnectionOptions())),
         ]);
     }
 

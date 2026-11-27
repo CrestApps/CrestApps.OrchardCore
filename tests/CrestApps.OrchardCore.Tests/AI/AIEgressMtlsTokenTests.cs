@@ -78,6 +78,39 @@ public sealed class AIEgressMtlsTokenTests
         Assert.Empty(other.Requests);
     }
 
+    [Fact]
+    public async Task AnMtlsToken_IsCachedForItsCertificate_NotForAnotherConnectionNamingTheSameClient()
+    {
+        // Arrange
+        // Review 3: the cache key was the endpoint, client and scopes only, and the memory cache is shared by every
+        // tenant, so a connection naming the same client with any certificate got another connection's token.
+        using var server = new TokenServer();
+        using var services = CreateServices(allowPrivateNetwork: true);
+        var endpoint = $"http://127.0.0.1:{server.Port}/token";
+
+        // Act
+        string first;
+        string second;
+        string again;
+
+        using (var scope = services.CreateScope())
+        {
+            var tokens = scope.ServiceProvider.GetRequiredService<IOAuth2TokenService>();
+            var certificate = CreateCertificate();
+            first = await tokens.AcquireTokenWithMtlsAsync(endpoint, "client", certificate, scopes: "read", cancellationToken: TestContext.Current.CancellationToken);
+            again = await tokens.AcquireTokenWithMtlsAsync(endpoint, "client", certificate, scopes: "read", cancellationToken: TestContext.Current.CancellationToken);
+            second = await tokens.AcquireTokenWithMtlsAsync(endpoint, "client", CreateCertificate(), scopes: "read", cancellationToken: TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.Equal("issued-token", first);
+        Assert.Equal("issued-token", again);
+        Assert.Equal("issued-token", second);
+
+        // The same certificate is answered from the cache; another one asks the endpoint itself.
+        Assert.Equal(2, server.Requests.Length);
+    }
+
     // The package registers its token service with TryAdd; the AI features then add their guards.
     private static ServiceProvider CreateServices(bool allowPrivateNetwork)
     {

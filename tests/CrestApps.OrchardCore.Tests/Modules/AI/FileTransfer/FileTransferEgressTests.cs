@@ -206,6 +206,84 @@ public sealed class FileTransferEgressTests
     }
 
     [Fact]
+    public async Task FtpFileSource_ThePackageConnectsToTheCheckedAddress_AndTheStoredSourceKeepsItsName()
+    {
+        // Arrange
+        // Review 3: the server was checked, then the package resolved the name again, so a name that answered with a
+        // public address first and an internal one second reached an internal FTP server.
+        var inner = new CapturingConnector(FtpIngestionConnector.ConnectorName);
+        var services = new ServiceCollection();
+        AddCommon(services);
+        services.AddSingleton(new FileTransferEgressPolicy(Options.Create(new FileTransferHostOptions()), hostEnvironment: null, Resolve));
+        services.AddKeyedSingleton<IIngestionConnector>(FtpIngestionConnector.ConnectorName, inner);
+        services.AddFtpIngestionEgressGuard();
+        await using var provider = services.BuildServiceProvider();
+        var connector = provider.GetRequiredKeyedService<IIngestionConnector>(FtpIngestionConnector.ConnectorName);
+        var source = new FileSource { ItemId = "fs-ftp", Source = FtpIngestionConnector.ConnectorName, DisplayText = "Share" };
+        source.Put(new FtpConnectionMetadata { Host = "ftp.example.com", DataConnectionType = "EPSV" });
+
+        // Act
+        await connector.DiscoverAsync(source, cancellationToken: TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotSame(source, inner.Source);
+        Assert.Equal("203.0.113.10", inner.Source.GetOrCreate<FtpConnectionMetadata>().Host);
+        Assert.Equal("ftp.example.com", source.GetOrCreate<FtpConnectionMetadata>().Host);
+    }
+
+    [Theory]
+    [InlineData(null, false, "203.0.113.10")]
+    [InlineData("None", false, "203.0.113.10")]
+    [InlineData("Auto", false, "203.0.113.10")]
+    [InlineData("Explicit", true, "203.0.113.10")]
+    [InlineData("Explicit", false, "ftp.example.com")]
+    [InlineData("Implicit", false, "ftp.example.com")]
+    public void PrepareFtpConnection_NamesTheCheckedAddress_UnlessTheCertificateMustMatchTheName(string encryptionMode, bool validateAnyCertificate, string expected)
+    {
+        // Arrange
+        // A plain (or anonymous) FTP server, or one whose certificate is not checked, proves nothing by its name.
+        var policy = new FileTransferEgressPolicy(Options.Create(new FileTransferHostOptions()), hostEnvironment: null, Resolve);
+        var metadata = new FtpConnectionMetadata { Host = "ftp.example.com", EncryptionMode = encryptionMode, ValidateAnyCertificate = validateAnyCertificate };
+
+        // Act
+        FileTransferEgress.PrepareFtpConnection(metadata, policy);
+
+        // Assert
+        Assert.Equal(expected, metadata.Host);
+    }
+
+    [Fact]
+    public void PrepareSftpConnection_NamesTheCheckedAddresses()
+    {
+        // Arrange
+        // An SFTP server is verified by its host key, not its name.
+        var policy = new FileTransferEgressPolicy(Options.Create(new FileTransferHostOptions()), hostEnvironment: null, Resolve);
+        var metadata = new SftpConnectionMetadata { Host = "sftp.example.com", ProxyHost = "proxy.example.com", HostKeyFingerprint = Fingerprint };
+
+        // Act
+        FileTransferEgress.PrepareSftpConnection(metadata, policy);
+
+        // Assert
+        Assert.Equal("203.0.113.10", metadata.Host);
+        Assert.Equal("203.0.113.10", metadata.ProxyHost);
+    }
+
+    [Theory]
+    [InlineData("inside.example.com")]
+    [InlineData("missing.example.com")]
+    public void PrepareFtpConnection_AServerThatIsNotAllowedWhenItIsConnectedTo_IsRefused(string host)
+    {
+        // Arrange
+        var policy = new FileTransferEgressPolicy(Options.Create(new FileTransferHostOptions()), hostEnvironment: null, Resolve);
+
+        // Act
+        var exception = Assert.Throws<InvalidOperationException>(() => FileTransferEgress.PrepareFtpConnection(new FtpConnectionMetadata { Host = host }, policy));
+
+        // Assert
+        Assert.Contains(EgressNetwork.RefusedMessage, exception.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SftpResource_IsCheckedBeforeEveryRead()
     {
         using var server = new CountingServer();
@@ -301,6 +379,36 @@ public sealed class FileTransferEgressTests
 
     private static UpdateEditorContext Context(object submitted)
         => new(null, string.Empty, false, string.Empty, null, null, new FakeUpdateModel(submitted));
+
+    // Keeps the source the guard hands the package, and connects nowhere.
+    private sealed class CapturingConnector : IIngestionConnector
+    {
+        public CapturingConnector(string name)
+        {
+            Name = name;
+        }
+
+        public string Name { get; }
+
+        public IngestionSource Source { get; private set; }
+
+        public ValueTask ValidateAsync(IngestionSource source, ValidationResultDetails result, CancellationToken cancellationToken = default)
+            => ValueTask.CompletedTask;
+
+        public Task<IngestionDiscoveryResult> DiscoverAsync(IngestionSource source, string continuationToken = null, CancellationToken cancellationToken = default)
+        {
+            Source = source;
+
+            return Task.FromResult<IngestionDiscoveryResult>(null);
+        }
+
+        public Task<IngestionItemContent> FetchAsync(IngestionSource source, string itemId, CancellationToken cancellationToken = default)
+        {
+            Source = source;
+
+            return Task.FromResult<IngestionItemContent>(null);
+        }
+    }
 
     // Counts the connections made to it on this machine, and closes each.
     private sealed class CountingServer : IDisposable

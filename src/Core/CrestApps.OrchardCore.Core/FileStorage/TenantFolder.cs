@@ -21,6 +21,9 @@ namespace CrestApps.OrchardCore.Core.FileStorage;
 /// </remarks>
 public sealed class TenantFolder
 {
+    // The links one path may go through, as the operating systems limit them (Linux's is 40), so a loop ends.
+    private const int MaxLinks = 40;
+
     private readonly string _root;
     private string _realRoot;
 
@@ -124,31 +127,34 @@ public sealed class TenantFolder
             return false;
         }
 
-        // A link inside the folder can point anywhere, and GetFullPath does not follow one. Walking the segments one at a
-        // time, following a link wherever one is found, catches a link that leaves the folder at any depth.
+        return TryWalk(realRoot, segments, links: 0, out resolved, out reason);
+    }
+
+    // A link inside the folder can point anywhere, and GetFullPath does not follow one. Walking the segments one at a
+    // time, following a link wherever one is found, catches a link that leaves the folder at any depth. A link's target
+    // is walked the same way from the folder, one link at a time, so a target that passes through another link (a.txt
+    // -> sub/x where sub -> /etc) is followed through that link too, rather than taken as the path it reads as (review 3).
+    private static bool TryWalk(string realRoot, string[] segments, int links, out string resolved, out string reason)
+    {
+        resolved = null;
+        reason = null;
+
         var current = realRoot;
 
         foreach (var segment in segments)
         {
+            string target = null;
+
             try
             {
                 current = Path.GetFullPath(Path.Combine(current, segment));
 
-                FileSystemInfo target = null;
+                // The target of a relative link comes back resolved against the link's own folder.
+                var link = Directory.Exists(current)
+                    ? Directory.ResolveLinkTarget(current, returnFinalTarget: false)
+                    : File.Exists(current) ? File.ResolveLinkTarget(current, returnFinalTarget: false) : null;
 
-                if (Directory.Exists(current))
-                {
-                    target = Directory.ResolveLinkTarget(current, returnFinalTarget: true);
-                }
-                else if (File.Exists(current))
-                {
-                    target = File.ResolveLinkTarget(current, returnFinalTarget: true);
-                }
-
-                if (target is not null)
-                {
-                    current = Path.GetFullPath(target.FullName);
-                }
+                target = link is null ? null : Path.GetFullPath(link.FullName);
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or PathTooLongException)
             {
@@ -157,11 +163,26 @@ public sealed class TenantFolder
                 return false;
             }
 
-            if (!TryGetRelativeSegments(realRoot, current, out _))
+            if (target is not null)
             {
-                reason = "That path, or a folder above it, links outside the folder this tenant may read.";
+                if (links >= MaxLinks)
+                {
+                    reason = "That path follows too many links.";
 
-                return false;
+                    return false;
+                }
+
+                if (!TryGetRelativeSegments(realRoot, target, out var targetSegments))
+                {
+                    reason = "That path, or a folder above it, links outside the folder this tenant may read.";
+
+                    return false;
+                }
+
+                if (!TryWalk(realRoot, targetSegments, links + 1, out current, out reason))
+                {
+                    return false;
+                }
             }
         }
 
