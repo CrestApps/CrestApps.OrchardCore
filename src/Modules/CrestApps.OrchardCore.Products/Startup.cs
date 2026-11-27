@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Seo;
 using CrestApps.OrchardCore.Products.StructuredData;
 using CrestApps.OrchardCore.Commerce;
@@ -61,8 +60,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.AddCatalogs()
             .AddCatalogManagers();
 

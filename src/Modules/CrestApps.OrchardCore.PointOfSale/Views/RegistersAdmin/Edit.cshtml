@@ -118,7 +118,7 @@
                                         </select>
                                     </td>
                                     <td><input name="Keys[@i].Label" value="@key.Label" class="form-control" maxlength="40" placeholder="@T["The department's name"]" aria-label="@T["Key reads"]" /></td>
-                                    <td><input name="Keys[@i].PresetAmount" value="@Convert.ToString(key.PresetAmount, System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0.01" step="0.01" class="form-control" placeholder="@T["Keyed in"]" aria-label="@T["Preset amount"]" /><input type="hidden" name="__Invariant" value="Keys[@i].PresetAmount" /></td>
+                                    <td><input name="Keys[@i].PresetAmount" value="@Convert.ToString(key.PresetAmount, System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0.01" step="0.01" class="form-control" placeholder="@T["Keyed in"]" aria-label="@T["Preset amount"]" /></td>
                                     <td class="text-end text-nowrap">
                                         <button type="button" class="btn btn-sm btn-outline-secondary" data-key-up title="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i><span class="visually-hidden">@T["Move up"]</span></button>
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-key-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Remove"]</span></button>
@@ -143,7 +143,7 @@
                             </select>
                         </td>
                         <td><input name="Keys[__index__].Label" class="form-control" maxlength="40" placeholder="@T["The department's name"]" aria-label="@T["Key reads"]" /></td>
-                        <td><input name="Keys[__index__].PresetAmount" type="number" min="0.01" step="0.01" class="form-control" placeholder="@T["Keyed in"]" aria-label="@T["Preset amount"]" /><input type="hidden" name="__Invariant" value="Keys[__index__].PresetAmount" /></td>
+                        <td><input name="Keys[__index__].PresetAmount" type="number" min="0.01" step="0.01" class="form-control" placeholder="@T["Keyed in"]" aria-label="@T["Preset amount"]" /></td>
                         <td class="text-end text-nowrap">
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-key-up title="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i><span class="visually-hidden">@T["Move up"]</span></button>
                             <button type="button" class="btn btn-sm btn-outline-danger" data-key-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Remove"]</span></button>
@@ -174,11 +174,6 @@
         const renumber = () => body.querySelectorAll('[data-key-row]').forEach((row, index) => {
             row.querySelectorAll('[name^="Keys["]').forEach(field => {
                 field.name = field.name.replace(/^Keys\[[^\]]*\]/, `Keys[${index}]`);
-            });
-
-            // Each number input is followed by the __Invariant field that names it, so its dot is read the same in every culture.
-            row.querySelectorAll('input[name="__Invariant"]').forEach(marker => {
-                marker.value = marker.previousElementSibling ? marker.previousElementSibling.name : '';
             });
         });
 

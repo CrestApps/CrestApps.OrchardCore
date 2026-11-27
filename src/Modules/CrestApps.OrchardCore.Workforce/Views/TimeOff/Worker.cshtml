@@ -81,7 +81,7 @@
                                 <span class="hint">@T["A negative correction takes away. A payout always takes away. A grant, such as year-end bonus hours, is used before the rest of the balance, and what is left of it expires after its last day."]</span>
                             </div>
                         </div>
-                        <div class="ocat-wrapper"><label for="adjust-amount" class="ocat-label">@T["Amount"]</label><div class="ocat-end"><input id="adjust-amount" name="Amount" type="number" step="0.25" class="form-control" style="max-width: 10rem" required /><input type="hidden" name="__Invariant" value="Amount" /></div></div>
+                        <div class="ocat-wrapper"><label for="adjust-amount" class="ocat-label">@T["Amount"]</label><div class="ocat-end"><input id="adjust-amount" name="Amount" type="number" step="0.25" class="form-control" style="max-width: 10rem" required /></div></div>
                         <div class="ocat-wrapper"><label for="adjust-date" class="ocat-label">@T["Counts from"]</label><div class="ocat-end"><input id="adjust-date" name="EffectiveDate" type="date" value="@Model.Today.ToString("yyyy-MM-dd")" class="form-control" style="max-width: 12rem" /></div></div>
                         <div class="ocat-wrapper" id="adjust-expires-row" hidden><label for="adjust-expires" class="ocat-label">@T["Last day to use it"]</label><div class="ocat-end"><input id="adjust-expires" name="ExpiresOn" type="date" class="form-control" style="max-width: 12rem" /></div></div>
                         <div class="ocat-wrapper"><label for="adjust-note" class="ocat-label">@T["Note"]</label><div class="ocat-end"><input id="adjust-note" name="Note" class="form-control" /></div></div>

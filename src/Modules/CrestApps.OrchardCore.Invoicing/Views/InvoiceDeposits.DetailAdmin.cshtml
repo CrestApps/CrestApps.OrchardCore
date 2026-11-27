@@ -51,11 +51,11 @@ else if (Model.Invoice.Status == InvoiceStatus.Draft && Model.CanManage)
             <form asp-controller="InvoiceDeposits" asp-action="Ask" asp-route-itemId="@Model.Invoice.ItemId" method="post" class="row g-2 align-items-end">
                 <div class="col-sm-4">
                     <label class="form-label" for="deposit-percent">@T["Deposit (%)"]</label>
-                    <input id="deposit-percent" name="percent" type="number" step="any" min="0" max="100" class="form-control" /><input type="hidden" name="__Invariant" value="percent" />
+                    <input id="deposit-percent" name="percent" type="number" step="any" min="0" max="100" class="form-control" />
                 </div>
                 <div class="col-sm-4">
                     <label class="form-label" for="deposit-amount">@T["or an amount"]</label>
-                    <input id="deposit-amount" name="amount" type="number" step="any" min="0" class="form-control" /><input type="hidden" name="__Invariant" value="amount" />
+                    <input id="deposit-amount" name="amount" type="number" step="any" min="0" class="form-control" />
                 </div>
                 <div class="col-sm-4">
                     <button type="submit" class="btn btn-secondary w-100">@T["Ask for a deposit first"]</button>

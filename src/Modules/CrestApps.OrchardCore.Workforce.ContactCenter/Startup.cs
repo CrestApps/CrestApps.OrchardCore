@@ -3,7 +3,6 @@ using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Workforce.ContactCenter.AI;
 using CrestApps.OrchardCore.Workforce.ContactCenter.BackgroundTasks;
@@ -49,8 +48,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.TryAddScoped<AgentWorkerService>();
         services.TryAddScoped(sp => new Lazy<AgentWorkerService>(sp.GetRequiredService<AgentWorkerService>));
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<AgentProfile>, AgentWorkerHandler>());

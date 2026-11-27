@@ -86,9 +86,6 @@
 						else value.removeAttribute("max");
 					}
 					if (suffix) suffix.textContent = current === "percent" ? "%" : currency;
-					row.querySelectorAll("input[name=\"__Invariant\"]").forEach(function(marker) {
-						marker.value = marker.previousElementSibling ? marker.previousElementSibling.getAttribute("name") : "";
-					});
 				});
 			}
 			function update() {

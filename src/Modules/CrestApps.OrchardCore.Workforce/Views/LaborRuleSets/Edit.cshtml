@@ -93,7 +93,7 @@
                                     }
                                     else
                                     {
-                                        <input type="number" id="@id" name="Rules[@index].Parameters[@parameter.Name]" value="@(value ?? parameter.DefaultValue)" min="0" step="@(parameter.Kind is CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Count or CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Days or CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Years ? "1" : "0.25")" class="form-control form-control-sm" style="width: 8rem" /><input type="hidden" name="__Invariant" value="Rules[@index].Parameters[@parameter.Name]" />
+                                        <input type="number" id="@id" name="Rules[@index].Parameters[@parameter.Name]" value="@(value ?? parameter.DefaultValue)" min="0" step="@(parameter.Kind is CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Count or CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Days or CrestApps.OrchardCore.Workforce.Services.LaborRuleParameterKind.Years ? "1" : "0.25")" class="form-control form-control-sm" style="width: 8rem" />
                                     }
                                 </div>
                             }

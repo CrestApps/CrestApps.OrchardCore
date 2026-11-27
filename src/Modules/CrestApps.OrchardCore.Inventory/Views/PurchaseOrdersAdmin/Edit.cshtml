@@ -162,7 +162,7 @@
                                 <td class="text-end">
                                     @if (!readOnly)
                                     {
-                                        <input type="number" name="Lines[@i].UnitCost" value="@line.UnitCost.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" step="any" class="form-control form-control-sm d-inline-block text-end" style="width: 7rem;" aria-label="@T["Unit cost of {0}", line.Title]" /><input type="hidden" name="__Invariant" value="Lines[@i].UnitCost" />
+                                        <input type="number" name="Lines[@i].UnitCost" value="@line.UnitCost.ToString(System.Globalization.CultureInfo.InvariantCulture)" min="0" step="any" class="form-control form-control-sm d-inline-block text-end" style="width: 7rem;" aria-label="@T["Unit cost of {0}", line.Title]" />
                                     }
                                     else
                                     {

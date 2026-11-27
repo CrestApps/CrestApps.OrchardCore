@@ -181,7 +181,7 @@
                     @switch (field.Kind)
                     {
                         case AssetAttributeKind.Number:
-                            <input id="@id" name="@(attributesName)[@field.Name]" type="number" step="any" value="@value" class="form-control" style="max-width: 12rem" /><input type="hidden" name="__Invariant" value="@(attributesName)[@field.Name]" />
+                            <input id="@id" name="@(attributesName)[@field.Name]" type="number" step="any" value="@value" class="form-control" style="max-width: 12rem" />
                             break;
                         case AssetAttributeKind.Date:
                             <input id="@id" name="@(attributesName)[@field.Name]" type="date" value="@value" class="form-control" style="max-width: 12rem" />

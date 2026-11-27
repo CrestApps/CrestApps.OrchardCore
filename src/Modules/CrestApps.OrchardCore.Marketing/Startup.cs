@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Marketing.BackgroundTasks;
 using CrestApps.OrchardCore.Marketing.Drivers;
@@ -27,8 +26,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         // Purchases, segments and campaigns live in their own YesSql collection, which has to be declared to be stored.
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(MarketingConstants.CollectionName));
         services.AddDataMigration<MarketingMigrations>()

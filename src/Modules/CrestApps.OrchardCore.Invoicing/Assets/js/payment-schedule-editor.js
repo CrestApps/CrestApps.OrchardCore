@@ -106,11 +106,6 @@
         if (suffix) {
           suffix.textContent = current === 'percent' ? '%' : currency;
         }
-
-        // Each number input is followed by the __Invariant field that names it, so its dot is read the same in every culture.
-        row.querySelectorAll('input[name="__Invariant"]').forEach(function (marker) {
-          marker.value = marker.previousElementSibling ? marker.previousElementSibling.getAttribute('name') : '';
-        });
       });
     }
 

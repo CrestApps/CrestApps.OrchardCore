@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Learning.StructuredData;
 using CrestApps.OrchardCore.Seo;
 using CrestApps.OrchardCore.Learning.AuditTrail;
@@ -76,8 +75,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(LearningConstants.CollectionName));
         services.AddDataMigration<LearningMigrations>()
             .AddIndexProvider<EnrollmentIndexProvider>()

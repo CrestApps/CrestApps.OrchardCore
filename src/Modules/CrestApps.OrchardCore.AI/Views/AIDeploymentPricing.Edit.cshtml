@@ -150,11 +150,6 @@
                 row.querySelectorAll('[data-name]').forEach(function (input) {
                     input.name = namePrefix + 'Prices[' + index + '].' + input.dataset.name;
                 });
-
-                // Each number input is followed by the __Invariant field that names it, so its dot is read the same in every culture.
-                row.querySelectorAll('input[name="__Invariant"]').forEach(function (marker) {
-                    marker.value = marker.previousElementSibling ? marker.previousElementSibling.name : '';
-                });
             });
             empty.classList.toggle('d-none', rows.children.length > 0);
         }
@@ -168,7 +163,7 @@
                 '  <div class="row g-2 align-items-center">' +
                 '    <div class="col-12 col-md-4"><select data-name="Meter" class="form-select" data-price-meter aria-label="' + escape(text.unit) + '"></select></div>' +
                 '    <div class="col-6 col-md-3"><div class="input-group"><span class="input-group-text" data-price-currency></span>' +
-                '      <input data-name="Amount" type="number" step="any" min="0" class="form-control" aria-label="' + escape(text.price) + '" /><input type="hidden" name="__Invariant" value="" /></div></div>' +
+                '      <input data-name="Amount" type="number" step="any" min="0" class="form-control" aria-label="' + escape(text.price) + '" /></div></div>' +
                 '    <div class="col-6 col-md-3"><div class="input-group"><span class="input-group-text">' + escape(text.per) + '</span>' +
                 '      <select data-name="Per" class="form-select" data-price-per aria-label="' + escape(text.quantity) + '"></select></div></div>' +
                 '    <div class="col-12 col-md-2 text-md-end text-nowrap">' +

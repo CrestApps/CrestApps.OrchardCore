@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer.Moodle;
 using OrchardCore.Environment.Shell.Configuration;
 using CrestApps.OrchardCore.Learning.Assessments.ContentTransfer;
@@ -57,8 +56,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(AttemptDeadlineWork.CollectionName));
         services.AddDataMigration<AssessmentsMigrations>()
             .AddIndexProvider<AssessmentAttemptIndexProvider>()

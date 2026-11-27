@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.ContentTransfer;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.PersonalData.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
@@ -42,8 +41,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.AddUserAudienceRuleSource<SkillHolderAudienceRuleSource>();
         services.AddUserAudienceRuleSource<CertificationHolderAudienceRuleSource>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(SkillsConstants.CollectionName));

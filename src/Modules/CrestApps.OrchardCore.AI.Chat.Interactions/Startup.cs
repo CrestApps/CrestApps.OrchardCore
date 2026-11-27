@@ -2,7 +2,6 @@
 using CrestApps.Core.AI.Chat.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Data.YesSql;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore;
 using CrestApps.OrchardCore.AI.Chat.Core;
 using CrestApps.OrchardCore.AI.Chat.Interactions.Core;
@@ -37,8 +36,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         // Register framework-level chat interaction handlers.
         services
             .AddCoreAIChatInteractions()

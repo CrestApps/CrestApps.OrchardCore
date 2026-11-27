@@ -38,7 +38,7 @@
         {
             <span class="input-group-text">@Model.Currency</span>
         }
-        <input type="number" class="form-control" id="@(id)-amount" name="@amountName" form="@Model.FormId" min="@Model.Minimum.ToString(CultureInfo.InvariantCulture)" step="0.01" value="@first?.ToString(CultureInfo.InvariantCulture)" aria-label="@T["Amount"]" required /><input type="hidden" name="__Invariant" value="@amountName" />
+        <input type="number" class="form-control" id="@(id)-amount" name="@amountName" form="@Model.FormId" min="@Model.Minimum.ToString(CultureInfo.InvariantCulture)" step="0.01" value="@first?.ToString(CultureInfo.InvariantCulture)" aria-label="@T["Amount"]" required />
     </div>
 
     <label class="form-label small" for="@(id)-tribute">@T["In honor or memory of (optional)"]</label>

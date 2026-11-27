@@ -1,6 +1,5 @@
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Configuration;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Diagnostics;
 using CrestApps.OrchardCore.Telephony.BackgroundTasks;
 using CrestApps.OrchardCore.Telephony.Core.Models;
@@ -57,8 +56,6 @@ public sealed class Startup : StartupBase
 
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.ValidateTenantOptionsOnActivation();
 
         services

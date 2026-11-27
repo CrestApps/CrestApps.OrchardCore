@@ -177,11 +177,6 @@
           input.setAttribute('name', renumber(input.getAttribute('name'), 'Lines', index));
         });
 
-        // Each number input is followed by the __Invariant field that names it, so its dot is read the same in every culture.
-        row.querySelectorAll('input[name="__Invariant"]').forEach(function (marker) {
-          marker.value = marker.previousElementSibling ? marker.previousElementSibling.getAttribute('name') : '';
-        });
-
         var position = row.querySelector('[data-line-position]');
 
         if (position) {

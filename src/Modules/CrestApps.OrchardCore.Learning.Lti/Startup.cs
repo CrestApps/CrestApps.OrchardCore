@@ -1,5 +1,4 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Learning.Lti.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Lti.Deployments;
 using CrestApps.OrchardCore.Learning.Lti.Drivers;
@@ -38,8 +37,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(LtiConstants.CollectionName));
         services.AddDataMigration<LtiMigrations>()
             .AddIndexProvider<ExternalToolIndexProvider>()

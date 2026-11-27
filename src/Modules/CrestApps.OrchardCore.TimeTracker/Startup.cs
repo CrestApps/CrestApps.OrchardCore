@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Reports;
 using CrestApps.OrchardCore.Reports.Models;
@@ -33,8 +32,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(TimeTrackerConstants.CollectionName));
         services.AddTimeTrackerCore();
         services.AddPermissionProvider<TimeTrackerPermissionsProvider>();

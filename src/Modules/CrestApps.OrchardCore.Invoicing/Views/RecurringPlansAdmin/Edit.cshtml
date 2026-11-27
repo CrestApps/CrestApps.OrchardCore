@@ -209,8 +209,8 @@
                                 {
                                     var tier = charge.Tiers[t];
                                     <tr>
-                                        <td><input type="number" step="any" min="0" name="UsageCharges[@i].Tiers[@t].UpTo" value="@tier.UpTo?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" placeholder="@T["No limit"]" aria-label="@T["Tier {0} up to", t + 1]" /><input type="hidden" name="__Invariant" value="UsageCharges[@i].Tiers[@t].UpTo" /></td>
-                                        <td><input type="number" step="any" min="0" name="UsageCharges[@i].Tiers[@t].UnitPrice" value="@tier.UnitPrice?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" aria-label="@T["Tier {0} price of each", t + 1]" /><input type="hidden" name="__Invariant" value="UsageCharges[@i].Tiers[@t].UnitPrice" /></td>
+                                        <td><input type="number" step="any" min="0" name="UsageCharges[@i].Tiers[@t].UpTo" value="@tier.UpTo?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" placeholder="@T["No limit"]" aria-label="@T["Tier {0} up to", t + 1]" /></td>
+                                        <td><input type="number" step="any" min="0" name="UsageCharges[@i].Tiers[@t].UnitPrice" value="@tier.UnitPrice?.ToString(System.Globalization.CultureInfo.InvariantCulture)" class="form-control form-control-sm" aria-label="@T["Tier {0} price of each", t + 1]" /></td>
                                     </tr>
                                 }
                             </tbody>

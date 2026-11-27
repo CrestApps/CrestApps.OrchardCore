@@ -46,7 +46,6 @@ using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.Services;
 using CrestApps.OrchardCore.AI.Workflows.Tools;
 using CrestApps.OrchardCore.AI.Filters;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Core;
 using CrestApps.OrchardCore.Core.Migrations;
 using CrestApps.OrchardCore.Webhooks.Core;
@@ -81,8 +80,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         // Data migrations that skip records show the people who manage AI profiles a warning on admin pages until it is dismissed.
         services.AddMigrationSkipLog();
         services.Configure<MvcOptions>(options => options.Filters.Add<MigrationSkipNoticeFilter>(order: -1000));

@@ -2,7 +2,6 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Handlers;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Commerce.Core;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Products.Core.Listing;
@@ -63,8 +62,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.AddDataMigration<SubscriptionPartMigrations>()
             .AddContentPart<SubscriptionPart>()
             .UseDisplayDriver<SubscriptionPartDisplayDriver>();

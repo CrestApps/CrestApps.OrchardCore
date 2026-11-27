@@ -48,12 +48,12 @@
         <label class="form-label small text-body-secondary" for="@(formId)-amount">@T["Amount"]</label>
         <input type="number"
                step="0.01"
-               min="@(selected?.MinimumAmount?.ToString() ?? "0")"
-               max="@(selected?.MaximumAmount?.ToString() ?? string.Empty)"
+               min="@(selected?.MinimumAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "0")"
+               max="@(selected?.MaximumAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty)"
                name="customAmount"
                id="@(formId)-amount"
-               value="@(selected?.Amount)"
-               class="form-control form-control-sm" /><input type="hidden" name="__Invariant" value="customAmount" />
+               value="@(selected?.Amount.ToString(System.Globalization.CultureInfo.InvariantCulture))"
+               class="form-control form-control-sm" />
     </div>
 
     <div class="mb-2 @(selected?.AllowQuantity == true ? string.Empty : "d-none")" data-signup-quantity>

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Geo.BackgroundTasks;
 using CrestApps.OrchardCore.Geo.Core.Indexes;
 using CrestApps.OrchardCore.Geo.Drivers;
@@ -26,8 +25,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(GeoConstants.CollectionName));
         services.AddGeoCore();
         services.AddPermissionProvider<GeoPermissionsProvider>();

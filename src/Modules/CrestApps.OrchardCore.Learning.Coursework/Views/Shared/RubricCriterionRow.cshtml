@@ -32,7 +32,7 @@
                         <input type="text" name="@(name).Levels[@j].Title" value="@level.Title" class="form-control form-control-sm" maxlength="255" aria-label="@T["Level"]" placeholder="@T["Level, such as Excellent"]" />
                     </div>
                     <div class="col-4 col-md-2">
-                        <input type="number" step="0.01" min="0" name="@(name).Levels[@j].Points" value="@(level.Points?.ToString(System.Globalization.CultureInfo.InvariantCulture))" class="form-control form-control-sm" aria-label="@T["Points"]" placeholder="@T["Points"]" /><input type="hidden" name="__Invariant" value="@(name).Levels[@j].Points" />
+                        <input type="number" step="0.01" min="0" name="@(name).Levels[@j].Points" value="@(level.Points?.ToString(System.Globalization.CultureInfo.InvariantCulture))" class="form-control form-control-sm" aria-label="@T["Points"]" placeholder="@T["Points"]" />
                     </div>
                     <div class="col-auto">
                         <button type="button" class="btn btn-sm btn-outline-secondary" data-rubric-remove-level title="@T["Remove the level"]" aria-label="@T["Remove the level"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>

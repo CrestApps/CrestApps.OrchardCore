@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Accounts;
 using CrestApps.OrchardCore.Assets;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.Geo;
 using CrestApps.OrchardCore.Inventory.Core;
@@ -57,8 +56,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc/>
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.AddPartyDirectory();
         services.AddScoped<Integrations.WorkOrderCustomers>();
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(WorkOrdersConstants.CollectionName));

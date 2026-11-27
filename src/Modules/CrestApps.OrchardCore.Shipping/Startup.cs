@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Commerce.Core;
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Products.Core;
 using CrestApps.OrchardCore.Products.Core.Feeds;
 using CrestApps.Core.Handlers;
@@ -50,8 +49,6 @@ public sealed class Startup : StartupBase
 {
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.AddShippingCore();
         services.AddScoped<IStoreSetupStep, ShippingSetupStep>();
 

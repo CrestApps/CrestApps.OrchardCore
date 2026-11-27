@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Core.ModelBinding;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Coursework.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Coursework.Drivers;
@@ -49,8 +48,6 @@ public sealed class Startup : StartupBase
     /// <inheritdoc />
     public override void ConfigureServices(IServiceCollection services)
     {
-        services.AddInvariantNumberInputs();
-
         services.Configure<StoreCollectionOptions>(options => options.Collections.Add(CourseworkConstants.CollectionName));
         services.Configure<CourseworkOptions>(_configuration.GetSection("CrestApps:Learning:Coursework"));
         services.AddDataMigration<CourseworkMigrations>()
