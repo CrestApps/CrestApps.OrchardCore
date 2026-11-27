@@ -138,7 +138,7 @@ public sealed class PaymentProviderCapabilityTruthfulnessTests
 
         var declarations = new Dictionary<string, (bool IsAbstract, HashSet<string> Bases)>(StringComparer.Ordinal);
 
-        foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(sourceRoot, "*.cs", directory => Path.GetFileName(directory) == "obj"))
         {
             if (file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             {

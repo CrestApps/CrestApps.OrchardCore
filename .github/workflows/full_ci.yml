@@ -1,0 +1,81 @@
+name: Full - CI
+
+# The slow lane: the Windows build and test jobs, the Telephony browser tests and the Contact Center distributed tests.
+# PR - CI runs the Linux jobs on every push; this workflow runs the rest when it matters:
+#
+# - The merge queue runs it for every group, on both operating systems, and the group merges only if the Merge gate
+#   job passes. The Merge gate is a required check, so no pull request reaches main without every suite passing.
+# - Add the `full-ci` label to a pull request to run it before queueing. Every later push runs it again while the
+#   label is on.
+# - Approve the pull request.
+# - Run it by hand from the Actions tab for any branch (both operating systems).
+#
+# Main - CI runs all of it again after every merge, and Release - CI before every release.
+
+on:
+  # Every pull request event runs this workflow, documentation-only changes included, so the required Merge gate is
+  # always reported and a pull request can join the queue. Without the label the suites are skipped on pull requests.
+  pull_request:
+    branches: [ main, release/** ]
+    types: [ opened, labeled, synchronize, reopened ]
+  pull_request_review:
+    types: [ submitted ]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build_test:
+    name: Build & Test
+    # A labelled event only counts when the label added is `full-ci`; any other push counts while the label is on.
+    if: >-
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'full-ci')
+        && (github.event.action != 'labeled' || github.event.label.name == 'full-ci'))
+      || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')
+      || github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+    # On the job rather than the workflow, so an event that does not qualify (another label, a review that only
+    # comments) never cancels a run that is in progress: its run skips this job and never joins the group.
+    concurrency:
+      group: full-ci-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    uses: ./.github/workflows/build_and_test.yml
+    with:
+      # On a pull request PR - CI already runs the Linux jobs, so only Windows runs here.
+      os: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_review') && '["windows-latest"]' || '["ubuntu-latest", "windows-latest"]' }}
+      long-suites: true
+
+  # The required status check of the "Merge queue for main" ruleset. It reports on every pull request
+  # event so a pull request can join the merge queue, and in the queue it passes only when every suite passed on both
+  # operating systems. On a pull request it fails only when a labelled run actually failed.
+  merge_gate:
+    name: Merge gate
+    needs: build_test
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+    - name: Check the Full - CI result
+      shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        RESULT: ${{ needs.build_test.result }}
+      run: |
+        echo "Event: $EVENT. Build & Test: $RESULT."
+
+        if [ "$EVENT" = "merge_group" ]; then
+          if [ "$RESULT" != "success" ]; then
+            echo "::error::Every suite must pass on both operating systems before the group merges."
+            exit 1
+          fi
+          exit 0
+        fi
+
+        if [ "$RESULT" != "success" ] && [ "$RESULT" != "skipped" ]; then
+          echo "::error::Full - CI ran for this pull request and did not pass."
+          exit 1
+        fi
+
+        echo "The merge queue runs every suite on both operating systems before this pull request merges."

@@ -4,22 +4,23 @@ The unit and integration tests for every CrestApps module in this repository.
 
 ## Running them
 
-The project uses xUnit v3 on the Microsoft Testing Platform, which means the test assembly is an executable
-rather than something `dotnet test` drives. Build it, then run the assembly:
+The project uses xUnit v3 on the Microsoft Testing Platform, and the assembly runs one test at a time
+(`TestParallelizationBehavior.cs`). Run it with `tests/run-unit-tests.ps1`, which runs the test classes in one process
+per core, each still one test at a time, and checks that every test method ran. CI runs the same script.
 
 ```bash
-dotnet build tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj -c Release
+pwsh ./tests/run-unit-tests.ps1 -Build
 ```
+
+Filter to one area with a namespace (the `CrestApps.OrchardCore.Tests.` prefix is optional) or part of a class name:
 
 ```bash
-dotnet tests/CrestApps.OrchardCore.Tests/bin/Release/net10.0/CrestApps.OrchardCore.Tests.dll
+pwsh ./tests/run-unit-tests.ps1 -Namespace Checkout, Subscriptions
+pwsh ./tests/run-unit-tests.ps1 -Class CheckoutEngineTests
 ```
 
-Filter to one area with a namespace pattern:
-
-```bash
-dotnet CrestApps.OrchardCore.Tests.dll -filter "/*/CrestApps.OrchardCore.Tests.Checkout*"
-```
+The results, one log per process and the class timings that balance the next run are written to `TestResults/unit`.
+The script prints the slowest classes at the end of every run.
 
 Always verify with a **Release** build and warnings as errors before calling a change done, because the
 analyzer set is stricter there than in Debug and CI runs it that way:
