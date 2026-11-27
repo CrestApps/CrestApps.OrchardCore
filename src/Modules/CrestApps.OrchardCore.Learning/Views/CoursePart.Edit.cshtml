@@ -150,7 +150,7 @@
                 <span asp-validation-for="MinimumGrade"></span>
                 @if (Model.NoGradeSource)
                 {
-                    <div class="alert alert-warning mt-2 mb-0">@T["Nothing in this course gives a grade: no item counts toward the course grade with a weight, or every one that does is an anonymous survey, which records only that the learner completed it. Learners get no course grade, so the minimum course grade is met without a check and the pass mark decides nothing. Mark an item \"Counts toward the course grade\", or make its survey identified."]</div>
+                    <div class="alert alert-warning mt-2 mb-0">@T["Nothing in this course gives a grade: no item counts toward the course grade with a weight, every one that does sits in a gradebook category that weighs nothing, or every one is an anonymous survey, which records only that the learner completed it. Learners get no course grade, so the minimum course grade is met without a check and the pass mark decides nothing. Mark an item \"Counts toward the course grade\", give its category a weight, or make its survey identified."]</div>
                 }
             </div>
         </div>

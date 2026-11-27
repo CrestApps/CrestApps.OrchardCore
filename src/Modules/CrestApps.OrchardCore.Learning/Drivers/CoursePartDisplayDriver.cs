@@ -332,36 +332,44 @@ internal sealed class CoursePartDisplayDriver : ContentPartDisplayDriver<CourseP
         return categories;
     }
 
-    // Whether anything in the course can give a score toward the course grade: an item that counts toward the grade with
-    // a weight, unless its survey is anonymous (an anonymous survey records the learner's completion only). Without one,
-    // every learner's course grade is empty, so the minimum course grade is met without a check and the pass mark
-    // decides nothing (see MinimumGradeCriterion and CourseGradeCalculator).
+    // Whether anything in the course can give a score toward the course grade, by the one rule the grade itself follows
+    // (CourseGradeCalculator.HasNoGradeSource: gradable items with a weight, in a gradebook category that weighs more than
+    // 0), with every item whose survey is anonymous taken as completion-only, since an anonymous survey records the
+    // learner's completion only (R10-Mi4). Without one, every learner's course grade is empty, so the minimum course grade
+    // is met without a check and the pass mark decides nothing (see MinimumGradeCriterion).
     private async Task<bool> HasGradeSourceAsync(CoursePart part)
     {
         var outline = await _courseStructure.GetOutlineAsync(part.ContentItem);
-        var counting = (outline?.Entries ?? [])
-            .Where(entry => entry.Part?.Gradable == true && entry.Part.Weight > 0 && !string.IsNullOrEmpty(entry.Item?.ContentItemId))
-            .Select(entry => entry.Item.ContentItemId)
-            .Distinct(StringComparer.Ordinal)
-            .ToList();
 
-        if (counting.Count == 0)
+        if (outline is null)
         {
             return false;
         }
 
-        if (_serviceProvider.GetService<ISurveyManager>() is not { } surveys)
+        var completionOnly = new EnrollmentProgress();
+
+        if (_serviceProvider.GetService<ISurveyManager>() is { } surveys)
         {
-            return true;
+            var owners = outline.Entries
+                .Where(entry => entry.Part?.Gradable == true && !string.IsNullOrEmpty(entry.Item?.ContentItemId))
+                .Select(entry => entry.Item.ContentItemId)
+                .Distinct(StringComparer.Ordinal)
+                .Select(LearningSurveyContexts.Owner)
+                .ToList();
+
+            if (owners.Count > 0)
+            {
+                foreach (var survey in await surveys.ListByOwnersAsync(owners))
+                {
+                    if (survey?.Access?.Anonymity == AnonymityMode.Anonymous && survey.Owner is { } owner)
+                    {
+                        completionOnly.Items.Add(new CourseItemProgress { ContentItemId = owner.Id, CompletionOnly = true });
+                    }
+                }
+            }
         }
 
-        var owners = counting.Select(LearningSurveyContexts.Owner).ToList();
-        var anonymous = (await surveys.ListByOwnersAsync(owners))
-            .Where(survey => survey?.Access?.Anonymity == AnonymityMode.Anonymous && survey.Owner is not null)
-            .Select(survey => survey.Owner.Value.Id)
-            .ToHashSet(StringComparer.Ordinal);
-
-        return counting.Any(itemId => !anonymous.Contains(itemId));
+        return !CourseGradeCalculator.HasNoGradeSource(outline, completionOnly);
     }
 
     private async Task<DateTime?> ToLocalAsync(DateTime? utc)

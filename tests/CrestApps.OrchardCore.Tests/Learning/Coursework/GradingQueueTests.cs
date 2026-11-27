@@ -4,9 +4,13 @@ using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Coursework;
 using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Learning.Assessments;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Coursework;
 
@@ -57,8 +61,17 @@ public sealed class GradingQueueTests
     public async Task TheRealSources_ListAnEssayAttemptAndACourseworkSubmissionTogether_OldestFirst()
     {
         // Arrange: a quiz attempt (a survey response) that waits for a grader, then a coursework submission an hour later.
-        await using var h = await CourseworkTestHarness.CreateAsync();
+        // The course's quiz item owns the quiz's survey, as the survey manager answers for the course's items.
+        var surveyManager = new Mock<ISurveyManager>();
+        surveyManager
+            .Setup(manager => manager.ListByOwnersAsync(It.IsAny<IReadOnlyCollection<RecordRef>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<RecordRef> owners, CancellationToken _) => owners
+                .Where(owner => owner.Id == "quiz")
+                .Select(owner => new Survey { ItemId = "quiz-survey", Kind = SurveyKinds.Quiz, Owner = owner, Title = "Quiz" })
+                .ToArray());
+        await using var h = await CourseworkTestHarness.CreateAsync(services => services.AddSingleton(surveyManager.Object));
         h.Courses.AddCourse("course1");
+        h.Courses.AddItem("course1", "quiz", kind: AssessmentsConstants.QuizKind, completionMode: CompletionModes.Passed);
         h.AddCoursework("course1", "work1");
         var enrollment = await h.EnrollAsync("ana", "course1");
         var attempt = await h.RunAsync(services =>
@@ -85,7 +98,9 @@ public sealed class GradingQueueTests
         var submission = (await h.SubmitAsync("ana", "work1", "My answer")).Submission;
 
         // Act
-        var page = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(null, 1, 10));
+        // The list of the course: the list of every course reads its quiz attempts through the Surveys results queries
+        // (SQL), which this harness's in-memory responses don't feed.
+        var page = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(["course1"], 1, 10));
         var otherCourse = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(["course2"], 1, 10));
 
         // Assert

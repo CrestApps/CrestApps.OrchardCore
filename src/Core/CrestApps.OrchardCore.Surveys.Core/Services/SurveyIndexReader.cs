@@ -90,31 +90,6 @@ public sealed class SurveyIndexReader
     }
 
     /// <summary>
-    /// Lists the ids of the anonymous surveys (any anonymity mode but Identified), from the survey index, so a query can
-    /// leave their responses out without reading a survey document.
-    /// </summary>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The survey ids.</returns>
-    public async Task<IReadOnlyCollection<string>> ListAnonymousIdsAsync(CancellationToken cancellationToken = default)
-    {
-        var identified = nameof(AnonymityMode.Identified);
-        var ids = (await RowsAsync(index => index.Anonymity != null && index.Anonymity != identified, cancellationToken))
-            .Select(row => row.ItemId)
-            .ToHashSet(StringComparer.Ordinal);
-
-        // Rows indexed before the index held the anonymity mode are read from their surveys.
-        foreach (var survey in await NotReindexedAsync(cancellationToken))
-        {
-            if ((survey.Access?.Anonymity ?? AnonymityMode.Identified) != AnonymityMode.Identified)
-            {
-                ids.Add(survey.ItemId);
-            }
-        }
-
-        return ids;
-    }
-
-    /// <summary>
     /// Lists the ids of the surveys any of several records own, a chunk of owners at a time.
     /// </summary>
     /// <param name="owners">The owners.</param>

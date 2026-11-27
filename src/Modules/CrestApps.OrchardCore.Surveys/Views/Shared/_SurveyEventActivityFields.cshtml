@@ -18,7 +18,7 @@
 @if (Model.IsResponseEvent)
 {
     <div class="alert alert-info" role="note">
-        @T["On an anonymous survey, a response starts this workflow only once enough responses share its link, version and context kind to hide it among them (the survey's minimum group size). The first responses of a new survey, link or version start nothing, and they don't start the workflow later either."]
+        @T["On an anonymous survey, a response starts this workflow only once enough responses share its link, version and context kind to hide it among them (the survey's minimum group size), or once enough responses in small groups reach the minimum together. The first responses of a new survey, link or version start nothing, and they don't start the workflow later either."]
     </div>
 
     <div class="mb-3">

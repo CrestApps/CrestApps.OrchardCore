@@ -189,30 +189,6 @@ public sealed class QuizResponseGradingQueueSourceTests
     }
 
     [Fact]
-    public async Task R8Mi16_TheEveryCourseListWithoutTheResultsQueries_ListsNoAnonymousAttempt()
-    {
-        // Arrange: the list of every course on a site without the Surveys results queries, so the small-group rule of
-        // anonymous surveys can't be counted. survey1 is anonymous with one attempt (a group of one); survey2 is named.
-        var surveyManager = SurveyManager();
-        surveyManager
-            .Setup(manager => manager.FindByIdAsync("survey1", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Survey { ItemId = "survey1", Kind = SurveyKinds.Quiz, Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Anonymous } });
-        surveyManager
-            .Setup(manager => manager.FindByIdAsync("survey2", It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new Survey { ItemId = "survey2", Kind = SurveyKinds.Quiz });
-        await using var h = await CreateAsync(surveyManager);
-        await AddAsync(h, "01anonymousresponseid", "survey1", "course1", new DateTime(2026, 1, 10, 14, 37, 12, DateTimeKind.Utc));
-        await AddAsync(h, "named", "survey2", "course2", new DateTime(2026, 1, 11, 9, 0, 0, DateTimeKind.Utc));
-
-        // Act
-        var page = await h.RunAsync(services => Source(services).ListWaitingAsync(new GradingQueueQuery { CourseIds = null, Take = 10 }, TestContext.Current.CancellationToken));
-
-        // Assert: the anonymous attempt, which the hidden-survey rule would leave out, isn't listed nor counted.
-        Assert.Equal(1, page.Count);
-        Assert.Equal("named", Assert.Single(page.Items).Id);
-    }
-
-    [Fact]
     public async Task R7M3_AnAnonymousAttemptWhoseCollectorVersionAndContextAreHidden_IsNotListed()
     {
         // Arrange: R7-M3, an anonymous quiz with five attempts on the course's link and one on a link sent to Bob; the
