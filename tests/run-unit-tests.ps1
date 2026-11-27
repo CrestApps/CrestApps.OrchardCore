@@ -119,13 +119,21 @@ else {
 
 Write-Host "Test assembly: $($assembly.FullName)"
 
-$listing = dotnet $assembly.FullName -list methods/json
+# Outside Windows xUnit writes ANSI color codes unless told not to, and they would follow the JSON. Only the JSON line
+# is parsed, so nothing else the runner prints can break the listing.
+$listing = @(dotnet $assembly.FullName -list methods/json -noColor)
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "Listing the tests failed with exit code ${LASTEXITCODE}:`n$listing"
+    Write-Error "Listing the tests failed with exit code ${LASTEXITCODE}:`n$($listing -join "`n")"
 }
 
-$methods = @(($listing -join "`n") | ConvertFrom-Json)
+$json = $listing | Where-Object { $_.TrimStart().StartsWith('[') } | Select-Object -First 1
+
+if (-not $json) {
+    Write-Error "Listing the tests returned no JSON:`n$($listing -join "`n")"
+}
+
+$methods = @($json | ConvertFrom-Json)
 
 # A listed name is Namespace.Class.Method; nested classes are listed with '+'.
 $classes = [ordered]@{}
