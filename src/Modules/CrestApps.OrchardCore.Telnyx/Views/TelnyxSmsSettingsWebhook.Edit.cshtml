@@ -1,0 +1,20 @@
+@model CrestApps.OrchardCore.Telnyx.ViewModels.TelnyxSmsSettingsViewModel
+
+<div data-telnyx-sms-card>
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Webhook URL"]</label>
+        <div class="ocat-end">
+            <input class="form-control" value="@Model.WebhookUrl" readonly onclick="this.select();" />
+            <span class="hint">@T["Set this as both the <em>Webhook URL</em> and <em>Webhook Failover URL</em> on your Telnyx messaging profile. Behind a reverse proxy, set the site Base URL (Configuration → Settings → General) or enable the Reverse Proxy feature so this address is correct."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="WebhookPublicKey">
+        <label asp-for="WebhookPublicKey" class="ocat-label">@T["Public Key"]</label>
+        <div class="ocat-end">
+            <input asp-for="WebhookPublicKey" class="form-control" type="password" autocomplete="new-password" placeholder="@(Model.HasWebhookPublicKey ? T["(stored — enter a value to replace it)"].Value : T["Telnyx Ed25519 public key (base64)"].Value)" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+            <span asp-validation-for="WebhookPublicKey" class="text-danger"></span>
+            <span class="hint">@T["Public key to validate Telnyx API V2 webhooks."]</span>
+        </div>
+    </div>
+</div>

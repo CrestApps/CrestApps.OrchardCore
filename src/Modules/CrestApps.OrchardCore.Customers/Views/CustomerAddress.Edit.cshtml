@@ -1,0 +1,11 @@
+@model CustomerAddressViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Label">
+    <label asp-for="Label" class="ocat-label">@T["Label"]</label>
+    <div class="ocat-end">
+        <input asp-for="Label" class="form-control" placeholder="@T["Home, Office…"]" />
+        <span class="hint">@T["Optional. A name to tell this address apart."]</span>
+    </div>
+</div>
+
+@await DisplayAsync(Model.AddressEditor)

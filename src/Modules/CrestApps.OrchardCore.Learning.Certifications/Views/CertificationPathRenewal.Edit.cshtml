@@ -1,0 +1,21 @@
+@model CertificationPathViewModel
+
+<div class="ocat-wrapper"><label asp-for="ReferenceDate" class="ocat-label">@T["Expiry counted from"]</label><div class="ocat-end">
+    <select asp-for="ReferenceDate" class="form-select" style="max-width: 22rem">
+        <option value="@CertificationReferenceDate.CompletionDate">@T["The day the requirements are met"]</option>
+        <option value="@CertificationReferenceDate.ExpiryDate">@T["The previous expiry (keeps the anniversary)"]</option>
+        <option value="@CertificationReferenceDate.FixedDate">@T["A fixed day of the year"]</option>
+    </select>
+    <span class="hint">@T["How long a certificate lasts comes from \"Valid for (months)\" above."]</span>
+</div></div>
+
+<div class="ocat-wrapper"><label class="ocat-label">@T["Fixed day"]</label><div class="ocat-end d-flex gap-2 flex-wrap">
+    <div class="input-group" style="max-width: 10rem"><span class="input-group-text">@T["Month"]</span><input asp-for="FixedMonth" type="number" min="1" max="12" class="form-control" /></div>
+    <div class="input-group" style="max-width: 10rem"><span class="input-group-text">@T["Day"]</span><input asp-for="FixedDay" type="number" min="1" max="31" class="form-control" /></div>
+    <div class="input-group" style="max-width: 18rem"><span class="input-group-text">@T["Shortest first period (months)"]</span><input asp-for="MinimumIntervalMonths" type="number" min="0" class="form-control" /></div>
+    <span asp-validation-for="FixedMonth"></span>
+</div></div>
+
+<div class="ocat-wrapper"><label asp-for="RenewalWindowDays" class="ocat-label">@T["Renewal opens (days before expiry)"]</label><div class="ocat-end"><input asp-for="RenewalWindowDays" type="number" min="0" class="form-control" style="max-width: 10rem" /><span asp-validation-for="RenewalWindowDays"></span></div></div>
+<div class="ocat-wrapper"><label asp-for="GracePeriodDays" class="ocat-label">@T["Grace period (days after expiry)"]</label><div class="ocat-end"><input asp-for="GracePeriodDays" type="number" min="0" class="form-control" style="max-width: 10rem" /><span class="hint">@T["After the grace period, the person starts over with the first-certificate requirements."]</span></div></div>
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="EnrollOnRenewal" class="form-check-input" /><label asp-for="EnrollOnRenewal" class="form-check-label">@T["Enroll the holder in the renewal courses when renewal opens"]</label></div></div></div>

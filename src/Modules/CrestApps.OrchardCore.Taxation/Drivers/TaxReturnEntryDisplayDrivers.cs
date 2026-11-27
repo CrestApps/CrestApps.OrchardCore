@@ -44,7 +44,7 @@ internal sealed class TaxReturnPaymentEntryDisplayDriver : DisplayDriver<TaxRetu
                 : payment.PaidOn;
             model.Reference = payment.Reference;
             model.Method = payment.Method;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["Payment"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(TaxReturnPaymentEntry entry, UpdateEditorContext context)
     {
@@ -119,7 +119,7 @@ internal sealed class EFileSubmissionRequestDisplayDriver : DisplayDriver<EFileS
                     .DistinctBy(transport => transport.Name)
                     .Select(transport => _localizerFactory.Localize(transport.DisplayName).Value),
             ];
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["Submission"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(EFileSubmissionRequest request, UpdateEditorContext context)

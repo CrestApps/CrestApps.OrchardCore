@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.AI.WebMcp.Services;
 using CrestApps.OrchardCore.AI.WebMcp.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -26,6 +27,8 @@ internal sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSett
 
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="WebMcpSettingsDisplayDriver"/> class.
     /// </summary>
@@ -33,16 +36,19 @@ internal sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSett
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="shellReleaseManager">The shell release manager, which rebuilds the tenant after the settings change.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public WebMcpSettingsDisplayDriver(
         WebMcpToolSelectionService toolSelection,
         IAuthorizationService authorizationService,
         IHttpContextAccessor httpContextAccessor,
-        IShellReleaseManager shellReleaseManager)
+        IShellReleaseManager shellReleaseManager,
+        IStringLocalizer<WebMcpSettingsDisplayDriver> stringLocalizer)
     {
         _toolSelection = toolSelection;
         _authorizationService = authorizationService;
         _httpContextAccessor = httpContextAccessor;
         _shellReleaseManager = shellReleaseManager;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(ISite site, WebMcpSettings settings, BuildEditorContext context)
@@ -67,7 +73,12 @@ internal sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSett
                 model.EnableOnFrontEndPages = settings.EnableOnFrontEndPages;
                 model.EnablePageTools = settings.EnablePageTools;
                 model.EnableStorefrontTools = settings.EnableStorefrontTools;
-            }).Location("Content:15%WebMCP;1")
+            }).Location(l => l.Zone("Content", "15").Card(S["Availability"], "10"))
+            .OnGroup(SettingsGroupId),
+            Initialize<WebMcpSettingsViewModel>("WebMcpSettingsTools_Edit", model =>
+            {
+                model.ExposeAllTools = settings.ExposeAllTools;
+            }).Location(l => l.Zone("Content", "15.1").Card(S["Exposed Tools"], "20"))
             .OnGroup(SettingsGroupId),
         };
 
@@ -76,7 +87,7 @@ internal sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSett
             results.Add(Initialize<EditProfileToolsViewModel>("EditProfileTools_Edit", model =>
             {
                 _toolSelection.PopulateTools(model, accessibleTools, selected);
-            }).Location("Content:15%WebMCP;5")
+            }).Location(l => l.Zone("Content", "15.5").Card(S["Exposed Tools"], "20"))
             .OnGroup(SettingsGroupId));
         }
 
@@ -85,7 +96,7 @@ internal sealed class WebMcpSettingsDisplayDriver : SiteDisplayDriver<WebMcpSett
             results.Add(Initialize<EditToolInstancesViewModel>("EditToolInstances_Edit", model =>
             {
                 WebMcpToolSelectionService.PopulateInstances(model, accessibleInstances, selected);
-            }).Location("Content:15%WebMCP;10")
+            }).Location(l => l.Zone("Content", "15.6").Card(S["Exposed Tools"], "20"))
             .OnGroup(SettingsGroupId));
         }
 

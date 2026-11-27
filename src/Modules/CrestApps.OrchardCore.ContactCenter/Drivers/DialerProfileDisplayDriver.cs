@@ -198,12 +198,12 @@ internal sealed class DialerProfileDisplayDriver : DisplayDriver<DialerProfile>
         }
 
         return Combine(
-            Initialize<DialerProfileViewModel>("DialerProfileGeneral_Edit", Populate).Location("Content:1%General;1"),
-            Initialize<DialerProfileViewModel>("DialerProfileDialing_Edit", Populate).Location("Content:1%Dialing;2"),
-            Initialize<DialerProfileViewModel>("DialerProfileCallerId_Edit", Populate).Location("Content:1%Caller ID;3"),
-            Initialize<DialerProfileViewModel>("DialerProfileCompliance_Edit", Populate).Location("Content:1%Compliance;4"),
-            Initialize<DialerProfileViewModel>("DialerProfileAbandonment_Edit", Populate).Location("Content:1%Abandoned calls;5"),
-            Initialize<DialerProfileViewModel>("DialerProfilePredictive_Edit", Populate).Location("Content:1%Predictive pacing;6"));
+            Initialize<DialerProfileViewModel>("DialerProfileGeneral_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["General"], "1")),
+            Initialize<DialerProfileViewModel>("DialerProfileDialing_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Dialing"], "2")),
+            Initialize<DialerProfileViewModel>("DialerProfileCallerId_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Caller ID"], "3")),
+            Initialize<DialerProfileViewModel>("DialerProfileCompliance_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Compliance"], "4")),
+            Initialize<DialerProfileViewModel>("DialerProfileAbandonment_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Abandoned Calls"], "5")),
+            Initialize<DialerProfileViewModel>("DialerProfilePredictive_Edit", Populate).Location(l => l.Zone("Content", "1").Card(S["Predictive Pacing"], "6")));
     }
 
     /// <inheritdoc/>

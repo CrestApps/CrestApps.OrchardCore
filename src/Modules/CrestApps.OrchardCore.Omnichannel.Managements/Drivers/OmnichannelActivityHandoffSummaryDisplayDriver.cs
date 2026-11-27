@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -19,8 +20,13 @@ internal sealed class OmnichannelActivityHandoffSummaryDisplayDriver : DisplayDr
 {
     private readonly ILocalClock _localClock;
 
-    public OmnichannelActivityHandoffSummaryDisplayDriver(ILocalClock localClock)
+    internal readonly IStringLocalizer S;
+
+    public OmnichannelActivityHandoffSummaryDisplayDriver(
+        ILocalClock localClock,
+        IStringLocalizer<OmnichannelActivityHandoffSummaryDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _localClock = localClock;
     }
 
@@ -37,7 +43,7 @@ internal sealed class OmnichannelActivityHandoffSummaryDisplayDriver : DisplayDr
             model.WrittenLocal = activity.HandoffSummaryUtc.HasValue
                 ? (await _localClock.ConvertToLocalAsync(activity.HandoffSummaryUtc.Value)).DateTime
                 : null;
-        }).Location("Content:4")
+        }).Location(l => l.Zone("Content", "4").Card(S["AI Summary"], "10"))
         .OnGroup(OmnichannelConstants.CompleteActivityGroup);
 
         // A completed activity is shown outside the completion group, and its summary still explains the call.

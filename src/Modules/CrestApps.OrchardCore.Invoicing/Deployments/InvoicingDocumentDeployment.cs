@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Invoicing.Models;
 using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
+using Microsoft.Extensions.Localization;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
@@ -188,6 +189,13 @@ internal sealed class InvoicesDeploymentStepSchema : DeploymentStepSchemaDefinit
 
 internal sealed class InvoicesDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, InvoicesDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public InvoicesDeploymentStepDisplayDriver(IStringLocalizer<InvoicesDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Display(InvoicesDeploymentStep step, BuildDisplayContext context)
         => Combine(
             View("InvoicesDeploymentStep_Summary", step).Location("Summary", "Content"),
@@ -195,7 +203,7 @@ internal sealed class InvoicesDeploymentStepDisplayDriver : DisplayDriver<Deploy
 
     public override IDisplayResult Edit(InvoicesDeploymentStep step, BuildEditorContext context)
         => Initialize<InvoicesDeploymentStepViewModel>("InvoicesDeploymentStep_Fields_Edit", model => model.IncludeTransactions = step.IncludeTransactions)
-            .Location("Content");
+            .Location(l => l.Zone("Content", "1").Card(S["Export"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(InvoicesDeploymentStep step, UpdateEditorContext context)
     {

@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Subscriptions.ViewModels;
 
@@ -49,6 +51,12 @@ public class InstallmentPlansIndexViewModel
 /// </summary>
 public class CreateInstallmentPlanViewModel
 {
+    /// <summary>
+    /// Gets or sets the editor of the page, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     /// <summary>
     /// Gets or sets what the plan pays for.
     /// </summary>

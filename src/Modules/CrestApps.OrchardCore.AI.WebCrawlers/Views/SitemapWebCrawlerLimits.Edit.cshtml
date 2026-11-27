@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.AI.WebCrawlers.ViewModels
+@using CrestApps.Core.AI.WebCrawlers
+@using Microsoft.Extensions.Options
+
+@inject IOptions<WebCrawlerOptions> WebCrawlerOptions
+
+@model SitemapWebCrawlerViewModel
+
+@{
+    var crawlerDefaults = WebCrawlerOptions.Value;
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxPages" class="ocat-label">@T["Max pages"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxPages" class="form-control" type="number" min="1" />
+        <span asp-validation-for="MaxPages" class="text-danger"></span>
+        <span class="hint">@T["The most pages to scrape per crawl. Leave empty to use the default ({0}).", crawlerDefaults.DefaultMaxPages]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxConcurrentRequests" class="ocat-label">@T["Max concurrent requests"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxConcurrentRequests" class="form-control" type="number" min="1" />
+        <span asp-validation-for="MaxConcurrentRequests" class="text-danger"></span>
+        <span class="hint">@T["How many pages are fetched in parallel. Leave empty to use the default ({0}). Keep this low to be polite to the target site.", crawlerDefaults.DefaultMaxConcurrentRequests]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="RequestTimeoutSeconds" class="ocat-label">@T["Request timeout (seconds)"]</label>
+    <div class="ocat-end">
+        <input asp-for="RequestTimeoutSeconds" class="form-control" type="number" min="1" />
+        <span asp-validation-for="RequestTimeoutSeconds" class="text-danger"></span>
+        <span class="hint">@T["Per-request fetch timeout. Leave empty to use the default ({0} seconds).", crawlerDefaults.DefaultRequestTimeoutSeconds]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="UserAgent" class="ocat-label">@T["User-Agent (optional)"]</label>
+    <div class="ocat-end">
+        <input asp-for="UserAgent" class="form-control" />
+        <span asp-validation-for="UserAgent" class="text-danger"></span>
+        <span class="hint">@T["The <code>User-Agent</code> header sent while crawling. Leave empty to use the default. Some sites require a recognizable agent to serve content."]</span>
+    </div>
+</div>

@@ -1,0 +1,8 @@
+@model WorkOrderTypeEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Parts, labor and charges planned for the job. Leave a row empty to skip it."]</span>
+    </div>
+</div>
+<partial name="_LineRows" model="(Model.Lines, Model.StockItemOptions)" />

@@ -59,7 +59,7 @@ internal sealed class FileSystemFileSourceDisplayDriver : DisplayDriver<FileSour
             }
 
             model.IsEmpty = IsEmpty(model.RootPath);
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Folder"], "50"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(FileSource fileSource, UpdateEditorContext context)

@@ -32,6 +32,13 @@ public sealed class StartCallRecordingTaskDisplayDriver : ActivityDisplayDriver<
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(StartCallRecordingTask activity, BuildEditorContext context)
+    {
+        return Initialize<RecordingInteractionTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(StartCallRecordingTask activity, RecordingInteractionTaskViewModel model)
     {
         model.InteractionId = activity.InteractionId;

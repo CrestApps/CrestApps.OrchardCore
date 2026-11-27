@@ -14,6 +14,8 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -37,6 +39,8 @@ public sealed class WebhooksAdminController : Controller
     private readonly INotifier _notifier;
     private readonly IHostEnvironment _hostEnvironment;
     private readonly IClock _clock;
+    private readonly IDisplayManager<WebhookEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -50,6 +54,8 @@ public sealed class WebhooksAdminController : Controller
         INotifier notifier,
         IHostEnvironment hostEnvironment,
         IClock clock,
+        IDisplayManager<WebhookEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<WebhooksAdminController> htmlLocalizer,
         IStringLocalizer<WebhooksAdminController> stringLocalizer)
     {
@@ -61,6 +67,8 @@ public sealed class WebhooksAdminController : Controller
         _notifier = notifier;
         _hostEnvironment = hostEnvironment;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -94,7 +102,7 @@ public sealed class WebhooksAdminController : Controller
             return Forbid();
         }
 
-        return View("Edit", Populate(new WebhookEditViewModel()));
+        return View("Edit", await PopulateAsync(new WebhookEditViewModel()));
     }
 
     [HttpPost]
@@ -106,11 +114,13 @@ public sealed class WebhooksAdminController : Controller
             return Forbid();
         }
 
+        await PopulateAsync(model, update: true);
+
         Validate(model);
 
         if (!ModelState.IsValid)
         {
-            return View("Edit", Populate(model));
+            return View("Edit", model);
         }
 
         var now = _clock.UtcNow;
@@ -142,7 +152,7 @@ public sealed class WebhooksAdminController : Controller
             return NotFound();
         }
 
-        return View(Populate(new WebhookEditViewModel
+        return View(await PopulateAsync(new WebhookEditViewModel
         {
             Name = subscription.Name,
             Url = subscription.Url,
@@ -166,11 +176,13 @@ public sealed class WebhooksAdminController : Controller
             return NotFound();
         }
 
+        await PopulateAsync(model, subscription, update: true);
+
         Validate(model);
 
         if (!ModelState.IsValid)
         {
-            return View(Populate(model, subscription));
+            return View(model);
         }
 
         Apply(model, subscription);
@@ -398,11 +410,14 @@ public sealed class WebhooksAdminController : Controller
         subscription.ModifiedUtc = _clock.UtcNow;
     }
 
-    private WebhookEditViewModel Populate(WebhookEditViewModel model, WebhookSubscription subscription = null)
+    private async Task<WebhookEditViewModel> PopulateAsync(WebhookEditViewModel model, WebhookSubscription subscription = null, bool update = false)
     {
         model.ItemId = subscription?.ItemId;
         model.Secret = subscription is null ? null : _dispatcher.GetSecret(subscription);
         model.AvailableEvents = [.. _events.GetEvents().GroupBy(entry => entry.Group)];
+        model.Editor = update
+            ? await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, model.IsNew)
+            : await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, model.IsNew);
 
         return model;
     }

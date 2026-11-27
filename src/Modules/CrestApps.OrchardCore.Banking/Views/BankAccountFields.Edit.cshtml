@@ -1,169 +1,66 @@
 @model BankAccountViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["The account"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="Name">
-            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
-            <div class="ocat-end">
-                <input asp-for="Name" class="form-control" maxlength="255" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-                <span class="hint">@T["The name the account is listed by, such as Payroll funding or Main checking."]</span>
-            </div>
-        </div>
-        @if (Model.IsOwnAccount)
-        {
-            @if (Model.OwnOwnerOptions.Count > 1)
-            {
-                <div class="ocat-wrapper" asp-validation-class-for="Owner">
-                    <label asp-for="Owner" class="ocat-label ocat-label-required">@T["Whose account"]</label>
-                    <div class="ocat-end">
-                        <select asp-for="Owner" asp-items="Model.OwnOwnerOptions" class="form-select"></select>
-                        <span asp-validation-for="Owner" class="text-danger"></span>
-                    </div>
-                </div>
-            }
-            else
-            {
-                <input type="hidden" asp-for="Owner" />
-            }
-        }
-        else
-        {
-            <div class="ocat-wrapper" asp-validation-class-for="Owner">
-                <label class="ocat-label">@T["Owner"]</label>
-                <div class="ocat-end">
-                    @await Component.InvokeAsync("ItemSelector", new
-                    {
-                        id = Html.IdFor(m => m.Owner) + "-picker",
-                        inputName = Html.NameFor(m => m.Owner).ToString(),
-                        endpoint = Url.RouteUrl("CrestApps.Banking.OwnerSearch"),
-                        initialItemsJson = Model.OwnerInitialItemsJson,
-                        multiple = false,
-                        enableSearch = true,
-                        buttonText = T["Choose an owner"].Value,
-                        searchPlaceholder = T["Search people and organizations"].Value,
-                        emptyResultsText = T["Nobody found."].Value,
-                        noSelectionText = T["The business"].Value,
-                        loadingText = T["Loading..."].Value,
-                        loadErrorText = T["Unable to load owners."].Value,
-                    })
-                    <span asp-validation-for="Owner" class="text-danger"></span>
-                    <span class="hint">@T["Who the account belongs to, such as a staff member or a vendor. Leave it empty for one of the business's own accounts."]</span>
-                </div>
-            </div>
-        }
-        <div class="ocat-wrapper" asp-validation-class-for="HolderName">
-            <label asp-for="HolderName" class="ocat-label ocat-label-required">@T["Account holder"]</label>
-            <div class="ocat-end">
-                <input asp-for="HolderName" class="form-control" maxlength="255" />
-                <span asp-validation-for="HolderName" class="text-danger"></span>
-                <span class="hint">@T["The name on the account, as the bank knows it."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Kind">
-            <label asp-for="Kind" class="ocat-label">@T["Account type"]</label>
-            <div class="ocat-end">
-                <select asp-for="Kind" asp-items="Model.KindOptions" class="form-select"></select>
-            </div>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="255" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["The name the account is listed by, such as Payroll funding or Main checking."]</span>
     </div>
 </div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Bank"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="BankName">
-            <label asp-for="BankName" class="ocat-label">@T["Bank name"]</label>
-            <div class="ocat-end">
-                <input asp-for="BankName" class="form-control" maxlength="255" />
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Country">
-            <label asp-for="Country" class="ocat-label ocat-label-required">@T["Country"]</label>
-            <div class="ocat-end">
-                <input asp-for="Country" class="form-control" maxlength="2" />
-                <span asp-validation-for="Country" class="text-danger"></span>
-                <span class="hint">@T["The bank's two-letter country code, such as US. It decides how the routing number is checked."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Currency">
-            <label asp-for="Currency" class="ocat-label ocat-label-required">@T["Currency"]</label>
-            <div class="ocat-end">
-                <input asp-for="Currency" class="form-control" maxlength="3" />
-                <span asp-validation-for="Currency" class="text-danger"></span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="RoutingNumber">
-            <label asp-for="RoutingNumber" class="ocat-label @(Model.IsOwnAccount ? "ocat-label-required" : null)">@T["Routing number"]</label>
-            <div class="ocat-end">
-                <input asp-for="RoutingNumber" class="form-control" maxlength="40" inputmode="numeric" />
-                <span asp-validation-for="RoutingNumber" class="text-danger"></span>
-                <span class="hint">@T["The bank's number, printed at the bottom left of a check. In the United States it has nine digits."]</span>
-                @if (!Model.IsOwnAccount)
-                {
-                    <span class="hint">@T["A payee's account needs both numbers. One of the business's own accounts can be saved without them until something needs them: printing the check line on blank stock, a bank file or a disbursement."]</span>
-                }
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="AccountNumber">
-            <label asp-for="AccountNumber" class="ocat-label @(Model.IsOwnAccount && Model.IsNew ? "ocat-label-required" : null)">@T["Account number"]</label>
-            <div class="ocat-end">
-                <input asp-for="AccountNumber" class="form-control" type="password" value="" maxlength="40" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore />
-                <span asp-validation-for="AccountNumber" class="text-danger"></span>
-                @if (string.IsNullOrEmpty(Model.MaskedAccountNumber))
-                {
-                    <span class="hint">@T["It is stored protected and shown with only its last digits."]</span>
-                }
-                else
-                {
-                    <span class="hint">@T["Stored: {0}. Leave it empty to keep it. A new number takes the account back to unverified.", Model.MaskedAccountNumber]</span>
-                }
-            </div>
-        </div>
-        @if (!Model.IsOwnAccount && string.IsNullOrEmpty(Model.MaskedAccountNumber))
-        {
-            <div class="ocat-wrapper" asp-validation-class-for="AccountNumberLastFour">
-                <label asp-for="AccountNumberLastFour" class="ocat-label">@T["Last four digits"]</label>
-                <div class="ocat-end">
-                    <input asp-for="AccountNumberLastFour" class="form-control" maxlength="4" autocomplete="off" />
-                    <span asp-validation-for="AccountNumberLastFour" class="text-danger"></span>
-                    <span class="hint">@T["When you don't have the full account number, such as for an account brought over from another system, enter its last digits so people can tell which account it is. Nothing is paid or printed from them, and the full number replaces them."]</span>
-                </div>
-            </div>
-        }
-    </div>
-</div>
-
-@if (!Model.IsOwnAccount && !Model.IsNew)
+@if (Model.IsOwnAccount)
 {
-    <div class="card mb-3">
-        <div class="card-header">@T["Verification"]</div>
-        <div class="card-body">
-            <div class="ocat-wrapper" asp-validation-class-for="Status">
-                <label asp-for="Status" class="ocat-label">@T["Status"]</label>
-                <div class="ocat-end">
-                    <select asp-for="Status" asp-items="Model.StatusOptions" class="form-select"></select>
-                    <span asp-validation-for="Status" class="text-danger"></span>
-                    <span class="hint">@T["Payments go only to a verified account. A closed account never opens again."]</span>
-                </div>
+    @if (Model.OwnOwnerOptions.Count > 1)
+    {
+        <div class="ocat-wrapper" asp-validation-class-for="Owner">
+            <label asp-for="Owner" class="ocat-label ocat-label-required">@T["Whose account"]</label>
+            <div class="ocat-end">
+                <select asp-for="Owner" asp-items="Model.OwnOwnerOptions" class="form-select"></select>
+                <span asp-validation-for="Owner" class="text-danger"></span>
             </div>
-            <div class="ocat-wrapper" asp-validation-class-for="StatusReason">
-                <label asp-for="StatusReason" class="ocat-label">@T["Reason"]</label>
-                <div class="ocat-end">
-                    <input asp-for="StatusReason" class="form-control" maxlength="500" />
-                    <span class="hint">@T["Why the status changed, such as how the account was checked."]</span>
-                </div>
-            </div>
+        </div>
+    }
+    else
+    {
+        <input type="hidden" asp-for="Owner" />
+    }
+}
+else
+{
+    <div class="ocat-wrapper" asp-validation-class-for="Owner">
+        <label class="ocat-label">@T["Owner"]</label>
+        <div class="ocat-end">
+            @await Component.InvokeAsync("ItemSelector", new
+            {
+                id = Html.IdFor(m => m.Owner) + "-picker",
+                inputName = Html.NameFor(m => m.Owner).ToString(),
+                endpoint = Url.RouteUrl("CrestApps.Banking.OwnerSearch"),
+                initialItemsJson = Model.OwnerInitialItemsJson,
+                multiple = false,
+                enableSearch = true,
+                buttonText = T["Choose an owner"].Value,
+                searchPlaceholder = T["Search people and organizations"].Value,
+                emptyResultsText = T["Nobody found."].Value,
+                noSelectionText = T["The business"].Value,
+                loadingText = T["Loading..."].Value,
+                loadErrorText = T["Unable to load owners."].Value,
+            })
+            <span asp-validation-for="Owner" class="text-danger"></span>
+            <span class="hint">@T["Who the account belongs to, such as a staff member or a vendor. Leave it empty for one of the business's own accounts."]</span>
         </div>
     </div>
 }
-else if (Model.IsOwnAccount && !Model.IsNew)
-{
-    <div class="card mb-3">
-        <div class="card-header">@T["Verification"]</div>
-        <div class="card-body">
-            <p class="mb-0">@T["Status: {0}. Payments go to the account once it is verified.", Model.Status.ToString()]</p>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="HolderName">
+    <label asp-for="HolderName" class="ocat-label ocat-label-required">@T["Account holder"]</label>
+    <div class="ocat-end">
+        <input asp-for="HolderName" class="form-control" maxlength="255" />
+        <span asp-validation-for="HolderName" class="text-danger"></span>
+        <span class="hint">@T["The name on the account, as the bank knows it."]</span>
     </div>
-}
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Kind">
+    <label asp-for="Kind" class="ocat-label">@T["Account type"]</label>
+    <div class="ocat-end">
+        <select asp-for="Kind" asp-items="Model.KindOptions" class="form-select"></select>
+    </div>
+</div>

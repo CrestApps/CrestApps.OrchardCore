@@ -1,0 +1,22 @@
+@model DraftOrderEditViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="draft-order-add-products">@T["Add products"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = "draft-order-add-products",
+            inputName = "AddProductIds",
+            endpoint = Model.ProductSearchEndpoint,
+            initialItemsJson = "[]",
+            multiple = true,
+            enableSearch = true,
+            buttonText = T["Find products"].Value,
+            searchPlaceholder = T["Search products"].Value,
+            emptyResultsText = T["No products found."].Value,
+            noSelectionText = T["None chosen."].Value,
+            selectedItemsLabel = T["To add"].Value,
+        })
+        <span class="hint">@T["They're added with a quantity of 1 when you update or save."]</span>
+    </div>
+</div>

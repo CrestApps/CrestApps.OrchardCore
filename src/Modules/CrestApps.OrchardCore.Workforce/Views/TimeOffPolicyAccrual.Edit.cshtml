@@ -1,0 +1,50 @@
+@model TimeOffPolicyEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="AccrualMethod" class="ocat-label">@T["Workers earn"]</label>
+    <div class="ocat-end">
+        <select asp-for="AccrualMethod" class="form-select" style="max-width: 22rem">
+            <option value="None">@T["Nothing; balances change only by hand"]</option>
+            <option value="PerPeriod">@T["A set amount each period"]</option>
+            <option value="PerHourWorked">@T["An amount for each hour worked"]</option>
+            <option value="AnnualLumpSum">@T["The year's amount at the reset date"]</option>
+        </select>
+        <span class="hint">@T["Hours worked are the paid time of published shifts. A worker who starts during the year gets a share of the yearly amount."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Rate" class="ocat-label">@T["Amount"]</label>
+    <div class="ocat-end">
+        <input asp-for="Rate" type="number" step="0.0001" min="0" class="form-control" style="max-width: 10rem" />
+        <span class="hint">@T["In the type's unit: per period, per hour worked or per year."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Frequency" class="ocat-label">@T["Period"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <select asp-for="Frequency" class="form-select" style="max-width: 14rem">
+                <option value="Weekly">@T["Weekly"]</option>
+                <option value="Biweekly">@T["Every two weeks"]</option>
+                <option value="SemiMonthly">@T["Twice a month"]</option>
+                <option value="Monthly">@T["Monthly"]</option>
+            </select>
+            <label asp-for="AnchorDate" class="mb-0">@T["starting"]</label>
+            <input asp-for="AnchorDate" type="date" class="form-control" style="max-width: 12rem" />
+        </div>
+        <span class="hint">@T["Each period is paid when it ends. The start date sets the weeks of a weekly or two-week period; leave it empty to start on a Monday."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="TenureTiers" class="ocat-label">@T["Rates by service"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="TenureTiers" class="form-control font-monospace" rows="3" placeholder="12 = 10&#10;60 = 13.33"></textarea>
+        <span class="hint">@T["Optional. One per line: the months of service, an equals sign and the amount from then on. Service counts from the seniority date, or else the hire date."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="WaitingPeriodDays" class="ocat-label">@T["Waiting period"]</label>
+    <div class="ocat-end">
+        <div class="d-flex align-items-center gap-2"><input asp-for="WaitingPeriodDays" type="number" min="0" class="form-control" style="max-width: 8rem" /><span>@T["days after the hire date"]</span></div>
+    </div>
+</div>

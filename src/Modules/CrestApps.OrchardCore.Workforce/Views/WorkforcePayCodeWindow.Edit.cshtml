@@ -1,54 +1,49 @@
 @model WorkforcePayCodeWindowViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Shift differential hours"]</div>
-    <div class="card-body">
-        <p class="hint">@T["Only for a code that pays a shift differential: the time clock pays it for the hours worked in this window."]</p>
-        <div class="ocat-wrapper" asp-validation-class-for="WindowStart">
-            <label asp-for="WindowStart" class="ocat-label">@T["Hours"]</label>
-            <div class="ocat-end">
-                <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <input asp-for="WindowStart" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["From"]" />
-                    <span>@T["to"]</span>
-                    <input asp-for="WindowEnd" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["To"]" />
-                </div>
-                <span asp-validation-for="WindowStart" class="text-danger"></span>
-                <span class="hint">@T["In the worker's time. An end before the start runs past midnight, such as 22:00 to 06:00."]</span>
-            </div>
+<div class="ocat-wrapper"><div class="ocat-end-offset"><span class="hint">@T["Only for a code that pays a shift differential: the time clock pays it for the hours worked in this window."]</span></div></div>
+<div class="ocat-wrapper" asp-validation-class-for="WindowStart">
+    <label asp-for="WindowStart" class="ocat-label">@T["Hours"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <input asp-for="WindowStart" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["From"]" />
+            <span>@T["to"]</span>
+            <input asp-for="WindowEnd" type="time" class="form-control" style="max-width: 9rem" aria-label="@T["To"]" />
         </div>
-        <div class="ocat-wrapper">
-            <span class="ocat-label">@T["On"]</span>
-            <div class="ocat-end">
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Monday" id="@Html.IdFor(m => m.Weekdays)-Monday" checked="@Model.Weekdays.Contains("Monday")" />
-                    <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Monday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Monday)</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Tuesday" id="@Html.IdFor(m => m.Weekdays)-Tuesday" checked="@Model.Weekdays.Contains("Tuesday")" />
-                    <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Tuesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Tuesday)</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Wednesday" id="@Html.IdFor(m => m.Weekdays)-Wednesday" checked="@Model.Weekdays.Contains("Wednesday")" />
-                    <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Wednesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Wednesday)</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Thursday" id="@Html.IdFor(m => m.Weekdays)-Thursday" checked="@Model.Weekdays.Contains("Thursday")" />
-                    <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Thursday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Thursday)</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Friday" id="@Html.IdFor(m => m.Weekdays)-Friday" checked="@Model.Weekdays.Contains("Friday")" />
-                    <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Friday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Friday)</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Saturday" id="@Html.IdFor(m => m.Weekdays)-Saturday" checked="@Model.Weekdays.Contains("Saturday")" />
-                    <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Saturday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Saturday)</label>
-                </div>
-                <div class="form-check form-check-inline">
-                    <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Sunday" id="@Html.IdFor(m => m.Weekdays)-Sunday" checked="@Model.Weekdays.Contains("Sunday")" />
-                    <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Sunday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Sunday)</label>
-                </div>
-                <span class="hint d-block">@T["The day the window starts. Tick none for every day."]</span>
-            </div>
+        <span asp-validation-for="WindowStart" class="text-danger"></span>
+        <span class="hint">@T["In the worker's time. An end before the start runs past midnight, such as 22:00 to 06:00."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["On"]</span>
+    <div class="ocat-end">
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Monday" id="@Html.IdFor(m => m.Weekdays)-Monday" checked="@Model.Weekdays.Contains("Monday")" />
+            <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Monday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Monday)</label>
         </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Tuesday" id="@Html.IdFor(m => m.Weekdays)-Tuesday" checked="@Model.Weekdays.Contains("Tuesday")" />
+            <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Tuesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Tuesday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Wednesday" id="@Html.IdFor(m => m.Weekdays)-Wednesday" checked="@Model.Weekdays.Contains("Wednesday")" />
+            <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Wednesday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Wednesday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Thursday" id="@Html.IdFor(m => m.Weekdays)-Thursday" checked="@Model.Weekdays.Contains("Thursday")" />
+            <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Thursday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Thursday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Friday" id="@Html.IdFor(m => m.Weekdays)-Friday" checked="@Model.Weekdays.Contains("Friday")" />
+            <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Friday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Friday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Saturday" id="@Html.IdFor(m => m.Weekdays)-Saturday" checked="@Model.Weekdays.Contains("Saturday")" />
+            <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Saturday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Saturday)</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Weekdays)" value="Sunday" id="@Html.IdFor(m => m.Weekdays)-Sunday" checked="@Model.Weekdays.Contains("Sunday")" />
+            <label class="form-check-label" for="@Html.IdFor(m => m.Weekdays)-Sunday">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(DayOfWeek.Sunday)</label>
+        </div>
+        <span class="hint d-block">@T["The day the window starts. Tick none for every day."]</span>
     </div>
 </div>

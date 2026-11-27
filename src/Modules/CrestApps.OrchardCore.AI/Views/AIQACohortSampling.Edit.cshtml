@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIQACohortViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper" asp-validation-class-for="ProfileIds">
+    <label asp-for="ProfileIds" class="ocat-label ocat-label-required">@T["AI profiles"]</label>
+    <div class="ocat-end">
+        <select asp-for="ProfileIds" asp-items="Model.Profiles" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3"></select>
+        <span asp-validation-for="ProfileIds" class="text-danger"></span>
+        <span class="hint">@T["The conversations of these profiles are sampled once they close."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SamplePercent">
+    <label asp-for="SamplePercent" class="ocat-label">@T["Sample"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="SamplePercent" type="number" min="1" max="100" class="form-control" />
+            <span class="input-group-text">%</span>
+        </div>
+        <span asp-validation-for="SamplePercent" class="text-danger"></span>
+        <span class="hint">@T["The share of conversations scored. Each conversation is in or out of the sample for good, so the same one is never scored twice."]</span>
+    </div>
+</div>

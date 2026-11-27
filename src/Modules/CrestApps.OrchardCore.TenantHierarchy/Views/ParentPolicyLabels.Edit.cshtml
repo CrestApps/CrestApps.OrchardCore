@@ -1,0 +1,23 @@
+@model ParentPolicyEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="ParentLabel" class="ocat-label">@T["The parent"]</label>
+    <div class="ocat-end">
+        <input asp-for="ParentLabel" class="form-control" placeholder="@T["Parent tenant"]" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ChildLabel" class="ocat-label">@T["One child"]</label>
+    <div class="ocat-end">
+        <input asp-for="ChildLabel" class="form-control" placeholder="@T["Child tenant"]" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="ChildrenLabel" class="ocat-label">@T["Several children"]</label>
+    <div class="ocat-end">
+        <input asp-for="ChildrenLabel" class="form-control" placeholder="@T["Child tenants"]" />
+        <span class="hint">@T["For example a bookkeeping firm can use \"Practice\", \"Client\" and \"Clients\"."]</span>
+    </div>
+</div>

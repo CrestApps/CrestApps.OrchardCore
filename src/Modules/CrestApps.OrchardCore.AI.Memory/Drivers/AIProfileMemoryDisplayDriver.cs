@@ -1,6 +1,7 @@
 using CrestApps.Core.AI.Memory;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Memory.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -14,13 +15,19 @@ public sealed class AIProfileMemoryDisplayDriver : DisplayDriver<AIProfile>
 {
     private readonly ISiteService _siteService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileMemoryDisplayDriver"/> class.
     /// </summary>
     /// <param name="siteService">The site service.</param>
-    public AIProfileMemoryDisplayDriver(ISiteService siteService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIProfileMemoryDisplayDriver(
+        ISiteService siteService,
+        IStringLocalizer<AIProfileMemoryDisplayDriver> stringLocalizer)
     {
         _siteService = siteService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
@@ -29,7 +36,7 @@ public sealed class AIProfileMemoryDisplayDriver : DisplayDriver<AIProfile>
         {
             model.EnableUserMemory = profile.GetMemoryMetadata().EnableUserMemory ?? false;
             model.HasIndexProfile = !string.IsNullOrEmpty((await _siteService.GetSettingsAsync<AIMemorySettings>()).IndexProfileName);
-        }).Location("Content:1#Knowledge;2");
+        }).Location(l => l.Zone("Content", "1").Tab(S["Knowledge"], "2").Card(S["Memory"], "30"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

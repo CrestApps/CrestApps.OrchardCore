@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.AI.FileTransfer.Core.ViewModels
+
+@model FtpConnectionFieldsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Host" class="ocat-label ocat-label-required">@T["Host"]</label>
+    <div class="ocat-end">
+        <input asp-for="Host" class="form-control" />
+        <span asp-validation-for="Host" class="text-danger"></span>
+        <span class="hint">@T["The FTP server hostname (e.g., ftp.example.com)."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Port" class="ocat-label">@T["Port"]</label>
+    <div class="ocat-end">
+        <input asp-for="Port" type="number" class="form-control" placeholder="21" />
+        <span asp-validation-for="Port" class="text-danger"></span>
+        <span class="hint">@T["The FTP server port. Default is 21 for FTP or 990 for implicit FTPS."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Username" class="ocat-label">@T["Username"]</label>
+    <div class="ocat-end">
+        <input asp-for="Username" class="form-control" />
+        <span asp-validation-for="Username" class="text-danger"></span>
+        <span class="hint">@T["The username for FTP authentication."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Password" class="ocat-label">@T["Password"]</label>
+    <div class="ocat-end">
+        @if (Model.HasPassword)
+        {
+            <input asp-for="Password" type="password" class="form-control" placeholder="@T["Keep current password"]" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+            <span class="hint">@T["Leave empty to keep the current password."]</span>
+        }
+        else
+        {
+            <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+        }
+        <span asp-validation-for="Password" class="text-danger"></span>
+    </div>
+</div>
+

@@ -9,6 +9,7 @@ using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using YesSql;
 using Asset = CrestApps.OrchardCore.Assets.Models.Asset;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Assets.Drivers;
 
@@ -26,63 +27,102 @@ internal sealed class AssetDisplayDriver : DisplayDriver<Asset>
     private readonly ISession _session;
     private readonly bool _fleet;
 
+    internal readonly IStringLocalizer S;
+
     public AssetDisplayDriver(
         AssetTypeManager typeManager,
         AssetOwnerDirectory owners,
         ISession session,
-        IEnumerable<FleetFeature> fleet)
+        IEnumerable<FleetFeature> fleet,
+        IStringLocalizer<AssetDisplayDriver> stringLocalizer)
     {
         _typeManager = typeManager;
         _owners = owners;
         _session = session;
         _fleet = fleet.Any();
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(Asset asset, BuildEditorContext context)
     {
-        return Initialize<AssetEditViewModel>("AssetFields_Edit", async model =>
-        {
-            model.AssetId = context.IsNew ? null : asset.ItemId;
-            model.AssetTypeId = asset.AssetTypeId;
-            model.Number = asset.Number;
-            model.Name = asset.Name;
-            model.SerialNumber = asset.SerialNumber;
-            model.Manufacturer = asset.Manufacturer;
-            model.Model = asset.Model;
-            model.Status = asset.Status;
-            model.OwnerKind = asset.OwnerKind;
-            model.OwnerId = asset.OwnerId;
-            model.ParentAssetId = asset.ParentAssetId;
-            model.InstallDate = asset.InstallDate;
-            model.AddressLine1 = asset.Location?.AddressLine1;
-            model.City = asset.Location?.City;
-            model.Region = asset.Location?.Region;
-            model.PostalCode = asset.Location?.PostalCode;
-            model.Country = asset.Location?.Country;
-            model.WarrantyStart = asset.Warranty?.StartDate;
-            model.WarrantyEnd = asset.Warranty?.EndDate;
-            model.WarrantyProvider = asset.Warranty?.Provider;
-            model.AttributeValues = new Dictionary<string, string>(asset.Attributes ?? [], StringComparer.OrdinalIgnoreCase);
-            model.Documents = string.Join(Environment.NewLine, asset.Documents ?? []);
-            model.Schedulable = asset.Fleet?.Schedulable ?? false;
-            model.CarriesStock = asset.Fleet?.CarriesStock ?? false;
-            model.Plate = asset.Fleet?.Plate;
-            model.Vin = asset.Fleet?.Vin;
-            model.Capacity = asset.Fleet?.Capacity;
-            model.FuelType = asset.Fleet?.FuelType;
+        // The editor is one shape for each card, each a copy of the asset's values, so every card renders its own rows
+        // while the fields keep posting under the same prefix. Each shape reads only what its card shows.
+        return Combine(
+            Initialize<AssetEditViewModel>("AssetFields_Edit", async model =>
+            {
+                FillValues(model, asset, context);
+                await FillTypeAsync(model);
+            }).Location(l => l.Zone("Content", "1").Card(S["Details"], "10")),
+            Initialize<AssetEditViewModel>("AssetOwner_Edit", async model =>
+            {
+                FillValues(model, asset, context);
+                await FillOwnerAsync(model);
+            }).Location(l => l.Zone("Content", "2").Card(S["Owner and Place"], "20")),
+            Initialize<AssetEditViewModel>("AssetWarranty_Edit", model => FillValues(model, asset, context))
+                .Location(l => l.Zone("Content", "3").Card(S["Installation and Warranty"], "30")),
+            Initialize<AssetEditViewModel>("AssetAttributes_Edit", async model =>
+            {
+                FillValues(model, asset, context);
+                await FillTypeAsync(model);
+            }).Location(l => l.Zone("Content", "4").Card(S["Type Details"], "40")),
+            Initialize<AssetEditViewModel>("AssetDocuments_Edit", model => FillValues(model, asset, context))
+                .Location(l => l.Zone("Content", "5").Card(S["Documents"], "50")),
+            Initialize<AssetEditViewModel>("AssetFleet_Edit", async model =>
+            {
+                FillValues(model, asset, context);
+                await FillTypeAsync(model);
+            }).Location(l => l.Zone("Content", "6").Card(S["Fleet"], "60")));
+    }
 
-            var types = (await _typeManager.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+    private static void FillValues(AssetEditViewModel model, Asset asset, BuildEditorContext context)
+    {
+        model.AssetId = context.IsNew ? null : asset.ItemId;
+        model.AssetTypeId = asset.AssetTypeId;
+        model.Number = asset.Number;
+        model.Name = asset.Name;
+        model.SerialNumber = asset.SerialNumber;
+        model.Manufacturer = asset.Manufacturer;
+        model.Model = asset.Model;
+        model.Status = asset.Status;
+        model.OwnerKind = asset.OwnerKind;
+        model.OwnerId = asset.OwnerId;
+        model.ParentAssetId = asset.ParentAssetId;
+        model.InstallDate = asset.InstallDate;
+        model.AddressLine1 = asset.Location?.AddressLine1;
+        model.City = asset.Location?.City;
+        model.Region = asset.Location?.Region;
+        model.PostalCode = asset.Location?.PostalCode;
+        model.Country = asset.Location?.Country;
+        model.WarrantyStart = asset.Warranty?.StartDate;
+        model.WarrantyEnd = asset.Warranty?.EndDate;
+        model.WarrantyProvider = asset.Warranty?.Provider;
+        model.AttributeValues = new Dictionary<string, string>(asset.Attributes ?? [], StringComparer.OrdinalIgnoreCase);
+        model.Documents = string.Join(Environment.NewLine, asset.Documents ?? []);
+        model.Schedulable = asset.Fleet?.Schedulable ?? false;
+        model.CarriesStock = asset.Fleet?.CarriesStock ?? false;
+        model.Plate = asset.Fleet?.Plate;
+        model.Vin = asset.Fleet?.Vin;
+        model.Capacity = asset.Fleet?.Capacity;
+        model.FuelType = asset.Fleet?.FuelType;
+    }
 
-            model.Type = types.FirstOrDefault(type => type.ItemId == model.AssetTypeId);
-            model.TypeOptions = [.. types.Select(type => new SelectListItem(type.Name, type.ItemId, type.ItemId == model.AssetTypeId))];
-            model.ParentOptions = [.. (await _session.QueryIndex<AssetIndex>(index => index.ItemId != model.AssetId, collection: AssetsConstants.CollectionName).ListAsync())
-                .Where(index => index.ItemId != model.AssetId)
-                .OrderBy(index => index.Name, StringComparer.CurrentCultureIgnoreCase)
-                .Select(index => new SelectListItem($"{index.Name} ({index.Number})", index.ItemId, index.ItemId == model.ParentAssetId))];
-            model.OwnerKinds = [.. _owners.Kinds.Union(model.OwnerKind == AssetOwnerKind.Internal ? [] : [model.OwnerKind])];
-            model.OwnerName = model.OwnerKind == AssetOwnerKind.Internal ? null : await _owners.GetNameAsync(model.OwnerKind, model.OwnerId) ?? model.OwnerId;
-            model.ShowFleet = _fleet && model.Type is not null && _fleetCategories.Contains(model.Type.Category);
-        }).Location("Content:1");
+    private async Task FillTypeAsync(AssetEditViewModel model)
+    {
+        var types = (await _typeManager.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+
+        model.Type = types.FirstOrDefault(type => type.ItemId == model.AssetTypeId);
+        model.TypeOptions = [.. types.Select(type => new SelectListItem(type.Name, type.ItemId, type.ItemId == model.AssetTypeId))];
+        model.ShowFleet = _fleet && model.Type is not null && _fleetCategories.Contains(model.Type.Category);
+    }
+
+    private async Task FillOwnerAsync(AssetEditViewModel model)
+    {
+        model.ParentOptions = [.. (await _session.QueryIndex<AssetIndex>(index => index.ItemId != model.AssetId, collection: AssetsConstants.CollectionName).ListAsync())
+            .Where(index => index.ItemId != model.AssetId)
+            .OrderBy(index => index.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(index => new SelectListItem($"{index.Name} ({index.Number})", index.ItemId, index.ItemId == model.ParentAssetId))];
+        model.OwnerKinds = [.. _owners.Kinds.Union(model.OwnerKind == AssetOwnerKind.Internal ? [] : [model.OwnerKind])];
+        model.OwnerName = model.OwnerKind == AssetOwnerKind.Internal ? null : await _owners.GetNameAsync(model.OwnerKind, model.OwnerId) ?? model.OwnerId;
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Asset asset, UpdateEditorContext context)

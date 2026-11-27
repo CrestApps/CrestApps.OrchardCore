@@ -45,24 +45,30 @@ internal sealed class StructuredDataSettingsDisplayDriver : SiteDisplayDriver<St
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, StructuredDataSettings settings, BuildEditorContext context)
-        => Initialize<StructuredDataSettingsViewModel>("StructuredDataSettings_Edit", model =>
-        {
-            model.RenderOnPages = settings.RenderOnPages;
-            model.PublisherType = settings.PublisherType;
-            model.PublisherName = settings.PublisherName;
-            model.PublisherLogoUrl = settings.PublisherLogoUrl;
-            model.SameAs = string.Join(Environment.NewLine, settings.SameAs ?? []);
-            model.IncludeWebSite = settings.IncludeWebSite;
-            model.IncludeSearchAction = settings.IncludeSearchAction;
-            model.PublisherTypes =
-            [
-                new SelectListItem(S["Organization"], StructuredDataPublisherTypes.Organization),
-                new SelectListItem(S["Person"], StructuredDataPublisherTypes.Person),
-                new SelectListItem(S["None"], string.Empty),
-            ];
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AdvancedSeoPermissionsProvider.ManageAdvancedSeoSettings))
-        .OnGroup(SettingsGroupId);
+        => Combine(
+            Initialize<StructuredDataSettingsViewModel>("StructuredDataSettings_Edit", model =>
+            {
+                model.RenderOnPages = settings.RenderOnPages;
+                model.IncludeWebSite = settings.IncludeWebSite;
+                model.IncludeSearchAction = settings.IncludeSearchAction;
+            }).Location(l => l.Zone("Content", "1").Card(S["Structured Data"], "10"))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AdvancedSeoPermissionsProvider.ManageAdvancedSeoSettings))
+            .OnGroup(SettingsGroupId),
+            Initialize<StructuredDataSettingsViewModel>("StructuredDataSettingsPublisher_Edit", model =>
+            {
+                model.PublisherType = settings.PublisherType;
+                model.PublisherName = settings.PublisherName;
+                model.PublisherLogoUrl = settings.PublisherLogoUrl;
+                model.SameAs = string.Join(Environment.NewLine, settings.SameAs ?? []);
+                model.PublisherTypes =
+                [
+                    new SelectListItem(S["Organization"], StructuredDataPublisherTypes.Organization),
+                    new SelectListItem(S["Person"], StructuredDataPublisherTypes.Person),
+                    new SelectListItem(S["None"], string.Empty),
+                ];
+            }).Location(l => l.Zone("Content", "2").Card(S["Publisher"], "20"))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AdvancedSeoPermissionsProvider.ManageAdvancedSeoSettings))
+            .OnGroup(SettingsGroupId));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(ISite site, StructuredDataSettings settings, UpdateEditorContext context)

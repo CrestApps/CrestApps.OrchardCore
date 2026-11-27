@@ -1,8 +1,11 @@
 @using CrestApps.OrchardCore.Learning.Coursework.Recipes
 @model LearningSubmissionsDeploymentStepViewModel
 
-<h5>@T["Learning coursework submissions (learner records)"]</h5>
-<p class="hint">@T["Exports coursework submissions with their text, file names, grades and feedback, naming people by user name. The files stay in the protected store of this site. Learner records hold personal data: the export needs the Export learner records permission and is recorded."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Exports coursework submissions with their text, file names, grades and feedback, naming people by user name. The files stay in the protected store of this site. Learner records hold personal data: the export needs the Export learner records permission and is recorded."]</span>
+    </div>
+</div>
 <div class="mb-3">
     <label asp-for="CourseworkId" class="form-label">@T["Coursework"]</label>
     <select asp-for="CourseworkId" asp-items="Model.CourseworkOptions" class="form-select">

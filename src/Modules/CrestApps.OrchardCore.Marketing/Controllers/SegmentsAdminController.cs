@@ -13,6 +13,8 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -32,6 +34,8 @@ public sealed class SegmentsAdminController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly IDisplayManager<SegmentEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -43,6 +47,8 @@ public sealed class SegmentsAdminController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
+        IDisplayManager<SegmentEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<SegmentsAdminController> htmlLocalizer,
         IStringLocalizer<SegmentsAdminController> stringLocalizer)
     {
@@ -52,6 +58,8 @@ public sealed class SegmentsAdminController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -91,7 +99,10 @@ public sealed class SegmentsAdminController : Controller
             return Forbid();
         }
 
-        return View("Edit", await PopulateAsync(new SegmentEditViewModel(), segment: null));
+        var model = await PopulateAsync(new SegmentEditViewModel(), segment: null);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     [HttpPost]
@@ -104,6 +115,9 @@ public sealed class SegmentsAdminController : Controller
         }
 
         var segment = new Segment { ItemId = IdGenerator.GenerateId(), CreatedUtc = _clock.UtcNow };
+
+        await PrepareAsync(model, segment: null);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         if (!Apply(model, segment))
         {
@@ -130,7 +144,7 @@ public sealed class SegmentsAdminController : Controller
 
         var rules = segment.Rules ?? new SegmentRules();
 
-        return View(await PopulateAsync(new SegmentEditViewModel
+        var model = await PopulateAsync(new SegmentEditViewModel
         {
             Name = segment.Name,
             Description = segment.Description,
@@ -142,7 +156,11 @@ public sealed class SegmentsAdminController : Controller
             LastOrderWithinDays = rules.LastOrderWithinDays,
             FirstOrderWithinDays = rules.FirstOrderWithinDays,
             Country = rules.Country,
-        }, segment));
+        }, segment);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -158,6 +176,9 @@ public sealed class SegmentsAdminController : Controller
         {
             return NotFound();
         }
+
+        await PrepareAsync(model, segment);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         if (!Apply(model, segment))
         {
@@ -250,10 +271,16 @@ public sealed class SegmentsAdminController : Controller
         return null;
     }
 
-    private async Task<SegmentEditViewModel> PopulateAsync(SegmentEditViewModel model, Segment segment)
+    // What the shapes of the editor show next to the fields.
+    private async Task PrepareAsync(SegmentEditViewModel model, Segment segment)
     {
         model.ItemId = segment?.ItemId;
         model.StoreCurrency = (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
+    }
+
+    private async Task<SegmentEditViewModel> PopulateAsync(SegmentEditViewModel model, Segment segment)
+    {
+        await PrepareAsync(model, segment);
 
         if (segment is not null)
         {

@@ -43,7 +43,7 @@ public sealed class AIProfileTemplatePromptSecurityDisplayDriver : DisplayDriver
             {
                 AIProfilePromptSecurityMapper.PopulateOverrides(model, template.GetOrCreate<PromptSecurityProfileSettings>());
             }
-        }).Location("Content:1%Prompt Security;100")
+        }).Location(l => l.Zone("Content", "1").Card(S["Prompt Security"], "100"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

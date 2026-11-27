@@ -1,0 +1,17 @@
+@model TerritoryEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="TimeZoneId">
+    <label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label>
+    <div class="ocat-end">
+        <select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select">
+            <option value="">@T["The site's time zone"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="TravelSpeedKmh">
+    <label asp-for="TravelSpeedKmh" class="ocat-label">@T["Average travel speed (km/h)"]</label>
+    <div class="ocat-end">
+        <input asp-for="TravelSpeedKmh" type="number" min="1" max="200" step="any" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["Leave empty for the site's. Travel inside a dense city is slower than in the countryside."]</span>
+    </div>
+</div>

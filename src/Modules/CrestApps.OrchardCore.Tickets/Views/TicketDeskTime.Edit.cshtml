@@ -1,28 +1,23 @@
 @model TicketDeskTimeViewModel
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Time tracking"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="StageId" class="ocat-label">@T["Time on tickets"]</label>
-            <div class="ocat-end">
-                <select asp-for="StageId" asp-items="Model.Stages" class="form-select">
-                    <option value="">@T["Not recorded"]</option>
-                </select>
-                <span asp-validation-for="StageId" class="text-danger"></span>
-                <span class="hint">@T["The Time Tracker stage agents' work on this desk's tickets is recorded in. Agents start and stop working on a ticket from its page, or log time they spent, and the ticket shows the time each person spent on it."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="StageId" class="ocat-label">@T["Time on tickets"]</label>
+    <div class="ocat-end">
+        <select asp-for="StageId" asp-items="Model.Stages" class="form-select">
+            <option value="">@T["Not recorded"]</option>
+        </select>
+        <span asp-validation-for="StageId" class="text-danger"></span>
+        <span class="hint">@T["The Time Tracker stage agents' work on this desk's tickets is recorded in. Agents start and stop working on a ticket from its page, or log time they spent, and the ticket shows the time each person spent on it."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="NotBilledStageId" class="ocat-label">@T["Time not billed to the customer"]</label>
-            <div class="ocat-end">
-                <select asp-for="NotBilledStageId" asp-items="Model.Stages" class="form-select">
-                    <option value="">@T["All ticket time is billable"]</option>
-                </select>
-                <span asp-validation-for="NotBilledStageId" class="text-danger"></span>
-                <span class="hint">@T["A second stage, for time agents log as not billable. Give each stage the time categories it counts toward (Billable only on the first one), so the time reports agree."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="NotBilledStageId" class="ocat-label">@T["Time not billed to the customer"]</label>
+    <div class="ocat-end">
+        <select asp-for="NotBilledStageId" asp-items="Model.Stages" class="form-select">
+            <option value="">@T["All ticket time is billable"]</option>
+        </select>
+        <span asp-validation-for="NotBilledStageId" class="text-danger"></span>
+        <span class="hint">@T["A second stage, for time agents log as not billable. Give each stage the time categories it counts toward (Billable only on the first one), so the time reports agree."]</span>
     </div>
 </div>

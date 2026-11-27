@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Documents.Models;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Documents.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -13,13 +14,19 @@ internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDr
 {
     private readonly ISiteService _siteService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileTemplateSessionDocumentsDisplayDriver"/> class.
     /// </summary>
     /// <param name="siteService">The site service.</param>
-    public AIProfileTemplateSessionDocumentsDisplayDriver(ISiteService siteService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIProfileTemplateSessionDocumentsDisplayDriver(
+        ISiteService siteService,
+        IStringLocalizer<AIProfileTemplateSessionDocumentsDisplayDriver> stringLocalizer)
     {
         _siteService = siteService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
@@ -32,7 +39,7 @@ internal sealed class AIProfileTemplateSessionDocumentsDisplayDriver : DisplayDr
 
             var settings = await _siteService.GetSettingsAsync<InteractionDocumentSettings>();
             model.HasIndexProfile = !string.IsNullOrEmpty(settings.IndexProfileName);
-        }).Location("Content:2#Knowledge;2")
+        }).Location(l => l.Zone("Content", "2").Tab(S["Knowledge"], "2").Card(S["Documents"], "20"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

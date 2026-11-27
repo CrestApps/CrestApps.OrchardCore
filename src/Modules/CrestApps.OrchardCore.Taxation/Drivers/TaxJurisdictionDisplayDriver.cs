@@ -54,56 +54,68 @@ internal sealed class TaxJurisdictionDisplayDriver : DisplayDriver<TaxJurisdicti
 
     public override IDisplayResult Edit(TaxJurisdiction jurisdiction, BuildEditorContext context)
     {
-        return Initialize<TaxJurisdictionViewModel>("TaxJurisdictionFields_Edit", async model =>
-        {
-            model.IsNew = context.IsNew;
-            model.Name = jurisdiction.Name;
-            model.Code = jurisdiction.Code;
-            model.Level = jurisdiction.Level;
-            model.Country = jurisdiction.Country;
-            model.Region = jurisdiction.Region;
-            model.County = jurisdiction.County;
-            model.City = jurisdiction.City;
-            model.PostalCode = jurisdiction.PostalCode;
-            model.ParentId = jurisdiction.ParentId;
-            model.EffectiveFromUtc = jurisdiction.EffectiveFromUtc;
-            model.EffectiveToUtc = jurisdiction.EffectiveToUtc;
-
-            model.Levels =
-            [
-                new SelectListItem(S["Country"], nameof(JurisdictionLevel.Country)),
-                new SelectListItem(S["State"], nameof(JurisdictionLevel.State)),
-                new SelectListItem(S["Province"], nameof(JurisdictionLevel.Province)),
-                new SelectListItem(S["Region"], nameof(JurisdictionLevel.Region)),
-                new SelectListItem(S["County"], nameof(JurisdictionLevel.County)),
-                new SelectListItem(S["City"], nameof(JurisdictionLevel.City)),
-                new SelectListItem(S["Special district"], nameof(JurisdictionLevel.Special)),
-                new SelectListItem(S["Other"], nameof(JurisdictionLevel.Other)),
-            ];
-
-            var countries = await _countryService.GetCountriesAsync();
-
-            model.Countries =
-            [
-                new SelectListItem(S["Select a country"], string.Empty),
-                .. countries
-                    .Select(country => new SelectListItem($"{country.Name} ({country.Code})", country.Code)),
-            ];
-
-            if (!string.IsNullOrEmpty(jurisdiction.Country) &&
-                !model.Countries.Any(item => string.Equals(item.Value, jurisdiction.Country, StringComparison.OrdinalIgnoreCase)))
+        return Combine(
+            Initialize<TaxJurisdictionViewModel>("TaxJurisdictionFields_Edit", async model =>
             {
-                model.Countries.Insert(1, new SelectListItem(jurisdiction.Country, jurisdiction.Country));
-            }
+                Populate(model, jurisdiction, context);
 
-            var jurisdictions = await _jurisdictionStore.GetAllAsync();
+                model.Levels =
+                [
+                    new SelectListItem(S["Country"], nameof(JurisdictionLevel.Country)),
+                    new SelectListItem(S["State"], nameof(JurisdictionLevel.State)),
+                    new SelectListItem(S["Province"], nameof(JurisdictionLevel.Province)),
+                    new SelectListItem(S["Region"], nameof(JurisdictionLevel.Region)),
+                    new SelectListItem(S["County"], nameof(JurisdictionLevel.County)),
+                    new SelectListItem(S["City"], nameof(JurisdictionLevel.City)),
+                    new SelectListItem(S["Special district"], nameof(JurisdictionLevel.Special)),
+                    new SelectListItem(S["Other"], nameof(JurisdictionLevel.Other)),
+                ];
 
-            model.Parents = jurisdictions
-                .Where(j => !string.Equals(j.ItemId, jurisdiction.ItemId, StringComparison.OrdinalIgnoreCase))
-                .OrderBy(j => j.Name)
-                .Select(j => new SelectListItem(j.Name, j.ItemId))
-                .ToList();
-        }).Location("Content:1");
+                var jurisdictions = await _jurisdictionStore.GetAllAsync();
+
+                model.Parents = jurisdictions
+                    .Where(j => !string.Equals(j.ItemId, jurisdiction.ItemId, StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(j => j.Name)
+                    .Select(j => new SelectListItem(j.Name, j.ItemId))
+                    .ToList();
+            }).Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<TaxJurisdictionViewModel>("TaxJurisdictionLocation_Edit", async model =>
+            {
+                Populate(model, jurisdiction, context);
+
+                var countries = await _countryService.GetCountriesAsync();
+
+                model.Countries =
+                [
+                    new SelectListItem(S["Select a country"], string.Empty),
+                    .. countries
+                        .Select(country => new SelectListItem($"{country.Name} ({country.Code})", country.Code)),
+                ];
+
+                if (!string.IsNullOrEmpty(jurisdiction.Country) &&
+                    !model.Countries.Any(item => string.Equals(item.Value, jurisdiction.Country, StringComparison.OrdinalIgnoreCase)))
+                {
+                    model.Countries.Insert(1, new SelectListItem(jurisdiction.Country, jurisdiction.Country));
+                }
+            }).Location(l => l.Zone("Content", "2").Card(S["Location"], "20")),
+            Initialize<TaxJurisdictionViewModel>("TaxJurisdictionDates_Edit", model => Populate(model, jurisdiction, context))
+                .Location(l => l.Zone("Content", "3").Card(S["Effective Dates"], "30")));
+    }
+
+    private static void Populate(TaxJurisdictionViewModel model, TaxJurisdiction jurisdiction, BuildEditorContext context)
+    {
+        model.IsNew = context.IsNew;
+        model.Name = jurisdiction.Name;
+        model.Code = jurisdiction.Code;
+        model.Level = jurisdiction.Level;
+        model.Country = jurisdiction.Country;
+        model.Region = jurisdiction.Region;
+        model.County = jurisdiction.County;
+        model.City = jurisdiction.City;
+        model.PostalCode = jurisdiction.PostalCode;
+        model.ParentId = jurisdiction.ParentId;
+        model.EffectiveFromUtc = jurisdiction.EffectiveFromUtc;
+        model.EffectiveToUtc = jurisdiction.EffectiveToUtc;
     }
 
     public override async Task<IDisplayResult> UpdateAsync(TaxJurisdiction jurisdiction, UpdateEditorContext context)

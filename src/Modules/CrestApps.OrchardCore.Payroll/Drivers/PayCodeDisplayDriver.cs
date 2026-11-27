@@ -68,7 +68,7 @@ internal sealed class PayCodeDisplayDriver : DisplayDriver<PayCode>
             model.ExportCode = code.ExportCode;
             model.Enabled = code.Enabled;
             model.KindOptions = KindOptions(code.Kind);
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["Pay Code"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(PayCode code, UpdateEditorContext context)

@@ -53,7 +53,7 @@ public sealed class AIProfileSpeechDisplayDriver : DisplayDriver<AIProfile>
             model.SpeechDeployments = (await _capabilityService.GetDeploymentsWithFeatureAsync(AIDeploymentFeatureNames.TextToSpeech))
                 .Select(deployment => new SelectListItem(deployment.Name, deployment.Name, deployment.Name == speech.FallbackTextToSpeechDeploymentName))
                 .ToList();
-        }).Location("Content:1.8%Voice & Speech;3");
+        }).Location(l => l.Zone("Content", "1.8").Card(S["Voice & Speech"], "3"));
     }
 
     /// <inheritdoc/>

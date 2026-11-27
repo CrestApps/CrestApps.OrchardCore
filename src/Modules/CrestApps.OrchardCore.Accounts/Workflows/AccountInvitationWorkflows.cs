@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Json.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -129,6 +131,17 @@ public sealed class AccountInvitationAcceptedEventDisplayDriver : ActivityDispla
 
 public sealed class InviteToAccountTaskDisplayDriver : ActivityDisplayDriver<InviteToAccountTask, InviteToAccountTaskViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    public InviteToAccountTaskDisplayDriver(IStringLocalizer<InviteToAccountTaskDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(InviteToAccountTask activity, BuildEditorContext context)
+        => Initialize<InviteToAccountTaskViewModel>("InviteToAccountTask_Fields_Edit", model => EditActivity(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Invitation"], "10"));
+
     protected override void EditActivity(InviteToAccountTask activity, InviteToAccountTaskViewModel model)
     {
         model.AccountId = activity.AccountId;

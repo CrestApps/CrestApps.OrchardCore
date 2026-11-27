@@ -1,0 +1,11 @@
+@model MySettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check"><input class="form-check-input" type="checkbox" checked disabled id="channel-inbox" /><label class="form-check-label" for="channel-inbox">@T["My Work notifications"] <span class="text-muted small">@T["(always on)"]</span></label></div>
+        @foreach (var channel in Model.Channels)
+        {
+            <div class="form-check"><input class="form-check-input" type="checkbox" name="channels" value="@channel.Value" id="channel-@channel.Value" checked="@channel.Enabled" /><label class="form-check-label" for="channel-@channel.Value">@channel.Label</label></div>
+        }
+    </div>
+</div>

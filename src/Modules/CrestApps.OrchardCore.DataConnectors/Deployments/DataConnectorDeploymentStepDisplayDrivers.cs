@@ -47,7 +47,7 @@ internal sealed class DataConnectionDeploymentStepDisplayDriver : DisplayDriver<
                     IsSelected = step.ItemIds?.Contains(connection.ItemId) == true,
                 }),
             ];
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Data Connections"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(DataConnectionDeploymentStep step, UpdateEditorContext context)
@@ -108,7 +108,7 @@ internal sealed class ConnectedDataSetDeploymentStepDisplayDriver : DisplayDrive
                     IsSelected = step.ItemIds?.Contains(dataSet.ItemId) == true,
                 }),
             ];
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Connected Data Sets"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ConnectedDataSetDeploymentStep step, UpdateEditorContext context)

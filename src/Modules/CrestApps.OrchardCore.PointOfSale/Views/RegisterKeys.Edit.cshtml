@@ -1,0 +1,72 @@
+@model RegisterEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-body-secondary mb-0">@T["The keys on the register's keypad that ring an amount up in a department: staff key in the amount, then press the key. With no keys here, the register shows a key for every department that's on, in their order."]</p>
+    </div>
+</div>
+<span asp-validation-for="Keys"></span>
+@if (Model.Departments.Count == 0)
+{
+    <p class="mb-0">@T["There are no departments yet."] <a asp-action="Create" asp-controller="PosDepartmentsAdmin">@T["Add a department"]</a></p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle mb-2">
+            <thead>
+                <tr>
+                    <th scope="col">@T["Department"]</th>
+                    <th scope="col">@T["Key reads"]</th>
+                    <th scope="col">@T["Preset amount"]</th>
+                    <th scope="col"><span class="visually-hidden">@T["Actions"]</span></th>
+                </tr>
+            </thead>
+            <tbody id="register-keys" data-next-index="@Model.Keys.Count">
+                @for (var i = 0; i < Model.Keys.Count; i++)
+                {
+                    var key = Model.Keys[i];
+                    <tr data-key-row>
+                        <td>
+                            <select name="Keys[@i].DepartmentId" class="form-select" aria-label="@T["Department"]">
+                                <option value="">@T["Choose a department"]</option>
+                                @foreach (var department in Model.Departments)
+                                {
+                                    <option value="@department.ItemId" selected="@(department.ItemId == key.DepartmentId)">@if (department.IsEnabled) { @department.Name } else { @T["{0} (off)", department.Name] }</option>
+                                }
+                            </select>
+                        </td>
+                        <td><input name="Keys[@i].Label" value="@key.Label" class="form-control" maxlength="40" placeholder="@T["The department's name"]" aria-label="@T["Key reads"]" /></td>
+                        <td><input name="Keys[@i].PresetAmount" value="@Convert.ToString(key.PresetAmount, System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0.01" step="0.01" class="form-control" placeholder="@T["Keyed in"]" aria-label="@T["Preset amount"]" /></td>
+                        <td class="text-end text-nowrap">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-key-up title="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i><span class="visually-hidden">@T["Move up"]</span></button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-key-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Remove"]</span></button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <button type="button" class="btn btn-sm btn-secondary" id="register-key-add"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add key"]</button>
+    <span class="hint d-block mt-2">@T["A preset amount rings up when nothing is keyed in, such as 1.00 for a coffee; blank needs an amount keyed in. Keys show in this order."]</span>
+
+    <template id="register-key-template">
+        <tr data-key-row>
+            <td>
+                <select name="Keys[__index__].DepartmentId" class="form-select" aria-label="@T["Department"]">
+                    <option value="">@T["Choose a department"]</option>
+                    @foreach (var department in Model.Departments.Where(department => department.IsEnabled))
+                    {
+                        <option value="@department.ItemId">@department.Name</option>
+                    }
+                </select>
+            </td>
+            <td><input name="Keys[__index__].Label" class="form-control" maxlength="40" placeholder="@T["The department's name"]" aria-label="@T["Key reads"]" /></td>
+            <td><input name="Keys[__index__].PresetAmount" type="number" min="0.01" step="0.01" class="form-control" placeholder="@T["Keyed in"]" aria-label="@T["Preset amount"]" /></td>
+            <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-key-up title="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i><span class="visually-hidden">@T["Move up"]</span></button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-key-remove title="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i><span class="visually-hidden">@T["Remove"]</span></button>
+            </td>
+        </tr>
+    </template>
+}

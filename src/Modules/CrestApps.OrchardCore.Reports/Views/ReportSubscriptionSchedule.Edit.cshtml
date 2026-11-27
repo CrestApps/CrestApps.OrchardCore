@@ -1,0 +1,46 @@
+@using CrestApps.OrchardCore.Reports.Subscriptions.Models
+@model ReportSubscriptionEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Frequency">
+    <label asp-for="Frequency" class="ocat-label">@T["Send"]</label>
+    <div class="ocat-end">
+        <select asp-for="Frequency" class="form-select">
+            <option value="@ReportSubscriptionFrequency.Daily">@T["Every day, for the day before"]</option>
+            <option value="@ReportSubscriptionFrequency.Weekly">@T["Every week, for the 7 days before"]</option>
+            <option value="@ReportSubscriptionFrequency.Monthly">@T["Every month, for the month before"]</option>
+        </select>
+        <span asp-validation-for="Frequency"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="DayOfWeek">
+    <label asp-for="DayOfWeek" class="ocat-label">@T["Day of the week"]</label>
+    <div class="ocat-end">
+        <select asp-for="DayOfWeek" class="form-select">
+            @foreach (var day in Enum.GetValues<DayOfWeek>())
+            {
+                <option value="@day" selected="@(day == Model.DayOfWeek)">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(day)</option>
+            }
+        </select>
+        <span asp-validation-for="DayOfWeek"></span>
+        <span class="hint">@T["For a weekly report."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="DayOfMonth">
+    <label asp-for="DayOfMonth" class="ocat-label">@T["Day of the month"]</label>
+    <div class="ocat-limited">
+        <input asp-for="DayOfMonth" type="number" min="1" max="28" class="form-control" />
+        <span asp-validation-for="DayOfMonth"></span>
+        <span class="hint">@T["For a monthly report, from 1 to 28."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Hour">
+    <label asp-for="Hour" class="ocat-label">@T["Hour"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Hour" type="number" min="0" max="23" class="form-control" />
+        <span asp-validation-for="Hour"></span>
+        <span class="hint">@T["From 0 to 23, in the site's time zone."]</span>
+    </div>
+</div>

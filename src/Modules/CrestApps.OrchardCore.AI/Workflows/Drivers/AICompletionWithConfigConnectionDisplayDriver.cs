@@ -62,7 +62,7 @@ public sealed class AICompletionWithConfigConnectionDisplayDriver : DisplayDrive
 
             model.ChatDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Chat);
             model.UtilityDeployments = await _deploymentManager.GetSelectListBySlotAsync(AIDeploymentSlotNames.Utility);
-        }).Location("Content:2#Content;1");
+        }).Location(l => l.Zone("Content", "2").Tab(S["Content"], "1").Card(S["Model"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

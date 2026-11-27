@@ -32,6 +32,34 @@ The bar is `position: fixed`, so it can sit anywhere inside the `<form>`: the bu
 it as before. Content item editors and site settings pages already get the bar from Orchard Core
 (`Content.Edit`, `SiteSettings.SaveButton`), so only the module's own views need it.
 
+## Grouping fields in cards
+
+Every non-content-item admin form groups its fields in logical cards, and **every card comes from placement**
+(OrchardCore PR #20256): views never write `card`, `card-header`, `<fieldset>` or `<legend>` markup. A shape placed
+in the `Content` zone without a card falls back into a card titled "Content", so every Edit shape declares one:
+
+```csharp
+.Location(l => l.Zone("Content", "1").Card(S["Server"], "10"))
+```
+
+- `S` is the driver's `IStringLocalizer`; card, tab and column names are Title Case ("Default Deployments").
+  `.Tab(...)` goes before `.Card(...)`. Cards are ordered by their position; shapes in the same card share it.
+- A view holding several logical sections is split into one shape per card, each with its own view, bound to the
+  same view model and prefix. A view holds only its rows: no heading row, the card title replaces it.
+- Content definition part/field settings share card names: General (10), Behavior (15), Settings (20),
+  Editor (30), Indexing (40), GraphQL (50).
+- A page whose controller edits a view model renders `@await DisplayAsync(Model.Editor)`, as the snippet below
+  shows: `[BindNever] public IShape Editor` on the view model, a `DisplayDriver<TViewModel>` placing one shape per
+  card with `Initialize<TViewModel>` and `BuildPrefix` returning the empty prefix (posted names stay unchanged), the
+  driver registered with `services.AddDisplayDriver<TViewModel, TDriver>()`, and the controller calling
+  `IDisplayManager<TViewModel>.BuildEditorAsync` (GET) and `UpdateEditorAsync` (POST, before validating).
+  `OrchardCore.Templates` is the reference implementation.
+- Content item editors (editors of content parts and fields) are not grouped in cards. Modals, card sub-forms,
+  list filters, row actions, read-only detail pages and storefront pages are not either.
+- In a tab the theme renders the card as a fieldset; never group fields in an accordion, a collapse or `<details>`.
+- `tests/js/lint/admin-edit-views-place-cards.test.js` guards the rule: an admin edit view that writes its own card
+  or fieldset markup fails.
+
 ## The markup
 
 The bar replaces the old `ocat-wrapper` / `ocat-end-offset` button row at the end of the form:

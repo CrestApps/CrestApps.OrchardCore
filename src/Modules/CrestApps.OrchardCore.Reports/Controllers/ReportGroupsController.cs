@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 
@@ -23,6 +25,8 @@ public sealed class ReportGroupsController : Controller
     private readonly ReportDesignService _designService;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ReportGroupEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IHtmlLocalizer H;
 
     /// <summary>
@@ -32,18 +36,24 @@ public sealed class ReportGroupsController : Controller
     /// <param name="designService">The design service, which counts the reports in each group.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the group editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public ReportGroupsController(
         ReportGroupService groupService,
         ReportDesignService designService,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        IDisplayManager<ReportGroupEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<ReportGroupsController> htmlLocalizer)
     {
         _groupService = groupService;
         _designService = designService;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -109,6 +119,7 @@ public sealed class ReportGroupsController : Controller
         };
 
         await PopulateParentsAsync(model, null);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View("Edit", model);
     }
@@ -128,6 +139,9 @@ public sealed class ReportGroupsController : Controller
             return Forbid();
         }
 
+        model.IsNew = true;
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         var result = await _groupService.SaveAsync(ToGroup(model), null);
 
         if (result.Succeeded)
@@ -138,7 +152,6 @@ public sealed class ReportGroupsController : Controller
         }
 
         AddErrors(result);
-        model.IsNew = true;
         await PopulateParentsAsync(model, null);
 
         return View("Edit", model);
@@ -172,6 +185,7 @@ public sealed class ReportGroupsController : Controller
         };
 
         await PopulateParentsAsync(model, group);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return View(model);
     }
@@ -198,6 +212,8 @@ public sealed class ReportGroupsController : Controller
         {
             return NotFound();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         var result = await _groupService.SaveAsync(ToGroup(model), group);
 

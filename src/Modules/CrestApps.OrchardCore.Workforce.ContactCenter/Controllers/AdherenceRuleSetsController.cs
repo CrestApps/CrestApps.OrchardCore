@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using QueryContext = CrestApps.Core.Models.QueryContext;
@@ -26,6 +28,8 @@ public sealed class AdherenceRuleSetsController : Controller
     private readonly AdherenceRuleSetManager _manager;
     private readonly ITeamManager _teamManager;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<AdherenceRuleSetEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -36,18 +40,24 @@ public sealed class AdherenceRuleSetsController : Controller
     /// <param name="manager">The rule set manager.</param>
     /// <param name="teamManager">The team manager.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public AdherenceRuleSetsController(
         IAuthorizationService authorizationService,
         AdherenceRuleSetManager manager,
         ITeamManager teamManager,
         INotifier notifier,
+        IDisplayManager<AdherenceRuleSetEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<AdherenceRuleSetsController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _manager = manager;
         _teamManager = teamManager;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -125,6 +135,8 @@ public sealed class AdherenceRuleSetsController : Controller
 
         model.TeamOptions = await WorkforceTeamOptions.ListAsync(_teamManager, WorkforceScope.Everything, model.TeamIds, HttpContext.RequestAborted);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -144,6 +156,7 @@ public sealed class AdherenceRuleSetsController : Controller
         }
 
         var isNew = string.IsNullOrEmpty(model.Id);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
         var item = isNew ? await _manager.NewAsync() : await _manager.FindByIdAsync(model.Id);
 
         if (item is null)

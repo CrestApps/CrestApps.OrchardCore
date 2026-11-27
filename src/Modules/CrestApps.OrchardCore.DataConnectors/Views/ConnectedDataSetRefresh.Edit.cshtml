@@ -1,0 +1,119 @@
+@using OrchardCore.DataSources
+@model ConnectedDataSetFieldsViewModel
+
+@{
+    var accessModeName = Html.NameFor(model => model.AccessMode);
+    var refreshModeId = Html.IdFor(model => model.RefreshMode);
+    var sectionId = Html.IdFor(model => model.AccessMode) + "_Refresh";
+    var incrementalFields = Model.Fields.Where(field => field.Type is DataFieldType.Date or DataFieldType.DateTime or DataFieldType.Integer or DataFieldType.Decimal).ToArray();
+}
+
+@* The card shows for an imported data set only: a script on the page hides it for a live one. *@
+<div id="@sectionId" data-access="Imported">
+    @if (Model.Import?.LastRefreshUtc is not null)
+    {
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Last refresh"]</label>
+            <div class="ocat-end">
+                <p class="form-control-plaintext mb-0">
+                    @await DisplayAsync(await New.DateTime(Utc: Model.Import.LastRefreshUtc, Format: "g")) – @Model.Import.LastStatus
+                    @if (Model.Import.LastSuccessUtc is not null)
+                    {
+                        <span class="text-muted">· @T["{0} rows published", Model.Import.RowCount]</span>
+                    }
+                </p>
+                @if (!string.IsNullOrEmpty(Model.Import.LastError))
+                {
+                    <div class="text-danger">@Model.Import.LastError</div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="ocat-wrapper">
+        <label asp-for="RefreshIntervalMinutes" class="ocat-label">@T["Refresh every (minutes)"]</label>
+        <div class="ocat-end">
+            <input asp-for="RefreshIntervalMinutes" type="number" min="1" class="form-control" />
+            <span asp-validation-for="RefreshIntervalMinutes" class="text-danger"></span>
+            <span class="hint">@T["Leave empty to refresh only when someone clicks Refresh now. A refresh that fails keeps the rows of the last one that succeeded."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="RefreshMode" class="ocat-label">@T["Refresh reads"]</label>
+        <div class="ocat-end">
+            <select asp-for="RefreshMode" class="form-select">
+                <option value="@nameof(DataSetRefreshMode.Full)">@T["Every row"]</option>
+                @if (Model.SupportsIncremental)
+                {
+                    <option value="@nameof(DataSetRefreshMode.Incremental)">@T["Only the rows changed since the last refresh"]</option>
+                }
+            </select>
+            <span asp-validation-for="RefreshMode" class="text-danger"></span>
+            @if (!Model.SupportsIncremental)
+            {
+                <span class="hint">@T["This connector can't tell which rows changed, so every refresh reads every row."]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" data-refresh="Incremental">
+        <label asp-for="IncrementalField" class="ocat-label">@T["Changed rows have a larger"]</label>
+        <div class="ocat-end">
+            <select asp-for="IncrementalField" class="form-select">
+                <option value="">@T["Pick a field"]</option>
+                @foreach (var field in incrementalFields)
+                {
+                    <option value="@field.Name" selected="@(field.Name == Model.IncrementalField)">@(string.IsNullOrEmpty(field.DisplayName) ? field.Name : field.DisplayName)</option>
+                }
+            </select>
+            <span asp-validation-for="IncrementalField" class="text-danger"></span>
+            <span class="hint">@T["A modification date or a version number that grows whenever a row changes. Rows are replaced by their identifier fields; a row deleted at the source stays until the next full refresh."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label asp-for="SchemaChangePolicy" class="ocat-label">@T["When the source's fields change"]</label>
+        <div class="ocat-end">
+            <select asp-for="SchemaChangePolicy" class="form-select">
+                <option value="@nameof(DataSetSchemaChangePolicy.Accept)">@T["Add new fields and follow type changes; keep removed fields, empty"]</option>
+                <option value="@nameof(DataSetSchemaChangePolicy.Fail)">@T["Fail the refresh and keep the published rows"]</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (function () {
+        const section = document.getElementById('@sectionId');
+        const refreshMode = document.getElementById('@refreshModeId');
+
+        if (!section) {
+            return;
+        }
+
+        // The card of the section is hidden with it, for a data set that is read live.
+        const card = section.closest('fieldset') || section;
+
+        const refresh = function () {
+            const checked = document.querySelector('input[name="@accessModeName"]:checked');
+            const access = checked ? checked.value : '';
+
+            card.classList.toggle('d-none', section.getAttribute('data-access') !== access);
+
+            section.querySelectorAll('[data-refresh]').forEach(function (element) {
+                element.classList.toggle('d-none', !refreshMode || element.getAttribute('data-refresh') !== refreshMode.value);
+            });
+        };
+
+        document.querySelectorAll('input[name="@accessModeName"]').forEach(function (input) {
+            input.addEventListener('change', refresh);
+        });
+
+        if (refreshMode) {
+            refreshMode.addEventListener('change', refresh);
+        }
+
+        refresh();
+    })();
+</script>

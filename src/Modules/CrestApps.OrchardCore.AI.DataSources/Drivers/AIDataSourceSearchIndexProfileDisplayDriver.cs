@@ -62,7 +62,7 @@ internal sealed class AIDataSourceSearchIndexProfileDisplayDriver : DisplayDrive
                     !string.Equals(index.Type, DataSourceConstants.IndexingTaskType, StringComparison.OrdinalIgnoreCase));
             model.SourceIndexProfileNames = BuildGroupedIndexProfileItems(sourceIndexes);
             model.FieldNames = [];
-        }).Location("Content:10");
+        }).Location(l => l.Zone("Content", "10").Card(S["Source"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)

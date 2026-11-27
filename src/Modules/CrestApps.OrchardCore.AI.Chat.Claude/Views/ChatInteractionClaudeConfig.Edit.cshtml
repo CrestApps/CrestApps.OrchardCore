@@ -7,9 +7,13 @@
 <div class="d-none orchestrator-dependent orchestrator-dependent-@(ClaudeOrchestrator.OrchestratorName)">
     @if (!Model.IsClaudeConfigured)
     {
-        <div class="alert alert-warning">
-            <i class="fas fa-exclamation-triangle"></i>
-            @T["Claude is not configured and cannot be used until it has been configured in Settings → Artificial Intelligence → Claude."]
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    @T["Claude is not configured and cannot be used until it has been configured in Settings → Artificial Intelligence → Claude."]
+                </div>
+            </div>
         </div>
     }
     else if (Model.AvailableModels.Any())

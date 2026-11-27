@@ -1,0 +1,30 @@
+@model TaxFormViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="HasRecipientStatements" />
+            <label class="form-check-label" asp-for="HasRecipientStatements">@T["Each recipient gets a statement"]</label>
+            <span class="hint dashed">@T["Such as a W-2, a 1099 or a T4 slip: kept on the filing, printed, and sent to the recipient once filed. Without it, recipient fields are only added up on the filing."]</span>
+        </div>
+        <div class="form-check mt-2">
+            <input type="checkbox" class="form-check-input" asp-for="StatementPerJurisdiction" />
+            <label class="form-check-label" asp-for="StatementPerJurisdiction">@T["A statement for each jurisdiction under the form's"]</label>
+            <span class="hint dashed">@T["Such as a T4 slip for each province a person was employed in."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="RecipientCondition">
+    <label asp-for="RecipientCondition" class="ocat-label">@T["A recipient is reported when"]</label>
+    <div class="ocat-end">
+        <input asp-for="RecipientCondition" class="form-control font-monospace" />
+        <span class="hint">@T["A formula over the recipient fields, such as [1] >= VALUE('Threshold') OR [4] > 0. Leave it empty to report a recipient with any field that isn't zero."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="MissingTaxIdNote">
+    <label asp-for="MissingTaxIdNote" class="ocat-label">@T["Note for no tax id"]</label>
+    <div class="ocat-end">
+        <input asp-for="MissingTaxIdNote" class="form-control" />
+        <span class="hint">@T["Added to the filing for a reported recipient with no tax id on file, {0} being their name. Leave it empty to add none.", "{0}"]</span>
+    </div>
+</div>

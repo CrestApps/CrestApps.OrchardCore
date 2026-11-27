@@ -1,0 +1,10 @@
+@model PayrollSettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultCountryPack" class="ocat-label">@T["Country pack"]</label>
+    <div class="ocat-end"><input asp-for="DefaultCountryPack" class="form-control text-uppercase" style="max-width: 8rem" placeholder="US" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="DefaultCurrency" class="ocat-label">@T["Currency"]</label>
+    <div class="ocat-end"><input asp-for="DefaultCurrency" class="form-control text-uppercase" style="max-width: 8rem" maxlength="3" placeholder="USD" /></div>
+</div>

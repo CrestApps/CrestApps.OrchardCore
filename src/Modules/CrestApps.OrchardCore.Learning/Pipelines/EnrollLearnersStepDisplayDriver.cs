@@ -35,8 +35,13 @@ internal sealed class EnrollLearnersStepDisplayDriver : DisplayDriver<DataPipeli
 
     public override IDisplayResult Edit(DataPipelineStep step, BuildEditorContext context)
     {
-        return Initialize<EnrollLearnersStepViewModel>($"{EnrollLearnersStep.StepName}_Fields_Edit", model => FillAsync(step, model))
-            .Location("Content");
+        return Combine(
+            Initialize<EnrollLearnersStepViewModel>($"{EnrollLearnersStep.StepName}_Fields_Edit", model => FillAsync(step, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Learner and Course"], "10")),
+            Initialize<EnrollLearnersStepViewModel>($"{EnrollLearnersStep.StepName}Dates_Fields_Edit", model => FillAsync(step, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Dates"], "20")),
+            Initialize<EnrollLearnersStepViewModel>($"{EnrollLearnersStep.StepName}Behavior_Fields_Edit", model => FillAsync(step, model))
+                .Location(l => l.Zone("Content", "3").Card(S["Behavior"], "30")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(DataPipelineStep step, UpdateEditorContext context)

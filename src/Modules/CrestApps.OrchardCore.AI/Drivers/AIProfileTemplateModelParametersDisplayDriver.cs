@@ -4,6 +4,7 @@ using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -18,9 +19,14 @@ internal sealed class AIProfileTemplateModelParametersDisplayDriver : DisplayDri
 {
     private readonly AIModelParameterViewService _viewService;
 
-    public AIProfileTemplateModelParametersDisplayDriver(AIModelParameterViewService viewService)
+    internal readonly IStringLocalizer S;
+
+    public AIProfileTemplateModelParametersDisplayDriver(
+        AIModelParameterViewService viewService,
+        IStringLocalizer<AIProfileTemplateModelParametersDisplayDriver> stringLocalizer)
     {
         _viewService = viewService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfileTemplate template, BuildEditorContext context)
@@ -42,7 +48,7 @@ internal sealed class AIProfileTemplateModelParametersDisplayDriver : DisplayDri
             model.Parameters = built.Parameters;
             model.CapabilitiesJson = built.CapabilitiesJson;
             model.FeaturesJson = built.FeaturesJson;
-        }).Location("Content:1.5%Deployments & Interactions;2");
+        }).Location(l => l.Zone("Content", "1.5").Card(S["Deployments & Interactions"], "2"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)

@@ -1,0 +1,51 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model CreateInstallmentPlanViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.NewCustomer)" id="customer-existing" value="false" checked="@(!Model.NewCustomer)" />
+            <label class="form-check-label" for="customer-existing">@T["Existing customer"]</label>
+        </div>
+        <div class="form-check form-check-inline">
+            <input class="form-check-input" type="radio" name="@Html.NameFor(m => m.NewCustomer)" id="customer-new" value="true" checked="@Model.NewCustomer" />
+            <label class="form-check-label" for="customer-new">@T["New customer"]</label>
+        </div>
+    </div>
+</div>
+
+<div id="customer-existing-fields" class="ocat-wrapper @(Model.NewCustomer ? "d-none" : string.Empty)" asp-validation-class-for="CustomerUserId">
+    <div class="ocat-end-offset">
+        @await Component.InvokeAsync("UserPicker", new
+        {
+            name = Html.NameFor(m => m.CustomerUserId).ToString(),
+            selectedValues = string.IsNullOrEmpty(Model.CustomerUserId) ? Array.Empty<string>() : new[] { Model.CustomerUserId },
+            valueType = "userId",
+            multiple = false,
+            buttonText = T["Choose a customer"].Value,
+            searchPlaceholder = T["Search customers"].Value,
+            smallButton = false,
+        })
+        <span asp-validation-for="CustomerUserId" class="text-danger"></span>
+    </div>
+</div>
+
+<div id="customer-new-fields" class="@(Model.NewCustomer ? string.Empty : "d-none")">
+    <div class="ocat-wrapper" asp-validation-class-for="NewCustomerName">
+        <label asp-for="NewCustomerName" class="ocat-label ocat-label-required">@T["Name"]</label>
+        <div class="ocat-end">
+            <input asp-for="NewCustomerName" class="form-control" autocomplete="off" />
+            <span asp-validation-for="NewCustomerName" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="NewCustomerEmail">
+        <label asp-for="NewCustomerEmail" class="ocat-label ocat-label-required">@T["Email"]</label>
+        <div class="ocat-end">
+            <input asp-for="NewCustomerEmail" type="email" class="form-control" autocomplete="off" />
+            <span asp-validation-for="NewCustomerEmail" class="text-danger"></span>
+            <span class="hint">@T["An account is created for the customer with this email. It has no password yet: the customer sets one with \"Forgot password\" when they want to sign in to see or pay their payments."]</span>
+        </div>
+    </div>
+</div>

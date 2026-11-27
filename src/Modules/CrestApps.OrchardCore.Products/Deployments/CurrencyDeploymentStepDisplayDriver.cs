@@ -51,7 +51,7 @@ internal sealed class CurrencyDeploymentStepDisplayDriver : DisplayDriver<Deploy
                     IsSelected = step.CurrencyIds?.Contains(x.ItemId) ?? false,
                 })
                 .ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Currencies"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CurrencyDeploymentStep step, UpdateEditorContext context)

@@ -39,42 +39,6 @@
 </div>
 
 <div class="ocat-wrapper">
-    <label asp-for="ResultsPath" class="ocat-label">@T["Results array path"]</label>
-    <div class="ocat-end">
-        <input asp-for="ResultsPath" class="form-control font-monospace" />
-        <span asp-validation-for="ResultsPath" class="text-danger"></span>
-        <span class="hint">@T["A dotted path to the results array in the JSON response (supports <code>[index]</code>). Leave it empty when the response body is itself the array (the WordPress default)."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="TitlePath" class="ocat-label ocat-label-required">@T["Title path"]</label>
-    <div class="ocat-end">
-        <input asp-for="TitlePath" class="form-control font-monospace" placeholder="title" />
-        <span asp-validation-for="TitlePath" class="text-danger"></span>
-        <span class="hint">@T["A dotted path, relative to each result, to the result title."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="UrlPath" class="ocat-label ocat-label-required">@T["URL path"]</label>
-    <div class="ocat-end">
-        <input asp-for="UrlPath" class="form-control font-monospace" placeholder="url" />
-        <span asp-validation-for="UrlPath" class="text-danger"></span>
-        <span class="hint">@T["A dotted path, relative to each result, to the result URL."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <label asp-for="SnippetPath" class="ocat-label">@T["Snippet path"]</label>
-    <div class="ocat-end">
-        <input asp-for="SnippetPath" class="form-control font-monospace" placeholder="_embedded.self[0].excerpt.rendered" />
-        <span asp-validation-for="SnippetPath" class="text-danger"></span>
-        <span class="hint">@T["A dotted path, relative to each result, to the text snippet. Point it at <code>_embedded.self[0].content.rendered</code> for the full body. HTML in the resolved value is stripped."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper">
     <label asp-for="MaxResults" class="ocat-label">@T["Maximum results"]</label>
     <div class="ocat-end">
         <input asp-for="MaxResults" type="number" min="1" class="form-control" />

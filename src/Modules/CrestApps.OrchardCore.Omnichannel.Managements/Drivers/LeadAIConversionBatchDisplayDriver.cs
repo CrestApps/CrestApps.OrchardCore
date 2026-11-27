@@ -70,7 +70,7 @@ internal sealed class LeadAIConversionBatchDisplayDriver : DisplayDriver<Omnicha
                 .OrderBy(definition => definition.DisplayName, StringComparer.OrdinalIgnoreCase)
                 .Select(definition => new SelectListItem(definition.DisplayName, definition.Name, definition.Name == settings.OpportunityContentType))
                 .ToList();
-        }).Location("Content:3");
+        }).Location(l => l.Zone("Content", "3").Card(S["AI Lead Conversion"], "40"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelActivityBatch batch, UpdateEditorContext context)

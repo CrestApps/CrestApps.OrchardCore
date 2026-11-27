@@ -255,6 +255,17 @@ public sealed class UsageMetersController : CatalogAdminController<UsageMeter>
 /// </summary>
 public sealed class UsageMeterDisplayDriver : DisplayDriver<UsageMeter>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="UsageMeterDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public UsageMeterDisplayDriver(IStringLocalizer<UsageMeterDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc/>
     public override Task<IDisplayResult> DisplayAsync(UsageMeter meter, BuildDisplayContext context)
     {
@@ -277,14 +288,14 @@ public sealed class UsageMeterDisplayDriver : DisplayDriver<UsageMeter>
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(UsageMeter meter, BuildEditorContext context)
-        => Initialize<UsageMeterViewModel>("UsageMeterFields_Edit", model =>
+        => Initialize<UsageMeterViewModel>("UsageMeterDetails_Edit", model =>
         {
             model.Name = meter.Name;
             model.Code = meter.Code;
             model.Unit = meter.Unit;
             model.Aggregation = meter.Aggregation;
             model.Enabled = meter.Enabled;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["Meter"], "10"));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(UsageMeter meter, UpdateEditorContext context)

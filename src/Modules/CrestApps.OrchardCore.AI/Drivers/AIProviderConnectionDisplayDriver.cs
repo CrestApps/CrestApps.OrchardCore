@@ -76,7 +76,7 @@ internal sealed class AIProviderConnectionDisplayDriver : DisplayDriver<AIProvid
             model.DisplayText = connection.DisplayText;
             model.Name = connection.Name;
             model.IsNew = context.IsNew;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnection connection, UpdateEditorContext context)

@@ -184,7 +184,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers
     [OrchardCore.Admin.Admin(null, null)]
     public sealed class BroadcastsController : Microsoft.AspNetCore.Mvc.Controller
     {
-        public BroadcastsController(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingBroadcastManager manager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingWorkspaceBuilder workspaceBuilder, CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingContactSearch contactSearch, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.Notify.INotifier notifier, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.BroadcastsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.BroadcastsController> stringLocalizer) { }
+        public BroadcastsController(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingBroadcastManager manager, CrestApps.OrchardCore.Omnichannel.Core.Services.IOmnichannelChannelEndpointManager endpointManager, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingWorkspaceBuilder workspaceBuilder, CrestApps.OrchardCore.Omnichannel.Messaging.Services.MessagingContactSearch contactSearch, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, OrchardCore.DisplayManagement.Notify.INotifier notifier, OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels.BroadcastCreateViewModel> createDisplayManager, OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor updateModelAccessor, Microsoft.AspNetCore.Mvc.Localization.IHtmlLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.BroadcastsController> htmlLocalizer, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Controllers.BroadcastsController> stringLocalizer) { }
         [OrchardCore.Admin.Admin("messaging/broadcasts/create", "MessagingBroadcastsCreate")]
         public System.Threading.Tasks.Task<Microsoft.AspNetCore.Mvc.IActionResult> Create() { }
         [Microsoft.AspNetCore.Mvc.ActionName("Create")]
@@ -306,7 +306,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Drivers
 {
     public sealed class MessageTemplateDisplayDriver : OrchardCore.DisplayManagement.Handlers.DisplayDriver<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate>
     {
-        public MessageTemplateDisplayDriver(Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplateScopeOptions> scopeOptions, Microsoft.Extensions.Localization.IStringLocalizerFactory localizerFactory) { }
+        public MessageTemplateDisplayDriver(Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplateScopeOptions> scopeOptions, Microsoft.Extensions.Localization.IStringLocalizerFactory localizerFactory, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Drivers.MessageTemplateDisplayDriver> stringLocalizer) { }
         public override OrchardCore.DisplayManagement.Views.IDisplayResult Display(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate template, OrchardCore.DisplayManagement.Handlers.BuildDisplayContext context) { }
         public override OrchardCore.DisplayManagement.Views.IDisplayResult Edit(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate template, OrchardCore.DisplayManagement.Handlers.BuildEditorContext context) { }
         public override System.Threading.Tasks.Task<OrchardCore.DisplayManagement.Views.IDisplayResult> UpdateAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessageTemplate template, OrchardCore.DisplayManagement.Handlers.UpdateEditorContext context) { }
@@ -567,6 +567,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels
         public BroadcastCreateViewModel() { }
         public string Body { get; set; }
         public System.Collections.Generic.IList<string> ContactAddresses { get; set; }
+        [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
+        public OrchardCore.DisplayManagement.IShape Editor { get; set; }
         [Microsoft.AspNetCore.Mvc.ModelBinding.BindNever]
         public System.Collections.Generic.IReadOnlyDictionary<string, string> EndpointChannels { get; set; }
         public string EndpointId { get; set; }

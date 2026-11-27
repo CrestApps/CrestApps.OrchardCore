@@ -1,0 +1,72 @@
+@model WorkOrderEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="AddressLine1" class="ocat-label">@T["Street address"]</label>
+    <div class="ocat-end">
+        <input asp-for="AddressLine1" class="form-control" autocomplete="off" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="AddressLine2" class="ocat-label">@T["Unit, floor"]</label>
+    <div class="ocat-end">
+        <input asp-for="AddressLine2" class="form-control" autocomplete="off" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="City" class="ocat-label">@T["City"]</label>
+    <div class="ocat-end">
+        <input asp-for="City" class="form-control" autocomplete="off" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Region" class="ocat-label">@T["State or region"]</label>
+    <div class="ocat-end">
+        <input asp-for="Region" class="form-control" autocomplete="off" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="PostalCode" class="ocat-label">@T["Postal code"]</label>
+    <div class="ocat-end">
+        <input asp-for="PostalCode" class="form-control" autocomplete="off" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Country" class="ocat-label">@T["Country"]</label>
+    <div class="ocat-end">
+        <input asp-for="Country" class="form-control" autocomplete="off" maxlength="2" placeholder="US" />
+    </div>
+</div>
+@if (Model.Map is not null)
+{
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        @* The map writes the pin with a dot: write and read the coordinates the same in every culture. *@
+        <input type="hidden" asp-for="Latitude" value="@Model.Latitude?.ToString(CultureInfo.InvariantCulture)" />
+        <input type="hidden" name="__Invariant" value="@Html.NameFor(model => model.Latitude)" />
+        <input type="hidden" asp-for="Longitude" value="@Model.Longitude?.ToString(CultureInfo.InvariantCulture)" />
+        <input type="hidden" name="__Invariant" value="@Html.NameFor(model => model.Longitude)" />
+        <style asp-name="leaflet"></style>
+        <script asp-name="crestapps-map" at="Foot"></script>
+        <div id="work-order-map" class="border rounded" style="height: 16rem; z-index: 0;"
+             data-tile-url="@Model.Map.TileUrl" data-attribution="@Model.Map.TileAttribution"
+             data-latitude="@Model.Map.DefaultLatitude.ToString(CultureInfo.InvariantCulture)" data-longitude="@Model.Map.DefaultLongitude.ToString(CultureInfo.InvariantCulture)" data-zoom="@Model.Map.DefaultZoom"
+             role="region" aria-label="@T["Where the job is"]"></div>
+        <span class="hint">@T["Click the map to place the job, or drag the pin. Without a pin, the address is placed in the background."]</span>
+        <script at="Foot">
+            document.addEventListener('DOMContentLoaded', () => {
+                const map = window.crestappsMap && window.crestappsMap.create('work-order-map');
+                if (map) {
+                    window.crestappsMap.pin(map, document.getElementById('@Html.IdFor(model => model.Latitude)'), document.getElementById('@Html.IdFor(model => model.Longitude)'));
+                }
+            });
+        </script>
+    </div>
+</div>
+}
+<div class="ocat-wrapper">
+    <label asp-for="AccessNotes" class="ocat-label">@T["Access notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="AccessNotes" class="form-control" rows="2" placeholder="@T["Such as: gate code, the dog, where to park"]"></textarea>
+        <span class="hint">@T["When Geo is on, the address is placed on the map in the background and gives the work order its territory."]</span>
+    </div>
+</div>

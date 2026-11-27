@@ -1,0 +1,22 @@
+@model CapacityPlanEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="CurrentFte" class="ocat-label">@T["Agents today (full-time)"]</label>
+    <div class="ocat-end">
+        <input asp-for="CurrentFte" type="number" min="0" step="any" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["Leave empty to count the team's workers."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="HoursPerFte" class="ocat-label">@T["Hours of a full-time agent"]</label>
+    <div class="ocat-end">
+        <input asp-for="HoursPerFte" type="number" min="1" max="80" step="any" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="AttritionPercentPerMonth" class="ocat-label">@T["Attrition a month %"]</label>
+    <div class="ocat-end">
+        <input asp-for="AttritionPercentPerMonth" type="number" min="0" max="99" step="any" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["The share of agents who leave each month."]</span>
+    </div>
+</div>

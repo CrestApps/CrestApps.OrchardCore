@@ -1,6 +1,7 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -11,6 +12,13 @@ namespace CrestApps.OrchardCore.Calendars.Drivers;
 /// </summary>
 internal sealed class ResourceCalendarSettingsDisplayDriver : DisplayDriver<Calendar>
 {
+    internal readonly IStringLocalizer S;
+
+    public ResourceCalendarSettingsDisplayDriver(IStringLocalizer<ResourceCalendarSettingsDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(Calendar calendar, BuildEditorContext context)
     {
         if (!IsResource(calendar))
@@ -25,7 +33,7 @@ internal sealed class ResourceCalendarSettingsDisplayDriver : DisplayDriver<Cale
             model.Location = settings.Location;
             model.Seats = settings.Seats;
             model.Amenities = settings.Amenities;
-        }).Location("Content:3%General;1");
+        }).Location(l => l.Zone("Content", "3").Card(S["Details"], "6"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Calendar calendar, UpdateEditorContext context)

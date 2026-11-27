@@ -53,7 +53,7 @@ internal sealed class ApprovalPolicyConditionsDisplayDriver : DisplayDriver<Appr
                     model.ScopeOptions.Add(new SelectListItem(policy.AccessScope, policy.AccessScope, true));
                 }
             }
-        }).Location("Content:2");
+        }).Location(l => l.Zone("Content", "2").Card(S["Conditions"], "30"));
 
     public override async Task<IDisplayResult> UpdateAsync(ApprovalPolicy policy, UpdateEditorContext context)
     {

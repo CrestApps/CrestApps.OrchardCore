@@ -1,5 +1,4 @@
 using CrestApps.OrchardCore.Workforce.BackgroundTasks;
-using OrchardCore.BackgroundTasks;
 using CrestApps.OrchardCore.Workforce.Core.Indexes;
 using CrestApps.OrchardCore.Workforce.Drivers;
 using CrestApps.OrchardCore.Workforce.Migrations;
@@ -7,6 +6,7 @@ using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Navigation;
 using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.BackgroundTasks;
 using OrchardCore.Data;
 using OrchardCore.Data.Migration;
 using OrchardCore.DisplayManagement.Handlers;
@@ -38,12 +38,19 @@ public sealed class ShiftPlanningStartup : StartupBase
             .AddIndexProvider<ShiftTradeIndexProvider>();
 
         services.AddDisplayDriver<ShiftTemplate, ShiftTemplateRowDisplayDriver>();
+        services.AddDisplayDriver<ShiftTemplateEditViewModel, ShiftTemplateEditDisplayDriver>();
         services.AddDisplayDriver<ShiftPattern, ShiftPatternRowDisplayDriver>();
+        services.AddDisplayDriver<RotationEditViewModel, RotationEditDisplayDriver>();
         services.AddDisplayDriver<CoverageRequirement, CoverageRequirementRowDisplayDriver>();
+        services.AddDisplayDriver<CoverageEditViewModel, CoverageEditDisplayDriver>();
         services.AddDisplayDriver<SchedulePeriod, SchedulePeriodRowDisplayDriver>();
+        services.AddDisplayDriver<ScheduleCreateViewModel, ScheduleCreateEditDisplayDriver>();
+        services.AddDisplayDriver<DraftShiftEditViewModel, DraftShiftEditDisplayDriver>();
         services.AddDisplayDriver<ScheduleChangeRowViewModel, ScheduleChangeRowDisplayDriver>();
         services.AddDisplayDriver<OpenShiftRowViewModel, OpenShiftRowDisplayDriver>();
+        services.AddDisplayDriver<OpenShiftEditViewModel, OpenShiftEditDisplayDriver>();
         services.AddDisplayDriver<ShiftTradeRowViewModel, ShiftTradeRowDisplayDriver>();
+        services.AddDisplayDriver<ShiftTradeCreateViewModel, ShiftTradeEditDisplayDriver>();
         services.AddSingleton<IBackgroundTask, OpenShiftAwardBackgroundTask>();
         services.AddPermissionProvider<ShiftPlanningPermissionsProvider>();
         services.AddNavigationProvider<ShiftPlanningAdminMenu>();

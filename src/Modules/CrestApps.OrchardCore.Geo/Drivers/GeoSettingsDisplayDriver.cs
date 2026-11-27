@@ -71,8 +71,26 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, GeoSettings settings, BuildEditorContext context)
-        => Initialize<GeoSettingsViewModel>("GeoSettings_Edit", async model =>
-        {
+        => Combine(
+            Initialize<GeoSettingsViewModel>("GeoSettings_Edit", async model =>
+            {
+                FillValues(model, settings);
+                await FillStatusAsync(model);
+            })
+                .Location(l => l.Zone("Content", "1").Card(S["Providers"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, GeoPermissions.ManageGeoSettings))
+                .OnGroup(SettingsGroupId),
+            Initialize<GeoSettingsViewModel>("GeoSettingsEstimate_Edit", model => FillValues(model, settings))
+                .Location(l => l.Zone("Content", "2").Card(S["Built-in Travel Estimate"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, GeoPermissions.ManageGeoSettings))
+                .OnGroup(SettingsGroupId),
+            Initialize<GeoSettingsViewModel>("GeoSettingsMaps_Edit", model => FillValues(model, settings))
+                .Location(l => l.Zone("Content", "3").Card(S["Maps"], "30"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, GeoPermissions.ManageGeoSettings))
+                .OnGroup(SettingsGroupId));
+
+    private async Task FillStatusAsync(GeoSettingsViewModel model)
+    {
             var requests = await _session.QueryIndex<GeocodeRequestIndex>(collection: GeoConstants.CollectionName).ListAsync();
 
             model.Waiting = requests.Count(index => index.Status == nameof(GeocodeRequestStatus.Pending));
@@ -89,7 +107,10 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
 
                 model.LastError = troubled.Select(request => request.LastError).FirstOrDefault(error => !string.IsNullOrEmpty(error));
             }
+    }
 
+    private void FillValues(GeoSettingsViewModel model, GeoSettings settings)
+    {
             model.GeocodingProvider = settings.GeocodingProvider;
             model.TravelTimeProvider = settings.TravelTimeProvider;
             model.RouteProvider = settings.RouteProvider;
@@ -104,9 +125,7 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
             model.GeocodingProviders = Options(_geocoders.Select(provider => (provider.Name, provider.DisplayName)), settings.GeocodingProvider, S["None: addresses aren't geocoded"]);
             model.TravelTimeProviders = Options(_travelProviders.Where(provider => provider.Name != GeoConstants.HaversineProviderName).Select(provider => (provider.Name, provider.DisplayName)), settings.TravelTimeProvider, S["Built-in estimate"]);
             model.RouteProviders = Options(_routeProviders.Where(provider => provider.Name != GeoConstants.HaversineProviderName).Select(provider => (provider.Name, provider.DisplayName)), settings.RouteProvider, S["Straight lines"]);
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, GeoPermissions.ManageGeoSettings))
-        .OnGroup(SettingsGroupId);
+    }
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(ISite site, GeoSettings settings, UpdateEditorContext context)

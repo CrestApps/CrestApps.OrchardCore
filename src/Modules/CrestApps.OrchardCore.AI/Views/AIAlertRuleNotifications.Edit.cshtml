@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.AI.Core.Conversations
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIAlertRuleViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="NotifyEmails" class="ocat-label">@T["Email"]</label>
+    <div class="ocat-end">
+        <input asp-for="NotifyEmails" class="form-control" placeholder="ops@example.com, lead@example.com" />
+        <span class="hint">@T["Addresses emailed when the rule triggers and resolves, with the Email feature set up. The alert webhook events and the AI Alert Triggered and AI Alert Resolved workflow events are raised either way."]</span>
+    </div>
+</div>

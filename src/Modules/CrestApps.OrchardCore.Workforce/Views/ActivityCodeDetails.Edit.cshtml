@@ -1,0 +1,7 @@
+@model ActivityCodeEditViewModel
+
+<div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+<div class="ocat-wrapper"><label asp-for="Code" class="ocat-label">@T["Short code"]</label><div class="ocat-end"><input asp-for="Code" class="form-control" style="max-width: 8rem" /><span class="hint">@T["Shown on schedules where there is little room, such as BRK."]</span></div></div>
+<div class="ocat-wrapper"><label asp-for="Kind" class="ocat-label">@T["Kind"]</label><div class="ocat-end"><select asp-for="Kind" asp-items="Model.KindOptions" class="form-select" style="max-width: 18rem"></select></div></div>
+<div class="ocat-wrapper"><label asp-for="Color" class="ocat-label">@T["Color"]</label><div class="ocat-end"><input asp-for="Color" type="color" class="form-control form-control-color" /></div></div>
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["Enabled"]</label></div></div></div>

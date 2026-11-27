@@ -1,0 +1,73 @@
+@using OrchardCore.DataSources
+@model ConnectedDataSetFieldsViewModel
+
+@{
+    var temporalFields = Model.Fields.Where(field => field.IsIncluded && (field.Type == DataFieldType.Date || field.Type == DataFieldType.DateTime)).ToArray();
+}
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Fields"]</label>
+    <div class="ocat-end">
+        @if (Model.Fields.Count == 0)
+        {
+            <div class="alert alert-info" role="alert">@T["No fields yet. Pick the resource, then discover its fields; they are also read when you save."]</div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-2">
+                    <thead>
+                        <tr>
+                            <th scope="col">@T["Show"]</th>
+                            <th scope="col">@T["Source field"]</th>
+                            <th scope="col">@T["Name"]</th>
+                            <th scope="col">@T["Display name"]</th>
+                            <th scope="col">@T["Type"]</th>
+                            <th scope="col">@T["Identifier"]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var index = 0; index < Model.Fields.Count; index++)
+                        {
+                            <tr>
+                                <td>
+                                    <input asp-for="Fields[index].IsIncluded" class="form-check-input" type="checkbox" title="@T["Readers see this field"]" />
+                                    <input asp-for="Fields[index].SourceName" type="hidden" />
+                                    <input asp-for="Fields[index].SourceType" type="hidden" />
+                                </td>
+                                <td><code>@Model.Fields[index].SourceName</code></td>
+                                <td><input asp-for="Fields[index].Name" class="form-control form-control-sm" /></td>
+                                <td><input asp-for="Fields[index].DisplayName" class="form-control form-control-sm" /></td>
+                                <td>
+                                    <select asp-for="Fields[index].Type" asp-items="Model.FieldTypes" class="form-select form-select-sm"></select>
+                                    @if (Model.Fields[index].Type != Model.Fields[index].SourceType)
+                                    {
+                                        <span class="hint">@T["Source: {0}", Model.Fields[index].SourceType]</span>
+                                    }
+                                </td>
+                                <td><input asp-for="Fields[index].IsIdentifier" class="form-check-input" type="checkbox" title="@T["Part of what identifies a row"]" /></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        <span asp-validation-for="Fields" class="text-danger"></span>
+        <button type="submit" name="submit.DiscoverFields" class="btn btn-sm btn-secondary"><i class="fa-solid fa-magnifying-glass me-1" aria-hidden="true"></i>@T["Discover fields"]</button>
+        <span class="hint">@T["Reads the resource's fields from the source. Fields you already have keep their names, types and settings; new ones are added."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultDateField" class="ocat-label">@T["Default date field"]</label>
+    <div class="ocat-end">
+        <select asp-for="DefaultDateField" class="form-select">
+            <option value="">@T["None"]</option>
+            @foreach (var field in temporalFields)
+            {
+                <option value="@field.Name" selected="@(field.Name == Model.DefaultDateField)">@(string.IsNullOrEmpty(field.DisplayName) ? field.Name : field.DisplayName)</option>
+            }
+        </select>
+        <span class="hint">@T["The date reports filter this data set by when nothing else is chosen."]</span>
+    </div>
+</div>

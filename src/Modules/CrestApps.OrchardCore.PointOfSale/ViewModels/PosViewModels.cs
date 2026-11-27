@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.PointOfSale.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.PointOfSale.ViewModels;
 
@@ -52,6 +53,12 @@ public class RegisterEditViewModel
     [BindNever]
     public bool IsNew
         => string.IsNullOrEmpty(ItemId);
+
+    /// <summary>
+    /// Gets or sets the editor of the register, built by the display drivers of <see cref="RegisterEditViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 public class PosDepartmentsIndexViewModel
@@ -96,6 +103,12 @@ public class PosDepartmentEditViewModel
     [BindNever]
     public bool IsNew
         => string.IsNullOrEmpty(ItemId);
+
+    /// <summary>
+    /// Gets or sets the editor of the department, built by the display drivers of <see cref="PosDepartmentEditViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.AI.Core.Workflows;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Activities;
@@ -13,6 +14,13 @@ namespace CrestApps.OrchardCore.AI.Workflows.Drivers;
 /// </summary>
 public sealed class AICompletionWithConfigParametersDisplayDriver : DisplayDriver<IActivity, AICompletionWithConfigTask>
 {
+    internal readonly IStringLocalizer S;
+
+    public AICompletionWithConfigParametersDisplayDriver(IStringLocalizer<AICompletionWithConfigParametersDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(AICompletionWithConfigTask activity, BuildEditorContext context)
     {
         return Initialize<AICompletionWithConfigParametersViewModel>("AICompletionWithConfigParameters_Edit", model =>
@@ -25,7 +33,7 @@ public sealed class AICompletionWithConfigParametersDisplayDriver : DisplayDrive
             model.TopP = interaction.TopP;
             model.FrequencyPenalty = interaction.FrequencyPenalty;
             model.PresencePenalty = interaction.PresencePenalty;
-        }).Location("Content:4#Content;1");
+        }).Location(l => l.Zone("Content", "4").Tab(S["Content"], "1").Card(S["Parameters"], "30"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

@@ -13,7 +13,7 @@ public sealed class PaymentTermEditorViewTests
     public void Editor_DisablesTheFieldsOfHiddenRows_AndStartsTheDayOfTheMonthAtOne()
     {
         // Arrange
-        var view = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Transactions", "Views", "PaymentTermFields.Edit.cshtml"));
+        var view = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Transactions", "Views", "PaymentTermDue.Edit.cshtml"));
 
         // Assert
         Assert.Contains("input.disabled = !used", view, StringComparison.Ordinal);

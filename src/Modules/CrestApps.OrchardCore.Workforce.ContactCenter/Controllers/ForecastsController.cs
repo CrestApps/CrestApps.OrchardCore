@@ -13,6 +13,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -31,6 +33,8 @@ public sealed class ForecastsController : Controller
     private readonly ISession _session;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ForecastCreateViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -43,6 +47,8 @@ public sealed class ForecastsController : Controller
     /// <param name="session">The session.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public ForecastsController(
         IAuthorizationService authorizationService,
@@ -51,6 +57,8 @@ public sealed class ForecastsController : Controller
         ISession session,
         IClock clock,
         INotifier notifier,
+        IDisplayManager<ForecastCreateViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<ForecastsController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
@@ -59,6 +67,8 @@ public sealed class ForecastsController : Controller
         _session = session;
         _clock = clock;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -117,6 +127,8 @@ public sealed class ForecastsController : Controller
 
         await PopulateAsync(model);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         return View(model);
     }
 
@@ -140,6 +152,7 @@ public sealed class ForecastsController : Controller
             ModelState.AddModelError(nameof(form.Weeks), H["Forecast 1 to 13 weeks."].Value);
         }
 
+        form.Editor = await _displayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew: true);
         if (ModelState.IsValid)
         {
             var created = await _forecastService.CreateAsync(form.PlanningGroupId, form.FromDate, form.FromDate.AddDays((form.Weeks * 7) - 1), form.Model, User.Identity?.Name, HttpContext.RequestAborted);

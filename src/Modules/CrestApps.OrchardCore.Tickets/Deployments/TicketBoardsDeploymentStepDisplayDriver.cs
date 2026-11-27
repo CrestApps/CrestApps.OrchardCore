@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -9,6 +10,17 @@ namespace CrestApps.OrchardCore.Tickets.Deployments;
 /// </summary>
 internal sealed class TicketBoardsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, TicketBoardsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TicketBoardsDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TicketBoardsDeploymentStepDisplayDriver(IStringLocalizer<TicketBoardsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc/>
     public override IDisplayResult Display(TicketBoardsDeploymentStep step, BuildDisplayContext context)
         => Combine(
@@ -17,5 +29,5 @@ internal sealed class TicketBoardsDeploymentStepDisplayDriver : DisplayDriver<De
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(TicketBoardsDeploymentStep step, BuildEditorContext context)
-        => View("TicketBoardsDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("TicketBoardsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Export"], "10"));
 }

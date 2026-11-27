@@ -1,15 +1,7 @@
 @model ChildTenantEditViewModel
-@inject OrchardCore.Modules.ILocalClock LocalClock
-
-@functions {
-    // Stored times are UTC; people read them in the site time zone.
-    private async Task<DateTime> LocalAsync(DateTime utc)
-        => (await LocalClock.ConvertToLocalAsync(DateTime.SpecifyKind(utc, DateTimeKind.Utc))).DateTime;
-}
 
 @{
     var labels = Model.Labels;
-    var suffix = Model.HostPattern?.Replace("{business}", string.Empty);
 }
 
 <zone Name="Title">
@@ -21,52 +13,7 @@
 <form asp-action="Edit" asp-route-id="@Model.EntryId" method="post" class="no-multisubmit" id="th-child-form">
     @Html.ValidationSummary(true, string.Empty, new { @class = "text-danger" })
 
-    <div class="ocat-wrapper">
-        <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Name"]</label>
-        <div class="ocat-end">
-            <input asp-for="DisplayName" class="form-control" autocomplete="off" maxlength="100" />
-            <span asp-validation-for="DisplayName" class="text-danger"></span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="Slug" class="ocat-label ocat-label-required">@T["Address"]</label>
-        <div class="ocat-end">
-            <div class="input-group">
-                <span class="input-group-text">@($"{Model.Scheme}://")</span>
-                <input asp-for="Slug" class="form-control" autocomplete="off" spellcheck="false" maxlength="40" pattern="[a-z0-9]([a-z0-9\-]*[a-z0-9])?" data-th-slug data-original="@Model.Info?.Entry.Slug" data-check-url="@Url.Action("CheckAddress", new { id = Model.EntryId })" />
-                @if (!string.IsNullOrEmpty(suffix))
-                {
-                    <span class="input-group-text">@suffix</span>
-                }
-            </div>
-            <span asp-validation-for="Slug" class="text-danger" data-th-slug-error></span>
-            <span class="hint" data-th-slug-status data-available-text="@T["Available:"]">@T["If you change the address, the old address stops working at once. Tell the people who use it."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="Description" class="ocat-label">@T["Description"]</label>
-        <div class="ocat-end">
-            <textarea asp-for="Description" class="form-control" rows="2" maxlength="500"></textarea>
-            <span asp-validation-for="Description" class="text-danger"></span>
-        </div>
-    </div>
-
-    @if (Model.Info is not null)
-    {
-        <div class="ocat-wrapper">
-            <span class="ocat-label">@T["Details"]</span>
-            <div class="ocat-end">
-                <dl class="row mb-0 small">
-                    <dt class="col-sm-3">@T["Created"]</dt>
-                    <dd class="col-sm-9">@((await LocalAsync(Model.Info.Entry.CreatedUtc)).ToString("f")) @if (!string.IsNullOrEmpty(Model.Info.Entry.CreatedByName)) { <span class="text-muted">@T["by {0}", Model.Info.Entry.CreatedByName]</span> }</dd>
-                    <dt class="col-sm-3">@T["Setup recipe"]</dt>
-                    <dd class="col-sm-9">@Model.Info.Entry.RecipeName</dd>
-                </dl>
-            </div>
-        </div>
-    }
+    @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
         <button class="btn btn-primary" type="submit">@T["Save"]</button>

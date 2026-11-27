@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AITestCaseViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Scenario">
+    <label asp-for="Scenario" class="ocat-label ocat-label-required">@T["Simulated customer"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Scenario" rows="6" class="form-control"></textarea>
+        <span asp-validation-for="Scenario" class="text-danger"></span>
+        <span class="hint">@T["Who the customer is, what they want and how they behave, for example <em>You are Sam, you were charged twice for one order and you are annoyed; you want a refund today</em>."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Variables">
+    <label asp-for="Variables" class="ocat-label">@T["Conversation variables"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Variables" rows="3" class="form-control font-monospace"></textarea>
+        <span class="hint">@T["One <code>name: value</code> per line, such as <code>balance_due: 120.50</code>. The AI sees them as it would see real conversation variables."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MockedTools">
+    <label asp-for="MockedTools" class="ocat-label">@T["Mocked tools"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="MockedTools" rows="3" class="form-control font-monospace"></textarea>
+        <span class="hint">@T["One <code>tool name: result</code> per line. The named tool returns the result instead of running, so the test books, charges and sends nothing for real. Other tools run as usual."]</span>
+    </div>
+</div>

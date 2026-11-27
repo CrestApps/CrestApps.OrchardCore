@@ -1,0 +1,92 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Kind">
+    <label asp-for="Kind" class="ocat-label">@T["Discount type"]</label>
+    <div class="ocat-end">
+        <select asp-for="Kind" class="form-select">
+            <option value="@((int)CouponKind.Percentage)">@T["Percentage"]</option>
+            <option value="@((int)CouponKind.FixedAmount)">@T["Fixed amount"]</option>
+            <option value="@((int)CouponKind.FreeShipping)">@T["Free shipping"]</option>
+            <option value="@((int)CouponKind.BuyXGetY)">@T["Buy X get Y"]</option>
+        </select>
+        <span class="hint" data-coupon-kinds="@((int)CouponKind.Percentage) @((int)CouponKind.FixedAmount) @((int)CouponKind.FreeShipping)">@T["Free shipping takes off the shipping charged at checkout, whatever the method."]</span>
+        <span class="hint" data-coupon-kinds="@((int)CouponKind.BuyXGetY)">@T["For every so many items bought, some items are cheaper or free. The cheapest qualifying items are the ones discounted."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Percentage" data-coupon-kinds="@((int)CouponKind.Percentage) @((int)CouponKind.BuyXGetY)">
+    <label asp-for="Percentage" class="ocat-label ocat-label-required">@T["Percentage"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Percentage" type="number" step="0.01" min="0" max="100" class="form-control" />
+        <span asp-validation-for="Percentage"></span>
+        <span class="hint" data-coupon-kinds="@((int)CouponKind.BuyXGetY)">@T["Taken off each item the customer gets. 100 makes them free."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Amount" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
+    <label asp-for="Amount" class="ocat-label ocat-label-required">@T["Amount"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Amount" type="number" step="0.01" min="0" class="form-control" />
+        <span asp-validation-for="Amount"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Currency" data-coupon-kinds="@((int)CouponKind.FixedAmount)">
+    <label asp-for="Currency" class="ocat-label ocat-label-required">@T["Currency"]</label>
+    <div class="ocat-limited">
+        @if (Model.Currencies is { Count: > 0 })
+        {
+            <select asp-for="Currency" asp-items="Model.Currencies" class="form-select">
+                <option value="">@T["Select a currency"]</option>
+            </select>
+        }
+        else
+        {
+            <input asp-for="Currency" class="form-control" maxlength="3" />
+        }
+        <span asp-validation-for="Currency"></span>
+    </div>
+</div>
+
+<div data-coupon-kinds="@((int)CouponKind.BuyXGetY)">
+    <div class="ocat-limited-wrapper" asp-validation-class-for="BuyQuantity">
+        <label asp-for="BuyQuantity" class="ocat-label ocat-label-required">@T["Customer buys"]</label>
+        <div class="ocat-limited">
+            <input asp-for="BuyQuantity" type="number" min="1" class="form-control" />
+            <span asp-validation-for="BuyQuantity"></span>
+            <span class="hint">@T["How many qualifying items, chosen under What the customer buys below."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="GetQuantity">
+        <label asp-for="GetQuantity" class="ocat-label ocat-label-required">@T["Customer gets"]</label>
+        <div class="ocat-limited">
+            <input asp-for="GetQuantity" type="number" min="1" class="form-control" />
+            <span asp-validation-for="GetQuantity"></span>
+            <span class="hint">@T["How many items at the percentage off, chosen under What the customer gets below."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-limited-wrapper" asp-validation-class-for="MaxApplicationsPerOrder">
+        <label asp-for="MaxApplicationsPerOrder" class="ocat-label">@T["Times per order"]</label>
+        <div class="ocat-limited">
+            <input asp-for="MaxApplicationsPerOrder" type="number" min="1" class="form-control" />
+            <span asp-validation-for="MaxApplicationsPerOrder"></span>
+            <span class="hint">@T["Leave blank to apply as often as the order allows: buy 4 get 2 on a buy 2 get 1 offer."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Target" data-coupon-kinds="@((int)CouponKind.Percentage) @((int)CouponKind.FixedAmount)">
+    <label asp-for="Target" class="ocat-label">@T["Applies to"]</label>
+    <div class="ocat-end">
+        <select asp-for="Target" class="form-select">
+            <option value="@((int)DiscountTarget.OneTime)">@T["The one-time amount"]</option>
+            <option value="@((int)DiscountTarget.FirstCycle)">@T["The first billing cycle"]</option>
+        </select>
+        <span class="hint">@T["A first-cycle discount applies once. It does not reduce later cycles."]</span>
+    </div>
+</div>

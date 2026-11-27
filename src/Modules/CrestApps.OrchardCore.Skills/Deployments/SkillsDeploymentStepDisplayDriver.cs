@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -6,6 +7,13 @@ namespace CrestApps.OrchardCore.Skills.Deployments;
 
 internal sealed class SkillsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, SkillsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public SkillsDeploymentStepDisplayDriver(IStringLocalizer<SkillsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(SkillsDeploymentStep step, BuildDisplayContext context)
     {
         return CombineAsync(
@@ -19,7 +27,7 @@ internal sealed class SkillsDeploymentStepDisplayDriver : DisplayDriver<Deployme
         {
             model.IncludeAssignments = step.IncludeAssignments;
             model.IncludeCertificationRecords = step.IncludeCertificationRecords;
-        }).Location("Content");
+        }).Location(l => l.Zone("Content").Card(S["Skills And Certifications"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(SkillsDeploymentStep step, UpdateEditorContext context)

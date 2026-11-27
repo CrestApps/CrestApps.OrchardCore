@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Marketing.Navigation;
 using CrestApps.OrchardCore.Marketing.Outreach;
 using CrestApps.OrchardCore.Marketing.Services;
 using CrestApps.OrchardCore.Orders.Core.Services;
+using CrestApps.OrchardCore.Marketing.ViewModels;
 using CrestApps.OrchardCore.PersonalData.Core;
 using Fluid;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,5 +55,7 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<MarketingAdminMenu>();
         services.AddDisplayDriver<Segment, SegmentDisplayDriver>();
         services.AddDisplayDriver<Campaign, CampaignDisplayDriver>();
+        services.AddDisplayDriver<SegmentEditViewModel, SegmentEditDisplayDriver>();
+        services.AddDisplayDriver<CampaignEditViewModel, CampaignEditDisplayDriver>();
     }
 }

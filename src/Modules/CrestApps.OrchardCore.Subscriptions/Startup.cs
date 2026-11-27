@@ -45,6 +45,7 @@ using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.Subscriptions.ViewModels;
 
 namespace CrestApps.OrchardCore.Subscriptions;
 
@@ -322,6 +323,7 @@ public sealed class InstallmentPlansStartup : StartupBase
         services.AddNavigationProvider<InstallmentPlansAdminMenu>();
         services.AddPermissionProvider<InstallmentPlanPermissionsProvider>();
         services.AddDisplayDriver<InstallmentPlan, InstallmentPlanDisplayDriver>();
+        services.AddDisplayDriver<CreateInstallmentPlanViewModel, CreateInstallmentPlanDisplayDriver>();
 
         // Lets a role that holds only the installment plans permission open Settings > Installment Plans.
         services.AddSiteSettingsPermission(SubscriptionConstants.InstallmentPlans.SettingsGroupId, SubscriptionPermissions.ManageInstallmentPlans);

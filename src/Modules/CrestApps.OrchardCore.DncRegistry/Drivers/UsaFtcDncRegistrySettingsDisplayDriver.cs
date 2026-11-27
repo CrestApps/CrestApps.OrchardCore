@@ -53,7 +53,7 @@ public sealed class UsaFtcDncRegistrySettingsDisplayDriver : SiteDisplayDriver<U
             viewModel.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey);
             viewModel.OrganizationId = settings.OrganizationId;
             viewModel.BaseUrl = settings.BaseUrl;
-        }).Location("Content:5")
+        }).Location(l => l.Zone("Content", "5").Card(S["Connection"], "10"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
             _httpContextAccessor.HttpContext?.User,

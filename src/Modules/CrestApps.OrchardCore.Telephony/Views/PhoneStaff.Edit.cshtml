@@ -1,8 +1,7 @@
 @model CrestApps.OrchardCore.Telephony.ViewModels.PhoneStaffViewModel
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Phone"]</div>
-    <div class="card-body">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         @if (string.IsNullOrEmpty(Model.ExtensionId))
         {
             <p class="hint mb-0">@T["No extension yet."] <a href="@Url.Content("~/Admin/telephony/extension/create")">@T["Add an extension"]</a></p>

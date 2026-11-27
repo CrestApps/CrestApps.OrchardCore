@@ -69,7 +69,7 @@ internal sealed class UserStaffDisplayDriver : DisplayDriver<User>
             model.StaffMemberId = staff?.ItemId;
             model.JobTitle = staff?.JobTitle;
             model.Status = staff?.Status.ToString();
-        }).Location("Content:13");
+        }).Location(l => l.Zone("Content", "13").Card(S["Staff"], "13"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(User user, UpdateEditorContext context)

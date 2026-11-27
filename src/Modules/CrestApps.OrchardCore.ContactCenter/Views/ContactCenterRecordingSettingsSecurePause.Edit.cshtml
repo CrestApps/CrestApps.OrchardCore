@@ -1,0 +1,37 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model ContactCenterRecordingSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="hint">@T["Secure pause lets an agent suppress recording during a sensitive-data capture, such as a card or Social Security number, so the sensitive audio is never captured. Every pause and resume is authorized against the agent's own live interaction and recorded as an audit event."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="AllowAgentSecurePause" class="form-check-input" />
+            <label asp-for="AllowAgentSecurePause" class="form-check-label">@T["Allow agents to pause recording"]</label>
+            <span class="hint dashed">@T["When disabled, only automation or the provider may suppress capture, and the agent-facing secure-pause control is never shown."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="MaxSecurePauseSeconds">
+    <label asp-for="MaxSecurePauseSeconds" class="ocat-label">@T["Maximum secure-pause window (seconds)"]</label>
+    <div class="ocat-end">
+        <input type="number" min="0" asp-for="MaxSecurePauseSeconds" class="form-control" />
+        <span asp-validation-for="MaxSecurePauseSeconds" class="text-danger"></span>
+        <span class="hint">@T["The number of seconds a recording may remain paused before the platform automatically resumes it, so a pause that is never resumed cannot suppress capture for the rest of the call. Zero keeps a pause active until it is explicitly resumed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" asp-for="RequirePauseReason" class="form-check-input" />
+            <label asp-for="RequirePauseReason" class="form-check-label">@T["Require a reason to pause"]</label>
+            <span class="hint dashed">@T["When enabled, an agent must supply a reason when pausing recording, so the suppression gap is always accompanied by an auditable justification."]</span>
+        </div>
+    </div>
+</div>

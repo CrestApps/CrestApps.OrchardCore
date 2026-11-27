@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.ExchangeRates.Models;
 using CrestApps.OrchardCore.ExchangeRates.Services;
 using CrestApps.OrchardCore.ExchangeRates.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -17,10 +18,16 @@ public sealed class ExchangeRateDisplayDriver : DisplayDriver<ExchangeRate>
     private readonly IExchangeRateService _rates;
     private readonly ILocalClock _localClock;
 
-    public ExchangeRateDisplayDriver(IExchangeRateService rates, ILocalClock localClock)
+    internal readonly IStringLocalizer S;
+
+    public ExchangeRateDisplayDriver(
+        IExchangeRateService rates,
+        ILocalClock localClock,
+        IStringLocalizer<ExchangeRateDisplayDriver> stringLocalizer)
     {
         _rates = rates;
         _localClock = localClock;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -52,7 +59,7 @@ public sealed class ExchangeRateDisplayDriver : DisplayDriver<ExchangeRate>
             model.Rate = rate.Rate;
             model.Date = rate.Date == default ? DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime) : rate.Date;
             model.Source = rate.Source;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["The Rate"], "10"));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(ExchangeRate rate, UpdateEditorContext context)

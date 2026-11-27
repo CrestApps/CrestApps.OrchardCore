@@ -61,7 +61,7 @@ internal sealed class TimeZoneMapDisplayDriver : DisplayDriver<TimeZoneMap>
             viewModel.Name = model.Name;
             viewModel.TimeZoneId = NormalizeTimeZoneId(model.TimeZoneId);
             viewModel.TimeZones = GetTimeZoneOptions(viewModel.TimeZoneId);
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(TimeZoneMap model, UpdateEditorContext context)

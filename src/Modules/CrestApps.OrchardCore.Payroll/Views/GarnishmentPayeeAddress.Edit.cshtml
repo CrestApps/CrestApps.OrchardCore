@@ -1,9 +1,9 @@
 @model GarnishmentPayeeAddressViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Payee's mailing address"]</div>
-    <div class="card-body">
-        <p class="hint">@T["Printed on checks to the payee."]</p>
-        @await DisplayAsync(Model.AddressEditor)
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Printed on checks to the payee."]</span>
     </div>
 </div>
+
+@await DisplayAsync(Model.AddressEditor)

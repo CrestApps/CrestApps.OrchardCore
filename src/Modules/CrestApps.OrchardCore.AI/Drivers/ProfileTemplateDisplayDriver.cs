@@ -58,32 +58,32 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             model.Orchestrators = _orchestratorOptions.GetOrchestratorDescriptors()
             .Select(x => new SelectListItem(x.Value.Title ?? x.Key, x.Key))
             .ToList();
-        }).Location("Content:2%General;1");
+        }).Location(l => l.Zone("Content", "2").Card(S["General"], "1"));
 
         var generalFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateGeneralFields_Edit", model =>
         {
             PopulateProfileFields(metadata, model);
-        }).Location("Content:5%General;1");
+        }).Location(l => l.Zone("Content", "5").Card(S["General"], "1"));
 
         var interactionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInteractionFields_Edit", model =>
         {
             PopulateProfileFields(metadata, model);
-        }).Location("Content:6%General;1");
+        }).Location(l => l.Zone("Content", "6").Card(S["General"], "1"));
 
         var instructionFieldsResult = Initialize<AIProfileTemplateProfileFieldsViewModel>("AIProfileTemplateInstructionFields_Edit", model =>
         {
             PopulateProfileFields(metadata, model);
-        }).Location("Content:1%Instructions;4");
+        }).Location(l => l.Zone("Content", "1").Card(S["Instructions"], "4"));
 
         var systemInstructionsResult = Initialize<AIProfileTemplateParametersViewModel>("AIProfileTemplateSystemInstructions_Edit", model =>
         {
             PopulateParameters(metadata, model);
-        }).Location("Content:5%Instructions;4");
+        }).Location(l => l.Zone("Content", "5").Card(S["Instructions"], "4"));
 
         var parametersResult = Initialize<AIProfileTemplateParametersViewModel>("AIProfileTemplateParameters_Edit", model =>
         {
             PopulateParameters(metadata, model);
-        }).Location("Content:1%Parameters;5");
+        }).Location(l => l.Zone("Content", "1").Card(S["Parameters"], "5"));
 
         var results = new List<IDisplayResult>
         {
@@ -221,6 +221,6 @@ internal sealed class ProfileTemplateDisplayDriver : DisplayDriver<AIProfileTemp
             .Select(h => new SelectListItem(h.Name, h.Name))
             .OrderBy(x => x.Text)
             .ToList();
-        }).Location("Content:9%General;1");
+        }).Location(l => l.Zone("Content", "9").Card(S["General"], "1"));
     }
 }

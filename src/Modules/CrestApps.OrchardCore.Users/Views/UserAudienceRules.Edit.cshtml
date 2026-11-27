@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Users
+@using CrestApps.OrchardCore.Users.Audiences
+@model UserAudienceEditViewModel
+
+@{
+    var rules = Model.Rules.ToList();
+
+    if (rules.Count == 0)
+    {
+        rules.Add(new UserAudienceRuleEditViewModel());
+    }
+}
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Join" class="ocat-label">@T["Who is in it"]</label>
+    <div class="ocat-limited">
+        <select asp-for="Join" class="form-select">
+            <option value="@UserAudienceJoin.All">@T["People who match every rule"]</option>
+            <option value="@UserAudienceJoin.Any">@T["People who match any rule"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Rules"]</label>
+    <div class="ocat-end">
+        <div id="user-audience-rules">
+            @for (var i = 0; i < rules.Count; i++)
+            {
+                <partial name="UserAudienceRuleRow" model="@(new UserAudienceRuleRowModel { Index = i.ToString(System.Globalization.CultureInfo.InvariantCulture), Rule = rules[i], Sources = Model.Sources })" />
+            }
+        </div>
+        <template id="user-audience-rule-template">
+            <partial name="UserAudienceRuleRow" model="@(new UserAudienceRuleRowModel { Index = "__index__", Rule = new UserAudienceRuleEditViewModel(), Sources = Model.Sources })" />
+        </template>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="user-audience-add-rule"><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add rule"]</button>
+        <span class="hint d-block mt-1">@T["Within a rule a person matches any of the values chosen."]</span>
+    </div>
+</div>

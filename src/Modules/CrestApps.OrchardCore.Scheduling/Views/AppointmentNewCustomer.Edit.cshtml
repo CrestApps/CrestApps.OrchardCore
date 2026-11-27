@@ -1,0 +1,26 @@
+@model NewAppointmentViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label ocat-label-required" for="CustomerName">@T["Name"]</label>
+    <div class="ocat-end">
+        <input id="CustomerName" name="CustomerName" value="@Model.CustomerName" class="form-control" required />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="CustomerEmail">@T["Email"]</label>
+    <div class="ocat-end">
+        <input id="CustomerEmail" name="CustomerEmail" value="@Model.CustomerEmail" type="email" class="form-control" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="CustomerPhone">@T["Phone"]</label>
+    <div class="ocat-end">
+        <input id="CustomerPhone" name="CustomerPhone" value="@Model.CustomerPhone" type="tel" class="form-control" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="Notes">@T["Notes"]</label>
+    <div class="ocat-end">
+        <textarea id="Notes" name="Notes" class="form-control" rows="2">@Model.Notes</textarea>
+    </div>
+</div>

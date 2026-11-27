@@ -1,0 +1,117 @@
+@using CrestApps.OrchardCore.ContactCenter.Core.Models
+@model AgentEntitlementViewModel
+
+@{
+    var skillsPrefix = Html.NameFor(m => m.SkillProficiencies);
+    var skillsId = Html.IdFor(m => m.SkillProficiencies);
+    var noSkillTitle = T["Select a skill"].Value;
+    var proficiencyLevels = Enumerable.Range(AgentSkill.MinimumProficiency, AgentSkill.MaximumProficiency - AgentSkill.MinimumProficiency + 1).ToArray();
+}
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Skills"]</label>
+    <div class="ocat-end">
+        @* Each skill is drawn like an Orchard bag-part item: a collapsible card whose header names the skill, with the
+           delete (trash) button on its right. *@
+        <div data-repeater data-repeater-prefix="@skillsPrefix">
+            <div data-repeater-rows>
+                @for (var i = 0; i < Model.SkillProficiencies.Count; i++)
+                {
+                    var row = Model.SkillProficiencies[i];
+                    var key = i.ToString();
+                    var itemId = $"{skillsId}-{key}";
+                    var skillName = Model.SkillOptions.FirstOrDefault(option => string.Equals(option.Value, row.SkillId, StringComparison.OrdinalIgnoreCase))?.Text;
+
+                    <div class="widget-editor card mb-2" data-repeater-row>
+                        <input type="hidden" name="@(skillsPrefix).Index" value="@key" />
+                        <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(itemId)-body" aria-expanded="true" aria-controls="@(itemId)-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                            <span class="flex-grow-1 text-truncate">
+                                <span data-repeater-title data-repeater-title-empty="@noSkillTitle">@(string.IsNullOrEmpty(skillName) ? noSkillTitle : skillName)</span>
+                                <span class="hint dashed">@T["Skill"]</span>
+                            </span>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-danger" data-repeater-remove title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            </div>
+                        </div>
+                        <div id="@(itemId)-body" class="collapse show">
+                            <div class="widget-editor-body card-body">
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label" for="@(itemId)-skill">@T["Skill"]</label>
+                                    <div class="ocat-end">
+                                        <select id="@(itemId)-skill" name="@(skillsPrefix)[@key].SkillId" class="form-select" data-repeater-title-source>
+                                            <option value="">@T["Select a skill"]</option>
+                                            @foreach (var option in Model.SkillOptions)
+                                            {
+                                                <option value="@option.Value" selected="@(string.Equals(option.Value, row.SkillId, StringComparison.OrdinalIgnoreCase))">@option.Text</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="ocat-wrapper">
+                                    <label class="ocat-label" for="@(itemId)-proficiency">@T["Proficiency"]</label>
+                                    <div class="ocat-end">
+                                        <select id="@(itemId)-proficiency" name="@(skillsPrefix)[@key].Proficiency" class="form-select">
+                                            @foreach (var level in proficiencyLevels)
+                                            {
+                                                <option value="@level" selected="@(level == row.Proficiency)">@level</option>
+                                            }
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+            <template data-repeater-template>
+                <div class="widget-editor card mb-2" data-repeater-row>
+                    <input type="hidden" name="@(skillsPrefix).Index" value="__KEY__" />
+                    <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(skillsId)-__KEY__-body" aria-expanded="true" aria-controls="@(skillsId)-__KEY__-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                        <span class="flex-grow-1 text-truncate">
+                            <span data-repeater-title data-repeater-title-empty="@noSkillTitle">@noSkillTitle</span>
+                            <span class="hint dashed">@T["Skill"]</span>
+                        </span>
+                        <div class="btn-group btn-group-sm" role="group">
+                            <button type="button" class="btn btn-danger" data-repeater-remove title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                        </div>
+                    </div>
+                    <div id="@(skillsId)-__KEY__-body" class="collapse show">
+                        <div class="widget-editor-body card-body">
+                            <div class="ocat-wrapper">
+                                <label class="ocat-label" for="@(skillsId)-__KEY__-skill">@T["Skill"]</label>
+                                <div class="ocat-end">
+                                    <select id="@(skillsId)-__KEY__-skill" name="@(skillsPrefix)[__KEY__].SkillId" class="form-select" data-repeater-title-source>
+                                        <option value="">@T["Select a skill"]</option>
+                                        @foreach (var option in Model.SkillOptions)
+                                        {
+                                            <option value="@option.Value">@option.Text</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="ocat-wrapper">
+                                <label class="ocat-label" for="@(skillsId)-__KEY__-proficiency">@T["Proficiency"]</label>
+                                <div class="ocat-end">
+                                    <select id="@(skillsId)-__KEY__-proficiency" name="@(skillsPrefix)[__KEY__].Proficiency" class="form-select">
+                                        @foreach (var level in proficiencyLevels)
+                                        {
+                                            <option value="@level" selected="@(level == AgentSkill.DefaultProficiency)">@level</option>
+                                        }
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </template>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add skill"]</button>
+        </div>
+        <span class="hint">@T["Proficiency runs from 1 (basic) to 5 (expert). A queue that requires a skill at a minimum proficiency only offers its work to agents at or above it."]</span>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ContactCenterRepeaterScript")

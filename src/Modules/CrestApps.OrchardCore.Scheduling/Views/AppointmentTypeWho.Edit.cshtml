@@ -1,0 +1,93 @@
+@model AppointmentTypeViewModel
+
+@{
+    var requirementsId = Html.IdFor(m => m.Requirements).ToString();
+}
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper"><div class="ocat-end-offset"><span class="hint">@T["The staff, rooms and equipment that take this appointment. To need one of each kind, such as one person and one room, put each kind in its own group: a time is offered only when every group has someone or something free."]</span></div></div>
+@for (var i = 0; i < Model.Requirements.Count; i++)
+{
+    var group = Model.Requirements[i];
+    var selected = group.ResourceIds ?? [];
+    <div class="border rounded p-3 mb-3@(i < Model.VisibleRequirements ? string.Empty : " d-none")" data-requirement>
+        <div class="fw-semibold mb-2">@T["Group {0}", i + 1]</div>
+        <div class="ocat-wrapper"><label for="@(requirementsId)_@(i)_Name" class="ocat-label">@T["Name"]</label><div class="ocat-end"><input id="@(requirementsId)_@(i)_Name" name="@Html.NameFor(m => m.Requirements[i].Name)" value="@group.Name" class="form-control" style="max-width: 22rem" placeholder="@T["Such as Staff or Room"]" /></div></div>
+        <div class="ocat-wrapper"><label for="@(requirementsId)_@(i)_ResourceIds" class="ocat-label">@T["Resources"]</label><div class="ocat-end">
+            <select id="@(requirementsId)_@(i)_ResourceIds" name="@Html.NameFor(m => m.Requirements[i].ResourceIds)" class="selectpicker show-tick" multiple data-live-search="true" data-width="100%" title="@T["Choose resources"]" data-requirement-resources>
+                @foreach (var option in Model.ResourceOptions)
+                {
+                    <option value="@option.Value" selected="@selected.Contains(option.Value)">@option.Text</option>
+                }
+            </select>
+        </div></div>
+        <div class="ocat-wrapper"><label for="@(requirementsId)_@(i)_Assignment" class="ocat-label">@T["Pick"]</label><div class="ocat-end">
+            <select id="@(requirementsId)_@(i)_Assignment" name="@Html.NameFor(m => m.Requirements[i].Assignment)" class="form-select" style="max-width: 22rem" data-requirement-assignment>
+                @foreach (var option in Model.AssignmentOptions)
+                {
+                    <option value="@option.Value" selected="@(option.Value == group.Assignment)">@option.Text</option>
+                }
+            </select>
+        </div></div>
+        <div class="ocat-wrapper" data-weights><span class="ocat-label">@T["Share of appointments"]</span><div class="ocat-end">
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var option in Model.ResourceOptions)
+                {
+                    var weight = group.Weights is not null && group.Weights.TryGetValue(option.Value, out var value) && value > 0 ? value : 1;
+                    <div class="input-group input-group-sm" style="max-width: 16rem" data-weight-for="@option.Value">
+                        <label class="input-group-text" for="@(requirementsId)_@(i)_Weights_@option.Value">@option.Text</label>
+                        <input id="@(requirementsId)_@(i)_Weights_@option.Value" name="@(Html.NameFor(m => m.Requirements[i].Weights))[@option.Value]" type="number" min="1" max="100" value="@weight" class="form-control" />
+                    </div>
+                }
+            </div>
+            <span class="hint">@T["With round robin, a resource with 2 takes about twice as many appointments as one with 1."]</span>
+        </div></div>
+    </div>
+}
+@if (Model.VisibleRequirements < Model.Requirements.Count)
+{
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button type="button" class="btn btn-sm btn-secondary" data-add-requirement><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a group"]</button></div></div>
+}
+<div class="ocat-wrapper"><label asp-for="Capacity" class="ocat-label">@T["Places per appointment"]</label><div class="ocat-end"><input asp-for="Capacity" type="number" min="1" class="form-control" style="max-width: 10rem" /><span class="hint">@T["More than 1 makes it a class or group session that several customers book."]</span></div></div>
+
+<script at="Foot">
+    (function () {
+        // Each group shows a share for its chosen resources only while it picks by round robin.
+        document.querySelectorAll('[data-requirement]').forEach(function (group) {
+            var resources = group.querySelector('[data-requirement-resources]');
+            var assignment = group.querySelector('[data-requirement-assignment]');
+            var weights = group.querySelector('[data-weights]');
+            var update = function () {
+                var chosen = Array.from(resources.selectedOptions).map(function (option) { return option.value; });
+                var roundRobin = assignment.value === 'RoundRobin';
+
+                group.querySelectorAll('[data-weight-for]').forEach(function (item) {
+                    item.classList.toggle('d-none', !chosen.includes(item.getAttribute('data-weight-for')));
+                });
+                weights.classList.toggle('d-none', !roundRobin || chosen.length === 0);
+            };
+
+            resources.addEventListener('change', update);
+            assignment.addEventListener('change', update);
+            update();
+        });
+
+        var add = document.querySelector('[data-add-requirement]');
+
+        if (add) {
+            add.addEventListener('click', function () {
+                var next = document.querySelector('[data-requirement].d-none');
+
+                if (next) {
+                    next.classList.remove('d-none');
+                }
+
+                if (!document.querySelector('[data-requirement].d-none')) {
+                    add.classList.add('d-none');
+                }
+            });
+        }
+    })();
+</script>

@@ -62,8 +62,10 @@ internal sealed class IncomeTaxRuleDisplayDriver : DisplayDriver<IncomeTaxRule>
     public override IDisplayResult Edit(IncomeTaxRule rule, BuildEditorContext context)
     {
         return Combine(
-            Initialize<IncomeTaxRuleViewModel>("IncomeTaxRuleFields_Edit", model => Fill(model, rule, context)).Location("Content:1"),
-            Initialize<IncomeTaxRuleViewModel>("IncomeTaxRuleWhen_Edit", model => Fill(model, rule, context)).Location("Content:20"));
+            Initialize<IncomeTaxRuleViewModel>("IncomeTaxRuleFields_Edit", model => Fill(model, rule, context))
+                .Location(l => l.Zone("Content", "1").Card(S["The Tax"], "10")),
+            Initialize<IncomeTaxRuleViewModel>("IncomeTaxRuleWhen_Edit", model => Fill(model, rule, context))
+                .Location(l => l.Zone("Content", "20").Card(S["When"], "30")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(IncomeTaxRule rule, UpdateEditorContext context)

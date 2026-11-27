@@ -35,10 +35,20 @@ public sealed class SftpResourceDisplayDriver : SftpConnectionDisplayDriverBase<
             return null;
         }
 
-        return Initialize<SftpConnectionFieldsViewModel>("SftpResourceConnection_Edit", model =>
-        {
-            PopulateConnectionFields(resource.GetOrCreate<SftpConnectionMetadata>(), model);
-        }).Location("Content:5");
+        return Combine(
+            Initialize<SftpConnectionFieldsViewModel>("SftpResourceServer_Edit", model => Populate(resource, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Server"], "40")),
+            Initialize<SftpConnectionFieldsViewModel>("SftpResourceAuthentication_Edit", model => Populate(resource, model))
+                .Location(l => l.Zone("Content", "5.05").Card(S["Authentication"], "45")),
+            Initialize<SftpConnectionFieldsViewModel>("SftpResourceConnectionOptions_Edit", model => Populate(resource, model))
+                .Location(l => l.Zone("Content", "5.2").Card(S["Connection Options"], "60")),
+            Initialize<SftpConnectionFieldsViewModel>("SftpResourceProxy_Edit", model => Populate(resource, model))
+                .Location(l => l.Zone("Content", "5.3").Card(S["Proxy"], "70")));
+    }
+
+    private static void Populate(McpResource resource, SftpConnectionFieldsViewModel model)
+    {
+        PopulateConnectionFields(resource.GetOrCreate<SftpConnectionMetadata>(), model);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpResource resource, UpdateEditorContext context)

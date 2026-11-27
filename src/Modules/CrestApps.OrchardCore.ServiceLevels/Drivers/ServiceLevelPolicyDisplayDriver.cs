@@ -76,13 +76,13 @@ internal sealed class ServiceLevelPolicyDisplayDriver : DisplayDriver<ServiceLev
                 model.HoursScheduleId = policy.HoursScheduleId;
                 model.WarningPercent = policy.WarningPercent;
                 model.ScopeDisplayName = ServiceLevelScopeNames.Get(_localizerFactory, _scopes, policy.Scope);
-            }).Location("Content:1%General;1"),
+            }).Location(l => l.Zone("Content", "1").Card(S["General"], "1")),
             Initialize<ServiceLevelTargetsViewModel>("ServiceLevelPolicyTargets_Edit", async model =>
             {
                 model.Metrics = await GetMetricsAsync(scope);
                 model.Priorities = await GetPrioritiesAsync(scope);
                 model.Cells = ServiceLevelTargetGrid.BuildCells(policy.Targets, model.Metrics, model.Priorities);
-            }).Location("Content:1%Targets;2"));
+            }).Location(l => l.Zone("Content", "1").Card(S["Targets"], "2")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ServiceLevelPolicy policy, UpdateEditorContext context)

@@ -36,7 +36,7 @@ internal sealed class DisbursementsDeploymentStepDisplayDriver : DisplayDriver<D
 
     public override IDisplayResult Edit(DisbursementsDeploymentStep step, BuildEditorContext context)
     {
-        return View("DisbursementsDeploymentStep_Fields_Edit", step).Location("Content");
+        return View("DisbursementsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Disbursements"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(DisbursementsDeploymentStep step, UpdateEditorContext context)

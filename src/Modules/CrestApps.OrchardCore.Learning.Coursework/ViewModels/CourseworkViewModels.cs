@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Learning.Coursework.ViewModels;
 
@@ -268,4 +269,8 @@ public class SubmissionGradingViewModel
 
     /// <summary>Gets or sets whether the grader used scoring help (a suggestion from AI) for this grade.</summary>
     public bool AIAssisted { get; set; }
+
+    /// <summary>Gets or sets the editor the display drivers build: its fields in cards.</summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

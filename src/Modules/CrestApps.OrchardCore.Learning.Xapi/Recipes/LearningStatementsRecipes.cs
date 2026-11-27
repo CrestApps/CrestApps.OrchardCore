@@ -173,13 +173,20 @@ internal sealed class LearningStatementsDeploymentSource : DeploymentSourceBase<
 
 internal sealed class LearningStatementsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, LearningStatementsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public LearningStatementsDeploymentStepDisplayDriver(IStringLocalizer<LearningStatementsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(LearningStatementsDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("LearningStatementsDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("LearningStatementsDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(LearningStatementsDeploymentStep step, BuildEditorContext context)
-        => View("LearningStatementsDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("LearningStatementsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Statements"], "10"));
 }
 
 internal sealed class LearningStatementsRecipeStepSchema : IRecipeStep

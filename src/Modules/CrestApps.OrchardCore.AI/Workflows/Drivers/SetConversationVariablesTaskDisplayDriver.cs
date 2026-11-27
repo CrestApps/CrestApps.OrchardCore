@@ -38,6 +38,13 @@ public sealed class SetConversationVariablesTaskDisplayDriver : ActivityDisplayD
         => model.Variables = activity.Variables;
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(SetConversationVariablesTask activity, BuildEditorContext context)
+    {
+        return Initialize<SetConversationVariablesTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Variables"], "10"));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(SetConversationVariablesTask activity, UpdateEditorContext context)
     {
         var model = new SetConversationVariablesTaskViewModel();

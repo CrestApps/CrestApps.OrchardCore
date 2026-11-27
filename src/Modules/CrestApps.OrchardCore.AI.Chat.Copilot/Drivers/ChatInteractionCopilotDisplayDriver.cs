@@ -111,6 +111,6 @@ internal sealed class ChatInteractionCopilotDisplayDriver : DisplayDriver<ChatIn
             {
                 model.AvailableModels = [];
             }
-        }).Location("Parameters:4#Settings;1");
+        }).Location(l => l.Zone("Parameters", "4").Tab(S["Settings"], "1").Card(S["General"], "1"));
     }
 }

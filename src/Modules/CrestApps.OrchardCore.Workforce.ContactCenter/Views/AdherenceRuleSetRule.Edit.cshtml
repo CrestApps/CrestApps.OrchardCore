@@ -1,0 +1,48 @@
+@model AdherenceRuleCardViewModel
+@using CrestApps.OrchardCore.ContactCenter.Models
+@inject IStringLocalizer<AdherenceRuleSetEditViewModel> S
+
+@{
+    var i = Model.Index;
+    var rule = Model.Rule;
+}
+
+<input type="hidden" name="Rules[@i].Kind" value="@rule.Kind" />
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["In adherence when"]</span>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-3">
+            @foreach (var status in Enum.GetValues<AgentPresenceStatus>())
+            {
+                var id = "rule-" + i + "-" + status;
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="@id" name="Rules[@i].AllowedStatuses" value="@status" checked="@rule.AllowedStatuses.Contains(status.ToString())" />
+                    <label class="form-check-label" for="@id">@AdherenceNames.Status(S, status)</label>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="rule-@i-reasons">@T["Reasons"]</label>
+    <div class="ocat-end">
+        <input class="form-control" id="rule-@i-reasons" name="Rules[@i].AllowedReasons" value="@rule.AllowedReasons" />
+        <span class="hint">@T["Optional, comma-separated, such as Meal."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="rule-@i-start">@T["Start grace (min)"]</label>
+    <div class="ocat-end"><input class="form-control" type="number" min="0" id="rule-@i-start" name="Rules[@i].StartGraceMinutes" value="@rule.StartGraceMinutes" style="max-width: 10rem" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="rule-@i-end">@T["End grace (min)"]</label>
+    <div class="ocat-end"><input class="form-control" type="number" min="0" id="rule-@i-end" name="Rules[@i].EndGraceMinutes" value="@rule.EndGraceMinutes" style="max-width: 10rem" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="rule-@i-min">@T["Shortest slip (min)"]</label>
+    <div class="ocat-end"><input class="form-control" type="number" min="0" id="rule-@i-min" name="Rules[@i].MinimumOutMinutes" value="@rule.MinimumOutMinutes" style="max-width: 10rem" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label" for="rule-@i-alert">@T["Alert after (min)"]</label>
+    <div class="ocat-end"><input class="form-control" type="number" min="0" id="rule-@i-alert" name="Rules[@i].AlertAfterMinutes" value="@rule.AlertAfterMinutes" style="max-width: 10rem" /></div>
+</div>

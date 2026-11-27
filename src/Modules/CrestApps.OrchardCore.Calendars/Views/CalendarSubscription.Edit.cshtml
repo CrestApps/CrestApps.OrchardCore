@@ -3,7 +3,11 @@
 <div data-calendar-subscription data-address-providers="@string.Join(',', Model.AddressProviders)" data-writable-providers="@string.Join(',', Model.WritableProviders)">
     @if (Model.NeedsReconnect)
     {
-        <div class="alert alert-warning">@T["The external calendar refused access, so synchronization is paused. Reconnect the account if the provider needs it, then save the calendar to start again."]</div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="alert alert-warning mb-0">@T["The external calendar refused access, so synchronization is paused. Reconnect the account if the provider needs it, then save the calendar to start again."]</div>
+            </div>
+        </div>
     }
 
     <div class="ocat-wrapper">

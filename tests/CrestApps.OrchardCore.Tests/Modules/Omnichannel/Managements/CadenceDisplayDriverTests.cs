@@ -34,7 +34,7 @@ public sealed class CadenceDisplayDriverTests
         };
 
         // Act
-        await new CadenceDisplayDriver().UpdateAsync(cadence, PostedFormUpdateModel.CreateContext(model));
+        await new CadenceDisplayDriver(RecipeRoundTrip.Localizer<CadenceDisplayDriver>()).UpdateAsync(cadence, PostedFormUpdateModel.CreateContext(model));
 
         // Assert
         Assert.Equal("Renewal follow-up", cadence.DisplayText);
@@ -56,7 +56,7 @@ public sealed class CadenceDisplayDriverTests
         var model = new CadenceViewModel { DisplayText = "Empty", Steps = null };
 
         // Act
-        await new CadenceDisplayDriver().UpdateAsync(cadence, PostedFormUpdateModel.CreateContext(model));
+        await new CadenceDisplayDriver(RecipeRoundTrip.Localizer<CadenceDisplayDriver>()).UpdateAsync(cadence, PostedFormUpdateModel.CreateContext(model));
 
         // Assert
         Assert.Empty(cadence.Steps);

@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Scheduling.Migrations;
 using CrestApps.OrchardCore.Scheduling.Models;
 using CrestApps.OrchardCore.Scheduling.Navigation;
 using CrestApps.OrchardCore.Scheduling.Services;
+using CrestApps.OrchardCore.Scheduling.ViewModels;
 using CrestApps.OrchardCore.Staff;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -65,6 +66,7 @@ public sealed class Startup : StartupBase
 
         // The editors are built by drivers, so other modules add sections to them with drivers of their own.
         services.AddDisplayDriver<AppointmentType, AppointmentTypeFieldsDisplayDriver>();
+        services.AddDisplayDriver<NewAppointmentViewModel, NewAppointmentDisplayDriver>();
         services.AddDisplayDriver<SchedulingResource, SchedulingResourceFieldsDisplayDriver>();
         services.AddDisplayDriver<WaitlistEntry, WaitlistEntryDisplayDriver>();
         services.AddPermissionProvider<SchedulingPermissionsProvider>();

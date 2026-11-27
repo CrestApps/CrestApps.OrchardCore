@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Learning.Pipelines;
 using CrestApps.OrchardCore.Learning.Recipes;
 using CrestApps.OrchardCore.Learning.Reports;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Learning.ViewModels;
 using CrestApps.OrchardCore.Learning.Shapes;
 using CrestApps.OrchardCore.Learning.Webhooks;
 using CrestApps.OrchardCore.Learning.Workflows;
@@ -112,6 +113,7 @@ public sealed class Startup : StartupBase
             .UseDisplayDriver<VideoLessonPartDisplayDriver>();
 
         services.AddDisplayDriver<Enrollment, EnrollmentRowDisplayDriver>();
+        services.AddDisplayDriver<EnrollViewModel, EnrollDisplayDriver>();
         services.AddPermissionProvider<LearningPermissionsProvider>();
         services.AddNavigationProvider<LearningAdminMenu>();
         services.AddSingleton<IBackgroundTask, LearningDailyBackgroundTask>();

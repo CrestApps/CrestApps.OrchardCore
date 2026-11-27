@@ -5,6 +5,8 @@ using CrestApps.OrchardCore.Customers.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Customers.Controllers;
 
@@ -18,14 +20,23 @@ namespace CrestApps.OrchardCore.Customers.Controllers;
 public sealed class MyAccountController : Controller
 {
     private readonly CustomerAccountPages _pages;
+    private readonly IDisplayManager<MyAccountViewModel> _profileDisplayManager;
+    private readonly IDisplayManager<CustomerAddressViewModel> _addressDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
     public MyAccountController(
         CustomerAccountPages pages,
+        IDisplayManager<MyAccountViewModel> profileDisplayManager,
+        IDisplayManager<CustomerAddressViewModel> addressDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<MyAccountController> htmlLocalizer)
     {
         _pages = pages;
+        _profileDisplayManager = profileDisplayManager;
+        _addressDisplayManager = addressDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -39,7 +50,10 @@ public sealed class MyAccountController : Controller
             return Forbid();
         }
 
-        return View(await _pages.BuildAccountAsync(customer, input: null));
+        var model = await _pages.BuildAccountAsync(customer, input: null);
+        model.Editor = await _profileDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -54,11 +68,15 @@ public sealed class MyAccountController : Controller
             return Forbid();
         }
 
+        // The page's own values (the email, the kinds to choose from) are filled in before the editor reads the form.
+        await _pages.BuildAccountAsync(customer, model);
+        model.Editor = await _profileDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         var result = await _pages.SaveProfileAsync(customer, model, ModelState, HttpContext.RequestAborted);
 
         if (result == CustomerAccountSaveResult.Invalid)
         {
-            return View(await _pages.BuildAccountAsync(customer, model));
+            return View(model);
         }
 
         await _pages.NotifyAsync(result, H["Your details were saved."]);
@@ -76,7 +94,7 @@ public sealed class MyAccountController : Controller
             return Forbid();
         }
 
-        return View("AddressEdit", await _pages.BuildAddressEditorAsync(customer, null));
+        return View("AddressEdit", await BuildAddressEditorAsync(customer, null, input: null));
     }
 
     [HttpPost]
@@ -102,7 +120,7 @@ public sealed class MyAccountController : Controller
             return NotFound();
         }
 
-        return View(await _pages.BuildAddressEditorAsync(customer, address));
+        return View(await BuildAddressEditorAsync(customer, address, input: null));
     }
 
     [HttpPost]
@@ -143,6 +161,9 @@ public sealed class MyAccountController : Controller
             return Forbid();
         }
 
+        // The fields of the page are read first, so what other modules add to the editor is validated with them.
+        await _addressDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: addressId is null);
+
         var (result, entry) = await _pages.SaveAddressAsync(customer, addressId, model, ModelState, HttpContext.RequestAborted);
 
         if (result == CustomerAccountSaveResult.NotFound)
@@ -152,12 +173,22 @@ public sealed class MyAccountController : Controller
 
         if (result == CustomerAccountSaveResult.Invalid)
         {
-            return View("AddressEdit", await _pages.BuildAddressEditorAsync(customer, entry, model));
+            return View("AddressEdit", await BuildAddressEditorAsync(customer, entry, model));
         }
 
         await _pages.NotifyAsync(result, H["The address was saved."]);
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // The address page: the customer's own address editor, built in cards.
+    private async Task<CustomerAddressViewModel> BuildAddressEditorAsync(Customer customer, CustomerAddress address, CustomerAddressViewModel input)
+    {
+        var model = await _pages.BuildAddressEditorAsync(customer, address, input);
+
+        model.Editor = await _addressDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: address is null);
+
+        return model;
     }
 
     private Task<Customer> GetCustomerAsync()

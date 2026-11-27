@@ -1,0 +1,17 @@
+@model WorkforceTeamEditViewModel
+
+<div class="ocat-wrapper"><span class="ocat-label">@T["Address"]</span><div class="ocat-end"><span class="form-control-plaintext">@(string.IsNullOrEmpty(Model.TeamAddress) ? T["None"] : Model.TeamAddress)</span><span class="hint">@T["The team's address, set in its Address card. The site coordinates are found from it when left empty."]</span></div></div>
+@if (Model.ShowTimeClock)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="Latitude" class="ocat-label">@T["Site coordinates"]</label>
+        <div class="ocat-end">
+            <div class="d-flex flex-wrap gap-2">
+                <input asp-for="Latitude" type="number" step="0.000001" min="-90" max="90" class="form-control" style="max-width: 12rem" placeholder="@T["Latitude"]" aria-label="@T["Latitude"]" />
+                <input asp-for="Longitude" type="number" step="0.000001" min="-180" max="180" class="form-control" style="max-width: 12rem" placeholder="@T["Longitude"]" aria-label="@T["Longitude"]" />
+            </div>
+            <span class="hint">@T["Optional. Where workers must be to clock in when their time clock policy asks for the work site. Sub-teams use their parent's."]</span>
+            <span asp-validation-for="Latitude" class="text-danger"></span>
+        </div>
+    </div>
+}

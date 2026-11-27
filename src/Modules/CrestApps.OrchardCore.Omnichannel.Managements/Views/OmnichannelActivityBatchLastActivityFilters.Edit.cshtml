@@ -1,0 +1,40 @@
+@using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels
+
+@model OmnichannelActivityBatchViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" at="Foot"></script>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Filter records by their last completed activity. For example, find the records whose last activity had a specific subject and disposition."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="LastActivitySubjectContentType" class="ocat-label">@T["Last activity subject"]</label>
+    <div class="ocat-end">
+        <select asp-for="LastActivitySubjectContentType" asp-items="Model.SubjectContentTypes" class="form-select">
+            <option value="">@T["Any subject"]</option>
+        </select>
+        <span class="hint">@T["Only include records whose last completed activity had this subject."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="LastActivityDispositionId" class="ocat-label">@T["Last activity disposition"]</label>
+    <div class="ocat-end">
+        <select asp-for="LastActivityDispositionId" asp-items="Model.Dispositions" class="form-select">
+        </select>
+        <span class="hint">@T["Only include records whose last completed activity had this disposition."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="LastActivityAttempts" class="ocat-label">@T["Last activity attempts"]</label>
+    <div class="ocat-end">
+        <input asp-for="LastActivityAttempts" class="form-control" placeholder="@T["Any attempt"]" />
+        <span asp-validation-for="LastActivityAttempts" class="text-danger"></span>
+        <span class="hint">@T["Only include records whose last completed activity was on these attempts: 4 for the fourth attempt, 4+ for the fourth or later, 4- for the fourth or earlier, or 2..5 for the second to the fifth. Works with or without a subject."]</span>
+    </div>
+</div>

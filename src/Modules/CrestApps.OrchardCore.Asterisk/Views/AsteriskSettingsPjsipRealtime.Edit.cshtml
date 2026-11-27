@@ -1,0 +1,55 @@
+@model AsteriskSettingsViewModel
+
+<div data-asterisk-provider-card>
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipCredentialLifetimeMinutes">
+        <label asp-for="PjsipCredentialLifetimeMinutes" class="ocat-label">@T["PJSIP credential lifetime (minutes)"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipCredentialLifetimeMinutes" class="form-control" type="number" min="1" />
+            <span asp-validation-for="PjsipCredentialLifetimeMinutes"></span>
+            <span class="hint">@T["Short-lived browser SIP credentials are bound to tenant, session, and expiry."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipContactExpirationSeconds">
+        <label asp-for="PjsipContactExpirationSeconds" class="ocat-label">@T["PJSIP contact expiration (seconds)"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipContactExpirationSeconds" class="form-control" type="number" min="1" />
+            <span asp-validation-for="PjsipContactExpirationSeconds"></span>
+            <span class="hint">@T["Asterisk registration contacts expire independently from credential rotation; revocation also tears down existing contacts and dialogs."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipRealtimeProviderInvariantName">
+        <label asp-for="PjsipRealtimeProviderInvariantName" class="ocat-label">@T["PJSIP Realtime provider"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipRealtimeProviderInvariantName" class="form-control" autocomplete="off" />
+            <span asp-validation-for="PjsipRealtimeProviderInvariantName"></span>
+            <span class="hint">@T["The ADO.NET provider invariant name used to write Asterisk PJSIP Realtime endpoint, auth, and AOR rows."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipRealtimeConnectionString">
+        <label asp-for="PjsipRealtimeConnectionString" class="ocat-label">@T["PJSIP Realtime connection string"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipRealtimeConnectionString" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+            <span asp-validation-for="PjsipRealtimeConnectionString"></span>
+            @if (Model.HasPjsipRealtimeConnectionString)
+            {
+                <span class="hint">@T["A PJSIP Realtime connection string is already saved. Leave this empty to keep the existing value, or enter a new value to replace it."]</span>
+            }
+            else
+            {
+                <span class="hint">@T["Required for browser audio. This database must be the PJSIP Realtime source configured in Asterisk sorcery/extconfig."]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="PjsipRealtimeTablePrefix">
+        <label asp-for="PjsipRealtimeTablePrefix" class="ocat-label">@T["PJSIP Realtime table prefix"]</label>
+        <div class="ocat-end">
+            <input asp-for="PjsipRealtimeTablePrefix" class="form-control" autocomplete="off" />
+            <span asp-validation-for="PjsipRealtimeTablePrefix"></span>
+            <span class="hint">@T["Optional. Prefix added before ps_endpoints, ps_auths, and ps_aors when your Realtime schema uses tenant-specific table names."]</span>
+        </div>
+    </div>
+</div>

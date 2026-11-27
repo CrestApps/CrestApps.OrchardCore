@@ -10,6 +10,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -28,6 +30,8 @@ public sealed class TerritoriesController : Controller
     private readonly ITimeZoneSelectListProvider _timeZoneSelectListProvider;
     private readonly INotifier _notifier;
     private readonly IEnumerable<ITerritoryMemberSource> _memberSources;
+    private readonly IDisplayManager<TerritoryEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -41,6 +45,9 @@ public sealed class TerritoriesController : Controller
     /// <param name="timeZoneSelectListProvider">The time zone list provider.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
+    /// <param name="memberSources">The sources of the members a territory is served by.</param>
+    /// <param name="displayManager">The display manager of the territory editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     public TerritoriesController(
         IAuthorizationService authorizationService,
         ServiceTerritoryManager manager,
@@ -49,7 +56,9 @@ public sealed class TerritoriesController : Controller
         ITimeZoneSelectListProvider timeZoneSelectListProvider,
         INotifier notifier,
         IHtmlLocalizer<TerritoriesController> htmlLocalizer,
-        IEnumerable<ITerritoryMemberSource> memberSources)
+        IEnumerable<ITerritoryMemberSource> memberSources,
+        IDisplayManager<TerritoryEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor)
     {
         _authorizationService = authorizationService;
         _manager = manager;
@@ -58,6 +67,8 @@ public sealed class TerritoriesController : Controller
         _timeZoneSelectListProvider = timeZoneSelectListProvider;
         _notifier = notifier;
         _memberSources = memberSources;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -142,6 +153,7 @@ public sealed class TerritoriesController : Controller
         };
 
         await PopulateAsync(model);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
 
         return View(model);
     }
@@ -169,6 +181,10 @@ public sealed class TerritoriesController : Controller
             return NotFound();
         }
 
+        // The options of the editor are set before it is built, so the fields keep what was posted.
+        await PopulateAsync(form);
+        form.Editor = await _displayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
+
         item.Name = form.Name?.Trim();
         item.ParentId = string.IsNullOrEmpty(form.ParentId) ? null : form.ParentId;
         item.Shape = form.Shape;
@@ -194,8 +210,6 @@ public sealed class TerritoriesController : Controller
 
         if (!ModelState.IsValid)
         {
-            await PopulateAsync(form);
-
             return View(form);
         }
 
