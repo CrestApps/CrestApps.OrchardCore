@@ -97,6 +97,33 @@ public sealed class SurveyManagerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task SaveDraftAsync_TheStampASaveReturns_MatchesTheStampReadBackFromADocumentStoredToTheSecond()
+    {
+        // Arrange: a clock with sub-second ticks. Orchard Core stores a DateTime in a document to the second, so the stamp
+        // the designer reads back after a save is the save's stamp cut to the second.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _harness.Store.CreateSession();
+        var services = _harness.CreateServices(session);
+        _harness.Now = new DateTime(2026, 11, 27, 10, 0, 0, DateTimeKind.Utc).AddTicks(2_249_333);
+        var created = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Draft" }, cancellationToken);
+        await session.SaveChangesAsync(cancellationToken);
+        var survey = await services.Manager.FindByIdAsync(created.ItemId, cancellationToken);
+
+        // Act: a save (the designer adding a question), then the next save with the stamp as the database keeps it.
+        _harness.Now = _harness.Now.AddMilliseconds(400);
+        var first = await services.Manager.SaveDraftAsync(survey, AuthoringDefinitions.TwoPages(), survey.DraftModifiedUtc, cancellationToken);
+        var returned = survey.DraftModifiedUtc.Value;
+        var stored = new DateTime(returned.Ticks - (returned.Ticks % TimeSpan.TicksPerSecond), DateTimeKind.Utc);
+        var second = await services.Manager.SaveDraftAsync(survey, AuthoringDefinitions.TwoPages(), stored, cancellationToken);
+
+        // Assert: stamps are whole seconds, so the stamp the save returned is the one stored, and the next save goes through
+        // (with ticks in the stamp, it was refused as another author's change).
+        Assert.Equal(SurveyErrorCode.None, first);
+        Assert.Equal(0, returned.Ticks % TimeSpan.TicksPerSecond);
+        Assert.Equal(SurveyErrorCode.None, second);
+    }
+
+    [Fact]
     public async Task DuplicateAsync_GivesNewIdsAndKeepsReferencesCodesAndTranslations()
     {
         // Arrange

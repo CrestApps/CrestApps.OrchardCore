@@ -1283,6 +1283,27 @@ public sealed class SurveyInvitationDeliveryTests
     }
 
     [Fact]
+    public async Task ARun_CountsTheFailedBeforeSendsThatGoOutBetweenTheOthers()
+    {
+        // Arrange: a first send held by yesterday's limit, and one held after the mail server failed it, which the mail
+        // server takes today.
+        var sender = new RecordingSender();
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var collectorId = (await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().EnsureCollectorAsync(survey))).ItemId;
+        await CreateHeldAsync(harness, survey, collectorId, ["held@example.com"], failedBefore: false);
+        await CreateHeldAsync(harness, survey, collectorId, ["failed@example.com"], failedBefore: true);
+
+        // Act
+        var sent = await RemindAsync(harness, collectorId);
+
+        // Assert: the held send went out, then the failed-before one right after it (R10-M1); both are counted.
+        Assert.Equal(2, sent);
+        Assert.Equal(2, sender.Sent.Count);
+    }
+
+    [Fact]
     public async Task AThrottleThatStartsPartwayThroughARun_UsesUpNoAttemptOfTheAddressItRefused_SoItDoesNotBounce()
     {
         // Arrange: R9-M2, a mail provider that takes one e-mail a run and then throttles (SMTP 421 "too many messages",

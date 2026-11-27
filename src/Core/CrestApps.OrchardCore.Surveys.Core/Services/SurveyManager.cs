@@ -105,7 +105,7 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         survey.Name = await UniqueNameAsync(string.IsNullOrWhiteSpace(request.Name) ? SurveyNames.Slugify(survey.Title) : SurveyNames.Slugify(request.Name), cancellationToken);
         survey.Status = SurveyStatus.Draft;
         survey.Draft = definition;
-        survey.DraftModifiedUtc = _clock.UtcNow;
+        survey.DraftModifiedUtc = NextDraftStamp(previous: null);
         survey.HasUnpublishedChanges = true;
         survey.Owner = request.Owner;
         _secrets.Assign(survey);
@@ -129,8 +129,10 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         ArgumentNullException.ThrowIfNull(survey);
         ArgumentNullException.ThrowIfNull(draft);
 
-        // The stamp is compared to the tick: two saves in the same second are told apart.
-        if (expectedDraftModifiedUtc is { } expected && survey.DraftModifiedUtc is { } actual && actual.Ticks != expected.Ticks)
+        // The stamp is compared to the second, the precision Orchard Core stores a DateTime with in a document. Every save
+        // moves the stamp on by at least a whole second (NextDraftStamp), so two saves in the same second are still told
+        // apart, and a page that sent the stamp a save returned matches the stamp read back from the database.
+        if (expectedDraftModifiedUtc is { } expected && survey.DraftModifiedUtc is { } actual && WholeSecond(actual) != WholeSecond(expected))
         {
             return SurveyErrorCode.Busy;
         }
@@ -471,14 +473,20 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         return candidate;
     }
 
-    // The draft stamp of a save: now, and always later than the stamp it replaces, so every save gives a new stamp (an
-    // editor that loaded the draft before it is refused) even when two saves read the same clock tick.
+    // The draft stamp of a save: now, to the whole second, and always at least a second later than the stamp it replaces,
+    // so every save gives a new stamp (an editor that loaded the draft before it is refused) even when two saves read the
+    // same second. Whole seconds because Orchard Core stores a DateTime in a document to the second: a stamp with ticks
+    // would come back from the database different from the one the save returned to the page, which would then take
+    // its own next save for another author's change (409).
     private DateTime NextDraftStamp(DateTime? previous)
     {
-        var now = _clock.UtcNow;
+        var now = WholeSecond(_clock.UtcNow);
 
-        return previous is { } before && before.Ticks >= now.Ticks
-            ? new DateTime(before.Ticks + 1, DateTimeKind.Utc)
+        return previous is { } before && WholeSecond(before) >= now
+            ? WholeSecond(before).AddSeconds(1)
             : now;
     }
+
+    private static DateTime WholeSecond(DateTime value)
+        => new(value.Ticks - (value.Ticks % TimeSpan.TicksPerSecond), DateTimeKind.Utc);
 }
