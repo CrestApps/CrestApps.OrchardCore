@@ -1,0 +1,17 @@
+@model AssetEditViewModel
+
+@if (Model.ShowVehicle)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="Plate" class="ocat-label">@T["Plate"]</label>
+        <div class="ocat-end">
+            <input asp-for="Plate" class="form-control" />
+        </div>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="Vin" class="ocat-label">@T["VIN"]</label>
+        <div class="ocat-end">
+            <input asp-for="Vin" class="form-control" />
+        </div>
+    </div>
+}

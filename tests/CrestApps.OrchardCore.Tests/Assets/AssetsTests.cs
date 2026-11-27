@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Assets;
 using CrestApps.OrchardCore.Assets.Core.Indexes;
 using CrestApps.OrchardCore.Assets.Core.Services;
 using CrestApps.OrchardCore.Assets.Models;
+using CrestApps.OrchardCore.Assets.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -148,6 +149,88 @@ public sealed class AssetsTests
         Assert.Equal(["c1"], result.found.Select(owner => owner.Id));
     }
 
+    [Fact]
+    public async Task AnAssetInUse_CantBeDeleted()
+    {
+        await using var harness = await CreateAsync(services => services.AddAssetUsage<PostedAssetUsage>());
+        var type = await AddTypeAsync(harness);
+        var (posted, spare) = await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<AssetManager>();
+            var first = await manager.NewAsync();
+
+            first.Name = PostedAssetUsage.AssetName;
+            first.AssetTypeId = type.ItemId;
+            await manager.CreateAsync(first);
+
+            var second = await manager.NewAsync();
+
+            second.Name = "Spare cooler";
+            second.AssetTypeId = type.ItemId;
+            await manager.CreateAsync(second);
+
+            return (first, second);
+        });
+
+        var (reasons, error) = await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<AssetStore>();
+            var stored = await store.FindByIdAsync(posted.ItemId, TestContext.Current.CancellationToken);
+
+            return (await store.GetUsageReasonsAsync(stored, TestContext.Current.CancellationToken), await Record.ExceptionAsync(() => services.GetRequiredService<AssetManager>().DeleteAsync(stored, TestContext.Current.CancellationToken).AsTask()));
+        }, commit: false);
+
+        Assert.Equal([PostedAssetUsage.Reason], reasons);
+        Assert.Contains(PostedAssetUsage.Reason, Assert.IsType<InvalidOperationException>(error).Message);
+
+        // An asset nothing points to is deleted.
+        await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<AssetManager>();
+
+            await manager.DeleteAsync(await manager.FindByIdAsync(spare.ItemId, TestContext.Current.CancellationToken), TestContext.Current.CancellationToken);
+        });
+
+        Assert.Null(await harness.RunAsync(services => services.GetRequiredService<AssetManager>().FindByIdAsync(spare.ItemId, TestContext.Current.CancellationToken).AsTask(), commit: false));
+    }
+
+    [Fact]
+    public async Task Assets_AreListedByTheCategoryOfTheirType()
+    {
+        await using var harness = await CreateAsync();
+        var vehicles = await AddTypeAsync(harness, AssetCategory.Vehicle);
+        var equipment = await AddTypeAsync(harness);
+
+        await harness.RunAsync(async services =>
+        {
+            var manager = services.GetRequiredService<AssetManager>();
+
+            foreach (var (name, typeId, status) in new[] { ("Van 2", vehicles.ItemId, AssetStatus.Active), ("Van 1", vehicles.ItemId, AssetStatus.Active), ("Old van", vehicles.ItemId, AssetStatus.Retired), ("Cooler", equipment.ItemId, AssetStatus.Active) })
+            {
+                var asset = await manager.NewAsync();
+
+                asset.Name = name;
+                asset.AssetTypeId = typeId;
+                asset.Status = status;
+                await manager.CreateAsync(asset);
+            }
+        });
+
+        var (all, active, none) = await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<AssetStore>();
+
+            return (
+                await store.ListByCategoryAsync(AssetCategory.Vehicle, cancellationToken: TestContext.Current.CancellationToken),
+                await store.ListByCategoryAsync(AssetCategory.Vehicle, [AssetStatus.Active, AssetStatus.InService], TestContext.Current.CancellationToken),
+                await store.ListByCategoryAsync(AssetCategory.Facility, cancellationToken: TestContext.Current.CancellationToken));
+        }, commit: false);
+
+        Assert.Equal(["Old van", "Van 1", "Van 2"], all.Select(asset => asset.Name));
+        Assert.Equal(["Van 1", "Van 2"], active.Select(asset => asset.Name));
+        Assert.Empty(none);
+    }
+
     internal static Task<AssetType> AddTypeAsync(CalendarTestHarness harness, AssetCategory category = AssetCategory.Equipment)
         => harness.RunAsync(async services =>
         {
@@ -191,4 +274,14 @@ internal sealed class FakeOwnerSource : global::CrestApps.OrchardCore.Parties.Se
 
     public Task<IReadOnlyDictionary<string, string>> GetNamesAsync(IReadOnlyCollection<string> ids, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyDictionary<string, string>>(_owners.Where(owner => ids.Contains(owner.Id)).ToDictionary(owner => owner.Id, owner => owner.Name));
+}
+
+internal sealed class PostedAssetUsage : global::CrestApps.OrchardCore.Assets.Services.IAssetUsage
+{
+    public const string AssetName = "Walk-in cooler";
+
+    public const string Reason = "Its purchase is posted to the ledger.";
+
+    public Task<string> GetUsageAsync(Asset asset, CancellationToken cancellationToken = default)
+        => Task.FromResult(asset.Name == AssetName ? Reason : null);
 }
