@@ -118,8 +118,9 @@
     {
         <div class="ocat-wrapper">
             <div class="ocat-end-offset">
-                <div class="card mb-0">
-                    <div class="card-body py-2">
+                @* A status panel inside the placed Email card, not a card of its own. *@
+                <div class="border rounded mb-0">
+                    <div class="px-3 py-2">
                         <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
                             <strong>@T["Sending health, last 7 days"]</strong>
                             @if (health.IsPaused)
