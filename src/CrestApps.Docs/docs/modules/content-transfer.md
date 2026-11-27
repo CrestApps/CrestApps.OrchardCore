@@ -94,7 +94,7 @@ Each run logs the row it starts from and where it stops. A run that finds the im
 once the import has gone 10 minutes without saving progress. **Resume import** on an import that a run is still
 working on says that the import is already running.
 
-Imports save drafts by default. When **Publish imported content** is checked, items are published after create or update. When a row includes an existing `ContentItemId`, the import updates a new latest version of that item and then either keeps that version as a draft or publishes it based on the checkbox. For versionable content types, exports still include `ContentItemVersionId` for reference, but imports ignore that value entirely.
+Imports save drafts by default. When **Publish imported content** is checked, items are published after create or update. When a row includes an existing `ContentItemId`, the import updates a new latest version of that item and then either keeps that version as a draft or publishes it based on the checkbox. A row that fails validation leaves the item it names as it was: a published item is given its new draft only once the row passed. Imported HTML, in an HTML body or an HTML field, is sanitized as its editor sanitizes it, unless the part or field turns sanitizing off. For versionable content types, exports still include `ContentItemVersionId` for reference, but imports ignore that value entirely.
 
 ### Omnichannel contact imports
 
@@ -250,6 +250,7 @@ Configure the module in `appsettings.json` under the `OrchardCore:CrestApps:Cont
 | `MaxUploadFileSize` | `1073741824` (1 GB) | Maximum size, in bytes, of a file that can be uploaded for bulk import. Set to `0` to disable the size check. |
 | `MaxUploadChunkSize` | `26214400` (25 MB) | Size, in bytes, of each chunk when an upload is streamed to the server. The default stays below the common pre-application request-body limit (about 28.6 MB / `30000000` bytes) so uploads work out of the box on IIS and most reverse proxies. Set to `0` to disable chunked uploads. |
 | `TemporaryFileLifetime` | `"01:00:00"` (1 hour) | How long an in-progress chunked upload's temporary file is kept before a background task purges it. Uses the `d.hh:mm:ss` time-span format. |
+| `RequireEditPermissionPerItem` | `false` | When `true`, a row that names an existing item is imported only if the uploader holds `EditContent` on that item (and `PublishContent` when the import publishes), checked against the uploader's own roles, so an import can't change someone else's item or one restricted to roles the uploader isn't in. A refused row is recorded in the error file. Off by default: the import permission of a type lets its holder update every item of that type. |
 
 All values are read from the tenant's shell configuration, so they can be set globally for every tenant or overridden for a single tenant. See [Overriding the upload limits](#overriding-the-upload-limits).
 

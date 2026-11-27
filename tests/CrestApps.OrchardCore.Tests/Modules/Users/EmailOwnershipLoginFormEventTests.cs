@@ -110,6 +110,8 @@ public sealed class EmailOwnershipLoginFormEventTests
 
         var loginFormEvent = new EmailOwnershipLoginFormEvent(
             page.Object,
+            new EmailSignInEligibility(new Mock<UserManager<IUser>>(Mock.Of<IUserStore<IUser>>(), null, null, null, null, null, null, null, null).Object, EmailSignInHarness.SystemRoles(), Microsoft.Extensions.Options.Options.Create(new EmailSignInOptions())),
+            EmailSignInHarness.CreateSiteService(),
             notifier.Object,
             new HttpContextAccessor { HttpContext = httpContext },
             new PassThroughHtmlLocalizer<EmailOwnershipLoginFormEvent>(),

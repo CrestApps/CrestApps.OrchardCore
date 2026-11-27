@@ -34,6 +34,7 @@ public sealed class BookingPagesController : Controller
     private readonly SchedulingPageService _pageService;
     private readonly IAttemptLimiter _limiter;
     private readonly SignedTokenService _tokens;
+    private readonly SiteUrlGenerator _siteUrls;
     private readonly IClock _clock;
 
     private const string ConfirmationPurpose = "CrestApps.Scheduling.ConfirmBooking";
@@ -48,6 +49,7 @@ public sealed class BookingPagesController : Controller
     /// <param name="pageService">The page builder.</param>
     /// <param name="limiter">The attempt limiter.</param>
     /// <param name="tokens">The signed token service, for e-mail confirmation links.</param>
+    /// <param name="siteUrls">Builds the e-mailed link from the site's base URL.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public BookingPagesController(
@@ -56,6 +58,7 @@ public sealed class BookingPagesController : Controller
         SchedulingPageService pageService,
         IAttemptLimiter limiter,
         SignedTokenService tokens,
+        SiteUrlGenerator siteUrls,
         IClock clock,
         IStringLocalizer<BookingPagesController> stringLocalizer)
     {
@@ -64,6 +67,7 @@ public sealed class BookingPagesController : Controller
         _pageService = pageService;
         _limiter = limiter;
         _tokens = tokens;
+        _siteUrls = siteUrls;
         _clock = clock;
         S = stringLocalizer;
     }
@@ -312,7 +316,13 @@ public sealed class BookingPagesController : Controller
     private async Task<bool> SendConfirmationAsync(IEmailService emailService, AppointmentType type, Appointment appointment)
     {
         var lifetime = TimeSpan.FromMinutes(Math.Max(1, type.HoldMinutes));
-        var link = Url.RouteUrl("SchedulingConfirmBooking", new { id = appointment.ItemId, token = _tokens.Protect(ConfirmationPurpose, appointment.ItemId, lifetime) }, Request.Scheme);
+        // From the site's base URL, not the request's Host header, which whoever posts the booking chooses.
+        var link = await _siteUrls.GetUrlAsync("SchedulingConfirmBooking", new { id = appointment.ItemId, token = _tokens.Protect(ConfirmationPurpose, appointment.ItemId, lifetime) });
+
+        if (string.IsNullOrEmpty(link))
+        {
+            return false;
+        }
         var name = WebUtility.HtmlEncode(type.Name);
 
         var sent = await emailService.SendAsync(new MailMessage

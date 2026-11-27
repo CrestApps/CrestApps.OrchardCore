@@ -15,18 +15,22 @@ public sealed partial class ImportFilesBackgroundTask
     /// item of another type is refused and leaves that item exactly as it was.
     /// </summary>
     /// <remarks>
-    /// The items are first read with <see cref="VersionOptions.Latest"/>, which changes nothing. An item of the import's
-    /// type whose latest version is a draft is edited as it is. Only the published items of the import's type are then
-    /// asked for with <see cref="VersionOptions.DraftRequired"/>, which unpublishes an item whose type is not versionable
-    /// and adds a draft to one whose type is (and returns nothing for an item that is already a draft): asking for every
-    /// named item that way changed the items of the rows it then refused. Ids are matched without regard to case, as a
-    /// case-insensitive database collation matches them, so an id in another case can't pass for a new item and take
-    /// the existing one's id.
+    /// The items are read with <see cref="VersionOptions.Latest"/>, which changes nothing. An item of the import's type
+    /// whose latest version is a draft is edited as it is. The row of a published item is mapped onto an in-memory copy
+    /// of it, and only once the row passed validation is the item asked for with
+    /// <see cref="VersionOptions.DraftRequired"/>, which unpublishes an item whose type is not versionable and adds a
+    /// draft to one whose type is: asking for it before changed the items of the rows that were then refused or failed
+    /// validation. Ids are matched without regard to case, as a case-insensitive database collation matches them, so an
+    /// id in another case can't pass for a new item and take the existing one's id.
     /// </remarks>
     /// <param name="rowDefinitionAsync">
     /// Returns the content type a row is imported as, when an import may create items of several related types, or
     /// <see langword="null"/> after recording why the row can't be imported. Every row is
     /// <paramref name="contentTypeDefinition"/> when it is not given.
+    /// </param>
+    /// <param name="mayChangeAsync">
+    /// Whether the uploader may change an existing item, when the import checks each item; every item of the row's
+    /// type may be changed when it is not given.
     /// </param>
     internal static async Task ImportExistingRowsAsync(
         ContentTransferEntry entry,
@@ -39,7 +43,8 @@ public sealed partial class ImportFilesBackgroundTask
         ImportRunMonitor monitor,
         IStringLocalizer localizer,
         ImportRunTelemetry runTelemetry,
-        Func<int, DataRow, Task<ContentTypeDefinition>> rowDefinitionAsync = null)
+        Func<int, DataRow, Task<ContentTypeDefinition>> rowDefinitionAsync = null,
+        Func<ContentItem, Task<bool>> mayChangeAsync = null)
     {
         if (existingRows.Count == 0)
         {
@@ -68,7 +73,6 @@ public sealed partial class ImportFilesBackgroundTask
         }
 
         var refusedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var publishedIds = new List<string>();
         var existingContentItems = new Dictionary<string, ContentItem>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var item in await contentManager.GetAsync(rowDefinitions.Keys, VersionOptions.Latest))
@@ -78,23 +82,11 @@ public sealed partial class ImportFilesBackgroundTask
             {
                 refusedIds.Add(item.ContentItemId);
             }
-            else if (item.Published)
-            {
-                publishedIds.Add(item.ContentItemId);
-            }
             else
             {
-                // The latest version is already a draft, and it is the one to edit. Orchard's DraftRequired read
-                // returns only the items that were published, so asking it for this one would return nothing and the
-                // row would create a second item with the same id.
-                existingContentItems.TryAdd(item.ContentItemId, item);
-            }
-        }
-
-        if (publishedIds.Count > 0)
-        {
-            foreach (var item in await contentManager.GetAsync(publishedIds, VersionOptions.DraftRequired))
-            {
+                // A draft is the version to edit. Orchard's DraftRequired read returns only the items that were
+                // published, so asking it for a draft would return nothing and the row would create a second item with
+                // the same id.
                 existingContentItems.TryAdd(item.ContentItemId, item);
             }
         }
@@ -123,9 +115,26 @@ public sealed partial class ImportFilesBackgroundTask
 
                 var isNew = !existingContentItems.TryGetValue(existingRow.Key, out var contentItem);
 
+                if (!isNew && mayChangeAsync is not null && !await mayChangeAsync(contentItem))
+                {
+                    AddRowError(progressPart, existingRow.Value.Key, localizer["You may not change the content item '{0}'.", existingRow.Key], localizer["Could not be imported"]);
+                    runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
+
+                    continue;
+                }
+
+                Func<ContentItem, Task<ContentItem>> versionToSaveAsync = null;
+
                 if (isNew)
                 {
                     contentItem = await contentManager.NewAsync(rowDefinition.Name);
+                }
+                else if (contentItem.Published)
+                {
+                    // The row is mapped onto a copy, so a row that fails leaves the published item and its versions as
+                    // they were; the item is given its draft once the row passed.
+                    contentItem = contentItem.Clone();
+                    versionToSaveAsync = imported => GetDraftOfAsync(contentManager, imported);
                 }
 
                 await ProcessRowAsync(
@@ -140,12 +149,30 @@ public sealed partial class ImportFilesBackgroundTask
                     progressPart,
                     localizer,
                     runTelemetry,
-                    isNew);
+                    isNew,
+                    versionToSaveAsync);
             }
             finally
             {
                 monitor.EndRow();
             }
         }
+    }
+
+    // Asks for the draft of a published item and gives it what the row mapped onto the item's copy.
+    private static async Task<ContentItem> GetDraftOfAsync(IContentManager contentManager, ContentItem imported)
+    {
+        var draft = (await contentManager.GetAsync([imported.ContentItemId], VersionOptions.DraftRequired)).FirstOrDefault()
+            ?? throw new InvalidOperationException($"The content item '{imported.ContentItemId}' could not be opened for editing.");
+
+        if (!ReferenceEquals(draft, imported))
+        {
+            draft.Apply(imported);
+            draft.DisplayText = imported.DisplayText;
+            draft.Owner = imported.Owner;
+            draft.Author = imported.Author;
+        }
+
+        return draft;
     }
 }

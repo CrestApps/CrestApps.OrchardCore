@@ -8,8 +8,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Entities;
+using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Events;
 using OrchardCore.Users.Models;
@@ -222,17 +225,16 @@ public sealed class EmailSignInGuessingTests : IAsyncLifetime
         await PostCodeAsync(await RequestCodeAsync());
 
         var account = await FindAsync();
-        var loginEvent = CreateOwnershipLoginEvent(new DefaultHttpContext());
 
         // Act
-        var passwordWhileHeld = await loginEvent.ValidatingLoginAsync(account);
+        var passwordWhileHeld = await ValidateLoginAsync(account, new DefaultHttpContext());
 
         var codeContext = new DefaultHttpContext();
         EmailOwnershipLoginFormEvent.MarkEmailedCodeSignIn(codeContext);
-        var codeWhileHeld = await CreateOwnershipLoginEvent(codeContext).ValidatingLoginAsync(account);
+        var codeWhileHeld = await ValidateLoginAsync(account, codeContext);
 
         UserCredentialsProof.ReleaseUnprovedCredentials(account);
-        var passwordOnceReleased = await loginEvent.ValidatingLoginAsync(account);
+        var passwordOnceReleased = await ValidateLoginAsync(account, new DefaultHttpContext());
 
         // Assert
         Assert.IsType<RedirectToRouteResult>(passwordWhileHeld);
@@ -257,13 +259,50 @@ public sealed class EmailSignInGuessingTests : IAsyncLifetime
         Assert.Empty(_harness.SignIns);
     }
 
-    private static EmailOwnershipLoginFormEvent CreateOwnershipLoginEvent(HttpContext httpContext)
-        => new(
+    /// <summary>
+    /// Round 3: the hold refused every password sign-in until the owner confirmed with a code, even once a code could no
+    /// longer sign in to the account (it turned on two-factor sign-in, gained a role kept to password sign-in, or the site
+    /// turned local sign-in off), so the account was locked out for good. It refuses only while a code can sign in now.
+    /// </summary>
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    public async Task AHeldAccount_ThatACodeCanNoLongerSignIn_SignsInWithItsCredentials(bool twoFactor, bool localLoginOff)
+    {
+        // Arrange: the owner signed in with a code, so the unproved password is held.
+        await CreateUserAsync();
+        await PostCodeAsync(await RequestCodeAsync());
+
+        var account = await FindAsync();
+        Assert.True(UserCredentialsProof.AreUnprovedCredentialsHeld(account));
+        account.TwoFactorEnabled = twoFactor;
+
+        // Act
+        var result = await ValidateLoginAsync(account, new DefaultHttpContext(), localLoginOff);
+
+        // Assert
+        Assert.Null(result);
+    }
+
+    private Task<IActionResult> ValidateLoginAsync(User account, HttpContext httpContext, bool localLoginOff = false)
+        => _harness.InRequestAsync(services => CreateOwnershipLoginEvent(services, httpContext, localLoginOff).ValidatingLoginAsync(account));
+
+    private static EmailOwnershipLoginFormEvent CreateOwnershipLoginEvent(IServiceProvider services, HttpContext httpContext, bool localLoginOff)
+    {
+        var site = new SiteSettings { SiteName = "Test site" };
+        site.Put(new LoginSettings { DisableLocalLogin = localLoginOff });
+        var siteService = new Mock<ISiteService>();
+        siteService.Setup(s => s.GetSiteSettingsAsync()).ReturnsAsync(site);
+
+        return new(
             Mock.Of<IEmailOwnershipConfirmationPage>(),
+            new EmailSignInEligibility(services.GetRequiredService<UserManager<IUser>>(), EmailSignInHarness.SystemRoles(), Options.Create(new EmailSignInOptions())),
+            siteService.Object,
             Mock.Of<INotifier>(),
             new HttpContextAccessor { HttpContext = httpContext },
             Mock.Of<IHtmlLocalizer<EmailOwnershipLoginFormEvent>>(localizer => localizer[It.IsAny<string>()] == new LocalizedHtmlString("x", "x")),
             NullLogger<EmailOwnershipLoginFormEvent>.Instance);
+    }
 
     private Task<string> CreateUserAsync()
         => _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "kate", Email = Email, EmailConfirmed = true, IsEnabled = true });

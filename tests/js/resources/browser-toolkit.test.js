@@ -250,6 +250,21 @@ describe('crestapps.confirm', () => {
 
         expect(confirmDialog.mock.calls[1][0]).toEqual(expect.objectContaining({ title: 'Stop', okText: 'Stop', cancelText: 'Keep' }));
     });
+
+    // Round 3: TheAdmin writes okText and cancelText into its dialog as markup, like the title and message, but they were
+    // passed as they came.
+    it('escapes the button texts it hands the admin dialog', async () => {
+        const confirmDialog = vi.fn(options => options.callback(true));
+        globalThis.window = { confirmDialog };
+
+        await confirmAction('Stop', 'Stop renewing?', { okText: '<img src=x onerror=alert(1)>', cancelText: 'Keep "Gold" & co' });
+
+        const options = confirmDialog.mock.calls[0][0];
+
+        expect(options.okText).toBe('&lt;img src=x onerror=alert(1)&gt;');
+        expect(options.cancelText).not.toContain('"');
+        expect(options.cancelText).toContain('&amp;');
+    });
 });
 
 // Just enough of a page for the delegated submit listener: forms with data attributes and submit buttons. Like a

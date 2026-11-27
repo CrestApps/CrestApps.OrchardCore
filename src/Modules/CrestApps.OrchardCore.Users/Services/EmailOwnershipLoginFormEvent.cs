@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Settings;
 using OrchardCore.Users;
 using OrchardCore.Users.Events;
 using OrchardCore.Users.Models;
@@ -26,6 +27,8 @@ public sealed class EmailOwnershipLoginFormEvent : LoginFormEventBase
     private const string EmailedCodeSignInItem = "CrestApps.EmailOwnership.EmailedCodeSignIn";
 
     private readonly IEmailOwnershipConfirmationPage _confirmationPage;
+    private readonly EmailSignInEligibility _eligibility;
+    private readonly ISiteService _siteService;
     private readonly INotifier _notifier;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger _logger;
@@ -34,12 +37,16 @@ public sealed class EmailOwnershipLoginFormEvent : LoginFormEventBase
 
     public EmailOwnershipLoginFormEvent(
         IEmailOwnershipConfirmationPage confirmationPage,
+        EmailSignInEligibility eligibility,
+        ISiteService siteService,
         INotifier notifier,
         IHttpContextAccessor httpContextAccessor,
         IHtmlLocalizer<EmailOwnershipLoginFormEvent> htmlLocalizer,
         ILogger<EmailOwnershipLoginFormEvent> logger)
     {
         _confirmationPage = confirmationPage;
+        _eligibility = eligibility;
+        _siteService = siteService;
         _notifier = notifier;
         _httpContextAccessor = httpContextAccessor;
         H = htmlLocalizer;
@@ -47,16 +54,13 @@ public sealed class EmailOwnershipLoginFormEvent : LoginFormEventBase
     }
 
     /// <summary>
-    /// Marks <paramref name="httpContext"/>'s request as a sign-in with an e-mailed code that leaves the account's
-    /// credentials in place: its pages warn from now on, so the sign-in notice is not said too.
-    /// </summary>
-    /// <param name="httpContext">The request.</param>
-    /// <summary>
     /// Refuses a sign-in with a password, an external login or a passkey while the account's unproved credentials are
     /// held (<see cref="UserCredentialsProof.AreUnprovedCredentialsHeld"/>): the owner of the address signed in with a code
     /// and hasn't confirmed the address yet, so those credentials may be whoever registered with it. A sign-in with an
     /// e-mailed code goes ahead; confirming the address, with the password typed on that page if it is the owner's, ends
-    /// the hold.
+    /// the hold. The hold refuses only while a code can sign in to the account: once it can't (the code sign-in pages are
+    /// off with local login, or the account turned on two-factor sign-in or holds a role kept to password sign-in), the
+    /// account signs in with its credentials again rather than not at all.
     /// </summary>
     /// <param name="user">The user signing in.</param>
     public override async Task<IActionResult> ValidatingLoginAsync(IUser user)
@@ -65,6 +69,14 @@ public sealed class EmailOwnershipLoginFormEvent : LoginFormEventBase
             !UserCredentialsProof.AreUnprovedCredentialsHeld(account) ||
             _httpContextAccessor.HttpContext?.Items.ContainsKey(EmailedCodeSignInItem) == true)
         {
+            return null;
+        }
+
+        // Sent to sign in with a code only when a code can sign in to it, or the hold would lock the account out for good.
+        if (!await EmailSignInAvailability.IsAvailableAsync(_siteService) || !await _eligibility.AllowsAsync(account))
+        {
+            _logger.LogWarning("An account whose credentials are held until its email address is confirmed was not sent to sign in with a code, because a code can't sign in to it.");
+
             return null;
         }
 

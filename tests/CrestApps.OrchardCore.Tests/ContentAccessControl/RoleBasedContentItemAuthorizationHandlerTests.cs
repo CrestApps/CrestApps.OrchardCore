@@ -204,6 +204,67 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
         Assert.False(member.HasFailed);
     }
 
+    /// <summary>
+    /// Round 3: the current roles were cached once a request without the version checked first, so checking the
+    /// published version and then the draft dropped the published version's roles from the draft's check.
+    /// </summary>
+    [Fact]
+    public async Task ADraft_IsCheckedAgainstThePublishedRoles_WhicheverVersionWasCheckedFirst()
+    {
+        // Arrange: the live page is restricted to Member; the draft widens it to Authenticated.
+        var published = Item("Member");
+        published.ContentItemVersionId = "version-1";
+        published.Latest = false;
+
+        var draft = Item("Authenticated");
+        draft.ContentItemVersionId = "version-2";
+        draft.Published = false;
+
+        var contentManager = new Mock<IContentManager>();
+        contentManager.Setup(manager => manager.GetAsync("handbook", It.Is<VersionOptions>(options => options.IsPublished))).ReturnsAsync(published);
+        contentManager.Setup(manager => manager.GetAsync("handbook", It.Is<VersionOptions>(options => options.IsLatest))).ReturnsAsync(draft);
+
+        var handler = new RoleBasedContentItemAuthorizationHandler(Services(contentManager: contentManager.Object));
+        var user = SignedIn();
+
+        // Act: the same handler (one a request) checks the live version first, then the draft.
+        await HandleAsync(handler, user, published, CommonPermissions.EditContent);
+        var context = await HandleAsync(handler, user, draft, CommonPermissions.EditContent);
+
+        // Assert
+        Assert.True(context.HasFailed);
+    }
+
+    /// <summary>
+    /// Round 3: a draft that restricts the item to a role refused the live page to everyone outside it before the draft
+    /// was published.
+    /// </summary>
+    [Fact]
+    public async Task ADraftsRestriction_DoesNotApplyToTheLivePage_UntilItIsPublished()
+    {
+        // Arrange: the live page is open to everyone signed in; the draft restricts it to Member.
+        var published = Item("Authenticated");
+        published.ContentItemVersionId = "version-1";
+        published.Latest = false;
+
+        var draft = Item("Member");
+        draft.ContentItemVersionId = "version-2";
+        draft.Published = false;
+
+        var contentManager = new Mock<IContentManager>();
+        contentManager.Setup(manager => manager.GetAsync("handbook", It.Is<VersionOptions>(options => options.IsPublished))).ReturnsAsync(published);
+        contentManager.Setup(manager => manager.GetAsync("handbook", It.Is<VersionOptions>(options => options.IsLatest))).ReturnsAsync(draft);
+
+        // Act
+        var viewing = await AuthorizeAsync(SignedIn(), published, contentManager: contentManager.Object);
+        var editing = await AuthorizeAsync(SignedIn(), published, permission: CommonPermissions.EditContent, contentManager: contentManager.Object);
+
+        // Assert: viewing the live page is allowed; changing the item still meets the draft's restriction.
+        Assert.True(viewing.HasSucceeded);
+        Assert.False(viewing.HasFailed);
+        Assert.True(editing.HasFailed);
+    }
+
     [Fact]
     public async Task ARestriction_LeavesPermissionsThatAreNotAboutTheItemAlone()
     {
@@ -280,6 +341,15 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
         }
 
         await new RoleBasedContentItemAuthorizationHandler(Services(contentManager: contentManager)).HandleAsync(context);
+
+        return context;
+    }
+
+    private static async Task<AuthorizationHandlerContext> HandleAsync(RoleBasedContentItemAuthorizationHandler handler, ClaimsPrincipal user, ContentItem item, global::OrchardCore.Security.Permissions.Permission permission)
+    {
+        var context = new AuthorizationHandlerContext([new PermissionRequirement(permission)], user, item);
+
+        await handler.HandleAsync(context);
 
         return context;
     }

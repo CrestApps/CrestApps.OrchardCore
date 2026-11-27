@@ -9,7 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.Modules;
 using OrchardCore.Users;
+using OrchardCore.Users.Events;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Accounts.B2B.Controllers;
@@ -27,6 +29,7 @@ public sealed class PunchoutController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly ICartService _cartService;
     private readonly IShapeFactory _shapeFactory;
+    private readonly IEnumerable<ILoginFormEvent> _loginFormEvents;
     private readonly ILogger _logger;
 
     public PunchoutController(
@@ -37,6 +40,7 @@ public sealed class PunchoutController : Controller
         IAuthorizationService authorizationService,
         ICartService cartService,
         IShapeFactory shapeFactory,
+        IEnumerable<ILoginFormEvent> loginFormEvents,
         ILogger<PunchoutController> logger)
     {
         _accounts = accounts;
@@ -46,6 +50,7 @@ public sealed class PunchoutController : Controller
         _authorizationService = authorizationService;
         _cartService = cartService;
         _shapeFactory = shapeFactory;
+        _loginFormEvents = loginFormEvents;
         _logger = logger;
     }
 
@@ -90,9 +95,22 @@ public sealed class PunchoutController : Controller
             return Unauthorized();
         }
 
-        // The session says it is a punchout, so it can be recognized and limited.
+        // The site's login policies (Orchard Core's moderation and confirmation checks, held credentials, linked users and
+        // any other) refuse a punchout sign-in as they refuse the buyer's own.
+        foreach (var loginFormEvent in _loginFormEvents)
+        {
+            if (await loginFormEvent.ValidatingLoginAsync(user) is not null)
+            {
+                _logger.LogWarning("A punchout was refused by a login policy.");
+
+                return Unauthorized();
+            }
+        }
+
+        // The session says it is a punchout, so it can be recognized; the punchout is kept for this buyer's session only.
         await _signInManager.SignInWithClaimsAsync(user, isPersistent: false, [new Claim(PunchoutService.ClaimType, account.AccountId)]);
-        _punchout.Start(account.AccountId, hookUrl, Value("~TARGET"));
+        _punchout.Start(account.AccountId, account.Punchout.UserId, hookUrl, Value("~TARGET"));
+        await _loginFormEvents.InvokeAsync((handler, signedIn) => handler.LoggedInAsync(signedIn), user, _logger);
 
         return Redirect(Url.Content("~/"));
     }

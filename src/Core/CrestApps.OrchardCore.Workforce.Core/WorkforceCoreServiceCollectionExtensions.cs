@@ -73,6 +73,7 @@ public static class WorkforceCoreServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<ShiftPattern>, ShiftPatternCatalogHandler>());
         services.TryAddScoped<ICoverageService, DefaultCoverageService>();
         services.TryAddScoped<ISchedulePlanningService, DefaultSchedulePlanningService>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISchedulePublishValidator, PublishedShiftChangesPublishValidator>());
 
         services.AddOptions<ShiftPlanningOptions>();
         services.TryAddScoped<OpenShiftStore>();

@@ -11,12 +11,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Moq;
 using OrchardCore.Email;
 using OrchardCore.Infrastructure;
 using OrchardCore.Modules;
+using OrchardCore.Settings;
 using static CrestApps.OrchardCore.Tests.Scheduling.SchedulingTestSupport;
 
 namespace CrestApps.OrchardCore.Tests.Scheduling;
@@ -72,6 +74,35 @@ public sealed class SchedulingBookingPageTests
         limiter.Verify(value => value.AcquireAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// Round 3: the confirmation link was built from the request's Host header, which whoever posts the booking sets, so
+    /// the e-mail the site sent could link to another host. It is built from the site's base URL.
+    /// </summary>
+    [Fact]
+    public async Task TheConfirmationLink_IsBuiltFromTheSitesBaseUrl_NotTheRequestsHost()
+    {
+        // Arrange
+        MailMessage sent = null;
+        var email = new Mock<IEmailService>();
+
+        email.Setup(service => service.SendAsync(It.IsAny<MailMessage>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback((MailMessage message, string _, CancellationToken _) => sent = message)
+            .ReturnsAsync(Result.Success());
+
+        await using var harness = await CreateAsync(services => services.AddSingleton(email.Object));
+        var type = await AddSelfServiceTypeAsync(harness);
+        var slot = (await FindAsync(harness, type, Day, Day.AddDays(1)))[0];
+
+        // Act: the request's own URL helper would give the host it was sent to.
+        var result = await harness.RunAsync(services => Page(services, new Mock<IAttemptLimiter>(), allowed: true, requestLink: "https://attacker.example/book/confirm").BookPost(type.Slug, Booking(slot.StartUtc)));
+
+        // Assert
+        Assert.Equal("CheckEmail", Assert.IsType<ViewResult>(result).ViewName);
+        Assert.NotNull(sent);
+        Assert.Contains("https://shop.example/book/confirm", sent.HtmlBody, StringComparison.Ordinal);
+        Assert.DoesNotContain("attacker.example", sent.HtmlBody, StringComparison.Ordinal);
+    }
+
     private static async Task<AppointmentType> AddSelfServiceTypeAsync(CalendarTestHarness harness)
     {
         var resource = await AddResourceAsync(harness, "Dr. Page");
@@ -92,7 +123,7 @@ public sealed class SchedulingBookingPageTests
             CustomerEmail = "john@contoso.com",
         };
 
-    private static BookingPagesController Page(IServiceProvider services, Mock<IAttemptLimiter> limiter, bool allowed)
+    private static BookingPagesController Page(IServiceProvider services, Mock<IAttemptLimiter> limiter, bool allowed, string requestLink = "https://shop.example/book/confirm")
     {
         limiter.Setup(value => value.AcquireAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AttemptLimitResult(allowed, allowed ? 1 : 0, TimeSpan.Zero));
@@ -101,10 +132,11 @@ public sealed class SchedulingBookingPageTests
             services,
             ActivatorUtilities.CreateInstance<SchedulingPageService>(services),
             limiter.Object,
-            new SignedTokenService(new EphemeralDataProtectionProvider(), services.GetRequiredService<IClock>()));
+            new SignedTokenService(new EphemeralDataProtectionProvider(), services.GetRequiredService<IClock>()),
+            SiteUrls());
         var url = new Mock<IUrlHelper>();
 
-        url.Setup(value => value.RouteUrl(It.IsAny<UrlRouteContext>())).Returns("https://shop.example/book/confirm");
+        url.Setup(value => value.RouteUrl(It.IsAny<UrlRouteContext>())).Returns(requestLink);
         controller.Url = url.Object;
         var httpContext = new DefaultHttpContext { RequestServices = services };
 
@@ -112,5 +144,18 @@ public sealed class SchedulingBookingPageTests
         controller.TempData = new TempDataDictionary(httpContext, Mock.Of<ITempDataProvider>());
 
         return controller;
+    }
+
+    // The site's base URL is https://shop.example.
+    private static SiteUrlGenerator SiteUrls()
+    {
+        var siteService = new Mock<ISiteService>();
+        siteService.Setup(service => service.GetSiteSettingsAsync()).ReturnsAsync(new SiteSettings { BaseUrl = "https://shop.example" });
+
+        var links = new Mock<LinkGenerator>();
+        links.Setup(generator => generator.GetPathByAddress(It.IsAny<RouteValuesAddress>(), It.IsAny<RouteValueDictionary>(), It.IsAny<PathString>(), It.IsAny<FragmentString>(), It.IsAny<LinkOptions>()))
+            .Returns("/book/confirm");
+
+        return new SiteUrlGenerator(siteService.Object, new HttpContextAccessor(), links.Object);
     }
 }

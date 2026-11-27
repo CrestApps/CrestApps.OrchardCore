@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -70,12 +71,12 @@ public sealed class PunchoutService
                 : null;
 
     /// <summary>
-    /// Remembers the punchout for this browser: the account, and where its cart goes back to.
+    /// Remembers the punchout for this browser: the account, the buyer it signed in, and where its cart goes back to.
     /// </summary>
-    public void Start(string accountId, Uri hookUrl, string target)
+    public void Start(string accountId, string userId, Uri hookUrl, string target)
     {
         var httpContext = _httpContextAccessor.HttpContext ?? throw new InvalidOperationException("A punchout starts in a request.");
-        var payload = JsonSerializer.Serialize(new PunchoutSession(accountId, hookUrl.AbsoluteUri, SafeTarget(target)));
+        var payload = JsonSerializer.Serialize(new PunchoutSession(accountId, hookUrl.AbsoluteUri, SafeTarget(target), userId));
 
         httpContext.Response.Cookies.Append(CookieName, _protector.Protect(payload), new CookieOptions
         {
@@ -88,18 +89,27 @@ public sealed class PunchoutService
     }
 
     /// <summary>
-    /// Returns this browser's punchout, or <see langword="null"/>.
+    /// Returns this browser's punchout, or <see langword="null"/>: only while the browser is signed in as the buyer the
+    /// punchout signed in, so a cookie left behind after signing out, or after signing in as somebody else, sends no cart
+    /// to the procurement system.
     /// </summary>
     public PunchoutSession GetCurrent()
     {
-        if (_httpContextAccessor.HttpContext?.Request.Cookies[CookieName] is not { Length: > 0 } cookie)
+        var httpContext = _httpContextAccessor.HttpContext;
+
+        if (httpContext?.Request.Cookies[CookieName] is not { Length: > 0 } cookie ||
+            httpContext.User?.Identity?.IsAuthenticated != true ||
+            httpContext.User.FindFirstValue(ClaimTypes.NameIdentifier) is not { Length: > 0 } userId)
         {
             return null;
         }
 
         try
         {
-            return JsonSerializer.Deserialize<PunchoutSession>(_protector.Unprotect(cookie));
+            return JsonSerializer.Deserialize<PunchoutSession>(_protector.Unprotect(cookie)) is { } session &&
+                string.Equals(session.UserId, userId, StringComparison.Ordinal)
+                    ? session
+                    : null;
         }
         catch (Exception exception) when (exception is CryptographicException or JsonException)
         {
@@ -164,4 +174,4 @@ public sealed class PunchoutService
 /// <summary>
 /// A browser's punchout: the account it's for, and where the cart goes back to.
 /// </summary>
-public sealed record PunchoutSession(string AccountId, string HookUrl, string Target);
+public sealed record PunchoutSession(string AccountId, string HookUrl, string Target, string UserId = null);

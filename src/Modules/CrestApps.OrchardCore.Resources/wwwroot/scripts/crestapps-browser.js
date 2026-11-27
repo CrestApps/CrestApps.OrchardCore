@@ -18,8 +18,8 @@
 		const dialog = { callback };
 		if (hasValue(title)) dialog.title = escapeHtml(title);
 		if (hasValue(message)) dialog.message = escapeHtml(message);
-		if (hasValue(options.okText)) dialog.okText = options.okText;
-		if (hasValue(options.cancelText)) dialog.cancelText = options.cancelText;
+		if (hasValue(options.okText)) dialog.okText = escapeHtml(options.okText);
+		if (hasValue(options.cancelText)) dialog.cancelText = escapeHtml(options.cancelText);
 		return dialog;
 	}
 	function confirmAction(title, message, options = {}) {
