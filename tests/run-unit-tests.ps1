@@ -31,6 +31,17 @@ optional: "Checkout" and "Modules.Telephony" both work.
 .PARAMETER Class
 Runs only classes whose name contains one of these strings, for example "CheckoutEngineTests".
 
+.PARAMETER Shard
+With -ShardCount, runs only this part of the selected classes (1-based). CI uses it to spread a slow runner's unit
+tests over several jobs.
+
+.PARAMETER ShardCount
+How many parts the selected classes are split into. Every class lands in exactly one part, and the split depends only
+on the test assembly, so jobs that run different parts of the same build always cover the whole suite together.
+
+.PARAMETER ListClasses
+Prints the test classes the run would execute, one per line, and exits without running them.
+
 .PARAMETER Build
 Builds the test project before running it.
 
@@ -53,6 +64,9 @@ param(
     [int] $Parallel = 0,
     [string[]] $Namespace = @(),
     [string[]] $Class = @(),
+    [int] $Shard = 1,
+    [int] $ShardCount = 1,
+    [switch] $ListClasses,
     [switch] $Build,
     [string] $AssemblyPath,
     [string] $ResultsDirectory
@@ -96,8 +110,7 @@ if (-not $assembly) {
     Write-Error "The $Configuration test assembly was not found under $projectDirectory/bin. Build it first, or pass -Build."
 }
 
-# Each run starts from an empty results folder, so a result file left by an earlier run is never counted. The
-# timings of the earlier run are kept: they balance this one.
+# The timings of the earlier run balance this one.
 $timingsFile = Join-Path $ResultsDirectory 'timings.json'
 $previousTimings = @{}
 
@@ -110,12 +123,6 @@ if (Test-Path $timingsFile) {
     }
 }
 
-if (Test-Path $ResultsDirectory) {
-    Get-ChildItem $ResultsDirectory -File | Where-Object Name -ne 'timings.json' | Remove-Item -Force
-}
-else {
-    New-Item -ItemType Directory -Path $ResultsDirectory | Out-Null
-}
 
 Write-Host "Test assembly: $($assembly.FullName)"
 
@@ -159,8 +166,52 @@ if ($Class.Count -gt 0) {
     $selected = @($selected | Where-Object { $name = $_; $Class | Where-Object { $name.Contains($_) } })
 }
 
+if ($ShardCount -lt 1 -or $Shard -lt 1 -or $Shard -gt $ShardCount) {
+    Write-Error "-Shard must be between 1 and -ShardCount ($ShardCount)."
+}
+
+# The split must come out the same in every job, so it uses only what the assembly declares (the number of test
+# methods per class) and never the saved timings, which can differ between jobs. The largest classes are placed first,
+# each on the part with the fewest methods so far; ties go by name.
+if ($ShardCount -gt 1) {
+    $loads = [long[]]::new($ShardCount)
+    $assigned = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($className in ($selected | Sort-Object @{ Expression = { $classes[$_].Count }; Descending = $true }, @{ Expression = { $_ }; Descending = $false })) {
+        $target = 0
+
+        for ($i = 1; $i -lt $ShardCount; $i++) {
+            if ($loads[$i] -lt $loads[$target]) {
+                $target = $i
+            }
+        }
+
+        $loads[$target] += $classes[$className].Count
+
+        if ($target -eq $Shard - 1) {
+            $assigned.Add($className)
+        }
+    }
+
+    Write-Host "Shard $Shard of ${ShardCount}: $($assigned.Count) of $($selected.Count) test classes."
+    $selected = @($assigned)
+}
+
 if ($selected.Count -eq 0) {
     Write-Error 'No test class matches the given filters.'
+}
+
+if ($ListClasses) {
+    $selected | Sort-Object | Write-Output
+    exit 0
+}
+
+# Each run starts from an empty results folder, so a result file left by an earlier run is never counted.
+if (Test-Path $ResultsDirectory) {
+    Get-ChildItem $ResultsDirectory -File | Where-Object Name -ne 'timings.json' | Remove-Item -Force
+}
+else {
+    New-Item -ItemType Directory -Path $ResultsDirectory | Out-Null
 }
 
 # A class's weight is its time in the previous run, or an estimate from its number of test methods when it has no

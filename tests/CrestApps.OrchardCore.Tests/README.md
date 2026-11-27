@@ -22,6 +22,10 @@ pwsh ./tests/run-unit-tests.ps1 -Class CheckoutEngineTests
 The results, one log per process and the class timings that balance the next run are written to `TestResults/unit`.
 The script prints the slowest classes at the end of every run.
 
+`-ListClasses` prints the classes a run would execute without running them. `-Shard 2 -ShardCount 3` runs one third
+of them; CI splits the Windows unit tests over three jobs this way, and the split depends only on the test assembly,
+so the parts always cover every class exactly once.
+
 Always verify with a **Release** build and warnings as errors before calling a change done, because the
 analyzer set is stricter there than in Debug and CI runs it that way:
 
