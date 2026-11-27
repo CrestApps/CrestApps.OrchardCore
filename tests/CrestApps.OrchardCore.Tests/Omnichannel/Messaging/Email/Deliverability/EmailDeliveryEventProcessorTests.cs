@@ -37,6 +37,31 @@ public sealed class EmailDeliveryEventProcessorTests
             It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Theory]
+    [InlineData("5.1.1", EmailDeliveryEventKind.SoftBounce)]
+    [InlineData("5.7.1", EmailDeliveryEventKind.Deferred)]
+    public async Task ProcessAsync_AnUnconfirmedReport_CountsWithoutSuppressingFailingOrPausing(string status, EmailDeliveryEventKind expected)
+    {
+        // Arrange: a report tied to its email only by the recipient, as for Orchard Core's email service, which anyone
+        // who knows the recipient could write.
+        var harness = new Harness();
+        harness.Log.AddSent(AddressId, harness.Clock.UtcNow.AddHours(-1), "jane@example.com");
+        harness.SentMessages["m-1@contoso.com"] = new OmnichannelMessage { ServiceAddress = "news@contoso.com", CustomerAddress = "jane@example.com" };
+
+        var report = Bounce("jane@example.com", "<m-1@contoso.com>", status);
+        report.IsUnconfirmed = true;
+
+        // Act
+        var processed = await harness.Processor.ProcessAsync([report], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(1, processed);
+        Assert.False(harness.Suppressions.Items.ContainsKey("jane@example.com"));
+        Assert.Contains(harness.Log.Entries, entry => entry.Kind == expected && entry.Recipient == "jane@example.com");
+        harness.Governor.Verify(governor => governor.PauseAsync(It.IsAny<string>(), It.IsAny<EmailSendingPauseKind>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        harness.ConversationService.Verify(service => service.ApplyDeliveryReceiptAsync(It.IsAny<MessageDeliveryReceipt>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task ProcessAsync_TheSameEventDeliveredTwice_IsActedOnOnce()
     {

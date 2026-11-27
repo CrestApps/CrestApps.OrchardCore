@@ -39,6 +39,13 @@ public sealed class OutboundDeliveryState
     public MessagingOutboundPurpose Purpose { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the next attempt waits for the channel's turn (the address's sending
+    /// limits or a pause) rather than for a retry after a failure. Only a held message is brought forward when the
+    /// address's limits change.
+    /// </summary>
+    public bool IsHeld { get; set; }
+
+    /// <summary>
     /// Gets the maximum number of attempts, which is the first attempt plus one per scheduled delay.
     /// </summary>
     public static int MaxAttempts => RetryDelayMinutes.Length + 1;

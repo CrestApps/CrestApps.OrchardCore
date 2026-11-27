@@ -163,6 +163,7 @@ public sealed class AutoReplyRouter : IMessagingInboundRouter
         {
             // Held back by the channel (the address is at its sending limit): the outbox sends it on its turn.
             state.NextAttemptUtc = dispatch.RetryAfterUtc;
+            state.IsHeld = true;
             state.LastError = dispatch.GetErrorText();
 
             message.DeliveryStatus = MessageDeliveryStatus.Queued.ToString();

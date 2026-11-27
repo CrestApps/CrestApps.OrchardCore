@@ -23,6 +23,19 @@ public sealed class OmnichannelEmailAddressTests
     }
 
     [Theory]
+    [InlineData("\"<jane@bigcorp.com>\"@attacker.com")]
+    [InlineData("\"Jane\" <\"<jane@bigcorp.com>\"@attacker.com>")]
+    public void Normalize_AngleBracketsInAQuotedLocalPart_AreNotTakenForTheAddress(string address)
+    {
+        // Act
+        var normalized = OmnichannelEmailAddress.Normalize(address);
+
+        // Assert: the address is the attacker's own, never the one dressed up inside it.
+        Assert.NotEqual("jane@bigcorp.com", normalized);
+        Assert.EndsWith("@attacker.com", normalized);
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
@@ -56,6 +69,9 @@ public sealed class OmnichannelEmailAddressTests
     [InlineData("ann@", false)]
     [InlineData("ann@example..com", false)]
     [InlineData("ann smith@example.com", false)]
+    [InlineData("\"<jane@bigcorp.com>\"@attacker.com", false)]
+    [InlineData("\"Jane\" <\"<jane@bigcorp.com>\"@attacker.com>", false)]
+    [InlineData("\"ann\"@example.com", false)]
     [InlineData("", false)]
     public void IsValid_AcceptsAddressesAndRefusesEverythingElse(string address, bool expected)
     {

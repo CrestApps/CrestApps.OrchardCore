@@ -732,6 +732,7 @@ public sealed partial class MessagingConversationService : IMessagingConversatio
         var state = message.GetOrCreate<OutboundDeliveryState>();
 
         state.Purpose = purpose;
+        state.IsHeld = dispatch.IsDeferred;
 
         // Held back by the channel (the address is at its sending limit, or paused): queued for its turn, and the wait
         // is not one of the message's retries.

@@ -385,7 +385,7 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
 
         // Anybody can email a delivery report. One is believed only when it is about an email this site sent, to the
         // address the report names: otherwise a forged report could suppress any address or pause the sender.
-        var (isAboutEmailSent, sentEntryKey) = await FindReportedSendAsync(report, cancellationToken);
+        var (isAboutEmailSent, sentEntry) = await FindReportedSendAsync(report, cancellationToken);
 
         if (!isAboutEmailSent)
         {
@@ -405,9 +405,12 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
                     // A report tied to its email through the delivery log is counted once for that logged send. The
                     // report's own Message-ID is the sender's to choose, so keying on it would let one forged report,
                     // resent with new identifiers, count as many bounces.
-                    EventId = sentEntryKey is null
+                    EventId = sentEntry is null
                         ? $"{report.OriginalMessageId}:{report.Recipient}:{report.Action}"
-                        : $"{sentEntryKey}:{report.Action}",
+                        : $"{sentEntry.Key}:{report.Action}",
+
+                    // A report tied to its email only by the recipient could have been written by anyone who knows it.
+                    IsUnconfirmed = sentEntry?.IsByRecipientOnly == true,
                     Status = report.Status,
                     Reason = report.Diagnostic,
                     OccurredUtc = _clock.UtcNow,
@@ -422,8 +425,8 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
     // Whether a report is about an email this site sent to the recipient it names. A workspace message stored under the
     // reported id settles it. Otherwise the delivery log does, which holds every email sent, those of the AI and of a
     // transport that cannot set the Message-ID included: the email logged under the id, or a recent one to the recipient
-    // logged without an id. The key names the logged send it was matched to, when the log settled it.
-    private async Task<(bool IsAboutEmailSent, string SentEntryKey)> FindReportedSendAsync(InboundEmailDeliveryReport report, CancellationToken cancellationToken)
+    // logged without an id. The match names the logged send, when the log settled it.
+    private async Task<(bool IsAboutEmailSent, EmailSentEntryMatch SentEntry)> FindReportedSendAsync(InboundEmailDeliveryReport report, CancellationToken cancellationToken)
     {
         var messageId = MimeInboundEmailParser.TrimMessageId(report.OriginalMessageId);
         var recipient = OmnichannelEmailAddress.Normalize(report.Recipient);
@@ -433,13 +436,13 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
             return (string.Equals(OmnichannelEmailAddress.Normalize(original.CustomerAddress), recipient, StringComparison.Ordinal), null);
         }
 
-        var sentEntryKey = await _deliveryLog.FindSentEntryKeyAsync(
+        var sentEntry = await _deliveryLog.FindSentEntryAsync(
             EmailSendingGovernor.TrimMessageId(messageId),
             recipient,
             _clock.UtcNow.Subtract(_bounceReportWindow),
             cancellationToken);
 
-        return (sentEntryKey is not null, sentEntryKey);
+        return (sentEntry is not null, sentEntry);
     }
 
     // Only a failure or a delay is a problem with the delivery. A report that the email was delivered, relayed or

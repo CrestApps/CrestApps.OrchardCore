@@ -152,6 +152,31 @@ public sealed class MessagingOutboxHeldMailTests : IAsyncLifetime
         Assert.Equal(_now.AddHours(1), (await LoadAsync("other")).GetOrCreate<OutboundDeliveryState>().NextAttemptUtc);
     }
 
+    [Fact]
+    public async Task BringForwardAsync_LeavesARetryAfterAFailureWaiting()
+    {
+        // Arrange: one email held by the limits, and one waiting out its retry after the server refused it.
+        var retry = Queued("retry", MessagingOutboundPurpose.Broadcast, _now.AddMinutes(-20), nextAttemptUtc: _now.AddMinutes(30));
+        retry.Put(new OutboundDeliveryState { Purpose = MessagingOutboundPurpose.Broadcast, NextAttemptUtc = _now.AddMinutes(30), Attempts = 1 });
+
+        await SaveAsync(
+            retry,
+            Queued("held", MessagingOutboundPurpose.Broadcast, _now.AddMinutes(-20), nextAttemptUtc: _now.AddHours(1)));
+
+        // Act
+        int moved;
+
+        await using (var session = _store.CreateSession())
+        {
+            moved = await CreateOutbox(session).BringForwardAsync(Channel, ServiceAddress, TestContext.Current.CancellationToken);
+        }
+
+        // Assert
+        Assert.Equal(1, moved);
+        Assert.Equal(_now, (await LoadAsync("held")).GetOrCreate<OutboundDeliveryState>().NextAttemptUtc);
+        Assert.Equal(_now.AddMinutes(30), (await LoadAsync("retry")).GetOrCreate<OutboundDeliveryState>().NextAttemptUtc);
+    }
+
     private async Task<int> DispatchAsync()
     {
         await using var session = _store.CreateSession();
@@ -210,7 +235,7 @@ public sealed class MessagingOutboxHeldMailTests : IAsyncLifetime
     {
         var message = Outbound(id, createdUtc, serviceAddress);
         message.DeliveryStatus = MessageDeliveryStatus.Queued.ToString();
-        message.Put(new OutboundDeliveryState { Purpose = purpose, NextAttemptUtc = nextAttemptUtc });
+        message.Put(new OutboundDeliveryState { Purpose = purpose, NextAttemptUtc = nextAttemptUtc, IsHeld = true });
 
         return message;
     }

@@ -30,13 +30,14 @@ public static class OmnichannelEmailAddress
 
         var value = address.Trim();
 
-        // A display-name form keeps the address between the last pair of angle brackets.
-        var open = value.LastIndexOf('<');
-        var close = value.LastIndexOf('>');
+        // A display-name form ("Ann" <ann@example.com>) keeps the address between its angle brackets: the first '<'
+        // outside a quoted string, to the '>' that ends the value. A quoted local part may itself hold angle brackets
+        // ("<jane@bigcorp.com>"@attacker.com), and reading those as the address would let a sender take on someone else's.
+        var open = IndexOfUnquoted(value, '<');
 
-        if (open >= 0 && close > open)
+        if (open >= 0 && value[^1] == '>')
         {
-            value = value.Substring(open + 1, close - open - 1).Trim();
+            value = value.Substring(open + 1, value.Length - open - 2).Trim();
         }
 
         if (value.StartsWith(MailtoPrefix, StringComparison.OrdinalIgnoreCase))
@@ -52,11 +53,58 @@ public static class OmnichannelEmailAddress
             }
         }
 
-        value = value.Trim().Trim('<', '>', '"', '\'').Trim();
+        value = StripEnclosingPairs(value.Trim());
 
         return value.Length == 0
             ? null
             : value.ToLowerInvariant();
+    }
+
+    // Removes brackets or quotes that enclose the whole value (<ann@example.com>, "ann@example.com"), and only those:
+    // a quote that opens a quoted local part ("ann lee"@example.com) is part of the address.
+    private static string StripEnclosingPairs(string value)
+    {
+        while (value.Length >= 2 &&
+            ((value[0] == '<' && value[^1] == '>') ||
+            (value[0] == '"' && value[^1] == '"' && IndexOfUnquoted(value.Substring(1, value.Length - 2), '"') < 0) ||
+            (value[0] == '\'' && value[^1] == '\'')))
+        {
+            value = value.Substring(1, value.Length - 2).Trim();
+        }
+
+        return value;
+    }
+
+    // The index of the first occurrence of a character outside a quoted string, honoring backslash escapes in quotes.
+    private static int IndexOfUnquoted(string value, char character)
+    {
+        var quoted = false;
+
+        for (var i = 0; i < value.Length; i++)
+        {
+            var current = value[i];
+
+            if (quoted && current == '\\')
+            {
+                i++;
+
+                continue;
+            }
+
+            if (current == '"')
+            {
+                quoted = !quoted;
+
+                continue;
+            }
+
+            if (!quoted && current == character)
+            {
+                return i;
+            }
+        }
+
+        return -1;
     }
 
     /// <summary>
@@ -77,7 +125,9 @@ public static class OmnichannelEmailAddress
 
     /// <summary>
     /// Determines whether a value is shaped like an email address: one <c>@</c> with a local part before it and a
-    /// dotted domain after it, and no whitespace. The provider is the authority on whether the mailbox exists.
+    /// dotted domain after it, and no whitespace, quotes or angle brackets. A quoted local part is legal but unused by
+    /// real mailboxes, and it is how a sender would dress one address up as another. The provider is the authority on
+    /// whether the mailbox exists.
     /// </summary>
     /// <param name="address">The address to check, in any form <see cref="Normalize"/> accepts.</param>
     /// <returns><see langword="true"/> when the address is usable.</returns>
@@ -85,7 +135,9 @@ public static class OmnichannelEmailAddress
     {
         var normalized = Normalize(address);
 
-        if (string.IsNullOrEmpty(normalized) || normalized.Length > 254 || normalized.Any(char.IsWhiteSpace))
+        if (string.IsNullOrEmpty(normalized) ||
+            normalized.Length > 254 ||
+            normalized.Any(character => char.IsWhiteSpace(character) || character is '<' or '>' or '"'))
         {
             return false;
         }

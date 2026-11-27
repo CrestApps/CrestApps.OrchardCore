@@ -116,6 +116,12 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
         }
 
         var (kind, isRejectedEmail) = Reclassify(deliveryEvent);
+
+        if (deliveryEvent.IsUnconfirmed)
+        {
+            kind = Unconfirmed(kind);
+        }
+
         var detail = Describe(deliveryEvent);
         var addressId = await _log.FindSendingAddressIdAsync(messageId, recipient, cancellationToken);
         var domain = EmailSendingGovernor.GetDomain(recipient);
@@ -145,13 +151,20 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
             case EmailDeliveryEventKind.Rejected:
                 // The receiving system refused this one email for what it is (its size, its content). The email failed,
                 // but neither the recipient nor the receiving domain did anything that should hold other mail back.
-                await MarkMessageFailedAsync(messageId, detail, cancellationToken);
+                if (!deliveryEvent.IsUnconfirmed)
+                {
+                    await MarkMessageFailedAsync(messageId, detail, cancellationToken);
+                }
+
                 break;
 
             case EmailDeliveryEventKind.SoftBounce:
                 // Counted by email, not by report: a provider reports each retry of one email, and one email bouncing
-                // three times says less about the address than three emails bouncing.
-                var bouncedEmails = await _log.CountMessagesForRecipientAsync(recipient, EmailDeliveryEventKind.SoftBounce, _clock.UtcNow.Subtract(EmailHealthPolicy.SoftBounceWindow), cancellationToken);
+                // three times says less about the address than three emails bouncing. A report that could not be tied to
+                // its email is counted, but never suppresses the recipient.
+                var bouncedEmails = deliveryEvent.IsUnconfirmed
+                    ? 0
+                    : await _log.CountMessagesForRecipientAsync(recipient, EmailDeliveryEventKind.SoftBounce, _clock.UtcNow.Subtract(EmailHealthPolicy.SoftBounceWindow), cancellationToken);
 
                 if (bouncedEmails >= EmailHealthPolicy.SoftBouncesBeforeSuppression)
                 {
@@ -241,6 +254,17 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
             _ => (deliveryEvent.Kind, false),
         };
     }
+
+    // What a report that could not be tied to its email may count as. Anyone who knows a recipient this site mailed
+    // lately can write one, so it never suppresses the recipient or pauses the address: a permanent bounce counts as a
+    // soft bounce and a block as a deferral, which still show in the address's health.
+    internal static EmailDeliveryEventKind Unconfirmed(EmailDeliveryEventKind kind)
+        => kind switch
+        {
+            EmailDeliveryEventKind.HardBounce => EmailDeliveryEventKind.SoftBounce,
+            EmailDeliveryEventKind.Blocked => EmailDeliveryEventKind.Deferred,
+            _ => kind,
+        };
 
     // When the event happened, as the provider says, kept between the log's retention and now. A provider's clock (or a
     // forged call) can date an event in the future, and a future entry would count in every window and never be pruned;

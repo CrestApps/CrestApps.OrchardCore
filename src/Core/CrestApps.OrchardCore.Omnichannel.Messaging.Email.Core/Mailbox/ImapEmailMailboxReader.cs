@@ -461,8 +461,9 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
             return MessageOutcome.PassedOver;
         }
 
-        // The mailbox host stamps every email it accepts with its own Authentication-Results, above any header the
-        // sender wrote, so the topmost one says whether the From domain passed DMARC.
+        // A mailbox host that checks DMARC (Microsoft 365, Google Workspace) adds its own Authentication-Results above any
+        // header the sender wrote, so the topmost one says whether the From domain passed. Which server wrote it is not
+        // checked, so a host that adds none leaves the sender's own header on top.
         email.IsFromDomainAuthenticated = InboundEmailAuthentication.HasDmarcPass(
             email.Headers.TryGetValue(InboundEmailAuthentication.AuthenticationResultsHeader, out var authenticationResults) ? authenticationResults : null,
             email.From?.Address);

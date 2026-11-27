@@ -93,11 +93,12 @@ public interface IEmailDeliveryLog
     /// <param name="sinceUtc">The oldest send a report without a known message identifier may be about.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>
-    /// A key that names that one logged send, so the reports about it count once however their own identifiers differ;
-    /// <see langword="null"/> when no such email was sent. An email logged under <paramref name="messageId"/> to another
-    /// recipient gives <see langword="null"/>, because the report then names a recipient the email never went to.
+    /// The logged send, with a key that names it so the reports about it count once however their own identifiers
+    /// differ, and whether it was found only by its recipient; <see langword="null"/> when no such email was sent. An
+    /// email logged under <paramref name="messageId"/> to another recipient gives <see langword="null"/>, because the
+    /// report then names a recipient the email never went to.
     /// </returns>
-    Task<string> FindSentEntryKeyAsync(string messageId, string recipient, DateTime sinceUtc, CancellationToken cancellationToken = default);
+    Task<EmailSentEntryMatch> FindSentEntryAsync(string messageId, string recipient, DateTime sinceUtc, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Deletes entries older than a time, oldest first, at most <paramref name="maxEntries"/> of them (and never more than
@@ -233,7 +234,7 @@ public sealed class EmailDeliveryLog : IEmailDeliveryLog
         return byRecipient?.AddressId;
     }
 
-    public async Task<string> FindSentEntryKeyAsync(string messageId, string recipient, DateTime sinceUtc, CancellationToken cancellationToken = default)
+    public async Task<EmailSentEntryMatch> FindSentEntryAsync(string messageId, string recipient, DateTime sinceUtc, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(recipient))
         {
@@ -253,13 +254,14 @@ public sealed class EmailDeliveryLog : IEmailDeliveryLog
             // recipient that email went to.
             if (byMessage.Length > 0)
             {
-                return ToEntryKey(byMessage.FirstOrDefault(row => string.Equals(row.Recipient, key, StringComparison.Ordinal)));
+                return ToMatch(byMessage.FirstOrDefault(row => string.Equals(row.Recipient, key, StringComparison.Ordinal)), isByRecipientOnly: false);
             }
         }
 
         // A transport that cannot set the Message-ID logs its emails without one, so a report about such an email can only
         // be tied to it by the recipient and a recent send. The newest such send is the one, so reports that name made-up
-        // identifiers all land on it and count once.
+        // identifiers all land on it and count once. Anyone who knows the recipient can write such a report, so the match
+        // says so.
         var byRecipient = await _session.QueryIndex<EmailDeliveryLogIndex>(
                 index => index.Recipient == key &&
                     index.Kind == _sent &&
@@ -270,11 +272,13 @@ public sealed class EmailDeliveryLog : IEmailDeliveryLog
             .Take(1)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return ToEntryKey(byRecipient);
+        return ToMatch(byRecipient, isByRecipientOnly: true);
     }
 
-    private static string ToEntryKey(EmailDeliveryLogIndex row)
-        => row is null ? null : "sent:" + row.Id.ToString(CultureInfo.InvariantCulture);
+    private static EmailSentEntryMatch ToMatch(EmailDeliveryLogIndex row, bool isByRecipientOnly)
+        => row is null
+            ? null
+            : new EmailSentEntryMatch("sent:" + row.Id.ToString(CultureInfo.InvariantCulture), isByRecipientOnly);
 
     public async Task<int> PruneAsync(DateTime beforeUtc, int maxEntries, CancellationToken cancellationToken = default)
     {

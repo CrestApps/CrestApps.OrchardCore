@@ -47,6 +47,14 @@ public sealed class EmailDeliveryEvent
     /// Gets or sets the provider that reported it.
     /// </summary>
     public string Provider { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the report could not be tied to the email it is about, only to a recent
+    /// email to its recipient. Anyone who knows the recipient could have written it, so it counts toward the address's
+    /// deliverability as a soft bounce or a deferral, and never suppresses the recipient, fails an email or pauses the
+    /// address on its own.
+    /// </summary>
+    public bool IsUnconfirmed { get; set; }
 }
 
 /// <summary>

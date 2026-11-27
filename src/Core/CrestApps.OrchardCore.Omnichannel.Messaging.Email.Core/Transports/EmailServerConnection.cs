@@ -149,6 +149,15 @@ public static class EmailServerConnection
 
         if (!string.IsNullOrWhiteSpace(server.UserName))
         {
+            // "Auto" uses STARTTLS only when the server offers it, so someone in the network path could strip the offer
+            // and read the password. The password is only sent in the clear when the admin chose no security.
+            if (!client.IsSecure && server.Security != EmailConnectionSecurity.None)
+            {
+                await client.DisconnectAsync(true, cancellationToken);
+
+                throw new InvalidOperationException($"The mail server at '{server.Host.Trim()}' did not offer an encrypted connection, so the password was not sent. Choose STARTTLS or SSL/TLS, or None to send it unencrypted.");
+            }
+
             var password = secretProtector.Unprotect(server.Password) ?? string.Empty;
 
             await client.AuthenticateAsync(server.UserName.Trim(), password, cancellationToken);

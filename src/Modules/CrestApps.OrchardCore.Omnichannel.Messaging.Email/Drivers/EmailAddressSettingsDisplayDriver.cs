@@ -244,9 +244,16 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         {
             var addressId = endpoint.ItemId;
             var serviceAddress = endpoint.Value;
+            var modelState = context.Updater.ModelState;
 
             ShellScope.AddDeferredTask(async scope =>
             {
+                // Read once every driver has run: a save any of them refused changed no limits.
+                if (!modelState.IsValid)
+                {
+                    return;
+                }
+
                 await scope.ServiceProvider.GetRequiredService<IEmailSendingGovernor>().ResetTurnsAsync(addressId);
                 if (scope.ServiceProvider.GetService<IMessagingOutbox>() is { } outbox)
                 {

@@ -142,7 +142,8 @@ public sealed class MessagingOutbox : IMessagingOutbox
             if (state.Purpose == MessagingOutboundPurpose.AutoReply && await IsAnsweredSinceAsync(message, cancellationToken))
             {
                 state.NextAttemptUtc = null;
-                state.LastError = "The conversation was answered before the address had room to send this acknowledgement, so it was not sent.";
+                state.IsHeld = false;
+                state.LastError = "Not sent: the conversation was answered before the address had room for this acknowledgement.";
 
                 message.DeliveryStatus = MessageDeliveryStatus.Failed.ToString();
                 message.ErrorCode = state.LastError;
@@ -156,6 +157,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
 
             perEndpointBudget[endpoint] = used + 1;
             attempted++;
+            state.IsHeld = false;
 
             // A picture message is re-sent with fresh links: the ones the first attempt carried may have expired.
             var mediaUrls = await BuildMediaUrlsAsync(channel, message, cancellationToken);
@@ -182,6 +184,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
             {
                 // Still held back: the message moves to its new turn and keeps its retries.
                 state.NextAttemptUtc = dispatch.RetryAfterUtc;
+                state.IsHeld = true;
                 state.LastError = dispatch.GetErrorText();
                 message.ErrorCode = state.LastError;
             }
@@ -259,8 +262,10 @@ public sealed class MessagingOutbox : IMessagingOutbox
         var now = _clock.UtcNow;
 
         // Every held message comes due now, so the next pass asks the channel for its turn under the address's current
-        // limits. Those moved are no longer after now, so each page reads only the ones still waiting.
+        // limits. A message waiting out a retry after a failure keeps its wait. Those moved are no longer after now, so
+        // each page skips only the waiting retries it already read.
         var moved = 0;
+        var kept = 0;
 
         while (true)
         {
@@ -268,6 +273,8 @@ public sealed class MessagingOutbox : IMessagingOutbox
                     index => index.Channel == channel && index.ServiceAddress == serviceAddress && index.NextAttemptUtc > now,
                     collection: OmnichannelConstants.CollectionName)
                 .OrderBy(index => index.NextAttemptUtc)
+                .ThenBy(index => index.Id)
+                .Skip(kept)
                 .Take(_bringForwardPageSize)
                 .ListAsync(cancellationToken);
 
@@ -280,7 +287,12 @@ public sealed class MessagingOutbox : IMessagingOutbox
 
             foreach (var message in messages)
             {
-                var state = message.TryGet<OutboundDeliveryState>(out var stored) ? stored : new OutboundDeliveryState();
+                if (!message.TryGet<OutboundDeliveryState>(out var state) || !state.IsHeld)
+                {
+                    kept++;
+
+                    continue;
+                }
 
                 state.NextAttemptUtc = now;
                 message.Put(state);

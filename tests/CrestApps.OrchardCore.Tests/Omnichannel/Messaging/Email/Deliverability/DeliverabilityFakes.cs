@@ -89,7 +89,7 @@ internal sealed class InMemoryEmailDeliveryLog : IEmailDeliveryLog
         return Task.FromResult(match?.AddressId);
     }
 
-    public Task<string> FindSentEntryKeyAsync(string messageId, string recipient, DateTime sinceUtc, CancellationToken cancellationToken = default)
+    public Task<EmailSentEntryMatch> FindSentEntryAsync(string messageId, string recipient, DateTime sinceUtc, CancellationToken cancellationToken = default)
     {
         var sent = Entries.Where(entry => entry.Kind == EmailDeliveryEventKind.Sent).ToArray();
         var byMessage = string.IsNullOrEmpty(messageId) ? [] : sent.Where(entry => entry.MessageId == messageId).ToArray();
@@ -101,7 +101,7 @@ internal sealed class InMemoryEmailDeliveryLog : IEmailDeliveryLog
                 .OrderByDescending(entry => entry.OccurredUtc)
                 .FirstOrDefault();
 
-        return Task.FromResult(match is null ? null : "sent:" + Entries.IndexOf(match));
+        return Task.FromResult(match is null ? null : new EmailSentEntryMatch("sent:" + Entries.IndexOf(match), byMessage.Length == 0));
     }
 
     public Task<int> PruneAsync(DateTime beforeUtc, int maxEntries, CancellationToken cancellationToken = default)

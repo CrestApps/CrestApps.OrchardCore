@@ -529,6 +529,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public static readonly System.Collections.Immutable.ImmutableArray<int> RetryDelayMinutes;
         public OutboundDeliveryState() { }
         public int Attempts { get; set; }
+        public bool IsHeld { get; set; }
         public string LastError { get; set; }
         public System.DateTime? NextAttemptUtc { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingOutboundPurpose Purpose { get; set; }

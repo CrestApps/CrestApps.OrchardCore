@@ -27,7 +27,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
         public System.Threading.Tasks.Task<int> CountAsync(string addressId, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, string recipientDomain = null, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> CountMessagesForRecipientAsync(string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> FindSendingAddressIdAsync(string messageId, string recipient, System.Threading.CancellationToken cancellationToken = default) { }
-        public System.Threading.Tasks.Task<string> FindSentEntryKeyAsync(string messageId, string recipient, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSentEntryMatch> FindSentEntryAsync(string messageId, string recipient, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.DateTime?> GetLastBulkSentUtcAsync(string addressId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.DateTime?> GetSentTimeAsync(string addressId, System.DateTime sinceUtc, int position, string recipientDomain = null, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> HasEventAsync(string eventId, System.Threading.CancellationToken cancellationToken = default) { }
@@ -118,6 +118,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingState> FindFreshAsync(string addressId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task SaveAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingState state, System.Threading.CancellationToken cancellationToken = default) { }
     }
+    public sealed class EmailSentEntryMatch : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSentEntryMatch>
+    {
+        public EmailSentEntryMatch(string Key, bool IsByRecipientOnly) { }
+        public bool IsByRecipientOnly { get; init; }
+        public string Key { get; init; }
+    }
     public sealed class EmailSentMessageFinder : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailSentMessageFinder
     {
         public EmailSentMessageFinder(YesSql.ISession session) { }
@@ -153,7 +159,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
         System.Threading.Tasks.Task<int> CountAsync(string addressId, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, string recipientDomain = null, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> CountMessagesForRecipientAsync(string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind kind, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<string> FindSendingAddressIdAsync(string messageId, string recipient, System.Threading.CancellationToken cancellationToken = default);
-        System.Threading.Tasks.Task<string> FindSentEntryKeyAsync(string messageId, string recipient, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailSentEntryMatch> FindSentEntryAsync(string messageId, string recipient, System.DateTime sinceUtc, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.DateTime?> GetLastBulkSentUtcAsync(string addressId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.DateTime?> GetSentTimeAsync(string addressId, System.DateTime sinceUtc, int position, string recipientDomain = null, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> HasEventAsync(string eventId, System.Threading.CancellationToken cancellationToken = default);
@@ -206,6 +212,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents
     {
         public EmailDeliveryEvent() { }
         public string EventId { get; set; }
+        public bool IsUnconfirmed { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind Kind { get; set; }
         public string MessageId { get; set; }
         public System.DateTime? OccurredUtc { get; set; }
