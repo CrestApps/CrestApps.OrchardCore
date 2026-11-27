@@ -710,16 +710,19 @@ Before committing:
 3. Run `pwsh ./tests/run-unit-tests.ps1` (if build succeeds) - all tests must pass
 4. Verify no uncommitted asset changes with `git status`
 
-CI runs in two lanes so a push gets feedback fast without dropping any suite:
+CI runs in two lanes so a push gets feedback fast without dropping any suite, and nothing reaches `main` or a
+`release/**` branch before every suite has passed:
 
 | Workflow | When | What |
 | --- | --- | --- |
 | PR - CI | Every push to a pull request (not documentation-only changes) | Linux: build with warnings as errors, unit, feature activation, integration and JavaScript suites |
-| Full - CI | A pull request labelled `full-ci` (and every push while the label is on), an approved review, a manual run, a merge queue group | Windows: the same jobs. Both: the Telephony browser tests and the Contact Center distributed tests (Redis and PostgreSQL) |
+| Full - CI | Every merge queue group; a pull request labelled `full-ci` (and every push while the label is on); an approved review; a manual run | Windows and Linux: the same jobs. Plus the Telephony browser tests and the Contact Center distributed tests (Redis and PostgreSQL) |
 | Main - CI | Every push to `main` or `release/**` | Everything above, on both operating systems |
 
-Add the `full-ci` label before merging a pull request that touches platform-sensitive code (file paths, line endings,
-processes), the soft phone, or the Contact Center's distributed paths. Main - CI runs it all after the merge either way.
+Pull requests merge through the merge queue ("Merge when ready", or `gh pr merge --squash --auto`). The queue runs
+Full - CI on the pull request combined with the latest `main`, and merges only when its required `Merge gate` check
+and `Test building assets` pass, which takes about 20 minutes. Add the `full-ci` label to find Windows or long-suite
+failures before queueing instead of in the queue.
 
 ---
 

@@ -4,9 +4,9 @@ name: PR - CI
 # activation, integration and JavaScript suites on Linux, the platform that catches the casing and path mistakes a
 # Windows workstation hides.
 #
-# Windows and the long suites (Telephony browser tests, Contact Center distributed tests) run in Full - CI: once a
-# pull request is approved or labelled `full-ci`, and on every merge to main through Main - CI. Nothing is dropped;
-# the slow jobs simply stop running on every intermediate push.
+# Windows and the long suites (Telephony browser tests, Contact Center distributed tests) run in Full - CI: in the
+# merge queue before every merge, and earlier when a pull request is approved or labelled `full-ci`. Nothing is
+# dropped; the slow jobs simply stop running on every intermediate push.
 
 on:
   pull_request:

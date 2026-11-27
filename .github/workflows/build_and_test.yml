@@ -9,8 +9,8 @@ name: Build & Test
 # instead of the sum of all of them.
 #
 # Callers choose the operating systems and whether the long suites run (see the inputs). PR - CI runs the Linux jobs on
-# every push; Full - CI adds Windows and the long suites once a pull request is approved or labelled `full-ci`; Main -
-# CI runs everything after every merge.
+# every push; Full - CI runs everything in the merge queue, and adds Windows and the long suites earlier when a pull
+# request is approved or labelled `full-ci`; Main - CI runs everything after every merge.
 
 on:
   workflow_call:

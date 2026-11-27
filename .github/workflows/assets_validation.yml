@@ -11,6 +11,8 @@ on:
     branches: [ main, release/** ]
   pull_request:
     branches: [ main, release/** ]
+  # A required check, so the merge queue runs it for every group as well.
+  merge_group:
 
 permissions:
   contents: read
