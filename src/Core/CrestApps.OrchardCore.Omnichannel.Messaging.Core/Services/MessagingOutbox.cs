@@ -1,5 +1,6 @@
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
@@ -28,6 +29,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 /// </summary>
 public sealed class MessagingOutbox : IMessagingOutbox
 {
+    private const int _bringForwardPageSize = 200;
+
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly IMessagingRealTimeNotifier _notifier;
     private readonly IMessagingConversationStore _conversationStore;
@@ -134,6 +137,23 @@ public sealed class MessagingOutbox : IMessagingOutbox
                 continue;
             }
 
+            // An acknowledgement held back by the address's limits says "we got your message and will reply soon". Once the
+            // conversation has been answered, sending it would tell the contact a reply is coming after it came.
+            if (state.Purpose == MessagingOutboundPurpose.AutoReply && await IsAnsweredSinceAsync(message, cancellationToken))
+            {
+                state.NextAttemptUtc = null;
+                state.LastError = "The conversation was answered before the address had room to send this acknowledgement, so it was not sent.";
+
+                message.DeliveryStatus = MessageDeliveryStatus.Failed.ToString();
+                message.ErrorCode = state.LastError;
+                message.Put(state);
+
+                await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
+                await NotifyAsync(message, cancellationToken);
+
+                continue;
+            }
+
             perEndpointBudget[endpoint] = used + 1;
             attempted++;
 
@@ -226,6 +246,71 @@ public sealed class MessagingOutbox : IMessagingOutbox
         }
 
         return accepted;
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> BringForwardAsync(string channel, string serviceAddress, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(channel) || string.IsNullOrEmpty(serviceAddress))
+        {
+            return 0;
+        }
+
+        var now = _clock.UtcNow;
+
+        // Every held message comes due now, so the next pass asks the channel for its turn under the address's current
+        // limits. Those moved are no longer after now, so each page reads only the ones still waiting.
+        var moved = 0;
+
+        while (true)
+        {
+            var page = await _session.Query<OmnichannelMessage, MessagingOutboxIndex>(
+                    index => index.Channel == channel && index.ServiceAddress == serviceAddress && index.NextAttemptUtc > now,
+                    collection: OmnichannelConstants.CollectionName)
+                .OrderBy(index => index.NextAttemptUtc)
+                .Take(_bringForwardPageSize)
+                .ListAsync(cancellationToken);
+
+            var messages = page.ToList();
+
+            if (messages.Count == 0)
+            {
+                return moved;
+            }
+
+            foreach (var message in messages)
+            {
+                var state = message.TryGet<OutboundDeliveryState>(out var stored) ? stored : new OutboundDeliveryState();
+
+                state.NextAttemptUtc = now;
+                message.Put(state);
+                moved++;
+
+                await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    // Whether the conversation got an answer after the message: an outbound message written after it that is neither a
+    // broadcast nor another acknowledgement.
+    private async Task<bool> IsAnsweredSinceAsync(OmnichannelMessage message, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(message.ConversationId))
+        {
+            return false;
+        }
+
+        var later = await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+                index => index.ConversationId == message.ConversationId && !index.IsInbound && index.CreatedUtc > message.CreatedUtc,
+                collection: OmnichannelConstants.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return later.Any(reply =>
+            reply.Id != message.Id &&
+            !reply.TryGet<MessagingBroadcastLink>(out _) &&
+            !(reply.TryGet<OutboundDeliveryState>(out var replyState) && replyState.Purpose == MessagingOutboundPurpose.AutoReply));
     }
 
     private static void CountBroadcastOutcome(Dictionary<string, (int Sent, int Failed)> outcomes, OmnichannelMessage message, bool sent)

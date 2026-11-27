@@ -163,7 +163,7 @@ public sealed class InboundEmailWebhookParserTests
             ["to"] = "Contoso <support@contoso.com>",
             ["subject"] = "Order 1042",
             ["text"] = "Where is my order?",
-            ["headers"] = "Message-ID: <sg-1@example.com>\nIn-Reply-To: <root@contoso.com>\n",
+            ["headers"] = "From: Ann Lee <ann@example.com>\nReply-To: Nina Park <nina@example.net>\nMessage-ID: <sg-1@example.com>\nIn-Reply-To: <root@contoso.com>\n",
             ["envelope"] = "{\"to\":[\"help@contoso.com\"],\"from\":\"ann@example.com\"}",
         });
 
@@ -180,6 +180,9 @@ public sealed class InboundEmailWebhookParserTests
         Assert.Equal("sg-1@example.com", email.MessageId);
         Assert.Equal("root@contoso.com", email.InReplyTo);
         Assert.Contains("help@contoso.com", email.DeliveredTo);
+
+        // SendGrid's parsed mode posts no Reply-To field of its own, so it comes from the header block.
+        Assert.Equal("nina@example.net", email.ReplyTo?.Address);
     }
 
     [Fact]

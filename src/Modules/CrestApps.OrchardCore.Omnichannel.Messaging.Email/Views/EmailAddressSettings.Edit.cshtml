@@ -112,7 +112,7 @@
     </div>
 
     <h6 class="mt-4 mb-1">@T["Sending limits"]</h6>
-    <p class="text-muted small mb-3">@T["Broadcasts, campaign opening emails and follow-ups are held to these limits and wait their turn instead of failing; replies to customers are counted but never held back. Mailbox hosts limit one mailbox too: Microsoft 365 takes about 30 messages a minute and 10,000 recipients a day, Google Workspace about 2,000 a day. Raise the limits gradually, and only on a dedicated sending service. 0 means no limit."]</p>
+    <p class="text-muted small mb-3">@T["Broadcasts, campaign opening emails and follow-ups are held to these limits and wait their turn instead of failing; automated replies wait for room under the hourly and daily limits; a person's own replies are counted but never held back. Mailbox hosts limit one mailbox too: Microsoft 365 takes about 30 messages a minute and 10,000 recipients a day, Google Workspace about 2,000 a day. Raise the limits gradually, and only on a dedicated sending service. 0 means no limit."]</p>
 
     @if (Model.Health is { } health)
     {

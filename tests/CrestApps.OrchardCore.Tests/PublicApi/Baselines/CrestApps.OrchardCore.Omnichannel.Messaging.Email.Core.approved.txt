@@ -108,6 +108,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
         public System.Threading.Tasks.Task<System.DateTime?> PauseAsync(string addressId, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingPauseKind kind, string reason, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<System.DateTime?> RecordFailureAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailFailureKind kind, string detail, bool isBulk, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task RecordSentAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, string recipient, string messageId, bool isBulk, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task ResetTurnsAsync(string addressId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<bool> ResumeAsync(string addressId, System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class EmailSendingStateStore : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.IEmailSendingStateStore
@@ -168,6 +169,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability
         System.Threading.Tasks.Task<System.DateTime?> PauseAsync(string addressId, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailSendingPauseKind kind, string reason, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<System.DateTime?> RecordFailureAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, string recipient, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability.EmailFailureKind kind, string detail, bool isBulk, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task RecordSentAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, string recipient, string messageId, bool isBulk, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task ResetTurnsAsync(string addressId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<bool> ResumeAsync(string addressId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IEmailSendingStateStore

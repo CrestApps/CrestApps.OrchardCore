@@ -56,6 +56,15 @@ public static class InboundEmailHeaders
         email.MessageId ??= parsed.MessageId;
         email.InReplyTo ??= parsed.InReplyTo;
 
+        // Providers that parse the email for us (SendGrid's default mode, Mailgun, Postmark) post no Reply-To field of
+        // their own, so it comes from the header block. A Reply-To naming the sender adds nothing.
+        if (email.ReplyTo is null &&
+            parsed.ReplyTo is not null &&
+            !string.Equals(parsed.ReplyTo.Address, email.From?.Address, StringComparison.OrdinalIgnoreCase))
+        {
+            email.ReplyTo = parsed.ReplyTo;
+        }
+
         if (email.References.Count == 0)
         {
             email.References = parsed.References;

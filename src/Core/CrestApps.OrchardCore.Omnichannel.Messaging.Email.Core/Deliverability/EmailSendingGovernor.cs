@@ -99,6 +99,16 @@ public interface IEmailSendingGovernor
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns><see langword="true"/> when the address was paused.</returns>
     Task<bool> ResumeAsync(string addressId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Forgets the turns given out to held bulk mail, so the next turns are spaced by the address's current limits rather
+    /// than the ones in force when the mail was held. Call it with <c>IMessagingOutbox.BringForwardAsync</c> when the
+    /// limits change, so the held mail asks for new turns.
+    /// </summary>
+    /// <param name="addressId">The address.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A task that completes once the turns are forgotten.</returns>
+    Task ResetTurnsAsync(string addressId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -533,6 +543,26 @@ public sealed class EmailSendingGovernor : IEmailSendingGovernor
         health.Level = EmailHealthPolicy.Judge(health.Sent, health.HardBounces, health.Complaints);
 
         return health;
+    }
+
+    public Task ResetTurnsAsync(string addressId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(addressId))
+        {
+            return Task.CompletedTask;
+        }
+
+        return UpdateStateAsync(addressId, create: false, state =>
+        {
+            if (state.NextBulkSlotUtc is null)
+            {
+                return false;
+            }
+
+            state.NextBulkSlotUtc = null;
+
+            return true;
+        }, cancellationToken);
     }
 
     public async Task<bool> ResumeAsync(string addressId, CancellationToken cancellationToken = default)

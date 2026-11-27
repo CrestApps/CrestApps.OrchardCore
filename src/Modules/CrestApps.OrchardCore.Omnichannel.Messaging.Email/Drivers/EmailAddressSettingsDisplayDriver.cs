@@ -7,12 +7,15 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.ViewModels;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Email.Services;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Modules;
 using OrchardCore.Mvc.ModelBinding;
 
@@ -201,6 +204,15 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         settings.Mailbox.InitialLookbackDays = Math.Clamp(model.InitialLookbackDays, 0, 30);
 
         settings.Limits ??= new EmailSendingLimits();
+
+        var limitsChanged =
+            settings.Limits.MaxPerHour != model.MaxPerHour ||
+            settings.Limits.MaxPerDay != model.MaxPerDay ||
+            settings.Limits.MaxPerHourPerDomain != model.MaxPerHourPerDomain ||
+            settings.Limits.MinimumSecondsBetweenSends != model.MinimumSecondsBetweenSends ||
+            settings.Limits.WarmUp != model.WarmUp ||
+            settings.Limits.WarmUpFirstDayLimit != model.WarmUpFirstDayLimit;
+
         settings.Limits.MaxPerHour = model.MaxPerHour;
         settings.Limits.MaxPerDay = model.MaxPerDay;
         settings.Limits.MaxPerHourPerDomain = model.MaxPerHourPerDomain;
@@ -224,6 +236,23 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         if (model.ResumeBulkSending && !string.IsNullOrEmpty(endpoint.ItemId))
         {
             await _governor.ResumeAsync(endpoint.ItemId);
+        }
+
+        // Mail held under the old limits, or until the pause would have ended, keeps the turn it was given. Once the address
+        // is saved, its held mail asks for new turns, spaced by the limits now in force.
+        if ((limitsChanged || model.ResumeBulkSending) && !string.IsNullOrEmpty(endpoint.ItemId) && !string.IsNullOrEmpty(endpoint.Value))
+        {
+            var addressId = endpoint.ItemId;
+            var serviceAddress = endpoint.Value;
+
+            ShellScope.AddDeferredTask(async scope =>
+            {
+                await scope.ServiceProvider.GetRequiredService<IEmailSendingGovernor>().ResetTurnsAsync(addressId);
+                if (scope.ServiceProvider.GetService<IMessagingOutbox>() is { } outbox)
+                {
+                    await outbox.BringForwardAsync(EmailChannelConstants.ChannelName, serviceAddress);
+                }
+            });
         }
 
         // Whether the settings can work is checked by EmailAddressSettingsRule, which a recipe import runs too.
