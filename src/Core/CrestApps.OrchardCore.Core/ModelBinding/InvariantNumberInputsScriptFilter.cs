@@ -5,7 +5,7 @@ using OrchardCore.ResourceManagement;
 namespace CrestApps.OrchardCore.Core.ModelBinding;
 
 /// <summary>
-/// Writes, at the foot of every page, the script that names each number input of a form in an <c>__Invariant</c> field as
+/// Writes, at the foot of every page, the script that names each number, date and time input of a form in an <c>__Invariant</c> field as
 /// the form is sent.
 /// </summary>
 internal sealed class InvariantNumberInputsScriptFilter : IAsyncResultFilter
@@ -40,6 +40,16 @@ internal sealed class InvariantNumberInputsScriptFilter : IAsyncResultFilter
             ?? throw new InvalidOperationException($"The embedded script '{ScriptResourceName}' is missing.");
         using var reader = new StreamReader(stream);
 
-        return new HtmlString("<script>" + reader.ReadToEnd() + "</script>");
+        return new HtmlString("<script>" + Compact(reader.ReadToEnd()) + "</script>");
     }
+
+    /// <summary>
+    /// Leaves out the blank lines and the lines that hold only a comment, since every page carries the script inline.
+    /// </summary>
+    internal static string Compact(string source)
+        => string.Join('\n', source
+            .ReplaceLineEndings("\n")
+            .Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0 && !line.StartsWith("//", StringComparison.Ordinal)));
 }

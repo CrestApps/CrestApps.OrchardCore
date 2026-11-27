@@ -17,7 +17,7 @@ public static class InvariantNumberInputsOrchardCoreBuilderExtensions
     /// <item>it turns on <see cref="Microsoft.AspNetCore.Mvc.Rendering.FormInputRenderMode.DetectCultureFromInputType"/>,
     /// so an <c>asp-for</c> number, range, date or time input writes its value invariantly and adds the
     /// <c>__Invariant</c> field that names it;</item>
-    /// <item>it writes a short script on every page that names each number input of a form in an <c>__Invariant</c>
+    /// <item>it writes a short script on every page that names each number, date and time input of a form in an <c>__Invariant</c>
     /// field as the form is sent, so a hand-written input (<c>name="..."</c> without <c>asp-for</c>) and the rows a script
     /// adds or renumbers are read invariantly too.</item>
     /// </list>

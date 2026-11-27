@@ -50,7 +50,7 @@ A number box sends its value with a dot ("12.50") in every language, while ASP.N
 builder.Services.AddOrchardCms(orchardCore => orchardCore.AddInvariantNumberInputs());
 ```
 
-It turns on ASP.NET Core's `FormInputRenderMode.DetectCultureFromInputType`, which also writes `asp-for` date and time boxes invariantly, and adds a short script to every page that marks each number box of a form when the form is sent.
+It turns on ASP.NET Core's `FormInputRenderMode.DetectCultureFromInputType`, which also writes `asp-for` date and time boxes invariantly, and adds a short script to every page that marks each number, date and time box of a form when the form is sent, so a language with another calendar, such as Thai, reads dates right too.
 
 Modules that need connection strings, API keys or tuning values read them from `appsettings.json`, environment variables or a secret store. The [Configuration Reference](configuration.md) lists every section, the environment-variable form of each key, and which source wins when a value is set in more than one place.
 
