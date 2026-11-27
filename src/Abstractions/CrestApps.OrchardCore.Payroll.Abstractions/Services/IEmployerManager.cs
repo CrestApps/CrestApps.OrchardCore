@@ -13,6 +13,27 @@ public interface IEmployerManager : ICatalogManager<Employer>
 }
 
 /// <summary>
+/// Finds the site's own company: the employer Payroll pays the site's staff as, edited under Payroll &gt; Management
+/// &gt; Company. A new pay run or pay profile belongs to it unless another employer is chosen with Multiple Employers on.
+/// </summary>
+public interface IPayrollCompanyService
+{
+    /// <summary>
+    /// Gets the company: the employer the settings name, or the oldest employer.
+    /// </summary>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
+    /// <returns>The company, or <see langword="null"/> before it is set up.</returns>
+    Task<Employer> GetCompanyAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Makes an employer the company.
+    /// </summary>
+    /// <param name="employerId">The employer.</param>
+    /// <returns>A task that completes when the settings are saved.</returns>
+    Task SetCompanyAsync(string employerId);
+}
+
+/// <summary>
 /// Tells Payroll that a module uses an employer, so it is not deleted. Register with
 /// <c>services.TryAddEnumerable(ServiceDescriptor.Scoped&lt;IEmployerUsage, T&gt;())</c>.
 /// </summary>

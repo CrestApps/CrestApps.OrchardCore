@@ -1,33 +1,48 @@
 ---
-sidebar_label: Employers and payroll access
-title: Employers and payroll access
-description: "Add the employers that pay people, with their tax registrations and the bank account they pay from, give each team a ledger code and a work site's jurisdictions, and give payroll staff access to one employer or all of them."
+sidebar_label: Your company and payroll access
+title: Your company and payroll access
+description: "Set up the company that pays your staff, with its tax registrations and the bank account it pays from; turn on Multiple Employers to run payroll for other employers too; give each team a ledger code and a work site's jurisdictions, and give payroll staff access to one employer or all of them."
 technical_manual:
   - modules/payroll
 ---
 
-An **employer** is the legal entity that pays people. A business with one company has one; a group with several companies has one per company, and payroll staff can be limited to the ones they work for.
+Payroll pays your own staff as your company: the legal entity whose name and tax id are printed on statements, checks and tax forms. Most businesses need nothing more, and never see an employer anywhere in Payroll.
+
+A business that runs payroll for more than one employer, such as a group with several companies or a payroll service paying its clients' people, turns on **Multiple Employers**. Payroll then lists the employers, asks for the employer of each pay run and pay profile, filters its pages by employer, and lets payroll staff be limited to the employers they work for.
 
 | | |
 | --- | --- |
-| **Menu** | **Payroll** → **Setup** → **Employers**, **Settings** → **Payroll** |
+| **Menu** | **Payroll** → **Management** → **Company** (or **Employers** with Multiple Employers on), **Settings** → **Payroll** |
 | **Permission** | Manage payroll settings and employers (all employers, or one) |
-| **Feature** | Payroll |
+| **Feature** | Payroll; Multiple Employers to pay the people of more than one employer |
 
 <AskYourAdmin />
 
-## Add an employer
+## Set up your company
 
-1. Open **Payroll** → **Setup** → **Employers** and choose **Add employer**. Only people who manage payroll settings for every employer can add one.
+1. Open **Payroll** → **Management** → **Company**. Until you save it the first time, the name is your site's name.
 2. Enter the **Name**, and the **Legal name** printed on statements, checks and forms when it differs.
-3. Enter the **Employer tax id**, the **Country pack** (such as US) and the **Currency**. A new employer starts with the country pack and currency of **Settings** → **Payroll**.
+3. Enter the **Employer tax id**, the **Country pack** (such as US) and the **Currency**.
 4. Under **Signatory and contact**, enter who signs checks and who to contact about payroll.
 5. Under **Tax registrations**, add a row for each tax agency account: the jurisdiction (such as US or US-CA), the agency, the account id, how often taxes are deposited, and a rate the agency assigned with the day it starts. When the agency changes the rate, add a row with the same jurisdiction, agency and account and the new rate's first day. When you have two accounts in one jurisdiction, such as a state's income tax withholding account and its unemployment insurance account, enter under **Taxes** what each covers (IncomeTax, Unemployment), so the unemployment rate is read from the right account and the W-2 shows the withholding account. Leave a row empty to remove it.
 6. Under **Where people work**, enter the tax jurisdictions of your place of business, separated with commas, such as US-MI, US-MI-DETROIT. People whose pay profile names no work site, or a work site with no jurisdictions, are taxed as working there. A business with one location doesn't need teams for this.
 7. Enter the **Address** printed on statements and checks, and choose **Save**.
 8. With Banking on, choose the bank account pay leaves from under **Funding account** → **Pay from**: one of the business's own accounts, added under **Banking** → **Bank Accounts** with no owner (an employer with its own bank and company id gets its own account, with its own bank file settings).
 
+Every new pay run and pay profile belongs to your company: you never choose an employer.
+
+## Pay the people of more than one employer
+
+Turn on the **Multiple Employers** feature. Then:
+
+- **Payroll** → **Management** → **Employers** lists the employers, with your company marked **Your company**. Choose **Add employer** to add one, with the same steps as your company. Only people who manage payroll settings for every employer can add one, and a new employer starts with the country pack and currency of **Settings** → **Payroll** → **New Employers**.
+- A pay run and a pay profile have an **Employer**, your company unless you choose another. A person has one pay profile with each employer, so nobody is paid twice by the same employer.
+- **Pay Runs**, **Liabilities**, **Filings** and **Year End** have an employer filter.
+- Each employer has its own copy of the payroll permissions (see below).
+
 An employer that no longer pays anyone can't be deleted while it is in use: clear **Runs payroll** instead.
+
+A site that already had more than one employer before Multiple Employers existed has it turned on when it updates.
 
 ## Teams: ledger codes and work sites
 
@@ -38,7 +53,7 @@ People who manage payroll settings see a **Payroll** card on each team:
 
 ## Give payroll staff access
 
-Every payroll permission, except seeing your own pay and changing your own pay details, exists twice in the role editor: once for every employer (under **Payroll**), and once per employer (under **Payroll: Contoso**, for example).
+Give payroll staff the permissions under **Payroll** in the role editor. With Multiple Employers on, every payroll permission, except seeing your own pay and changing your own pay details, exists twice: once for every employer (under **Payroll**), and once per employer (under **Payroll: Contoso**, for example).
 
 - A payroll administrator of the whole group gets the permissions under **Payroll**.
 - A payroll clerk of one company gets that company's permissions only, such as **Prepare pay runs for Contoso**. They see only that employer in the employer list and in payroll data, and every page of another employer is refused.
@@ -55,4 +70,4 @@ Under **Settings** → **Payroll**:
 
 - **The person who prepared a pay run may approve it**: off by default. Turn it on only when one person runs payroll.
 - **People may change their own pay in the admin pages**: off by default.
-- **A new employer**: the country pack and currency a new employer starts with.
+- **New Employers** (with Multiple Employers on): the country pack and currency a new employer starts with.

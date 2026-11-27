@@ -1,5 +1,9 @@
 @model ShapeViewModel<EmployeePayProfile>
 @inject CrestApps.OrchardCore.Payroll.Services.PayrollNames Names
+@inject Microsoft.Extensions.Options.IOptions<PayrollEmployerOptions> EmployerOptions
 
 <a asp-action="Edit" asp-controller="PayProfiles" asp-route-id="@Model.Value.ItemId">@(await Names.StaffAsync(Model.Value.StaffMemberId))</a>
-<span class="text-muted small ms-1">@(await Names.EmployerAsync(Model.Value.EmployerId))</span>
+@if (EmployerOptions.Value.MultipleEmployers)
+{
+    <span class="text-muted small ms-1">@(await Names.EmployerAsync(Model.Value.EmployerId))</span>
+}

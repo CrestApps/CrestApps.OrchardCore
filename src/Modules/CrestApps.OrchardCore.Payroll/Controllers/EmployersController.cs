@@ -18,11 +18,11 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Payroll.Controllers;
 
 /// <summary>
-/// Payroll &gt; Setup &gt; Employers. A person who manages payroll settings for every employer adds and deletes them;
-/// one who manages them for some employers sees and changes only those.
+/// Payroll &gt; Management &gt; Employers, with Multiple Employers on. A person who manages payroll settings for every
+/// employer adds and deletes them; one who manages them for some employers sees and changes only those.
 /// </summary>
 [Admin]
-[Feature(PayrollConstants.Features.Payroll)]
+[Feature(PayrollConstants.Features.MultipleEmployers)]
 public sealed class EmployersController : Controller
 {
     private readonly IEmployerManager _manager;
@@ -61,7 +61,7 @@ public sealed class EmployersController : Controller
         S = stringLocalizer;
     }
 
-    [Admin("payroll/setup/employers", "PayrollEmployersIndex")]
+    [Admin("payroll/employers", "PayrollEmployersIndex")]
     public async Task<IActionResult> Index()
     {
         var scope = await _scope.GetScopeAsync(User, PayrollPermissions.ManagePayrollSettings, HttpContext.RequestAborted);
@@ -81,7 +81,7 @@ public sealed class EmployersController : Controller
         });
     }
 
-    [Admin("payroll/setup/employers/create", "PayrollEmployersCreate")]
+    [Admin("payroll/employers/create", "PayrollEmployersCreate")]
     public async Task<IActionResult> Create()
     {
         if (!await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ManagePayrollSettings))
@@ -100,7 +100,7 @@ public sealed class EmployersController : Controller
 
     [HttpPost]
     [ActionName(nameof(Create))]
-    [Admin("payroll/setup/employers/create", "PayrollEmployersCreate")]
+    [Admin("payroll/employers/create", "PayrollEmployersCreate")]
     public async Task<IActionResult> CreatePost()
     {
         if (!await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ManagePayrollSettings))
@@ -126,7 +126,7 @@ public sealed class EmployersController : Controller
         return View(model);
     }
 
-    [Admin("payroll/setup/employers/edit/{id}", "PayrollEmployersEdit")]
+    [Admin("payroll/employers/edit/{id}", "PayrollEmployersEdit")]
     public async Task<IActionResult> Edit(string id)
     {
         var employer = string.IsNullOrEmpty(id) ? null : await _manager.FindByIdAsync(id);
@@ -150,7 +150,7 @@ public sealed class EmployersController : Controller
 
     [HttpPost]
     [ActionName(nameof(Edit))]
-    [Admin("payroll/setup/employers/edit/{id}", "PayrollEmployersEdit")]
+    [Admin("payroll/employers/edit/{id}", "PayrollEmployersEdit")]
     public async Task<IActionResult> EditPost(string id)
     {
         var employer = string.IsNullOrEmpty(id) ? null : await _manager.FindByIdAsync(id);
@@ -183,7 +183,7 @@ public sealed class EmployersController : Controller
     }
 
     [HttpPost]
-    [Admin("payroll/setup/employers/delete/{id}", "PayrollEmployersDelete")]
+    [Admin("payroll/employers/delete/{id}", "PayrollEmployersDelete")]
     public async Task<IActionResult> Delete(string id)
     {
         if (!await _authorizationService.AuthorizeAsync(User, PayrollPermissions.ManagePayrollSettings))

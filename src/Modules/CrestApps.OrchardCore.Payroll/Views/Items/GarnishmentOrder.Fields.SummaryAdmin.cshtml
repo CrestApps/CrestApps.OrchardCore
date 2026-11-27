@@ -1,4 +1,8 @@
 @model GarnishmentRowViewModel
+@inject Microsoft.Extensions.Options.IOptions<PayrollEmployerOptions> EmployerOptions
 
 <a asp-action="Edit" asp-controller="Garnishments" asp-route-id="@Model.Order.ItemId">@Model.StaffName</a>
-<span class="text-muted small ms-1">@Model.EmployerName</span>
+@if (EmployerOptions.Value.MultipleEmployers)
+{
+    <span class="text-muted small ms-1">@Model.EmployerName</span>
+}
