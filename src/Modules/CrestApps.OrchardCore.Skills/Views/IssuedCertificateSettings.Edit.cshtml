@@ -8,7 +8,7 @@
     <span class="hint">@T["Certificate templates are content items of the Certificate Template type."]</span>
     @if (!string.IsNullOrEmpty(Model.CertificationId))
     {
-        <a class="btn btn-sm btn-outline-secondary mt-2" target="_blank" asp-controller="IssuedCertificatesAdmin" asp-action="Preview" asp-route-id="@Model.CertificationId" asp-route-area="CrestApps.OrchardCore.Skills"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Preview a certificate"]</a>
+        <a class="btn btn-sm btn-outline-secondary mt-2" target="_blank" asp-controller="IssuedCertificatesAdmin" asp-action="Preview" asp-route-id="@Model.CertificationId" asp-route-area="CrestApps.OrchardCore.Skills"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Preview a Certificate"]</a>
         <span class="hint">@T["The preview uses the saved settings and template."]</span>
     }
 </div></div>

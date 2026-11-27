@@ -74,7 +74,7 @@
         @if (!string.IsNullOrEmpty(Model.DeclineQuoteUrl))
         {
             <form method="post" action="@Model.DeclineQuoteUrl" class="no-multisubmit">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">@(quote.Status == OrderQuoteStatus.Requested ? T["Withdraw the request"] : T["Turn it down"])</button>
+                <button type="submit" class="btn btn-outline-secondary btn-sm">@(quote.Status == OrderQuoteStatus.Requested ? T["Withdraw the Request"] : T["Turn It Down"])</button>
             </form>
         }
     </div>
@@ -119,7 +119,7 @@
         {
             <span>@T["A balance is still owed on this order."]</span>
         }
-        <a class="btn btn-primary btn-sm" href="@Model.PayUrl">@T["Pay now"]</a>
+        <a class="btn btn-primary btn-sm" href="@Model.PayUrl">@T["Pay Now"]</a>
     </div>
 }
 
@@ -218,7 +218,7 @@
 
 @if (shipsTo is { Count: > 0 })
 {
-    <h2 class="h6">@(order.Shipping?.IsPickup == true ? T["Pick up at"] : T["Ships to"])</h2>
+    <h2 class="h6">@(order.Shipping?.IsPickup == true ? T["Pick Up At"] : T["Ships To"])</h2>
     <address>
         @for (var i = 0; i < shipsTo.Count; i++)
         {
@@ -237,7 +237,7 @@
 
 @if (billedTo is { Count: > 0 })
 {
-    <h2 class="h6">@T["Billed to"]</h2>
+    <h2 class="h6">@T["Billed To"]</h2>
     <address>
         @for (var i = 0; i < billedTo.Count; i++)
         {

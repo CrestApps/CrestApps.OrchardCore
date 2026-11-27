@@ -19,7 +19,7 @@
                 @if (Model.Calendars.Any(calendar => calendar.Writable))
                 {
                     <a class="btn btn-primary w-100 mb-3" asp-controller="CalendarEvents" asp-action="Choose" data-calendar-new-event>
-                        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["New event"]
+                        <i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["New Event"]
                     </a>
                 }
                 @if (!string.IsNullOrEmpty(Model.ScheduleMode))
@@ -36,7 +36,7 @@
                         }
                     </p>
                     <p class="text-muted small">@T["Events you can't open show as busy."]</p>
-                    <a class="btn btn-sm btn-outline-secondary w-100" asp-action="Index">@T["Back to my calendars"]</a>
+                    <a class="btn btn-sm btn-outline-secondary w-100" asp-action="Index">@T["Back to My Calendars"]</a>
                 }
                 else
                 {
@@ -84,7 +84,7 @@
         {
             <form class="card text-bg-theme mb-3" method="get" asp-action="Index">
                 <div class="card-body">
-                    <h2 class="h6 text-uppercase text-muted">@T["Whose schedule"]</h2>
+                    <h2 class="h6 text-uppercase text-muted">@T["Whose Schedule"]</h2>
                     <div class="form-check">
                         <input class="form-check-input" type="radio" name="schedule" id="schedule-mine" value="" checked="@string.IsNullOrEmpty(Model.ScheduleMode)" />
                         <label class="form-check-label" for="schedule-mine">@T["My calendars"]</label>
@@ -116,8 +116,8 @@
             </form>
         }
         <div class="d-grid gap-2">
-            <a class="btn btn-sm btn-outline-secondary" asp-controller="Calendars" asp-action="Index">@T["Manage calendars"]</a>
-            <a class="btn btn-sm btn-outline-secondary" asp-controller="CalendarCategories" asp-action="Index">@T["Manage categories"]</a>
+            <a class="btn btn-sm btn-outline-secondary" asp-controller="Calendars" asp-action="Index">@T["Manage Calendars"]</a>
+            <a class="btn btn-sm btn-outline-secondary" asp-controller="CalendarCategories" asp-action="Index">@T["Manage Categories"]</a>
         </div>
     </div>
     <div class="col-lg-8 col-xl-9 col-xxl-10">
@@ -159,9 +159,9 @@
                 <p>@T["Which occurrences do you want to move?"]</p>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-primary" data-scope="ThisOccurrence">@T["This occurrence"]</button>
-                <button type="button" class="btn btn-outline-primary" data-scope="ThisAndFollowing">@T["This and following"]</button>
-                <button type="button" class="btn btn-outline-primary" data-scope="AllOccurrences">@T["All occurrences"]</button>
+                <button type="button" class="btn btn-primary" data-scope="ThisOccurrence">@T["This Occurrence"]</button>
+                <button type="button" class="btn btn-outline-primary" data-scope="ThisAndFollowing">@T["This and Following"]</button>
+                <button type="button" class="btn btn-outline-primary" data-scope="AllOccurrences">@T["All Occurrences"]</button>
                 <button type="button" class="btn btn-secondary" data-scope="">@T["Cancel"]</button>
             </div>
         </div>

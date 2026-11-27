@@ -17,7 +17,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="PayrollPayPreview" title="@T["Next pay of {0}", Model.StaffName]">
+    <breadcrumb name="PayrollPayPreview" title="@T["Next Pay of {0}", Model.StaffName]">
         <breadcrumb-item id="StaffIndex" action="Index" controller="Staff" area="CrestApps.OrchardCore.Staff">@T["Staff"]</breadcrumb-item>
         <breadcrumb-item id="PayrollPayProfilesEdit" action="Edit" controller="PayProfiles" area="CrestApps.OrchardCore.Payroll" route-id="@Model.ProfileId">@Model.StaffName</breadcrumb-item>
     </breadcrumb>
@@ -122,4 +122,4 @@
     </div>
 }
 
-<a class="btn btn-secondary" asp-controller="PayProfiles" asp-action="Edit" asp-route-id="@Model.ProfileId">@T["Back to the pay profile"]</a>
+<a class="btn btn-secondary" asp-controller="PayProfiles" asp-action="Edit" asp-route-id="@Model.ProfileId">@T["Back to the Pay Profile"]</a>

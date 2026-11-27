@@ -80,7 +80,7 @@
                     @if (returnLink is not null)
                     {
                         <a class="btn btn-link" href="@Url.Content(returnLink.ReturnUrl)" data-checkout-return>
-                            @(string.IsNullOrEmpty(returnLink.ReturnText) ? T["Leave checkout"].Value : returnLink.ReturnText)
+                            @(string.IsNullOrEmpty(returnLink.ReturnText) ? T["Leave Checkout"].Value : returnLink.ReturnText)
                         </a>
                     }
                 </div>
@@ -89,12 +89,12 @@
                     @if (Model.ShowsPayment)
                     {
                         <button type="submit" class="btn btn-primary px-4 d-none" name="@CheckoutConstants.FormActions.FieldName" value="@CheckoutConstants.FormActions.Update" data-checkout-update>
-                            @T["Update order"]
+                            @T["Update Order"]
                         </button>
                     }
 
                     <button type="submit" class="btn btn-primary px-4" id="checkout-submit">
-                        <span class="checkout-submit-label">@(Model.ShowsPayment ? Model.NothingToPay ? T["Place order"] : T["Pay now"] : T["Continue"])</span>
+                        <span class="checkout-submit-label">@(Model.ShowsPayment ? Model.NothingToPay ? T["Place Order"] : T["Pay Now"] : T["Continue"])</span>
                         <span class="checkout-submit-busy d-none">
                             <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
                             @T["Processing…"]

@@ -12,7 +12,7 @@
             <div class="col"><p class="mb-0 text-muted small">@T["Balances on {0}. Available is what can still be requested: the balance less approved time off still to come and requests waiting for a decision.", Model.Today.ToString("d MMM yyyy")]</p></div>
             <div class="col-auto d-flex gap-2">
                 <a asp-action="Index" asp-route-workerId="@Model.Worker.ItemId" asp-route-status="Approved" class="btn btn-outline-secondary">@T["Requests"]</a>
-                <a asp-action="Create" asp-route-workerId="@Model.Worker.ItemId" class="btn btn-secondary">@T["Request time off"]</a>
+                <a asp-action="Create" asp-route-workerId="@Model.Worker.ItemId" class="btn btn-secondary">@T["Request Time Off"]</a>
             </div>
         </div>
     </div>
@@ -85,7 +85,7 @@
                         <div class="ocat-wrapper"><label for="adjust-date" class="ocat-label">@T["Counts from"]</label><div class="ocat-end"><input id="adjust-date" name="EffectiveDate" type="date" value="@Model.Today.ToString("yyyy-MM-dd")" class="form-control" style="max-width: 12rem" /></div></div>
                         <div class="ocat-wrapper" id="adjust-expires-row" hidden><label for="adjust-expires" class="ocat-label">@T["Last day to use it"]</label><div class="ocat-end"><input id="adjust-expires" name="ExpiresOn" type="date" class="form-control" style="max-width: 12rem" /></div></div>
                         <div class="ocat-wrapper"><label for="adjust-note" class="ocat-label">@T["Note"]</label><div class="ocat-end"><input id="adjust-note" name="Note" class="form-control" /></div></div>
-                        <div class="ocat-wrapper"><div class="ocat-end-offset"><button type="submit" class="btn btn-primary">@T["Change the balance"]</button></div></div>
+                        <div class="ocat-wrapper"><div class="ocat-end-offset"><button type="submit" class="btn btn-primary">@T["Change the Balance"]</button></div></div>
                     </form>
                 </div>
             </div>

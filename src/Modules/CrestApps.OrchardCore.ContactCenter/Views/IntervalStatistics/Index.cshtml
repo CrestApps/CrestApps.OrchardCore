@@ -9,7 +9,7 @@
     var total = Model.TodayTotal;
 }
 
-<zone Name="Title"><breadcrumb name="ContactCenterIntervalStatistics" title="@T["Interval statistics"]" /></zone>
+<zone Name="Title"><breadcrumb name="ContactCenterIntervalStatistics" title="@T["Interval Statistics"]" /></zone>
 
 <p class="text-muted">@T["15-minute statistics of every queue and agent, computed in the background from interactions and agent states. Workforce forecasting, intraday and adherence read them, and the report builder lists them as Queue intervals and Agent intervals. Days are UTC days."]
     @T["When the feature is turned on, up to {0} earlier days are filled in, a few every five minutes.", Model.BackfillDays]</p>
@@ -46,7 +46,7 @@
     <div class="col-12 col-md-6 col-xl-4">
         <div class="card h-100">
             <div class="card-body">
-                <h2 class="h6 card-title">@T["Today so far"]</h2>
+                <h2 class="h6 card-title">@T["Today So Far"]</h2>
                 @if (total.Offered + total.Outbound == 0)
                 {
                     <p class="small text-muted mb-0">@T["No queue work today yet."]</p>

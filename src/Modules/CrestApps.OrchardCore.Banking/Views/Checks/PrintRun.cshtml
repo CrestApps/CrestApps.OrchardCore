@@ -1,7 +1,7 @@
 @model CheckPrintRunViewModel
 
 <zone Name="Title">
-    <breadcrumb name="ChecksPrintRun" title="@T["Print queued checks"]">
+    <breadcrumb name="ChecksPrintRun" title="@T["Print Queued Checks"]">
         <breadcrumb-item id="Checks" action="Index" controller="Checks" area="CrestApps.OrchardCore.Banking" permission="@ChecksPermissions.ViewCheckRegister.Name">@T["Checks"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -15,7 +15,7 @@
         <div class="ocat-end">
             <div class="input-group">
                 <select id="print-run-account" name="bankAccountId" asp-items="Model.BankAccountOptions" class="form-select"></select>
-                <button type="submit" class="btn btn-outline-secondary">@T["Show its checks"]</button>
+                <button type="submit" class="btn btn-outline-secondary">@T["Show Its Checks"]</button>
             </div>
             <span class="hint">@T["A print run prints the checks of one bank account: pre-printed stock carries the account and its numbers."]</span>
         </div>

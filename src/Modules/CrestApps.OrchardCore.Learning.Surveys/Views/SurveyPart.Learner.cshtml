@@ -107,13 +107,13 @@
                         }
                     </fieldset>
                 }
-                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(response is null ? T["Send my answers"] : T["Change my answers"])</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(response is null ? T["Send My Answers"] : T["Change My Answers"])</button>
             </form>
         }
 
         @if (Model.Summary is not null)
         {
-            <h2 class="h6 mt-4">@T["How everyone answered"]</h2>
+            <h2 class="h6 mt-4">@T["How Everyone Answered"]</h2>
             <partial name="SurveyTotals" model="Model.Summary" />
         }
     </div>

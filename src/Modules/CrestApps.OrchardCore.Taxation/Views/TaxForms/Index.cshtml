@@ -9,7 +9,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="TaxForms" title="@T["Tax forms"]" />
+    <breadcrumb name="TaxForms" title="@T["Tax Forms"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for delete actions. *@
@@ -27,18 +27,18 @@
                     @if (sources.Count > 1)
                     {
                         <div class="dropdown">
-                            <button class="btn btn-secondary dropdown-toggle create" type="button" data-bs-toggle="dropdown" aria-expanded="false">@T["Add tax form"]</button>
+                            <button class="btn btn-secondary dropdown-toggle create" type="button" data-bs-toggle="dropdown" aria-expanded="false">@T["Add Tax Form"]</button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 @foreach (var source in sources)
                                 {
-                                    <li><a class="dropdown-item" asp-action="Create" asp-route-source="@source.Name">@T["Prepared from {0}", LocalizerFactory.Localize(source.DisplayName).Value]</a></li>
+                                    <li><a class="dropdown-item" asp-action="Create" asp-route-source="@source.Name">@T["Prepared From {0}", LocalizerFactory.Localize(source.DisplayName).Value]</a></li>
                                 }
                             </ul>
                         </div>
                     }
                     else
                     {
-                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add tax form"]</a>
+                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Tax Form"]</a>
                     }
                 </div>
             </div>

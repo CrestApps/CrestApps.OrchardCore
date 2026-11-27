@@ -17,10 +17,10 @@
 
 <zone Name="Title">
     <breadcrumb name="PayrollPayRunsStatement" title="@T["{0}", statement.Snapshot?.EmployeeName ?? statement.StaffMemberId]">
-        <breadcrumb-item id="PayrollPayRuns" action="Index" controller="PayRuns" area="CrestApps.OrchardCore.Payroll">@T["Pay runs"]</breadcrumb-item>
+        <breadcrumb-item id="PayrollPayRuns" action="Index" controller="PayRuns" area="CrestApps.OrchardCore.Payroll">@T["Pay Runs"]</breadcrumb-item>
         @if (Model.Run is { } run)
         {
-            <breadcrumb-item id="PayrollPayRunsDetails" action="Details" controller="PayRuns" area="CrestApps.OrchardCore.Payroll" route-id="@run.ItemId">@T["Pay run {0}", run.Number]</breadcrumb-item>
+            <breadcrumb-item id="PayrollPayRunsDetails" action="Details" controller="PayRuns" area="CrestApps.OrchardCore.Payroll" route-id="@run.ItemId">@T["Pay Run {0}", run.Number]</breadcrumb-item>
         }
     </breadcrumb>
 </zone>
@@ -121,7 +121,7 @@
                     <input name="reason" class="form-control" placeholder="@T["Why it is voided"]" aria-label="@T["Why it is voided"]" required />
                 </div>
                 <div class="col-12 col-md-auto">
-                    <button type="submit" class="btn btn-danger" data-url-af="RemoveUrl" data-title="@T["Void the statement"]" data-message="@T["Void this pay statement? This can't be undone."]" data-ok-text="@T["Void"]">@T["Void"]</button>
+                    <button type="submit" class="btn btn-danger" data-url-af="RemoveUrl" data-title="@T["Void the Statement"]" data-message="@T["Void this pay statement? This can't be undone."]" data-ok-text="@T["Void"]">@T["Void"]</button>
                 </div>
             </form>
         </div>
@@ -129,5 +129,5 @@
 }
 
 <div class="mb-3">
-    <a class="btn btn-secondary" asp-action="StatementPdf" asp-route-id="@statement.ItemId"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Download the stub"]</a>
+    <a class="btn btn-secondary" asp-action="StatementPdf" asp-route-id="@statement.ItemId"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Download the Stub"]</a>
 </div>

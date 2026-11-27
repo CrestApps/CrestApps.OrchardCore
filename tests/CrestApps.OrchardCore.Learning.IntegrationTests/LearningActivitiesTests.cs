@@ -120,7 +120,7 @@ public sealed class LearningActivitiesTests
         Assert.Equal(HttpStatusCode.Redirect, signOff.StatusCode);
         Assert.Contains("coursework/submissions/", gradingUrl);
         Assert.Contains("A sign-off", grading);
-        Assert.DoesNotContain("Return for resubmission", grading);
+        Assert.DoesNotContain("Return for Resubmission", grading);
         Assert.Contains("your instructor signs this off", player);
         Assert.DoesNotContain("name=\"files\"", player);
     }
@@ -268,8 +268,8 @@ public sealed class LearningActivitiesTests
         var stored = await _fixture.InTenantAsync(async services => await services.GetRequiredService<ISurveyResponseService>().FindAsync(await EnrollmentIdAsync(courseId), choiceId));
 
         // Assert
-        Assert.DoesNotContain("How everyone answered", before);
-        Assert.Contains("How everyone answered", after);
+        Assert.DoesNotContain("How Everyone Answered", before);
+        Assert.Contains("How Everyone Answered", after);
         Assert.Equal(["Friday"], stored?.Answers["day"]);
     }
 

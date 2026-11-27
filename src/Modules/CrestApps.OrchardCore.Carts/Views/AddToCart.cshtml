@@ -18,7 +18,7 @@
     @* A card can't take the personal touch the product needs, so it sends the buyer to the product's page. *@
     <a href="@Model.ProductUrl" class="btn btn-outline-primary w-100 position-relative" style="z-index: 2">
         <span class="fa-solid fa-pen-to-square" aria-hidden="true"></span>
-        @T["Choose options"]
+        @T["Choose Options"]
     </a>
 
     return;
@@ -195,7 +195,7 @@
         }
         <button type="submit" class="btn btn-primary" style="flex: 1 1 8rem; min-width: 0" disabled="@(!canBuy)">
             <span class="fa-solid fa-cart-plus" aria-hidden="true"></span>
-            @(initial?.IsPreorder == true ? T["Pre-order"].Value : T["Add to cart"].Value)
+            @(initial?.IsPreorder == true ? T["Pre-Order"].Value : T["Add to Cart"].Value)
         </button>
     </div>
 </form>

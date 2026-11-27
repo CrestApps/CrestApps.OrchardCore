@@ -69,7 +69,7 @@ else
                         </dl>
                         @if (Model.CanManage && !row.InAdherence)
                         {
-                            <a asp-controller="AdherenceExceptions" asp-action="Create" asp-route-workerId="@row.WorkerId" asp-route-returnUrl="@Url.Action("Index", "Adherence", new { teamId = Model.TeamId })" class="btn btn-sm btn-outline-secondary mt-2">@T["Add exception"]</a>
+                            <a asp-controller="AdherenceExceptions" asp-action="Create" asp-route-workerId="@row.WorkerId" asp-route-returnUrl="@Url.Action("Index", "Adherence", new { teamId = Model.TeamId })" class="btn btn-sm btn-outline-secondary mt-2">@T["Add Exception"]</a>
                         }
                     </div>
                 </div>

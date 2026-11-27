@@ -82,7 +82,7 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
                     <div class="text-muted mb-2">@T["or"]</div>
                     <button type="button" class="btn btn-primary" id="browseBtn-@Model.ItemId">
                         <i class="fa-solid fa-folder-open me-1"></i>
-                        @T["Browse files"]
+                        @T["Browse Files"]
                     </button>
                 </div>
                 <div class="drop-zone-active d-none d-flex flex-column align-items-center" id="dropZoneActive-@Model.ItemId">
@@ -120,13 +120,13 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
                         <div class="d-flex gap-1 me-2 flex-shrink-0">
                             <a class="btn btn-sm btn-outline-secondary"
                                href="@Url.Content($"~/ai/documents/{doc.DocumentId}/download")"
-                               title="@T["Download file"]">
+                               title="@T["Download File"]">
                                 <i class="fa-solid fa-download"></i>
                             </a>
                             <button type="button"
                                     class="btn btn-sm btn-outline-danger remove-document"
                                     data-document-id="@doc.DocumentId"
-                                    title="@T["Remove file"]">
+                                    title="@T["Remove File"]">
                                 <i class="fa-solid fa-trash-can"></i>
                             </button>
                         </div>
@@ -389,13 +389,13 @@ else if (Model.AllowDocumentUploads && !Model.HasVectorSearchService)
             <div class="d-flex gap-1 me-2 flex-shrink-0">
             <a class="btn btn-sm btn-outline-secondary"
             href="${escapeHtml(downloadUrl)}"
-            title="@T["Download file"]">
+            title="@T["Download File"]">
             <i class="fa-solid fa-download"></i>
             </a>
             <button type="button"
             class="btn btn-sm btn-outline-danger remove-document"
             data-document-id="${doc.documentId}"
-            title="@T["Remove file"]">
+            title="@T["Remove File"]">
             <i class="fa-solid fa-trash-can"></i>
             </button>
             </div>

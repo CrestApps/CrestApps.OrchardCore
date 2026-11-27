@@ -43,14 +43,14 @@
                 @T["Your time is kept by {0}, and shown here as it is clocked.", keeper.Name]
                 @if (!string.IsNullOrEmpty(keeper.Url))
                 {
-                    <a href="@Url.Content(keeper.Url)" class="btn btn-primary btn-sm ms-2">@T["Open it"]</a>
+                    <a href="@Url.Content(keeper.Url)" class="btn btn-primary btn-sm ms-2">@T["Open It"]</a>
                 }
             </p>
             @if (open is not null && open.ManagedBy is null)
             {
                 <form asp-action="ClockOut" method="post" class="mt-3">
                     <span class="hint d-block mb-2">@T["This stage was started here, before the time clock kept your time."]</span>
-                    <button type="submit" class="btn btn-danger"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> @T["Clock out"]</button>
+                    <button type="submit" class="btn btn-danger"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> @T["Clock Out"]</button>
                 </form>
             }
         }
@@ -76,7 +76,7 @@
                         <button type="submit" class="btn btn-primary">
                             @if (open is null)
                             {
-                                <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> @T["Clock in"]
+                                <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i> @T["Clock In"]
                             }
                             else
                             {
@@ -88,7 +88,7 @@
                 @if (open is not null)
                 {
                     <form asp-action="ClockOut" method="post">
-                        <button type="submit" class="btn btn-danger"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> @T["Clock out"]</button>
+                        <button type="submit" class="btn btn-danger"><i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i> @T["Clock Out"]</button>
                     </form>
                 }
             </div>

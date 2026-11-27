@@ -1,7 +1,7 @@
 @model CustomerAddressViewModel
 
 <zone Name="Title">
-    <breadcrumb name="@(Model.IsNew ? "CustomersAddressCreate" : "CustomersAddressEdit")" title="@(Model.IsNew ? T["Add address"] : T["Edit address"])">
+    <breadcrumb name="@(Model.IsNew ? "CustomersAddressCreate" : "CustomersAddressEdit")" title="@(Model.IsNew ? T["Add Address"] : T["Edit Address"])">
         <breadcrumb-item id="CustomersIndex" action="Index" controller="CustomersAdmin" area="CrestApps.OrchardCore.Customers" permission="@CustomerPermissions.ViewCustomers.Name">@T["Customers"]</breadcrumb-item>
         <breadcrumb-item id="CustomersEdit" action="Edit" controller="CustomersAdmin" area="CrestApps.OrchardCore.Customers" route-customerId="@Model.CustomerId" permission="@CustomerPermissions.ViewCustomers.Name">@Model.CustomerName</breadcrumb-item>
     </breadcrumb>

@@ -13,10 +13,10 @@
     <input type="text" name="reference" class="form-control form-control-sm" placeholder="@T["Reference"]" aria-label="@T["Reference"]" />
     <button type="submit" class="btn btn-sm btn-secondary text-nowrap"
             data-url-af="RemoveUrl"
-            data-title="@T["Mark settled"]"
+            data-title="@T["Mark Settled"]"
             data-message="@T["Record that {0} {1} was paid back to the customer outside the application? This cannot be undone.", refund.Currency, CurrencyScale.Format(refund.RefundGrossAmount, refund.Currency)]"
-            data-ok-text="@T["Mark settled"]"
+            data-ok-text="@T["Mark Settled"]"
             data-cancel-text="@T["Cancel"]">
-        @T["Mark settled"]
+        @T["Mark Settled"]
     </button>
 </form>

@@ -17,7 +17,7 @@
     .classified-post .ocat-label-required::after { content: " *"; }
 </style>
 
-<h1 class="h3 mb-3">@(Model.ContentItemId is null ? T["Post a listing"] : T["Edit your listing"])</h1>
+<h1 class="h3 mb-3">@(Model.ContentItemId is null ? T["Post a Listing"] : T["Edit Your Listing"])</h1>
 
 @if (Model.RequireApproval)
 {
@@ -32,6 +32,6 @@
     @await DisplayAsync(zones["Content"])
     @await DisplayAsync(zones["Parts"])
 
-    <button type="submit" class="btn btn-primary">@(Model.ContentItemId is null ? T["Post it"] : T["Save"])</button>
-    <a href="@Url.RouteUrl("ClassifiedsOwn")" class="btn btn-link">@T["My listings"]</a>
+    <button type="submit" class="btn btn-primary">@(Model.ContentItemId is null ? T["Post It"] : T["Save"])</button>
+    <a href="@Url.RouteUrl("ClassifiedsOwn")" class="btn btn-link">@T["My Listings"]</a>
 </form>

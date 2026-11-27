@@ -16,10 +16,10 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <h2 class="h5">@T["Push notifications on this device"]</h2>
+        <h2 class="h5">@T["Push Notifications on This Device"]</h2>
         <p class="small text-muted">@T["Get a notification on this phone or computer when your schedule changes, even when My Work is closed. On a phone, add My Work to your home screen first."]</p>
         <div class="d-flex flex-wrap align-items-center gap-2">
-            <button type="button" class="btn btn-success btn-sm" id="push-on" data-key="@Model.PushPublicKey">@T["Turn on"]</button>
+            <button type="button" class="btn btn-success btn-sm" id="push-on" data-key="@Model.PushPublicKey">@T["Turn On"]</button>
             <span class="small" id="push-status" role="status"></span>
         </div>
         @if (Model.Devices.Count > 0)
@@ -29,7 +29,7 @@
                 {
                     <li class="list-group-item px-0 d-flex flex-wrap align-items-center gap-2">
                         <span class="me-auto small">@(string.IsNullOrEmpty(device.UserAgent) ? T["A device"].Value : device.UserAgent)<br /><span class="text-muted">@T["Added {0}", (await LocalAsync(device.CreatedUtc)).ToString("d")]@if (device.LastSentUtc.HasValue) {<text> · </text>@T["last reached {0}", (await LocalAsync(device.LastSentUtc.Value)).ToString("g")]}</span></span>
-                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/push/unsubscribe")"><input type="hidden" name="endpoint" value="@device.Endpoint" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Turn off"]</button></form>
+                        <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/push/unsubscribe")"><input type="hidden" name="endpoint" value="@device.Endpoint" /><button type="submit" class="btn btn-outline-danger btn-sm">@T["Turn Off"]</button></form>
                     </li>
                 }
             </ul>
@@ -47,7 +47,7 @@
 
 <div class="card mb-3" id="calendar">
     <div class="card-body">
-        <h2 class="h5">@T["My calendar app"]</h2>
+        <h2 class="h5">@T["My Calendar App"]</h2>
         <p class="small text-muted">@T["Subscribe to this address in Google Calendar, Outlook or your phone's calendar to see your shifts and time off there. Keep it private: anyone with it can see your schedule."]</p>
         <div class="input-group">
             <input type="text" class="form-control" value="@Model.FeedUrl" id="feed-url" readonly aria-label="@T["Calendar address"]" />

@@ -6,7 +6,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="CampaignEdit" title="@(Model.IsNew ? T["Add campaign"] : T["Edit campaign"])">
+    <breadcrumb name="CampaignEdit" title="@(Model.IsNew ? T["Add Campaign"] : T["Edit Campaign"])">
         <breadcrumb-item id="Campaigns" action="Index" controller="CampaignsAdmin" area="@MarketingConstants.Feature" permission="@MarketingPermissions.ManageMarketing.Name">@T["Campaigns"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -40,7 +40,7 @@
         @if (campaign.Status is CampaignStatus.Scheduled or CampaignStatus.Sending)
         {
             <form method="post" class="no-multisubmit">
-                <button type="submit" name="submit" value="cancel" class="btn btn-sm btn-outline-danger">@T["Cancel the campaign"]</button>
+                <button type="submit" name="submit" value="cancel" class="btn btn-sm btn-outline-danger">@T["Cancel the Campaign"]</button>
             </form>
         }
     </div>
@@ -52,9 +52,9 @@
         @await DisplayAsync(Model.Editor)
 
         <div class="action-bar-bottom">
-            <button type="submit" name="submit" value="save" class="btn btn-secondary">@T["Save draft"]</button>
+            <button type="submit" name="submit" value="save" class="btn btn-secondary">@T["Save Draft"]</button>
             <button type="submit" name="submit" value="send" class="btn btn-primary">@T["Send"]</button>
-            <a asp-action="Index" class="btn btn-link">@T["Back to campaigns"]</a>
+            <a asp-action="Index" class="btn btn-link">@T["Back to Campaigns"]</a>
         </div>
     </fieldset>
 </form>

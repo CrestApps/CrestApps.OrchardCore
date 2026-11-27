@@ -7,7 +7,7 @@
 <script asp-name="intl-tel-input" at="Foot"></script>
 
 <zone Name="Title">
-    <breadcrumb name="MessagingBroadcastsCreate" title="@T["New broadcast"]">
+    <breadcrumb name="MessagingBroadcastsCreate" title="@T["New Broadcast"]">
         <breadcrumb-item id="MessagingBroadcasts" action="Index" controller="Broadcasts" area="CrestApps.OrchardCore.Omnichannel.Messaging" permission="@MessagingPermissions.SendGroupMessages.Name">@T["Broadcasts"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -18,7 +18,7 @@
     @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
-        <button class="btn btn-primary" type="submit">@T["Queue broadcast"]</button>
+        <button class="btn btn-primary" type="submit">@T["Queue Broadcast"]</button>
         <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>
     </div>
 </form>

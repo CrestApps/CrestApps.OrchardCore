@@ -50,14 +50,14 @@
             <audio controls data-vm-preview style="max-width: 30rem;"></audio>
         </div>
 
-        <button type="button" class="btn btn-primary" data-vm-save disabled>@T["Save greeting"]</button>
+        <button type="button" class="btn btn-primary" data-vm-save disabled>@T["Save Greeting"]</button>
         <span class="ms-2" data-vm-save-status></span>
 
         @if (Model.HasAudioGreeting)
         {
             <form method="post" action="@clearUrl" class="d-inline ms-2" onsubmit="return confirm('@T["Remove your greeting?"]');">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-outline-danger">@T["Remove greeting"]</button>
+                <button type="submit" class="btn btn-outline-danger">@T["Remove Greeting"]</button>
             </form>
         }
     </div>

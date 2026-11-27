@@ -35,7 +35,7 @@
 
 <zone Name="Title">
     <breadcrumb name="TicketBoardsDisplay" title="@T["{0}", Model.Board.Name]">
-        <breadcrumb-item id="TicketBoardsIndex" action="Index" controller="TicketBoards" area="CrestApps.OrchardCore.Tickets">@T["Ticket boards"]</breadcrumb-item>
+        <breadcrumb-item id="TicketBoardsIndex" action="Index" controller="TicketBoards" area="CrestApps.OrchardCore.Tickets">@T["Ticket Boards"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -67,7 +67,7 @@
             {
                 <div class="col-auto">
                     <div class="dropdown">
-                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Other boards"]</button>
+                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Other Boards"]</button>
                         <ul class="dropdown-menu dropdown-menu-end">
                             @foreach (var other in Model.Boards)
                             {
@@ -81,14 +81,14 @@
                 <form asp-action="Pin" asp-route-id="@Model.Board.ItemId" method="post">
                     <input type="hidden" name="pinned" value="@(Model.IsPinned ? "false" : "true")" />
                     <button type="submit" class="btn btn-outline-secondary" aria-pressed="@(Model.IsPinned ? "true" : "false")" title="@(Model.IsPinned ? T["Remove this board from your menu"] : T["Show this board in your menu, under Service Desk"])">
-                        <i class="fa-solid fa-thumbtack me-1" aria-hidden="true"></i>@(Model.IsPinned ? T["Unpin"] : T["Pin to menu"])
+                        <i class="fa-solid fa-thumbtack me-1" aria-hidden="true"></i>@(Model.IsPinned ? T["Unpin"] : T["Pin to Menu"])
                     </button>
                 </form>
             </div>
             @if (Model.CanManage)
             {
                 <div class="col-auto">
-                    <a class="btn btn-secondary" asp-action="Edit" asp-route-id="@Model.Board.ItemId"><i class="fa-solid fa-table-columns me-1" aria-hidden="true"></i>@T["Edit board"]</a>
+                    <a class="btn btn-secondary" asp-action="Edit" asp-route-id="@Model.Board.ItemId"><i class="fa-solid fa-table-columns me-1" aria-hidden="true"></i>@T["Edit Board"]</a>
                 </div>
             }
         </div>

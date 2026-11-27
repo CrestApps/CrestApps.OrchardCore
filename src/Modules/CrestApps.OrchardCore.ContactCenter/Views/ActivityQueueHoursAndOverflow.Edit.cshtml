@@ -93,7 +93,7 @@ else
                     <div class="widget-editor card mb-2" data-repeater-row>
                         <input type="hidden" name="@(overflowTargetsPrefix).Index" value="@key" />
                         <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(itemId)-body" aria-expanded="true" aria-controls="@(itemId)-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(itemId)-body" aria-expanded="true" aria-controls="@(itemId)-body" title="@T["Collapse or Expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
                             <span class="flex-grow-1 text-truncate">
                                 <span data-repeater-title data-repeater-title-empty="@noQueueTitle">@(string.IsNullOrEmpty(queueName) ? noQueueTitle : queueName)</span>
                                 <span class="hint dashed">@T["Overflow hop"]</span>
@@ -132,7 +132,7 @@ else
                 <div class="widget-editor card mb-2" data-repeater-row>
                     <input type="hidden" name="@(overflowTargetsPrefix).Index" value="__KEY__" />
                     <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(overflowTargetsId)-__KEY__-body" aria-expanded="true" aria-controls="@(overflowTargetsId)-__KEY__-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(overflowTargetsId)-__KEY__-body" aria-expanded="true" aria-controls="@(overflowTargetsId)-__KEY__-body" title="@T["Collapse or Expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
                         <span class="flex-grow-1 text-truncate">
                             <span data-repeater-title data-repeater-title-empty="@noQueueTitle">@noQueueTitle</span>
                             <span class="hint dashed">@T["Overflow hop"]</span>
@@ -166,7 +166,7 @@ else
                     </div>
                 </div>
             </template>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add overflow hop"]</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add Overflow Hop"]</button>
         </div>
         <span class="hint">@T["Where a waiting caller widens to, and after how long: from specialists to a general pool as they wait. A caller is never sent back to a queue they have already been through. When any hop is set, the chain replaces the single overflow queue above."]</span>
     </div>

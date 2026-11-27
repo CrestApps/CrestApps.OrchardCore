@@ -12,7 +12,7 @@
 
 <zone Name="Title">
     <breadcrumb name="BankAccountsEdit" title="@T["Edit {0}", Model.DisplayName]">
-        <breadcrumb-item id="BankAccounts" action="Index" controller="BankAccounts" area="CrestApps.OrchardCore.Banking" permission="@BankingPermissions.ManageBankAccounts.Name">@T["Bank accounts"]</breadcrumb-item>
+        <breadcrumb-item id="BankAccounts" action="Index" controller="BankAccounts" area="CrestApps.OrchardCore.Banking" permission="@BankingPermissions.ManageBankAccounts.Name">@T["Bank Accounts"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -24,17 +24,17 @@
         <button class="btn btn-primary" type="submit">@T["Save"]</button>
         @if (canReveal)
         {
-            <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.Action("Reveal", new { id })">@T["Show the full number"]</button>
+            <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.Action("Reveal", new { id })">@T["Show the Full Number"]</button>
         }
         @foreach (var verifier in BankAccountService.Verifiers)
         {
-            <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.Action("Verify", new { id, verifier = verifier.Name })">@T["Check with {0}", verifier.DisplayName]</button>
+            <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.Action("Verify", new { id, verifier = verifier.Name })">@T["Check With {0}", verifier.DisplayName]</button>
         }
         @foreach (var provider in BankAccountService.LinkProviders)
         {
             if (await provider.IsAvailableAsync())
             {
-                <a class="btn btn-secondary action-bar-secondary" role="button" href="@Url.Action("Link", new { id, provider = provider.Name })">@T["Link with {0}", provider.DisplayName]</a>
+                <a class="btn btn-secondary action-bar-secondary" role="button" href="@Url.Action("Link", new { id, provider = provider.Name })">@T["Link With {0}", provider.DisplayName]</a>
             }
         }
         <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>

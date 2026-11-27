@@ -10,7 +10,7 @@
             <h2 class="h6 mb-0 me-auto">@T["Agreements"] <span class="badge text-bg-secondary fw-normal">@Model.Agreements.Count</span></h2>
             @if (Model.CanManage)
             {
-                <a class="btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.Agreements" asp-controller="Agreements" asp-action="Create" asp-route-accountId="@Model.AccountId">@T["New agreement"]</a>
+                <a class="btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.Agreements" asp-controller="Agreements" asp-action="Create" asp-route-accountId="@Model.AccountId">@T["New Agreement"]</a>
             }
         </div>
         @if (Model.Agreements.Count == 0)

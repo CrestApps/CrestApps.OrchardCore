@@ -2,7 +2,7 @@
 @using CrestApps.OrchardCore.Products.Core.Services
 
 <zone Name="Title">
-    <breadcrumb name="ShipmentsLabel" title="@T["Label for shipment {0}", Model.Shipment.Number]">
+    <breadcrumb name="ShipmentsLabel" title="@T["Label for Shipment {0}", Model.Shipment.Number]">
         <breadcrumb-item id="OrdersDetail" action="Detail" controller="OrdersAdmin" area="CrestApps.OrchardCore.Orders" route-orderId="@Model.Order.ItemId">@T["Order {0}", Model.Order.OrderNumber]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -49,7 +49,7 @@
                             <span class="hint">@(Model.WeightUnit == WeightUnit.Pound ? T["In inches. Optional."] : T["In centimeters. Optional."])</span>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-secondary btn-sm" disabled="@(!Model.HasShipFrom || Model.Order.ShippingAddress is null)">@T["Compare rates"]</button>
+                    <button type="submit" class="btn btn-secondary btn-sm" disabled="@(!Model.HasShipFrom || Model.Order.ShippingAddress is null)">@T["Compare Rates"]</button>
                 </form>
             </div>
         </div>
@@ -85,7 +85,7 @@
                         }
                     </div>
                     <div class="card-body">
-                        <button type="submit" class="btn btn-primary btn-sm" data-title="@T["Buy label"]" data-message="@T["Buy this label? The account is charged, and the shipment is marked shipped."]" data-ok-text="@T["Buy label"]" data-ok-class="btn-primary" data-url-af="RemoveUrl">@T["Buy label and ship"]</button>
+                        <button type="submit" class="btn btn-primary btn-sm" data-title="@T["Buy Label"]" data-message="@T["Buy this label? The account is charged, and the shipment is marked shipped."]" data-ok-text="@T["Buy Label"]" data-ok-class="btn-primary" data-url-af="RemoveUrl">@T["Buy Label and Ship"]</button>
                         <span class="hint d-block mt-1">@T["The buyer is emailed the tracking number."]</span>
                     </div>
                 </form>

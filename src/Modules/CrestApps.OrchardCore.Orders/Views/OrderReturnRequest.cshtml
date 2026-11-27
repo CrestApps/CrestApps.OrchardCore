@@ -2,7 +2,7 @@
 
 @* The buyer's form to send items of an order back. *@
 
-<h1 class="h3 mb-1">@T["Return items"]</h1>
+<h1 class="h3 mb-1">@T["Return Items"]</h1>
 <p class="text-muted">@T["Order {0}. Choose what you're sending back and why. Returns are accepted for {1} days after you pay.", Model.Order.OrderNumber, Model.WindowDays]</p>
 
 @if (Model.Problems.Count > 0)
@@ -84,8 +84,8 @@
     </div>
 
     <div class="d-flex flex-wrap gap-2">
-        <button type="submit" class="btn btn-primary">@T["Ask to return"]</button>
-        <a href="@Model.BackUrl" class="btn btn-outline-secondary">@T["Back to the order"]</a>
+        <button type="submit" class="btn btn-primary">@T["Ask to Return"]</button>
+        <a href="@Model.BackUrl" class="btn btn-outline-secondary">@T["Back to the Order"]</a>
     </div>
     <p class="small text-muted mt-3">@T["We'll email you once we've looked at your request, with how to send the items back."]</p>
 </form>

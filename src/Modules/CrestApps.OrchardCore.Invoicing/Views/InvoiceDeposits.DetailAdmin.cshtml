@@ -31,7 +31,7 @@ else if (Model.Invoice.Status == InvoiceStatus.Draft && Model.CanManage)
                         </span>
                         <form asp-controller="InvoiceDeposits" asp-action="Deduct" asp-route-itemId="@Model.Invoice.ItemId" method="post">
                             <input type="hidden" name="prepaymentId" value="@deposit.ItemId" />
-                            <button type="submit" class="btn btn-sm btn-primary">@T["Deduct from this invoice"]</button>
+                            <button type="submit" class="btn btn-sm btn-primary">@T["Deduct From This Invoice"]</button>
                         </form>
                     </li>
                 }
@@ -58,7 +58,7 @@ else if (Model.Invoice.Status == InvoiceStatus.Draft && Model.CanManage)
                     <input id="deposit-amount" name="amount" type="number" step="any" min="0" class="form-control" />
                 </div>
                 <div class="col-sm-4">
-                    <button type="submit" class="btn btn-secondary w-100">@T["Ask for a deposit first"]</button>
+                    <button type="submit" class="btn btn-secondary w-100">@T["Ask for a Deposit First"]</button>
                 </div>
             </form>
             <span class="hint">@T["Drafts a deposit invoice for part of this invoice, to issue and send now. When it is paid, it shows above, to deduct from this invoice before you issue it."]</span>

@@ -4,7 +4,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="@(isNew ? "OrdersCreate" : "OrdersEdit")" title="@(isNew ? T["Create order"] : T["Edit order {0}", Model.Order.OrderNumber])">
+    <breadcrumb name="@(isNew ? "OrdersCreate" : "OrdersEdit")" title="@(isNew ? T["Create Order"] : T["Edit Order {0}", Model.Order.OrderNumber])">
         <breadcrumb-item id="OrdersIndex" action="Index" controller="OrdersAdmin" area="CrestApps.OrchardCore.Orders" permission="@CrestApps.OrchardCore.Orders.OrderPermissions.ManageOrders.Name">@T["Orders"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -44,8 +44,8 @@
     @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
-        <button type="submit" name="submit" value="update" class="btn btn-secondary" formnovalidate>@T["Update prices"]</button>
-        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
+        <button type="submit" name="submit" value="update" class="btn btn-secondary" formnovalidate>@T["Update Prices"]</button>
+        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save Draft"]</button>
         <a class="btn btn-outline-secondary" href="@(isNew ? Url.Action("Index", "OrdersAdmin") : Url.Action("Detail", "OrdersAdmin", new { orderId = Model.Order.ItemId }))">@T["Cancel"]</a>
     </div>
 </form>

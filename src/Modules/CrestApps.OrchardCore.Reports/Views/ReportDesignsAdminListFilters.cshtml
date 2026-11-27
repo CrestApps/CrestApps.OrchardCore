@@ -20,6 +20,6 @@
     <ul class="dropdown-menu dropdown-menu-end">
         <li><a class="dropdown-item@(status == ReportDesignListStatus.All ? " active" : null)" asp-controller="ReportDesigns" asp-action="Index" asp-route-q="@search">@T["All"]</a></li>
         <li><a class="dropdown-item@(status == ReportDesignListStatus.Published ? " active" : null)" asp-controller="ReportDesigns" asp-action="Index" asp-route-q="@search" asp-route-status="@ReportDesignListStatus.Published">@T["Published"]</a></li>
-        <li><a class="dropdown-item@(status == ReportDesignListStatus.Unpublished ? " active" : null)" asp-controller="ReportDesigns" asp-action="Index" asp-route-q="@search" asp-route-status="@ReportDesignListStatus.Unpublished">@T["Not published"]</a></li>
+        <li><a class="dropdown-item@(status == ReportDesignListStatus.Unpublished ? " active" : null)" asp-controller="ReportDesigns" asp-action="Index" asp-route-q="@search" asp-route-status="@ReportDesignListStatus.Unpublished">@T["Not Published"]</a></li>
     </ul>
 </div>

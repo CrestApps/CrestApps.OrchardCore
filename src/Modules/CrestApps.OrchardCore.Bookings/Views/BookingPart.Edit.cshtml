@@ -32,7 +32,7 @@
         <div class="ocat-end-offset">
             @if (!string.IsNullOrEmpty(Model.ContentItemId))
             {
-                <a class="btn btn-secondary btn-sm" asp-area="@CrestApps.OrchardCore.Bookings.BookingsConstants.Feature" asp-controller="BookingsAdmin" asp-action="Dates" asp-route-contentItemId="@Model.ContentItemId">@T["Manage dates"]</a>
+                <a class="btn btn-secondary btn-sm" asp-area="@CrestApps.OrchardCore.Bookings.BookingsConstants.Feature" asp-controller="BookingsAdmin" asp-action="Dates" asp-route-contentItemId="@Model.ContentItemId">@T["Manage Dates"]</a>
                 <span class="hint d-block">@T["The departures buyers can choose, each with its seats and, optionally, its own price."]</span>
             }
             else

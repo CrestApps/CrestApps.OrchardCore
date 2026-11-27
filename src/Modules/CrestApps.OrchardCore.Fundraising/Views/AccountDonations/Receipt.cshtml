@@ -17,14 +17,14 @@
 
 <zone Name="Title">
     <breadcrumb name="AccountDonationReceipt" title="@(new HtmlContentString(donation.ReceiptNumber ?? string.Empty))">
-        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your Account"]</breadcrumb-item>
         <breadcrumb-item id="AccountDonations" url="@Url.RouteUrl("AccountDonations")">@T["Donations"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
 <div class="container my-4" style="max-width: 44rem;">
     <div class="d-flex align-items-center mb-3 d-print-none">
-        <h1 class="h3 mb-0 flex-grow-1">@T["Donation receipt"]</h1>
+        <h1 class="h3 mb-0 flex-grow-1">@T["Donation Receipt"]</h1>
         <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print()"><i class="fa-solid fa-print" aria-hidden="true"></i> @T["Print"]</button>
     </div>
 

@@ -25,7 +25,7 @@
                     <div class="widget-editor card mb-2" data-repeater-row>
                         <input type="hidden" name="@(skillsPrefix).Index" value="@key" />
                         <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(itemId)-body" aria-expanded="true" aria-controls="@(itemId)-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(itemId)-body" aria-expanded="true" aria-controls="@(itemId)-body" title="@T["Collapse or Expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
                             <span class="flex-grow-1 text-truncate">
                                 <span data-repeater-title data-repeater-title-empty="@noSkillTitle">@(string.IsNullOrEmpty(skillName) ? noSkillTitle : skillName)</span>
                                 <span class="hint dashed">@T["Skill"]</span>
@@ -69,7 +69,7 @@
                 <div class="widget-editor card mb-2" data-repeater-row>
                     <input type="hidden" name="@(skillsPrefix).Index" value="__KEY__" />
                     <div class="widget-editor-header card-header text-muted d-flex align-items-center gap-2 py-1 ps-2 pe-1">
-                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(skillsId)-__KEY__-body" aria-expanded="true" aria-controls="@(skillsId)-__KEY__-body" title="@T["Collapse or expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-toggle="collapse" data-bs-target="#@(skillsId)-__KEY__-body" aria-expanded="true" aria-controls="@(skillsId)-__KEY__-body" title="@T["Collapse or Expand"]"><i class="fa-solid fa-angle-down" aria-hidden="true"></i></button>
                         <span class="flex-grow-1 text-truncate">
                             <span data-repeater-title data-repeater-title-empty="@noSkillTitle">@noSkillTitle</span>
                             <span class="hint dashed">@T["Skill"]</span>
@@ -108,7 +108,7 @@
                     </div>
                 </div>
             </template>
-            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add skill"]</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add Skill"]</button>
         </div>
         <span class="hint">@T["Proficiency runs from 1 (basic) to 5 (expert). A queue that requires a skill at a minimum proficiency only offers its work to agents at or above it."]</span>
     </div>

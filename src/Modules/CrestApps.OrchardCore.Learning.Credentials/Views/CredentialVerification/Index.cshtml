@@ -2,7 +2,7 @@
 @model CredentialVerificationViewModel
 
 @{
-    ViewData["Title"] = T["Verify a digital credential"];
+    ViewData["Title"] = T["Verify a Digital Credential"];
 
     var (badge, text, summary) = Model.Outcome switch
     {
@@ -18,11 +18,11 @@
 
 <div class="container my-5" style="max-width: 46rem">
     <div class="product-breadcrumb">
-        <breadcrumb name="LearningCredentialVerification" title="@T["Verify a digital credential"]">
+        <breadcrumb name="LearningCredentialVerification" title="@T["Verify a Digital Credential"]">
             <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
         </breadcrumb>
     </div>
-    <h1 class="h3 mb-4">@T["Verify a digital credential"]</h1>
+    <h1 class="h3 mb-4">@T["Verify a Digital Credential"]</h1>
 
     @if (Model.Outcome == CredentialVerificationOutcome.NotFound)
     {
@@ -84,8 +84,8 @@
                 {
                     <div class="d-flex flex-wrap gap-2 mt-3">
                         <a class="btn btn-sm btn-outline-secondary" href="@Model.CredentialUrl" rel="nofollow">@T["Credential (JSON-LD)"]</a>
-                        <a class="btn btn-sm btn-outline-secondary" href="@Model.JwtUrl" rel="nofollow">@T["Signed credential (JWT)"]</a>
-                        <a class="btn btn-sm btn-outline-secondary" href="@Model.KeySetUrl" rel="nofollow">@T["Issuer keys"]</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="@Model.JwtUrl" rel="nofollow">@T["Signed Credential (JWT)"]</a>
+                        <a class="btn btn-sm btn-outline-secondary" href="@Model.KeySetUrl" rel="nofollow">@T["Issuer Keys"]</a>
                     </div>
                 }
                 <p class="small text-muted mt-3 mb-0">@T["This page checked the credential on the issuer's server just now. The credential is an Open Badges 3.0 credential; any verifier can check its signature with the issuer's keys and its revocation list."]</p>

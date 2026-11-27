@@ -108,7 +108,7 @@
                     @if (balance.Status is BookingBalanceStatus.Scheduled or BookingBalanceStatus.Failed)
                     {
                         <form asp-action="ChargeBalance" asp-route-itemId="@booking.ItemId" method="post">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Charge the card now"]</button>
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Charge the Card Now"]</button>
                         </form>
                     }
                 </div>
@@ -123,7 +123,7 @@
                         <button type="submit" class="btn btn-success btn-sm">@T["Complete"]</button>
                     </form>
                     <form asp-action="Complete" asp-route-itemId="@booking.ItemId" asp-route-noShow="true" method="post">
-                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["No-show"]</button>
+                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["No-Show"]</button>
                     </form>
                 </div>
             </div>
@@ -147,7 +147,7 @@
                             <label for="reason" class="form-label small">@T["Reason"]</label>
                             <input id="reason" name="reason" class="form-control form-control-sm" maxlength="200" />
                         </div>
-                        <button type="submit" class="btn btn-danger btn-sm">@T["Cancel the booking"]</button>
+                        <button type="submit" class="btn btn-danger btn-sm">@T["Cancel the Booking"]</button>
                     </form>
                 </div>
             </div>

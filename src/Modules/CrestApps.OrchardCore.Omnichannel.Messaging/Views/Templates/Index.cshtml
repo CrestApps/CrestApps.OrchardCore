@@ -1,7 +1,7 @@
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<MessageTemplate>>
 
 <zone Name="Title">
-    <breadcrumb name="MessagingTemplates" title="@T["Message templates"]" />
+    <breadcrumb name="MessagingTemplates" title="@T["Message Templates"]" />
 </zone>
 
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="true">
@@ -19,7 +19,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-route-action="Create">@T["Add template"]</a>
+                    <a class="btn btn-secondary create" role="button" asp-route-action="Create">@T["Add Template"]</a>
                 </div>
             </div>
         </div>

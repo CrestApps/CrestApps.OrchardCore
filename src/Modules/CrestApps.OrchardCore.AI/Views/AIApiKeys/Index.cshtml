@@ -1,7 +1,7 @@
 @model ListCatalogEntryViewModel
 
 <zone Name="Title">
-    <breadcrumb name="AIApiKeys" title="@T["API keys"]" />
+    <breadcrumb name="AIApiKeys" title="@T["API Keys"]" />
 </zone>
 
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit">
@@ -17,7 +17,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" asp-action="Create">@T["Add API key"]</a>
+                    <a class="btn btn-secondary create" asp-action="Create">@T["Add API Key"]</a>
                 </div>
             </div>
         </div>

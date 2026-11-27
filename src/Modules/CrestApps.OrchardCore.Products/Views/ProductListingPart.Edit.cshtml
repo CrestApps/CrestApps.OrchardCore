@@ -143,8 +143,8 @@
                 {
                     <button type="button" class="btn btn-sm btn-outline-secondary @(expandRows ? null : "collapsed")" data-bs-toggle="collapse" data-bs-target="#@filtersId" aria-expanded="@(expandRows ? "true" : "false")" aria-controls="@filtersId">
                         <span class="fa-solid fa-filter me-1" aria-hidden="true"></span>
-                        @T["Choose filters"]
-                        <span class="badge text-bg-secondary ms-1" data-product-summary="filters" data-template="@T["{0} of {1} in use"].Value"></span>
+                        @T["Choose Filters"]
+                        <span class="badge text-bg-secondary ms-1" data-product-summary="filters" data-template="@T["{0} of {1} in Use"].Value"></span>
                     </button>
 
                     <div class="collapse @(expandRows ? "show" : null)" id="@filtersId">
@@ -190,9 +190,9 @@
                                                         }
                                                     </div>
                                                     <div class="col-auto order-md-last">
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary collapsed" data-bs-toggle="collapse" data-bs-target="#@detailsId" aria-expanded="false" aria-controls="@detailsId" title="@T["More settings"]">
+                                                        <button type="button" class="btn btn-sm btn-outline-secondary collapsed" data-bs-toggle="collapse" data-bs-target="#@detailsId" aria-expanded="false" aria-controls="@detailsId" title="@T["More Settings"]">
                                                             <span class="fa-solid fa-sliders" aria-hidden="true"></span>
-                                                            <span class="visually-hidden">@T["More settings for {0}", row.AttributeLabel]</span>
+                                                            <span class="visually-hidden">@T["More Settings for {0}", row.AttributeLabel]</span>
                                                         </button>
                                                     </div>
                                                     <div class="col-12 col-md">
@@ -281,8 +281,8 @@
 
                 <button type="button" class="btn btn-sm btn-outline-secondary @(expandRows ? null : "collapsed")" data-bs-toggle="collapse" data-bs-target="#@sortsId" aria-expanded="@(expandRows ? "true" : "false")" aria-controls="@sortsId">
                     <span class="fa-solid fa-arrow-down-wide-short me-1" aria-hidden="true"></span>
-                    @T["Choose sorts"]
-                    <span class="badge text-bg-secondary ms-1" data-product-summary="sorts" data-template="@T["{0} of {1} in use"].Value"></span>
+                    @T["Choose Sorts"]
+                    <span class="badge text-bg-secondary ms-1" data-product-summary="sorts" data-template="@T["{0} of {1} in Use"].Value"></span>
                 </button>
 
                 <div class="collapse @(expandRows ? "show" : null)" id="@sortsId">

@@ -16,8 +16,8 @@
                 <span>
                     @T["A staff member"]@(string.IsNullOrEmpty(Model.JobTitle) ? null : ": " + Model.JobTitle)
                 </span>
-                <a class="btn btn-sm btn-outline-primary" asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Profile" asp-route-id="@Model.StaffMemberId">@T["Open their staff profile"]</a>
-                <a class="btn btn-sm btn-outline-secondary" asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-id="@Model.StaffMemberId">@T["Edit employment"]</a>
+                <a class="btn btn-sm btn-outline-primary" asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Profile" asp-route-id="@Model.StaffMemberId">@T["Open Their Staff Profile"]</a>
+                <a class="btn btn-sm btn-outline-secondary" asp-area="CrestApps.OrchardCore.Staff" asp-controller="Staff" asp-action="Edit" asp-route-id="@Model.StaffMemberId">@T["Edit Employment"]</a>
             </div>
             <span class="hint">@T["Their name and email come from this account. Their job, manager, teams, pay and the cards other modules add are on their staff profile."]</span>
         }

@@ -62,11 +62,11 @@
         <div class="card">
             <div class="card-body text-center py-5">
                 <div class="mb-3"><i class="fa-solid fa-sitemap fa-3x text-muted" aria-hidden="true"></i></div>
-                <h2 class="h4">@T["No {0} yet", labels.ChildrenLower]</h2>
+                <h2 class="h4">@T["No {0} Yet", labels.ChildrenLower]</h2>
                 <p class="text-muted mb-3">@T["Each {0} gets its own site with its own address, users and data. You can open any of them from here without signing in again.", labels.ChildLower]</p>
                 @if (Model.CanCreate && Model.HostGuardInstalled)
                 {
-                    <a class="btn btn-primary" asp-action="Create"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add your first {0}", labels.ChildLower]</a>
+                    <a class="btn btn-primary" asp-action="Create"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add Your First {0}", labels.ChildLower]</a>
                 }
             </div>
         </div>

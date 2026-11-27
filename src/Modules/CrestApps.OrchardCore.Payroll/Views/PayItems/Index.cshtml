@@ -1,7 +1,7 @@
 @model PayItemsIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="PayrollPayItems" title="@T["Pay items of {0}", Model.StaffName]">
+    <breadcrumb name="PayrollPayItems" title="@T["Pay Items of {0}", Model.StaffName]">
         <breadcrumb-item id="StaffIndex" action="Index" controller="Staff" area="CrestApps.OrchardCore.Staff">@T["Staff"]</breadcrumb-item>
         <breadcrumb-item id="PayrollPayProfilesEdit" action="Edit" controller="PayProfiles" area="CrestApps.OrchardCore.Payroll" route-id="@Model.Profile.ItemId">@Model.StaffName</breadcrumb-item>
     </breadcrumb>
@@ -16,7 +16,7 @@
                 @if (Model.CanManage)
                 {
                     <div class="col-auto">
-                        <a class="btn btn-secondary create" role="button" asp-action="Create" asp-route-profileId="@Model.Profile.ItemId">@T["Add pay item"]</a>
+                        <a class="btn btn-secondary create" role="button" asp-action="Create" asp-route-profileId="@Model.Profile.ItemId">@T["Add Pay Item"]</a>
                     </div>
                 }
             </div>
@@ -28,7 +28,7 @@
                 empty-message="@T["<strong>Nothing here!</strong> No recurring earning or deduction yet, such as a retirement contribution or a loan repayment."]">
         <admin-list-list item-css-class="list-group-item" />
         <admin-list-grid>
-            <admin-list-column name="Name" position="20" title="@T["Pay code"]" />
+            <admin-list-column name="Name" position="20" title="@T["Pay Code"]" />
             <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
             <admin-list-column type="Actions" title="@T["Actions"]" />
         </admin-list-grid>

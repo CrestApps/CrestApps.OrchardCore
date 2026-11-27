@@ -8,8 +8,8 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="ReportSubscriptionEdit" title="@(Model.IsNew ? T["Add subscription"] : T["Edit subscription"])">
-        <breadcrumb-item id="ReportSubscriptions" action="Index" controller="ReportSubscriptions" area="@ReportsConstants.Feature" permission="@ReportSubscriptionPermissions.ManageReportSubscriptions.Name">@T["Report subscriptions"]</breadcrumb-item>
+    <breadcrumb name="ReportSubscriptionEdit" title="@(Model.IsNew ? T["Add Subscription"] : T["Edit Subscription"])">
+        <breadcrumb-item id="ReportSubscriptions" action="Index" controller="ReportSubscriptions" area="@ReportsConstants.Feature" permission="@ReportSubscriptionPermissions.ManageReportSubscriptions.Name">@T["Report Subscriptions"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -39,7 +39,7 @@
 
     <div class="action-bar-bottom">
         <button type="submit" name="submit" value="save" class="btn btn-primary save">@T["Save"]</button>
-        <button type="submit" name="submit" value="send" class="btn btn-secondary">@T["Save and send now"]</button>
+        <button type="submit" name="submit" value="send" class="btn btn-secondary">@T["Save and Send Now"]</button>
         <a asp-action="Index" class="btn btn-link">@T["Cancel"]</a>
     </div>
 </form>

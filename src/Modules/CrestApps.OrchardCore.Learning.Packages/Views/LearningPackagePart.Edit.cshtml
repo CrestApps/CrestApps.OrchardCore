@@ -21,7 +21,7 @@
         {
             <div class="ocat-wrapper">
                 <div class="ocat-end-offset">
-                    <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("LearningPackageUpload", new { contentItemId = Model.ContentItemId })"><i class="fa-solid fa-file-zipper me-1" aria-hidden="true"></i>@(imported ? T["Import another package"] : T["Import a package"])</a>
+                    <a class="btn btn-secondary btn-sm" href="@Url.RouteUrl("LearningPackageUpload", new { contentItemId = Model.ContentItemId })"><i class="fa-solid fa-file-zipper me-1" aria-hidden="true"></i>@(imported ? T["Import Another Package"] : T["Import a Package"])</a>
                     <span class="hint">@T["A .zip file of a SCORM 1.2, SCORM 2004 (3rd or 4th Edition) or, with Learning cmi5 Packages, cmi5 package. The import goes into a draft; publish the item to give it to learners."]</span>
                 </div>
             </div>

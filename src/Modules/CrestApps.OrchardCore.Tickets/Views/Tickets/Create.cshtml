@@ -5,7 +5,7 @@
     var typeName = Model.Types.FirstOrDefault(type => type.Selected)?.Text;
 }
 
-<zone Name="Title"><breadcrumb name="TicketsCreate" title="@(string.IsNullOrEmpty(typeName) ? T["New ticket"] : T["New ticket: {0}", typeName])">
+<zone Name="Title"><breadcrumb name="TicketsCreate" title="@(string.IsNullOrEmpty(typeName) ? T["New Ticket"] : T["New Ticket: {0}", typeName])">
     <breadcrumb-item id="Tickets" action="Index" controller="Tickets" area="CrestApps.OrchardCore.Tickets">@T["Tickets"]</breadcrumb-item>
 </breadcrumb></zone>
 

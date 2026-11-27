@@ -20,7 +20,7 @@
             }
             @if (!row.Voided && string.IsNullOrEmpty(row.ReferenceId) && row.Method != CrestApps.OrchardCore.Payroll.Models.GarnishmentPaymentMethod.Outside && row.Amount > 0 && !string.IsNullOrEmpty(Model.OrderId))
             {
-                <button type="submit" class="btn btn-sm btn-outline-secondary mt-1" formaction="@Url.Action("Retry", "Garnishments", new { area = "CrestApps.OrchardCore.Payroll", id = Model.OrderId, statementId = row.StatementId })" formnovalidate>@T["Send again"]</button>
+                <button type="submit" class="btn btn-sm btn-outline-secondary mt-1" formaction="@Url.Action("Retry", "Garnishments", new { area = "CrestApps.OrchardCore.Payroll", id = Model.OrderId, statementId = row.StatementId })" formnovalidate>@T["Send Again"]</button>
             }
         </li>
     }

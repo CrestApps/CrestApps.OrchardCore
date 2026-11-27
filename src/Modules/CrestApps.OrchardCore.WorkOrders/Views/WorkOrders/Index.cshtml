@@ -16,7 +16,7 @@
                     @if (Model.TypeOptions.Count > 0)
                     {
                         <div class="dropdown">
-                            <button type="button" class="btn btn-secondary create dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add work order"]</button>
+                            <button type="button" class="btn btn-secondary create dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add Work Order"]</button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 @foreach (var type in Model.TypeOptions)
                                 {
@@ -27,7 +27,7 @@
                     }
                     else
                     {
-                        <a asp-controller="WorkOrderSettings" asp-action="EditType" class="btn btn-secondary create">@T["Add a work order type first"]</a>
+                        <a asp-controller="WorkOrderSettings" asp-action="EditType" class="btn btn-secondary create">@T["Add a Work Order Type First"]</a>
                     }
                 </div>
             </div>
@@ -41,7 +41,7 @@
 <admin-list name="WorkOrders" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Add a work order, or change the search and filters."]">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
-        <admin-list-column name="Name" position="20" title="@T["Work order"]" />
+        <admin-list-column name="Name" position="20" title="@T["Work Order"]" />
         <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>

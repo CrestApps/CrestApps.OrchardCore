@@ -4,7 +4,7 @@
 @model EditCatalogEntryViewModel
 
 <zone Name="Title">
-    <breadcrumb name="AIDataSourcesCreate" title="@T["New '{0}' data source", Model.DisplayName]">
+    <breadcrumb name="AIDataSourcesCreate" title="@T["New '{0}' Data Source", Model.DisplayName]">
         <breadcrumb-item id="AIDataSources" action="Index" controller="DataSources" area="CrestApps.OrchardCore.AI.DataSources" permission="@AIPermissions.ManageAIDataSources.Name">@T["AI Data Sources"]</breadcrumb-item>
     </breadcrumb>
 </zone>

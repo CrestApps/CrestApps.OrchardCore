@@ -12,7 +12,7 @@ using OrchardCore.Title.Models;
 namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 
 /// <summary>
-/// The quiz pages stay part of the course: "Back to the course" at the top, the site's own confirmation before
+/// The quiz pages stay part of the course: "Back to the Course" at the top, the site's own confirmation before
 /// submitting (not the browser's), a Continue to the next item on the result page, and a sign-in prompt, not a 404,
 /// for someone whose sign-in has ended.
 /// </summary>

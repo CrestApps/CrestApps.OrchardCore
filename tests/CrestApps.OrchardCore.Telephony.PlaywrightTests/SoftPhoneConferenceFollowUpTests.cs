@@ -101,7 +101,7 @@ public sealed class SoftPhoneConferenceFollowUpTests : SoftPhoneBrowserTest
         await page.ClickAsync($"[data-telephony-participant-hangup=\"{primary}\"]");
         await WaitForAsync(() => Server.Provider.HangupCommands.Contains($"{primary}:participant"));
         await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-telephony-conference-participant]').length === 1");
-        Assert.Equal("Hang up", await page.Locator("[data-telephony-hangup]").GetAttributeAsync("aria-label"));
+        Assert.Equal("Hang Up", await page.Locator("[data-telephony-hangup]").GetAttributeAsync("aria-label"));
 
         // Act
         await page.ClickAsync("[data-telephony-hangup]");

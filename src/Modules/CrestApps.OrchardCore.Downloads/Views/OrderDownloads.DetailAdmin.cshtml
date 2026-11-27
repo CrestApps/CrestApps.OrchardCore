@@ -56,11 +56,11 @@
                         @if (download.Problem == DownloadProblem.None)
                         {
                             <form asp-action="Revoke" asp-controller="DigitalFilesAdmin" asp-area="@DownloadsConstants.Feature" asp-route-itemId="@entitlement.ItemId" asp-route-returnUrl="@returnUrl" method="post">
-                                <button type="submit" class="btn btn-sm btn-outline-danger">@T["Take back"]</button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">@T["Take Back"]</button>
                             </form>
                         }
                         <form asp-action="Reset" asp-controller="DigitalFilesAdmin" asp-area="@DownloadsConstants.Feature" asp-route-itemId="@entitlement.ItemId" asp-route-returnUrl="@returnUrl" method="post">
-                            <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Give downloads back"]</button>
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">@T["Give Downloads Back"]</button>
                         </form>
                     </div>
                 </div>

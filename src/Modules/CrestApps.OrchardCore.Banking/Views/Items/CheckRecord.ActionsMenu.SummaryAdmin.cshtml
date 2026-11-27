@@ -17,7 +17,7 @@
     }
     @if (check.Status == CheckStatus.Queued)
     {
-        <a asp-action="PrintRun" asp-route-bankAccountId="@check.BankAccountId" class="dropdown-item">@T["Print queued checks"]</a>
+        <a asp-action="PrintRun" asp-route-bankAccountId="@check.BankAccountId" class="dropdown-item">@T["Print Queued Checks"]</a>
     }
     @if (!check.IsHistorical && check.Status == CheckStatus.Printed && check.Numbering != CheckNumbering.Handwritten)
     {
@@ -29,15 +29,15 @@
     }
     @if (CheckStatuses.Transitions.CanMove(check.Status, CheckStatus.Cleared))
     {
-        <a asp-action="Cleared" asp-route-id="@check.ItemId" class="dropdown-item" data-title="@T["Mark cleared"]" data-message="@T["Record that the bank paid check {0} today?", check.Number]" data-url-af="RemoveUrl UnsafeUrl">@T["Mark cleared"]</a>
+        <a asp-action="Cleared" asp-route-id="@check.ItemId" class="dropdown-item" data-title="@T["Mark Cleared"]" data-message="@T["Record that the bank paid check {0} today?", check.Number]" data-url-af="RemoveUrl UnsafeUrl">@T["Mark Cleared"]</a>
     }
     @if (CheckStatuses.Transitions.CanMove(check.Status, CheckStatus.StopPayment))
     {
-        <a asp-action="Stop" asp-route-id="@check.ItemId" class="dropdown-item text-danger" data-title="@T["Stop payment"]" data-message="@T["Record a stop payment on check {0}? Ask the bank to stop it too.", check.Number]" data-url-af="RemoveUrl UnsafeUrl">@T["Stop payment"]</a>
+        <a asp-action="Stop" asp-route-id="@check.ItemId" class="dropdown-item text-danger" data-title="@T["Stop Payment"]" data-message="@T["Record a stop payment on check {0}? Ask the bank to stop it too.", check.Number]" data-url-af="RemoveUrl UnsafeUrl">@T["Stop Payment"]</a>
     }
     @if (check.Status == CheckStatus.Cleared)
     {
-        <a asp-action="Unclear" asp-route-id="@check.ItemId" class="dropdown-item" data-title="@T["Mark not cleared"]" data-message="@T["Record that the bank did not pay {0} after all? It goes back to the status it had before it cleared.", name]" data-url-af="RemoveUrl UnsafeUrl">@T["Mark not cleared"]</a>
+        <a asp-action="Unclear" asp-route-id="@check.ItemId" class="dropdown-item" data-title="@T["Mark Not Cleared"]" data-message="@T["Record that the bank did not pay {0} after all? It goes back to the status it had before it cleared.", name]" data-url-af="RemoveUrl UnsafeUrl">@T["Mark Not Cleared"]</a>
     }
     @if (CheckStatuses.Transitions.CanMove(check.Status, CheckStatus.Voided))
     {

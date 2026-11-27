@@ -24,12 +24,12 @@
                 <p class="text-muted small mb-1">@Model.Company</p>
                 @if (Model.Expired)
                 {
-                    <h1 class="h4">@T["This link has expired"]</h1>
+                    <h1 class="h4">@T["This Link Has Expired"]</h1>
                     <p class="mb-0">@T["The visit is over, or the link is no longer valid. Contact us if you need anything."]</p>
                 }
                 else
                 {
-                    <h1 class="h4">@T["Your visit {0}", Model.Number]</h1>
+                    <h1 class="h4">@T["Your Visit {0}", Model.Number]</h1>
                     <p class="fs-5 mb-3"><span class="badge text-bg-primary">@Model.Status</span></p>
                     <dl class="mb-0">
                         @if (!string.IsNullOrEmpty(Model.Day))

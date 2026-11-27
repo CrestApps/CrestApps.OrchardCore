@@ -108,11 +108,11 @@
                 <div class="col-auto">
                     <button type="submit" class="btn btn-danger"
                             data-url-af="RemoveUrl"
-                            data-title="@T["Cancel subscription"]"
+                            data-title="@T["Cancel Subscription"]"
                             data-message="@T["Are you sure you want to cancel this subscription? With Keep access until the paid period ends ticked, it ends when the paid period does; otherwise it ends now. Billing stops either way."]"
-                            data-ok-text="@T["Cancel subscription"]"
-                            data-cancel-text="@T["Keep it"]">
-                        @T["Cancel subscription"]
+                            data-ok-text="@T["Cancel Subscription"]"
+                            data-cancel-text="@T["Keep It"]">
+                        @T["Cancel Subscription"]
                     </button>
                 </div>
             </form>
@@ -127,11 +127,11 @@
                 <div class="col-auto">
                     <button type="submit" class="btn btn-secondary"
                             data-url-af="RemoveUrl"
-                            data-title="@T["Pause billing"]"
+                            data-title="@T["Pause Billing"]"
                             data-message="@T["Are you sure you want to pause billing? No payments are taken until you resume it."]"
-                            data-ok-text="@T["Pause billing"]"
-                            data-cancel-text="@T["Keep billing"]">
-                        @T["Pause billing"]
+                            data-ok-text="@T["Pause Billing"]"
+                            data-cancel-text="@T["Keep Billing"]">
+                        @T["Pause Billing"]
                     </button>
                 </div>
             </form>
@@ -142,10 +142,10 @@
             <form asp-action="Resume" asp-route-itemId="@subscription.ItemId" method="post">
                 <button type="submit" class="btn btn-primary"
                         data-url-af="RemoveUrl"
-                        data-title="@T["Resume billing"]"
+                        data-title="@T["Resume Billing"]"
                         data-message="@T["Are you sure you want to resume billing for this subscription?"]"
                         data-ok-text="@T["Resume"]"
-                        data-cancel-text="@T["Not now"]">
+                        data-cancel-text="@T["Not Now"]">
                     @T["Resume"]
                 </button>
             </form>

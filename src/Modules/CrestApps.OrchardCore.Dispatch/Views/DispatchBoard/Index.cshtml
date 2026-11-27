@@ -55,10 +55,10 @@
             <div class="row gx-2 gy-2 align-items-center">
                 <div class="col-auto">
                     <div class="input-group input-group-sm">
-                        <a class="btn btn-secondary" asp-action="Index" asp-route-day="@day.AddDays(-1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" asp-route-teamId="@Model.TeamId" asp-route-capability="@Model.Capability" title="@T["The day before"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i><span class="visually-hidden">@T["The day before"]</span></a>
+                        <a class="btn btn-secondary" asp-action="Index" asp-route-day="@day.AddDays(-1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" asp-route-teamId="@Model.TeamId" asp-route-capability="@Model.Capability" title="@T["The Day Before"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i><span class="visually-hidden">@T["The Day Before"]</span></a>
                         <label for="dispatch-day" class="visually-hidden">@T["Day"]</label>
                         <input id="dispatch-day" type="date" name="day" value="@Model.Day" class="form-control" onchange="this.form.submit()" />
-                        <a class="btn btn-secondary" asp-action="Index" asp-route-day="@day.AddDays(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" asp-route-teamId="@Model.TeamId" asp-route-capability="@Model.Capability" title="@T["The day after"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i><span class="visually-hidden">@T["The day after"]</span></a>
+                        <a class="btn btn-secondary" asp-action="Index" asp-route-day="@day.AddDays(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)" asp-route-teamId="@Model.TeamId" asp-route-capability="@Model.Capability" title="@T["The Day After"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i><span class="visually-hidden">@T["The Day After"]</span></a>
                     </div>
                 </div>
                 <div class="col-auto">
@@ -95,14 +95,14 @@
                             <input class="form-check-input" type="checkbox" id="dispatch-include-unscheduled" checked />
                             <label class="form-check-label small" for="dispatch-include-unscheduled">@T["Fit in unscheduled"]</label>
                         </div>
-                        <button type="button" class="btn btn-sm btn-primary" data-board-optimize><i class="fa-solid fa-route" aria-hidden="true"></i> @T["Optimize the day"]</button>
+                        <button type="button" class="btn btn-sm btn-primary" data-board-optimize><i class="fa-solid fa-route" aria-hidden="true"></i> @T["Optimize the Day"]</button>
                     </div>
                 }
                 <div class="col-auto">
                     <a asp-controller="Visits" asp-action="Index" class="btn btn-sm btn-secondary">@T["Visits"]</a>
                     @if (Model.CanManage)
                     {
-                        <a asp-controller="FieldServiceSetup" asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-list-check" aria-hidden="true"></i> @T["Get started"]</a>
+                        <a asp-controller="FieldServiceSetup" asp-action="Index" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-list-check" aria-hidden="true"></i> @T["Get Started"]</a>
                     }
                 </div>
             </div>

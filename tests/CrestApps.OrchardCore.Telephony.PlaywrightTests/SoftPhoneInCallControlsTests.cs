@@ -27,8 +27,8 @@ public sealed class SoftPhoneInCallControlsTests : SoftPhoneBrowserTest
         await DialAndConnectAsync(page, "+15551234567");
 
         // Assert - Mute, Hold, Keypad and Hang up, then Transfer and Add call; nothing to end for anyone else yet.
-        Assert.Equal(["Mute", "Hold", "Keypad", "Hang up"], await VisibleLabelsAsync(page, "[data-telephony-call-controls]"));
-        Assert.Equal(["Transfer", "Add call"], await VisibleLabelsAsync(page, "[data-telephony-call-options]"));
+        Assert.Equal(["Mute", "Hold", "Keypad", "Hang Up"], await VisibleLabelsAsync(page, "[data-telephony-call-controls]"));
+        Assert.Equal(["Transfer", "Add Call"], await VisibleLabelsAsync(page, "[data-telephony-call-options]"));
         Assert.True(await page.Locator("[data-telephony-hangup-all]").IsHiddenAsync());
         Assert.True(await page.Locator("[data-telephony-dial]").IsHiddenAsync());
         Assert.Equal(1, await CountRedControlsAsync(page));
@@ -134,7 +134,7 @@ public sealed class SoftPhoneInCallControlsTests : SoftPhoneBrowserTest
         // Two lines: each with its state, and ending every call is offered, outlined rather than red.
         var lines = page.Locator("[data-telephony-active-calls-list] .telephony-soft-phone__line-state");
         Assert.Equal(["Active", "On hold"], (await lines.AllInnerTextsAsync()).Select(text => text.Trim()).Order());
-        Assert.Equal("End all", await page.Locator("[data-telephony-hangup-all]").GetAttributeAsync("aria-label"));
+        Assert.Equal("End All", await page.Locator("[data-telephony-hangup-all]").GetAttributeAsync("aria-label"));
         Assert.Equal(1, await CountRedControlsAsync(page));
         await AssertFitsTheWindowAsync(page);
     }

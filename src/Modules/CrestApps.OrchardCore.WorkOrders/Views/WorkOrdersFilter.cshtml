@@ -36,5 +36,5 @@
 @if (!string.IsNullOrEmpty(filter.AssetId))
 {
     <input type="hidden" name="assetId" value="@filter.AssetId" form="@formId" />
-    <a class="btn btn-sm btn-secondary" href="@Url.Action("Index", new { status = filter.Status, typeId = filter.TypeId, priority = filter.Priority, q = filter.Q })" title="@T["Show every asset"]">@T["Asset: {0}", filter.AssetName] <i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
+    <a class="btn btn-sm btn-secondary" href="@Url.Action("Index", new { status = filter.Status, typeId = filter.TypeId, priority = filter.Priority, q = filter.Q })" title="@T["Show Every Asset"]">@T["Asset: {0}", filter.AssetName] <i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
 }

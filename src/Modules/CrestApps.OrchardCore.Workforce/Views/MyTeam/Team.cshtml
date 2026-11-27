@@ -1,6 +1,6 @@
 @model MyTeamNowViewModel
 <zone Name="Title">
-    <breadcrumb name="MyWorkTeam" title="@T["Who's working"]">
+    <breadcrumb name="MyWorkTeam" title="@T["Who's Working"]">
         <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -26,7 +26,7 @@
 
 @if (Model.Off.Count > 0)
 {
-    <h2 class="h6">@T["Off now"]</h2>
+    <h2 class="h6">@T["Off Now"]</h2>
     <ul class="list-group">
         @foreach (var (name, teamName, hours) in Model.Off)
         {

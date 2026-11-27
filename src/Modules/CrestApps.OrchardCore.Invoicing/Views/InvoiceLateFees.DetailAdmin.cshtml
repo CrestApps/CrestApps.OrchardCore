@@ -22,7 +22,7 @@ else if (Model.DebitNotes.Count > 0 || Model.CanAssess)
             @if (Model.CanAssess)
             {
                 <form asp-action="Assess" asp-controller="InvoiceLateFees" asp-route-itemId="@Model.Invoice.ItemId" method="post">
-                    <button type="submit" class="btn btn-sm btn-secondary">@T["Charge the late fee due now"]</button>
+                    <button type="submit" class="btn btn-sm btn-secondary">@T["Charge the Late Fee Due Now"]</button>
                 </form>
             }
         </div>

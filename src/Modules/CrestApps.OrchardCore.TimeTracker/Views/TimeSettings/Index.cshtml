@@ -13,7 +13,7 @@
                 <span class="text-muted small">@(categories ? T["Categories total time: each is a column of the time report, such as Payable or Billable."] : T["Stages are what people do while their time is tracked, such as Work, Break or Lunch."])</span>
             </div>
             <div class="col-auto">
-                <a asp-action="@(categories ? "EditCategory" : "EditStage")" class="btn btn-secondary create">@(categories ? T["Add category"] : T["Add stage"])</a>
+                <a asp-action="@(categories ? "EditCategory" : "EditStage")" class="btn btn-secondary create">@(categories ? T["Add Category"] : T["Add Stage"])</a>
             </div>
         </div>
     </div>
