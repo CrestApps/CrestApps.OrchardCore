@@ -363,7 +363,7 @@ public sealed class PayRunHandler : CatalogEntryHandlerBase<PayRun>
 
         if (string.IsNullOrEmpty(run.EmployerId))
         {
-            context.Result.Fail(new ValidationResult(S["Choose the employer."], [nameof(PayRun.EmployerId)]));
+            context.Result.Fail(new ValidationResult(S["Choose the employer, or set up your company under Payroll > Management > Company first."], [nameof(PayRun.EmployerId)]));
         }
 
         if (string.IsNullOrEmpty(run.PayScheduleId) && run.StaffMemberIds.Count == 0)
@@ -792,7 +792,7 @@ public sealed partial class DefaultPayRunService : IPayRunService
             SubjectId = run.ItemId,
             AccessScope = run.EmployerId,
             SubjectUrl = $"~/Admin/payroll/pay-runs/{run.ItemId}",
-            Title = S["Pay run {0} of {1}, paid {2}", run.Number, employer?.Name ?? run.EmployerId, run.PayDate.ToString("d", System.Globalization.CultureInfo.CurrentCulture)],
+            Title = S["{0} of {1}, paid {2}", PayRunTitles.Name(run, S), employer?.Name ?? run.EmployerId, run.PayDate.ToString("d", System.Globalization.CultureInfo.CurrentCulture)],
             Amount = run.Totals.CashNeeded,
             Currency = employer?.Currency,
             SubjectVersion = run.Version,

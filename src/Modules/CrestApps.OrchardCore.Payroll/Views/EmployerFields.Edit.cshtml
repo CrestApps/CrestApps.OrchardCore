@@ -42,12 +42,15 @@
         <span class="hint">@T["A path in the media library, printed on statements and checks."]</span>
     </div>
 </div>
-<div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <div class="form-check">
-            <input asp-for="Active" type="checkbox" class="form-check-input" />
-            <label asp-for="Active" class="form-check-label">@T["Runs payroll"]</label>
-            <span class="hint dashed">@T["Clear it for an employer that no longer pays anyone; its history stays."]</span>
+@if (Model.ShowStatus)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="Active" type="checkbox" class="form-check-input" />
+                <label asp-for="Active" class="form-check-label">@T["Runs payroll"]</label>
+                <span class="hint dashed">@T["Clear it for an employer that no longer pays anyone; its history stays."]</span>
+            </div>
         </div>
     </div>
-</div>
+}

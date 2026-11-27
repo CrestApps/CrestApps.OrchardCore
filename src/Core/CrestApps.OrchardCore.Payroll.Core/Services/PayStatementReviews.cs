@@ -180,9 +180,9 @@ public sealed class PayStatementReviewService
 
         await notifications.SendAsync(preparer, new NotificationMessage
         {
-            Subject = S["{0} asked about their pay in run {1}", statement.Snapshot?.EmployeeName, run.Number],
+            Subject = S["{0} asked about their pay in {1}", statement.Snapshot?.EmployeeName, PayRunTitles.Name(run, S)],
             Summary = S["Look into it before you submit the run."],
-            TextBody = S["{0} asked about their pay in pay run {1}. Look into it before you submit the run.", statement.Snapshot?.EmployeeName, run.Number],
+            TextBody = S["{0} asked about their pay in {1}. Look into it before you submit the run.", statement.Snapshot?.EmployeeName, PayRunTitles.Name(run, S)],
             Url = "~/Admin/payroll/pay-runs/" + run.ItemId,
             Type = PayrollConstants.PayReviewQuestionedNotificationType,
             ReferenceId = statement.ItemId,

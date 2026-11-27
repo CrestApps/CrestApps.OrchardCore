@@ -35,6 +35,7 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddScoped<IEmployerManager, EmployerManager>();
         services.TryAddScoped<ICatalogManager<Employer>>(serviceProvider => serviceProvider.GetRequiredService<IEmployerManager>());
         services.TryAddScoped<IPayrollScopeService, PayrollScopeService>();
+        services.TryAddScoped<IPayrollCompanyService, PayrollCompanyService>();
         services.AddSensitiveValueProtector();
         services.TryAddScoped<PayProfileStore>();
         services.TryAddScoped<PayItemStore>();
@@ -42,6 +43,8 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddScoped<IPayItemManager, PayItemManager>();
         services.TryAddScoped<ICatalogManager<EmployeePayProfile>>(serviceProvider => serviceProvider.GetRequiredService<IPayProfileManager>());
         services.TryAddScoped<ICatalogManager<EmployeePayItem>>(serviceProvider => serviceProvider.GetRequiredService<IPayItemManager>());
+        // The company fills in the employer before the profile's own handler checks it.
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<EmployeePayProfile>, PayProfileCompanyEmployerHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<EmployeePayProfile>, PayProfileHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<EmployeePayItem>, PayItemHandler>());
         services.TryAddScoped<PayrollTaxIdHasher>();
@@ -68,7 +71,10 @@ public static class PayrollCoreServiceCollectionExtensions
         services.TryAddScoped<IPayRunInputManager, PayRunInputManager>();
         services.TryAddScoped<ICatalogManager<PayRun>>(serviceProvider => serviceProvider.GetRequiredService<IPayRunManager>());
         services.TryAddScoped<ICatalogManager<PayRunInput>>(serviceProvider => serviceProvider.GetRequiredService<IPayRunInputManager>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayRun>, PayRunCompanyEmployerHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayRun>, PayRunHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayRun>, PayRunTitleHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayRun>, PayRunPeopleHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayRunInput>, PayRunInputHandler>());
         services.TryAddScoped<DefaultPayRunService>();
         services.TryAddScoped<IPayRunService>(serviceProvider => serviceProvider.GetRequiredService<DefaultPayRunService>());

@@ -1,5 +1,6 @@
 @model PayrollLiabilitiesViewModel
 @using System.Globalization
+@inject Microsoft.Extensions.Options.IOptions<PayrollEmployerOptions> EmployerOptions
 
 <zone Name="Title">
     <breadcrumb name="PayrollLiabilities" title="@T["Liabilities"]" />
@@ -8,10 +9,7 @@
 <form method="get" class="card text-bg-theme mb-3 position-sticky action-bar">
     <div class="card-body">
         <div class="row gx-2 align-items-end">
-            <div class="col-12 col-md-5">
-                <label for="employerId" class="form-label">@T["Employer"]</label>
-                <select id="employerId" name="employerId" asp-items="Model.Employers" class="form-select"><option value="">@T["Choose…"]</option></select>
-            </div>
+            @await DisplayAsync(Model.EmployerFilter)
             <div class="col-6 col-md-2">
                 <label for="year" class="form-label">@T["Year"]</label>
                 <input id="year" name="year" type="number" min="2000" max="2100" value="@Model.Year" class="form-control" />
@@ -25,7 +23,7 @@
 
 @if (string.IsNullOrEmpty(Model.EmployerId))
 {
-    <div class="alert alert-info">@T["Choose the employer whose payroll taxes you want to see."]</div>
+    <div class="alert alert-info">@(EmployerOptions.Value.MultipleEmployers ? T["Choose the employer whose payroll taxes you want to see."] : T["Set up your company under Payroll > Management > Company first."])</div>
 }
 else
 {

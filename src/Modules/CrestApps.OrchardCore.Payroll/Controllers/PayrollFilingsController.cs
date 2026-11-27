@@ -7,7 +7,10 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 
@@ -31,6 +34,10 @@ public sealed class PayrollFilingsController : Controller
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
     private readonly IStringLocalizerFactory _localizerFactory;
+    private readonly IPayrollCompanyService _company;
+    private readonly IDisplayManager<PayrollEmployerFilter> _filterDisplay;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
+    private readonly PayrollEmployerOptions _employerOptions;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -46,6 +53,10 @@ public sealed class PayrollFilingsController : Controller
         ILocalClock localClock,
         INotifier notifier,
         IStringLocalizerFactory localizerFactory,
+        IPayrollCompanyService company,
+        IDisplayManager<PayrollEmployerFilter> filterDisplay,
+        IUpdateModelAccessor updateModelAccessor,
+        IOptions<PayrollEmployerOptions> employerOptions,
         IHtmlLocalizer<PayrollFilingsController> htmlLocalizer,
         IStringLocalizer<PayrollFilingsController> stringLocalizer)
     {
@@ -59,6 +70,10 @@ public sealed class PayrollFilingsController : Controller
         _localClock = localClock;
         _notifier = notifier;
         _localizerFactory = localizerFactory;
+        _company = company;
+        _filterDisplay = filterDisplay;
+        _updateModelAccessor = updateModelAccessor;
+        _employerOptions = employerOptions.Value;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -82,6 +97,7 @@ public sealed class PayrollFilingsController : Controller
             EmployerId = employer?.ItemId,
             Year = chosenYear,
             Employers = Options(employers, employer?.ItemId),
+            EmployerFilter = await FilterAsync(employers, employer, PayrollEmployerFilterDisplayTypes.Field),
             Periods = periods,
             Deposits = deposits,
             PeriodList = new AdminListContext<TaxLiabilityPeriod> { Source = periods },
@@ -182,6 +198,7 @@ public sealed class PayrollFilingsController : Controller
             EmployerId = employer?.ItemId,
             Year = await TodayYearAsync(),
             Employers = Options(employers, employer?.ItemId),
+            EmployerFilter = await FilterAsync(employers, employer, PayrollEmployerFilterDisplayTypes.Card),
             Forms = employer is null ? [] : [.. (await _service.FormsForAsync(employer, HttpContext.RequestAborted)).Select(form => new SelectListItem(_localizerFactory.Localize(form.DisplayName).Value, form.Name))],
             Filings = filings,
             List = new AdminListContext<PayrollFiling> { Source = filings },
@@ -381,6 +398,7 @@ public sealed class PayrollFilingsController : Controller
             EmployerId = employer?.ItemId,
             Year = chosenYear,
             Employers = Options(employers, employer?.ItemId),
+            EmployerFilter = await FilterAsync(employers, employer, PayrollEmployerFilterDisplayTypes.Field),
             Closed = employer?.ClosedYears.Contains(chosenYear) == true,
             Blockers = employer is null ? [] : await _service.YearEndBlockersAsync(employer, chosenYear, HttpContext.RequestAborted),
         });
@@ -421,7 +439,11 @@ public sealed class PayrollFilingsController : Controller
             return (null, null);
         }
 
-        var employers = (await _employers.GetAllAsync(HttpContext.RequestAborted))
+        // The company's own payroll is the company's; Multiple Employers offers every employer in the user's scope.
+        IEnumerable<Employer> candidates = _employerOptions.MultipleEmployers
+            ? await _employers.GetAllAsync(HttpContext.RequestAborted)
+            : await _company.GetCompanyAsync(HttpContext.RequestAborted) is { } company ? [company] : [];
+        var employers = candidates
             .Where(employer => scope.All || scope.EmployerIds.Contains(employer.ItemId))
             .OrderBy(employer => employer.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -429,6 +451,14 @@ public sealed class PayrollFilingsController : Controller
 
         return (employers, chosen);
     }
+
+    // The employer picker Multiple Employers places on the page, or nothing for the company's own payroll.
+    private Task<IShape> FilterAsync(IReadOnlyList<Employer> employers, Employer chosen, string displayType)
+        => _filterDisplay.BuildDisplayAsync(new PayrollEmployerFilter
+        {
+            EmployerId = chosen?.ItemId,
+            Employers = Options(employers, chosen?.ItemId),
+        }, _updateModelAccessor.ModelUpdater, displayType);
 
     private static List<SelectListItem> Options(IEnumerable<Employer> employers, string selected)
         => [.. employers.Select(employer => new SelectListItem(employer.Name, employer.ItemId, employer.ItemId == selected))];

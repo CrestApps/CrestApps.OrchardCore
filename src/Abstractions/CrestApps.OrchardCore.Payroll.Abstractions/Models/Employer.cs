@@ -264,4 +264,23 @@ public sealed class PayrollSettings
     /// States: 7.25 less the 2.13 cash wage).
     /// </summary>
     public decimal? MaximumTipCredit { get; set; }
+
+    /// <summary>
+    /// Gets or sets the employer that is the site's own company: the one Payroll pays its staff as, and the one a new
+    /// pay run or pay profile belongs to unless another employer is chosen (with Multiple Employers on).
+    /// <see langword="null"/> takes the oldest employer.
+    /// </summary>
+    public string CompanyEmployerId { get; set; }
+}
+
+/// <summary>
+/// How Payroll shows employers. The Multiple Employers feature turns <see cref="MultipleEmployers"/> on.
+/// </summary>
+public sealed class PayrollEmployerOptions
+{
+    /// <summary>
+    /// Gets or sets whether the site pays people of more than one employer, so pages name the employer of what they
+    /// show. Off, Payroll is the company's own and never shows an employer.
+    /// </summary>
+    public bool MultipleEmployers { get; set; }
 }

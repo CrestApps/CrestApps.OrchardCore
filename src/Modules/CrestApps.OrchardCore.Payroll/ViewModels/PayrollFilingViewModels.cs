@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Payroll.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Payroll.ViewModels;
 
@@ -11,6 +12,9 @@ namespace CrestApps.OrchardCore.Payroll.ViewModels;
 public class PayrollLiabilitiesViewModel
 {
     public string EmployerId { get; set; }
+
+    [BindNever]
+    public IShape EmployerFilter { get; set; }
 
     public int Year { get; set; }
 
@@ -61,6 +65,9 @@ public class PayrollFilingsIndexViewModel
 {
     public string EmployerId { get; set; }
 
+    [BindNever]
+    public IShape EmployerFilter { get; set; }
+
     public int Year { get; set; }
 
     [BindNever]
@@ -109,6 +116,9 @@ public class PayrollFilingDetailsViewModel
 public class PayrollYearEndViewModel
 {
     public string EmployerId { get; set; }
+
+    [BindNever]
+    public IShape EmployerFilter { get; set; }
 
     public int Year { get; set; }
 

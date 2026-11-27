@@ -2,10 +2,12 @@ using System.Security.Claims;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Calendars.Models;
 using CrestApps.OrchardCore.Calendars.Services;
+using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Staff.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Payroll.Services;
 
@@ -28,6 +30,7 @@ internal sealed class PayDateCalendarEventSource : ICalendarEventSource
     private readonly IStaffDirectory _staff;
     private readonly ICalendarService _calendars;
     private readonly IAuthorizationService _authorizationService;
+    private readonly PayrollEmployerOptions _employerOptions;
 
     internal readonly IStringLocalizer S;
 
@@ -38,6 +41,7 @@ internal sealed class PayDateCalendarEventSource : ICalendarEventSource
         IStaffDirectory staff,
         ICalendarService calendars,
         IAuthorizationService authorizationService,
+        IOptions<PayrollEmployerOptions> employerOptions,
         IStringLocalizer<PayDateCalendarEventSource> stringLocalizer)
     {
         _reader = reader;
@@ -46,6 +50,7 @@ internal sealed class PayDateCalendarEventSource : ICalendarEventSource
         _staff = staff;
         _calendars = calendars;
         _authorizationService = authorizationService;
+        _employerOptions = employerOptions.Value;
         S = stringLocalizer;
     }
 
@@ -81,7 +86,9 @@ internal sealed class PayDateCalendarEventSource : ICalendarEventSource
 
             foreach (var run in (await _reader.ListRunsAsync(scope, from, to, cancellationToken)).Where(run => run.Status != PayRunStatus.Canceled))
             {
-                occurrences.Add(Occurrence($"run:{run.ItemId}", null, run.PayDate, S["Pay day: {0} run {1}", employers.GetValueOrDefault(run.EmployerId) ?? run.EmployerId, run.Number].Value));
+                occurrences.Add(Occurrence($"run:{run.ItemId}", null, run.PayDate, (_employerOptions.MultipleEmployers
+                    ? S["Pay day: {0} ({1})", PayRunTitles.Name(run, S), employers.GetValueOrDefault(run.EmployerId) ?? run.EmployerId]
+                    : S["Pay day: {0}", PayRunTitles.Name(run, S)]).Value));
             }
         }
 

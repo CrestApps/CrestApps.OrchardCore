@@ -1,24 +1,55 @@
 @model PayRunViewModel
 
-<div class="ocat-wrapper" asp-validation-class-for="EmployerId">
-    <label asp-for="EmployerId" class="ocat-label ocat-label-required">@T["Employer"]</label>
+@{
+    var paysPeople = Model.Paid == "People";
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Title">
+    <label asp-for="Title" class="ocat-label">@T["Name"]</label>
     <div class="ocat-end">
-        <select asp-for="EmployerId" asp-items="Model.Employers" class="form-select" style="max-width: 24rem">
-            <option value="">@T["Choose…"]</option>
-        </select>
-        <span asp-validation-for="EmployerId" class="text-danger"></span>
+        <input asp-for="Title" class="form-control" maxlength="200" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+        <span class="hint">@T["Leave it empty for a name made from the dates, the schedule and who is paid, such as \"Pay for Nov 16 – Nov 29, 2026 (Weekly)\"."]</span>
     </div>
 </div>
 <div class="ocat-wrapper" asp-validation-class-for="PayScheduleId">
     <label asp-for="PayScheduleId" class="ocat-label">@T["Pay schedule"]</label>
     <div class="ocat-end">
-        <select asp-for="PayScheduleId" asp-items="Model.Schedules" class="form-select" style="max-width: 24rem">
+        <select asp-for="PayScheduleId" asp-items="Model.Schedules" class="form-select">
             <option value="">@T["Choose…"]</option>
         </select>
         <span asp-validation-for="PayScheduleId" class="text-danger"></span>
-        <span class="hint">@T["Everyone of the employer with an active pay profile on the schedule is paid by the run."]</span>
+        <span class="hint">@T["People are paid on the schedule of their pay profile: a weekly run pays the weekly people, a monthly run the monthly ones. The schedule also gives the period and the pay date."]</span>
     </div>
 </div>
+<div class="ocat-wrapper" asp-validation-class-for="StaffMemberIds" data-pay-run-paid>
+    <span class="ocat-label">@T["Who is paid"]</span>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input type="radio" class="form-check-input" id="@Html.IdFor(m => m.Paid)-schedule" name="@Html.NameFor(m => m.Paid)" value="Schedule" checked="@(!paysPeople)" />
+            <label class="form-check-label" for="@Html.IdFor(m => m.Paid)-schedule">@T["All staff on the pay schedule"]</label>
+            <span class="hint dashed">@T["Everyone with an active pay profile on the schedule."]</span>
+        </div>
+        <div class="form-check">
+            <input type="radio" class="form-check-input" id="@Html.IdFor(m => m.Paid)-people" name="@Html.NameFor(m => m.Paid)" value="People" checked="@paysPeople" />
+            <label class="form-check-label" for="@Html.IdFor(m => m.Paid)-people">@T["Only the staff members I choose"]</label>
+            <span class="hint dashed">@T["Such as a bonus for a few people or the final pay of someone who left: they are paid whatever their schedule."]</span>
+        </div>
+        <div class="mt-2@(paysPeople ? null : " d-none")" data-pay-run-people>
+            @await Component.InvokeAsync("StaffPicker", new { name = Html.NameFor(m => m.StaffMemberIds).ToString(), selectedValues = Model.StaffMemberIds, multiple = true, buttonText = T["Choose staff members"].Value })
+        </div>
+        <span asp-validation-for="StaffMemberIds" class="text-danger"></span>
+    </div>
+</div>
+<script at="Foot">
+    document.querySelectorAll('[data-pay-run-paid]').forEach(group => {
+        const people = group.querySelector('[data-pay-run-people]');
+
+        group.querySelectorAll('input[type="radio"]').forEach(radio => radio.addEventListener('change', () => {
+            people.classList.toggle('d-none', !(radio.checked && radio.value === 'People'));
+        }));
+    });
+</script>
 <div class="ocat-wrapper">
     <label asp-for="Type" class="ocat-label">@T["Type"]</label>
     <div class="ocat-end">

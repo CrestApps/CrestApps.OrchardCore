@@ -2,11 +2,11 @@
 
 @model PayrollTaskViewModel
 
-<p class="hint">@T["Adds a pay run for an employer and a pay schedule, for the schedule's period of today unless a period is given. A run of the same employer, schedule, type and period that is not cancelled is not added twice. Writes PayRunId and PayRunNumber to the output."]</p>
+<p class="hint">@T["Adds a pay run for a pay schedule, for the schedule's period of today unless a period is given. A run of the same employer, schedule, type and period that is not cancelled is not added twice. Writes PayRunId, PayRunNumber and PayRunTitle to the output."]</p>
 <div class="mb-3">
     <label asp-for="EmployerId" class="form-label">@T["Employer id"]</label>
     <input asp-for="EmployerId" class="form-control code" />
-    <span class="hint">@T["The employer's id. Liquid."]</span>
+    <span class="hint">@T["The employer's id, or empty for your company. Liquid."]</span>
 </div>
 <div class="mb-3">
     <label asp-for="PayScheduleId" class="form-label">@T["Pay schedule id"]</label>
