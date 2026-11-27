@@ -500,9 +500,11 @@ public sealed class EmailInboundReceiverTests
         var inbox = new RecordingInbox();
         var receiver = CreateReceiver(inbox, ownAddresses: ["forms@contoso.com"]);
 
+        // The mailbox host reported contoso.com authenticated: the website really sent it.
         var email = Email();
         email.From = new InboundEmailAddress("forms@contoso.com", "Website");
         email.ReplyTo = new InboundEmailAddress("Ann@Example.com", "Ann Lee");
+        email.IsFromDomainAuthenticated = true;
 
         // Act
         var result = await receiver.ReceiveAsync(email, "imap", dispatch: true, TestContext.Current.CancellationToken);
@@ -512,6 +514,26 @@ public sealed class EmailInboundReceiverTests
         var message = JsonSerializer.Deserialize<OmnichannelMessage>(Assert.Single(inbox.Accepted).Payload);
         Assert.Equal("ann@example.com", message.CustomerAddress);
         Assert.Null(message.GetEmailMetadata().ReplyTo);
+    }
+
+    [Fact]
+    public async Task ReceiveAsync_AForgedEmailFromTheBusinessOwnAddress_NeverWritesToTheReplyToStranger()
+    {
+        // Arrange: anybody can put the business's own address in From and a stranger in Reply-To; nothing reports the
+        // From domain authenticated.
+        var inbox = new RecordingInbox();
+        var receiver = CreateReceiver(inbox, ownAddresses: ["forms@contoso.com"]);
+
+        var email = Email();
+        email.From = new InboundEmailAddress("forms@contoso.com", "Website");
+        email.ReplyTo = new InboundEmailAddress("stranger@example.net", "Stranger");
+
+        // Act
+        var result = await receiver.ReceiveAsync(email, "mailgun", dispatch: true, TestContext.Current.CancellationToken);
+
+        // Assert: it is treated as the business's own mail coming back, so no conversation opens with the stranger.
+        Assert.Equal(EmailInboundStatus.Ignored, result.Status);
+        Assert.Empty(inbox.Accepted);
     }
 
     [Fact]

@@ -336,9 +336,15 @@ public sealed class EmailInboundReceiver : IEmailInboundReceiver
     // The customer is who sent the email. A Reply-To that names somebody else takes over only when one of the
     // business's own addresses sent the email, as a form on the business's own site relays a visitor's message;
     // from anybody else it proves nothing about who wrote, so it is kept on the message for the record.
+    //
+    // A From line is easy to forge, so "one of our own addresses" is believed only when the system that received the
+    // email reports the From domain authenticated (DMARC passed). Otherwise anybody could open a conversation with any
+    // stranger, and have agents or the AI write to them, by sending mail "from" the business with a Reply-To of their
+    // choosing. Unauthenticated mail from our own addresses is left as it is, and is dropped below as our own mail
+    // coming back.
     private async Task ResolveCustomerAsync(InboundEmail email, CancellationToken cancellationToken)
     {
-        if (email.ReplyTo is null || !OmnichannelEmailAddress.IsValid(email.ReplyTo.Address) || email.From is null)
+        if (email.ReplyTo is null || !OmnichannelEmailAddress.IsValid(email.ReplyTo.Address) || email.From is null || !email.IsFromDomainAuthenticated)
         {
             return;
         }

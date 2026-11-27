@@ -461,6 +461,12 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
             return MessageOutcome.PassedOver;
         }
 
+        // The mailbox host stamps every email it accepts with its own Authentication-Results, above any header the
+        // sender wrote, so the topmost one says whether the From domain passed DMARC.
+        email.IsFromDomainAuthenticated = InboundEmailAuthentication.HasDmarcPass(
+            email.Headers.TryGetValue(InboundEmailAuthentication.AuthenticationResultsHeader, out var authenticationResults) ? authenticationResults : null,
+            email.From?.Address);
+
         // The mailbox belongs to the address, so mail in it was sent to the address even when it arrived through an
         // alias, a forward or a Bcc that does not name it.
         var own = OmnichannelEmailAddress.Normalize(address.Value);

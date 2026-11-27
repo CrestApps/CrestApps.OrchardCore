@@ -26,6 +26,9 @@ public static class MimeInboundEmailParser
         "Return-Path",
         "X-Failed-Recipients",
         "Feedback-ID",
+
+        // The topmost one, which the receiving mail system adds; a source that trusts its receiver reads it.
+        InboundEmailAuthentication.AuthenticationResultsHeader,
     ];
 
     /// <summary>

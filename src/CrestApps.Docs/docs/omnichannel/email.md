@@ -127,6 +127,17 @@ An email over 30 MB is not downloaded, and an email that cannot be read is passe
 
 The conversation is with the address the email came from. A `Reply-To` naming somebody else decides the conversation only when one of the business's own addresses sent the email, as a form on the business's own site relays a visitor's message; from anyone else it is kept on the message for the record, because anybody can write any `Reply-To`.
 
+A `From` line is just as easy to forge, so mail "from" one of the business's own addresses is believed only when the system that received it reports the business's domain authenticated: DMARC passed, or a DKIM signature by that domain did. Otherwise anybody could make the workspace, or the AI, write to a stranger by sending mail from the business with that stranger as the `Reply-To`. Unauthenticated mail from the business's own addresses is dropped as the business's own mail coming back. The report is read from where the sender cannot write it:
+
+| How the email arrives | What is read |
+|---|---|
+| Reading the mailbox (IMAP) | The topmost `Authentication-Results` header, which the mailbox host adds (Microsoft 365, Google Workspace and most hosts do). |
+| Amazon SES | The `dmarcVerdict` in the signed SNS notification. |
+| SendGrid | Its DKIM check (`dkim`): a passing signature by the business's domain. |
+| Mailgun, Postmark, raw MIME, JSON | Nothing these webhooks post is a check the provider made, so a form's relayed message is not taken from them. Send the form through a mailbox read over IMAP, Amazon SES or SendGrid. |
+
+For the domain to pass, the website form must send from the business's domain with DKIM signing (or an SPF record for the server it sends from) and a DMARC record for the domain.
+
 The customer is matched to the contact or lead that holds the address among any of its email addresses, not only the first. On an upgraded site, the contacts and leads saved before this was added are indexed in the background by the **Resumable upgrade steps** task, up to 2,000 a minute.
 
 ## Answer email in the workspace

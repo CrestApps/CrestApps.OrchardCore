@@ -74,6 +74,10 @@ public sealed class SendGridInboundEmailParser : IInboundEmailWebhookParser
             email.DeliveredTo.Add(recipient);
         }
 
+        // SendGrid checks the DKIM signatures as it receives the email and posts the results; a passing signature by
+        // the From domain is the alignment DMARC asks for.
+        email.IsFromDomainAuthenticated = InboundEmailAuthentication.HasAlignedDkimPass(form["dkim"].ToString(), email.From?.Address);
+
         return InboundEmailWebhookResult.Of(email);
     }
 

@@ -109,6 +109,26 @@ public sealed class ImapEmailMailboxReaderTests
     }
 
     [Fact]
+    public async Task ReceiveBatchAsync_TrustsOnlyTheMailboxHostsOwnAuthenticationResults()
+    {
+        // Arrange: the host stamped email 1 with a DMARC pass for example.com, the From domain. Email 2 failed DMARC at
+        // the host, and its sender wrote a passing header of its own further down, which proves nothing.
+        var harness = new Harness();
+        harness.AuthenticationResults[1] = ["mx.contoso.com; dmarc=pass (p=reject) header.from=example.com"];
+        harness.AuthenticationResults[2] =
+        [
+            "mx.contoso.com; dmarc=fail (p=none) header.from=example.com",
+            "forged.example; dmarc=pass header.from=example.com",
+        ];
+
+        // Act
+        await harness.ReceiveAsync(1, 2, 3);
+
+        // Assert
+        Assert.Equal(new[] { true, false, false }, harness.Emails.Select(email => email.IsFromDomainAuthenticated));
+    }
+
+    [Fact]
     public async Task FindNewMailAsync_TriesAKeptEmailBeforeTheNewMail()
     {
         // Arrange: UIDs 1 to 5 are in the folder, 3 was the last read, and the receiver failed on 2.
@@ -169,7 +189,17 @@ public sealed class ImapEmailMailboxReaderTests
 
             Folder
                 .Setup(folder => folder.GetMessageAsync(It.IsAny<MailKit.UniqueId>(), It.IsAny<CancellationToken>(), It.IsAny<ITransferProgress>()))
-                .ReturnsAsync((MailKit.UniqueId uid, CancellationToken _, ITransferProgress _) => Message(uid.Id));
+                .ReturnsAsync((MailKit.UniqueId uid, CancellationToken _, ITransferProgress _) =>
+                {
+                    var message = Message(uid.Id);
+
+                    foreach (var header in AuthenticationResults.TryGetValue(uid.Id, out var headers) ? headers : [])
+                    {
+                        message.Headers.Add("Authentication-Results", header);
+                    }
+
+                    return message;
+                });
 
             // A UID search answers with the folder's UIDs it names: a range ending in * names every UID from its start.
             Folder
@@ -190,6 +220,7 @@ public sealed class ImapEmailMailboxReaderTests
                 .ReturnsAsync((InboundEmail email, string _, bool _, CancellationToken _) =>
                 {
                     Received.Add(email.MessageId);
+                    Emails.Add(email);
 
                     if (email.MessageId == FailingMessageId)
                     {
@@ -217,6 +248,11 @@ public sealed class ImapEmailMailboxReaderTests
         public List<uint> FolderUids { get; } = [];
 
         public List<string> Received { get; } = [];
+
+        public List<InboundEmail> Emails { get; } = [];
+
+        // Authentication-Results headers per UID, topmost first, as the mailbox holds them.
+        public Dictionary<uint, string[]> AuthenticationResults { get; } = new();
 
         public string FailingMessageId { get; set; }
 

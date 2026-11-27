@@ -89,4 +89,12 @@ public sealed class InboundEmail
     /// Gets or sets the delivery report, when the email is a bounce rather than a message from a person.
     /// </summary>
     public InboundEmailDeliveryReport DeliveryReport { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the system that received the email reported its <c>From</c> domain
+    /// authenticated: DMARC passed, or a DKIM signature by that domain did. Set by the source that read the email, from
+    /// a report the receiving side wrote and the sender could not (a mailbox host's own <c>Authentication-Results</c>
+    /// header, Amazon SES's verdict, SendGrid's DKIM check); <see langword="false"/> when the source reports nothing.
+    /// </summary>
+    public bool IsFromDomainAuthenticated { get; set; }
 }

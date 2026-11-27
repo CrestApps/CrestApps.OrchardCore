@@ -386,6 +386,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound
         public System.Collections.Generic.IDictionary<string, string> Headers { get; set; }
         public string HtmlBody { get; set; }
         public string InReplyTo { get; set; }
+        public bool IsFromDomainAuthenticated { get; set; }
         public string MessageId { get; set; }
         public System.Collections.Generic.IList<string> References { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.InboundEmailAddress ReplyTo { get; set; }
@@ -409,6 +410,12 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound
         public string ContentType { get; set; }
         public string FileName { get; set; }
         public bool IsInline { get; set; }
+    }
+    public static class InboundEmailAuthentication
+    {
+        public const string AuthenticationResultsHeader = "Authentication-Results";
+        public static bool HasAlignedDkimPass(string sendGridDkim, string fromAddress) { }
+        public static bool HasDmarcPass(string authenticationResults, string fromAddress) { }
     }
     public sealed class InboundEmailDeliveryReport
     {

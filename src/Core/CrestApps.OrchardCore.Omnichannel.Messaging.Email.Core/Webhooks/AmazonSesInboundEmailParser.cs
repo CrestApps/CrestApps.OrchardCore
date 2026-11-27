@@ -150,6 +150,11 @@ public sealed class AmazonSesInboundEmailParser : IInboundEmailWebhookParser
             }
         }
 
+        // SES checks DMARC for the From domain itself and says so in the notification Amazon signed.
+        email.IsFromDomainAuthenticated = receipt.ValueKind == JsonValueKind.Object &&
+            receipt.TryGetProperty("dmarcVerdict", out var dmarcVerdict) &&
+            string.Equals(GetString(dmarcVerdict, "status"), "PASS", StringComparison.OrdinalIgnoreCase);
+
         return InboundEmailWebhookResult.Of(email);
     }
 
