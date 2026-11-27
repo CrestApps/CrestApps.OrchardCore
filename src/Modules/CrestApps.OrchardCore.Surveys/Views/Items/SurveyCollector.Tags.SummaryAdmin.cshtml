@@ -8,7 +8,7 @@
         SurveyCollectorKinds.Invitation => T["Invitations"],
         SurveyCollectorKinds.Embed => T["Embed"],
         SurveyCollectorKinds.WebLink => T["Web link"],
-        _ => new Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString(collector.Kind ?? string.Empty, collector.Kind ?? string.Empty),
+        _ => (Microsoft.AspNetCore.Html.IHtmlContent)new Microsoft.AspNetCore.Html.HtmlString(Html.Encode(collector.Kind ?? string.Empty)),
     };
 }
 

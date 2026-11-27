@@ -125,6 +125,65 @@ internal sealed class SurveyReportData
     }
 
     /// <summary>
+    /// Decides whether a person may list the members of a user audience against a survey: one of the survey's own
+    /// audiences (who may respond), or any audience for a person with Manage user audiences, who may read every member
+    /// list on the audiences page anyway.
+    /// </summary>
+    /// <param name="user">The person.</param>
+    /// <param name="survey">The survey.</param>
+    /// <param name="audienceName">The audience's name.</param>
+    /// <returns><see langword="true"/> when allowed.</returns>
+    public async Task<bool> CanListAudienceAsync(ClaimsPrincipal user, Survey survey, string audienceName)
+    {
+        if (user is null || survey is null || string.IsNullOrEmpty(audienceName))
+        {
+            return false;
+        }
+
+        return OwnAudiences(survey).Contains(audienceName)
+            || await CanListEveryAudienceAsync(user);
+    }
+
+    /// <summary>
+    /// Gets which user audiences a person may pick against a survey, by the rule of <see cref="CanListAudienceAsync"/>.
+    /// </summary>
+    /// <param name="user">The person.</param>
+    /// <param name="surveyId">The survey's id, or <see langword="null"/>.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>A test of an audience's name.</returns>
+    public async Task<Func<string, bool>> ListableAudiencesAsync(ClaimsPrincipal user, string surveyId, CancellationToken cancellationToken)
+    {
+        if (await CanListEveryAudienceAsync(user))
+        {
+            return _ => true;
+        }
+
+        var survey = string.IsNullOrEmpty(surveyId) ? null : await _surveys.FindByIdAsync(surveyId, cancellationToken);
+
+        if (survey is null || !await CanViewResponsesAsync(user, survey, cancellationToken))
+        {
+            return _ => false;
+        }
+
+        return OwnAudiences(survey).Contains;
+    }
+
+    // The audiences the survey is for: only while Who may respond is a list of audiences. The list is kept when the mode
+    // changes, and a survey now open to everyone must not still open the members of an audience it used to name.
+    private static HashSet<string> OwnAudiences(Survey survey)
+        => survey.Access is { Audience: SurveyAudienceMode.Audiences, AudienceIds: { } ids }
+            ? new HashSet<string>(ids, StringComparer.Ordinal)
+            : [];
+
+    /// <summary>
+    /// Gets whether a person may list the members of every user audience: Manage user audiences.
+    /// </summary>
+    /// <param name="user">The person.</param>
+    /// <returns><see langword="true"/> when allowed.</returns>
+    public async Task<bool> CanListEveryAudienceAsync(ClaimsPrincipal user)
+        => user is not null && await _authorizationService.AuthorizeAsync(user, CrestApps.OrchardCore.Users.Core.UserPermissions.ManageUserAudiences);
+
+    /// <summary>
     /// Decides whether a person may see who responded to a survey, by the one rule of
     /// <see cref="SurveyRespondentNames.CanSeeIdentityAsync"/>.
     /// </summary>

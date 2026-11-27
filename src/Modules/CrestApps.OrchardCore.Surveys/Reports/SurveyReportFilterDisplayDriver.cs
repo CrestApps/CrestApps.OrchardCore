@@ -148,7 +148,10 @@ internal sealed class SurveyReportFilterDisplayDriver : DisplayDriver<ReportFilt
 
             if (model.ShowAudience && _serviceProvider.GetService<IUserAudienceService>() is { } audiences)
             {
-                model.Audiences = [.. (await audiences.ListAsync(cancellationToken)).Select(audience => new SelectListItem(audience.DisplayName ?? audience.Name, audience.Name, audience.Name == model.AudienceId))];
+                // The same audiences the report accepts: the survey's own, or every audience for Manage user audiences.
+                var listable = await _data.ListableAudiencesAsync(_httpContextAccessor.HttpContext?.User, model.SurveyId, cancellationToken);
+
+                model.Audiences = [.. (await audiences.ListAsync(cancellationToken)).Where(audience => listable(audience.Name)).Select(audience => new SelectListItem(audience.DisplayName ?? audience.Name, audience.Name, audience.Name == model.AudienceId))];
             }
         }).Location("Content:2");
     }

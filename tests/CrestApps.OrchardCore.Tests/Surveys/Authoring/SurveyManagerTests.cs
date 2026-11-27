@@ -97,6 +97,53 @@ public sealed class SurveyManagerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateSurveyAsync_WithAKindThatIsNotAPlainName_StoresASurvey()
+    {
+        // Arrange: R11-M1. A template's kind, a copied survey's kind and the AI tool's kind all come through here, and the
+        // Surveys list shows the kind.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var session = _harness.Store.CreateSession();
+        var services = _harness.CreateServices(session);
+
+        // Act
+        var markup = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Markup", Kind = "<img src=x onerror=alert(document.domain)>" }, cancellationToken);
+        var custom = await services.Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Custom", Kind = " Assessment " }, cancellationToken);
+
+        // Assert: a module's own kind is kept; markup never reaches the record.
+        Assert.Equal(SurveyKinds.Survey, markup.Kind);
+        Assert.Equal("Assessment", custom.Kind);
+    }
+
+    [Theory]
+    [InlineData("Survey", true)]
+    [InlineData("learning-quiz_2", true)]
+    [InlineData("", false)]
+    [InlineData("2fast", false)]
+    [InlineData("a b", false)]
+    [InlineData("<b>x</b>", false)]
+    [InlineData("Ünicode", false)]
+    public void SurveyKinds_IsValid_AcceptsOnlyPlainNames(string kind, bool expected)
+    {
+        // Act
+        var result = SurveyKinds.IsValid(kind);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
+    [Fact]
+    public void SurveyKinds_IsValid_RefusesAKindLongerThanTheIndexColumn()
+    {
+        // Act
+        var fits = SurveyKinds.IsValid(new string('a', SurveyKinds.MaxLength));
+        var tooLong = SurveyKinds.IsValid(new string('a', SurveyKinds.MaxLength + 1));
+
+        // Assert
+        Assert.True(fits);
+        Assert.False(tooLong);
+    }
+
+    [Fact]
     public async Task SaveDraftAsync_TheStampASaveReturns_MatchesTheStampReadBackFromADocumentStoredToTheSecond()
     {
         // Arrange: a clock with sub-second ticks. Orchard Core stores a DateTime in a document to the second, so the stamp

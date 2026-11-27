@@ -101,7 +101,10 @@ public sealed class SurveyManager : NamedCatalogManager<Survey>, ISurveyManager
         SurveyDefinitions.EnsureBasics(definition);
 
         survey.Title = string.IsNullOrWhiteSpace(request.Title) ? definition.Title : request.Title.Trim();
-        survey.Kind = string.IsNullOrWhiteSpace(request.Kind) ? SurveyKinds.Survey : request.Kind;
+        // The staff pages show the kind, so a kind that is not a plain name (from a template, a copy or the AI tool) is
+        // never stored: the survey is a Survey.
+        var requestedKind = request.Kind?.Trim();
+        survey.Kind = SurveyKinds.IsValid(requestedKind) ? requestedKind : SurveyKinds.Survey;
         survey.Name = await UniqueNameAsync(string.IsNullOrWhiteSpace(request.Name) ? SurveyNames.Slugify(survey.Title) : SurveyNames.Slugify(request.Name), cancellationToken);
         survey.Status = SurveyStatus.Draft;
         survey.Draft = definition;

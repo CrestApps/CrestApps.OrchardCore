@@ -14,7 +14,7 @@
         SurveyKinds.Quiz => T["Quiz"],
         SurveyKinds.Poll => T["Poll"],
         SurveyKinds.Survey => T["Survey"],
-        _ => new Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString(survey.Kind ?? string.Empty, survey.Kind ?? string.Empty),
+        _ => (Microsoft.AspNetCore.Html.IHtmlContent)new Microsoft.AspNetCore.Html.HtmlString(Html.Encode(survey.Kind ?? string.Empty)),
     };
 }
 

@@ -38,7 +38,7 @@ Select **Results** in the survey's menu, or go to **Reports** → **Surveys**:
 | **Quiz Results** | How scores spread, how many passed, averages by category, each person's best and latest score |
 | **Item Analysis** | How hard each quiz question is and how well it tells strong from weak respondents |
 | **Completion Funnel** | How many reached and left each page, and how long they spent |
-| **Survey Participation** | Who in a user audience completed an identified survey and who has not |
+| **Survey Participation** | Who in a user audience completed an identified survey and who has not. You pick one of the audiences the survey is for; with the right to manage user audiences you may pick any audience |
 | **Satisfaction Trend** | The average answer to a rating, score or number question by day, week or month |
 | **Survey Activity** | Completed responses per survey and the responses waiting for a grader |
 

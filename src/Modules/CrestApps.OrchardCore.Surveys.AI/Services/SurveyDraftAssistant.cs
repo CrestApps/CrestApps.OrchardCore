@@ -118,7 +118,7 @@ public sealed class SurveyDraftAssistant
         var survey = await _surveys.CreateSurveyAsync(new SurveyCreateRequest
         {
             Title = string.IsNullOrWhiteSpace(title) ? definition.Title : title.Trim(),
-            Kind = string.IsNullOrWhiteSpace(kind) ? SurveyKinds.Survey : kind.Trim(),
+            Kind = DraftKind(kind),
             Definition = definition,
         }, cancellationToken);
 
@@ -129,6 +129,19 @@ public sealed class SurveyDraftAssistant
             Survey = survey,
             Messages = validation.Messages,
         };
+    }
+
+    /// <summary>
+    /// Gets the kind a drafted survey takes. The tool's schema offers the built-in kinds only, and the model's value is
+    /// checked here rather than trusted: anything else drafts a survey.
+    /// </summary>
+    /// <param name="kind">The kind the tool was given.</param>
+    /// <returns>A built-in kind.</returns>
+    public static string DraftKind(string kind)
+    {
+        var trimmed = kind?.Trim();
+
+        return SurveyKinds.IsBuiltIn(trimmed) ? trimmed : SurveyKinds.Survey;
     }
 
     /// <summary>

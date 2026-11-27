@@ -25,6 +25,22 @@ public sealed class SurveyDraftAssistantTests
         Assert.Equal("Yes", definition.Pages[0].Questions[0].Choices[0].Text);
     }
 
+    // R11-M1: the AI tool's kind argument is checked on the server; the schema's enum only asks the model.
+    [Theory]
+    [InlineData("Quiz", "Quiz")]
+    [InlineData(" Poll ", "Poll")]
+    [InlineData(null, "Survey")]
+    [InlineData("<img src=x onerror=alert(document.domain)>", "Survey")]
+    [InlineData("Assessment", "Survey")]
+    public void DraftKind_TakesOnlyABuiltInKind(string kind, string expected)
+    {
+        // Act
+        var result = SurveyDraftAssistant.DraftKind(kind);
+
+        // Assert
+        Assert.Equal(expected, result);
+    }
+
     [Theory]
     [InlineData("I can't help with that.")]
     [InlineData("{\"Title\": \"No pages\"}")]

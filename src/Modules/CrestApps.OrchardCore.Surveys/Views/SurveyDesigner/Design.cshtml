@@ -114,7 +114,7 @@
                         SurveyControlCategories.Files => T["Files"],
                         SurveyControlCategories.Assessment => T["Quiz"],
                         SurveyControlCategories.Advanced => T["Advanced"],
-                        _ => new LocalizedHtmlString(group.Key, group.Key),
+                        _ => (Microsoft.AspNetCore.Html.IHtmlContent)new Microsoft.AspNetCore.Html.HtmlString(Html.Encode(group.Key)),
                     })</h6>
                     <div class="row row-cols-1 row-cols-md-2 g-2 mb-2">
                         @foreach (var item in group)

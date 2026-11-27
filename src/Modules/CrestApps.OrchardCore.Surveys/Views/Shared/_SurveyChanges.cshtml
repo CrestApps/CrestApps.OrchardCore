@@ -19,7 +19,7 @@
             "row" => T["row"],
             "ending" => T["ending"],
             "variable" => T["variable"],
-            _ => new Microsoft.AspNetCore.Mvc.Localization.LocalizedHtmlString(change.Target ?? string.Empty, change.Target ?? string.Empty),
+            _ => (Microsoft.AspNetCore.Html.IHtmlContent)new Microsoft.AspNetCore.Html.HtmlString(Html.Encode(change.Target ?? string.Empty)),
         };
         var detail = change.Detail switch
         {

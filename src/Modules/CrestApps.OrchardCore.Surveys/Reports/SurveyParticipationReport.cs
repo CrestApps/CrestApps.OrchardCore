@@ -74,6 +74,13 @@ internal sealed class SurveyParticipationReport : IReport
             return Message(scope.Survey.Title, S["Choose a user audience."].Value);
         }
 
+        // Reading the survey's responses does not open every member list: only the survey's own audiences, unless the
+        // person may manage user audiences.
+        if (!await _data.CanListAudienceAsync(context.User, scope.Survey, audienceName))
+        {
+            return Message(scope.Survey.Title, S["Choose one of the survey's own audiences."].Value);
+        }
+
         var members = new List<string>();
         int count;
 

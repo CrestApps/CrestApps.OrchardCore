@@ -22,7 +22,7 @@ With the Reports feature on, these reports are under **Reports** → **Surveys**
 | Quiz Results | `survey-scores` | Score spread, pass rate, average per category, each person's best and latest score |
 | Item Analysis | `survey-item-analysis` | Difficulty and discrimination of each scored question |
 | Completion Funnel | `survey-funnel` | How many reached and left each page, and the time spent there |
-| Survey Participation | `survey-participation` | Who in a user audience completed an identified survey and who has not |
+| Survey Participation | `survey-participation` | Who in a user audience completed an identified survey and who has not. It lists the survey's own audiences (those of its **Who may respond**), or any audience for a person with **Manage user audiences**, who may read every member list anyway |
 | Satisfaction Trend | `survey-trend` | The average answer of a rating, score or number question by day, week or month |
 | Survey Activity | `survey-activity` | Completed responses per survey and the responses waiting for a grader; also the Survey Activity dashboard widget |
 

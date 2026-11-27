@@ -114,6 +114,10 @@ internal sealed class SurveysRecipeStep : NamedRecipeStepHandler
                 }
             }
 
+            // The staff pages show the kind, so a recipe's kind follows the same rule as every other write.
+            var recipeKind = survey.Kind?.Trim();
+            survey.Kind = SurveyKinds.IsValid(recipeKind) ? recipeKind : SurveyKinds.Survey;
+
             survey.Name = name;
 
             // The owner comes by user name; a survey that has an owner on this site keeps it.

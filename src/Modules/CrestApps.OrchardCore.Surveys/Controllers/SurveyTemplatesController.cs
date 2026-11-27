@@ -330,6 +330,13 @@ public sealed class SurveyTemplatesController : Controller
             ModelState.AddModelError(nameof(model.Name), S["Another template already has this technical name."]);
         }
 
+        // The select offers the built-in kinds and a template's own; a posted kind is checked here, since the staff pages
+        // show it.
+        if (!string.IsNullOrWhiteSpace(model.Kind) && !SurveyKinds.IsValid(model.Kind.Trim()))
+        {
+            ModelState.AddModelError(nameof(model.Kind), S["Pick a kind from the list."]);
+        }
+
         var definition = new SurveyDefinition();
 
         if (isNew && string.IsNullOrWhiteSpace(model.DefinitionJson) && !string.IsNullOrEmpty(model.FromSurveyId))
