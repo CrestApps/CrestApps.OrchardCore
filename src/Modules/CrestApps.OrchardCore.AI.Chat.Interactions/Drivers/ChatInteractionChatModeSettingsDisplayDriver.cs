@@ -53,7 +53,7 @@ public sealed class ChatInteractionChatModeSettingsDisplayDriver : SiteDisplayDr
             model.ChatMode = settings.ChatMode;
             model.EnableTextToSpeechPlayback = settings.EnableTextToSpeechPlayback;
             model.AvailableModes = await GetAvailableModesAsync();
-        }).Location("Content:4.5%Chat Interactions;1")
+        }).Location(l => l.Zone("Content", "4.5").Card(S["Chat Interactions"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.EditChatInteractions));
     }

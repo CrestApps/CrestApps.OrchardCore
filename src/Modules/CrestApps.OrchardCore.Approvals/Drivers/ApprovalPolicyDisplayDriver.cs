@@ -76,8 +76,14 @@ internal sealed class ApprovalPolicyDisplayDriver : DisplayDriver<ApprovalPolicy
     // go between (Content:2 to Content:9).
     public override IDisplayResult Edit(ApprovalPolicy policy, BuildEditorContext context)
         => Combine(
-            Initialize<ApprovalPolicyViewModel>("ApprovalPolicyFields_Edit", model => Fill(model, policy, context)).Location("Content:1"),
-            Initialize<ApprovalPolicyViewModel>("ApprovalPolicyStages_Edit", model => Fill(model, policy, context)).Location("Content:10"));
+            Initialize<ApprovalPolicyViewModel>("ApprovalPolicyFields_Edit", model => Fill(model, policy, context))
+                .Location(l => l.Zone("Content", "1").Card(S["The Policy"], "10")),
+            Initialize<ApprovalPolicyViewModel>("ApprovalPolicyUsage_Edit", model => Fill(model, policy, context))
+                .Location(l => l.Zone("Content", "1").Card(S["When It Is Used"], "20")),
+            Initialize<ApprovalPolicyViewModel>("ApprovalPolicyStages_Edit", model => Fill(model, policy, context))
+                .Location(l => l.Zone("Content", "10").Card(S["Stages"], "40")),
+            Initialize<ApprovalPolicyViewModel>("ApprovalPolicyRules_Edit", model => Fill(model, policy, context))
+                .Location(l => l.Zone("Content", "11").Card(S["Built-in Rules"], "50")));
 
     private void Fill(ApprovalPolicyViewModel model, ApprovalPolicy policy, BuildEditorContext context)
     {

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Modules;
@@ -26,6 +27,8 @@ internal sealed class OmnichannelActivityCallRecordingsDisplayDriver : DisplayDr
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILocalClock _localClock;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelActivityCallRecordingsDisplayDriver"/> class.
     /// </summary>
@@ -34,13 +37,16 @@ internal sealed class OmnichannelActivityCallRecordingsDisplayDriver : DisplayDr
     /// <param name="nameResolver">Names the agents on the calls.</param>
     /// <param name="httpContextAccessor">The HTTP context accessor, read for the viewer.</param>
     /// <param name="localClock">The viewer's local clock.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public OmnichannelActivityCallRecordingsDisplayDriver(
         ActivityCallRecordingLookup lookup,
         CallRecordingAccessEvaluator accessEvaluator,
         CallRecordingAgentNameResolver nameResolver,
         IHttpContextAccessor httpContextAccessor,
-        ILocalClock localClock)
+        ILocalClock localClock,
+        IStringLocalizer<OmnichannelActivityCallRecordingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _lookup = lookup;
         _accessEvaluator = accessEvaluator;
         _nameResolver = nameResolver;
@@ -100,7 +106,7 @@ internal sealed class OmnichannelActivityCallRecordingsDisplayDriver : DisplayDr
         var result = Initialize<ActivityCallRecordingsViewModel>("OmnichannelActivityCallRecordings_Edit", model =>
         {
             model.Items = items;
-        }).Location("Content:4.5")
+        }).Location(l => l.Zone("Content", "4.5").Card(S["Call Recordings"], "4.5"))
         .OnGroup(OmnichannelConstants.CompleteActivityGroup);
 
         // A completed activity is shown outside the completion group, and its calls can still be listened to.

@@ -34,6 +34,7 @@ public sealed class TaxReturnsController : Controller
     private readonly IMerchantTaxRegistrationStore _registrations;
     private readonly IDisplayManager<TaxReturn> _displayManager;
     private readonly IDisplayManager<TaxReturnPaymentEntry> _paymentDisplayManager;
+    private readonly IDisplayManager<TaxReturnMarkFiledViewModel> _markFiledDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IAuthorizationService _authorizationService;
     private readonly IShapeFactory _shapeFactory;
@@ -52,6 +53,7 @@ public sealed class TaxReturnsController : Controller
         IMerchantTaxRegistrationStore registrations,
         IDisplayManager<TaxReturn> displayManager,
         IDisplayManager<TaxReturnPaymentEntry> paymentDisplayManager,
+        IDisplayManager<TaxReturnMarkFiledViewModel> markFiledDisplayManager,
         IUpdateModelAccessor updateModelAccessor,
         IAuthorizationService authorizationService,
         IShapeFactory shapeFactory,
@@ -68,6 +70,7 @@ public sealed class TaxReturnsController : Controller
         _registrations = registrations;
         _displayManager = displayManager;
         _paymentDisplayManager = paymentDisplayManager;
+        _markFiledDisplayManager = markFiledDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         _authorizationService = authorizationService;
         _shapeFactory = shapeFactory;
@@ -153,19 +156,22 @@ public sealed class TaxReturnsController : Controller
         }
 
         var registration = await _registrations.FindByIdAsync(taxReturn.RegistrationId, HttpContext.RequestAborted);
-        var formName = _service.GetForms().TryGetValue(taxReturn.Form ?? string.Empty, out var form)
+        var formName = (await _service.GetFormsAsync(includeDisabled: true, HttpContext.RequestAborted)).TryGetValue(taxReturn.Form ?? string.Empty, out var form)
             ? _localizerFactory.Localize(form.DisplayName).Value
             : taxReturn.Form;
         var title = taxReturn.Amendment > 0
             ? S["{0} {1}, amendment {2}", formName, taxReturn.PeriodKey, taxReturn.Amendment]
             : S["{0} {1}", formName, taxReturn.PeriodKey];
 
+        var today = await TodayAsync();
+
         return View(new TaxReturnDetailsViewModel
         {
             Return = taxReturn,
             Title = registration is null ? title : S["{0} · {1}", registration.Name, title],
             Display = await _displayManager.BuildDisplayAsync(taxReturn, _updateModelAccessor.ModelUpdater, "DetailAdmin"),
-            Today = await TodayAsync(),
+            MarkFiledEditor = await _markFiledDisplayManager.BuildEditorAsync(new TaxReturnMarkFiledViewModel { Today = today }, _updateModelAccessor.ModelUpdater, isNew: false),
+            Today = today,
             CanFile = await _authorizationService.AuthorizeAsync(User, TaxationPermissions.FileTaxReturns),
         });
     }

@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Navigation;
 using CrestApps.OrchardCore.Payroll.Recipes;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
 using CrestApps.OrchardCore.Staff.Models;
@@ -169,6 +170,8 @@ public sealed class PayrollStartup : StartupBase
         services.AddDisplayDriver<TaxLiabilityPeriod, TaxLiabilityPeriodDisplayDriver>();
         services.AddDisplayDriver<TaxDeposit, TaxDepositDisplayDriver>();
         services.AddDisplayDriver<PayrollFiling, PayrollFilingDisplayDriver>();
+        services.AddDisplayDriver<TaxForm, PayrollTaxFormSettingsDisplayDriver>();
+        services.AddTaxFormUsage<PayrollTaxFormUsage>();
         services.AddScoped<PayrollReportReader>();
         CrestApps.OrchardCore.PersonalData.Core.PersonalDataServiceCollectionExtensions.AddPersonalDataContributor<PayrollPersonalDataContributor>(services);
         services.AddScoped<PayRunApprovalPolicySeeder>();

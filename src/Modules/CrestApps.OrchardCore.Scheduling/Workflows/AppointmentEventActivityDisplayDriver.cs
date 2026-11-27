@@ -1,5 +1,8 @@
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
 
 namespace CrestApps.OrchardCore.Scheduling.Workflows;
@@ -13,14 +16,25 @@ public sealed class AppointmentEventActivityDisplayDriver<TActivity> : ActivityD
 {
     private readonly AppointmentTypeStore _typeStore;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AppointmentEventActivityDisplayDriver{TActivity}"/> class.
     /// </summary>
     /// <param name="typeStore">The appointment type store.</param>
-    public AppointmentEventActivityDisplayDriver(AppointmentTypeStore typeStore)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AppointmentEventActivityDisplayDriver(
+        AppointmentTypeStore typeStore,
+        IStringLocalizer<AppointmentEventActivityDisplayDriver<TActivity>> stringLocalizer)
     {
         _typeStore = typeStore;
+        S = stringLocalizer;
     }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<AppointmentEventActivityViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
 
     /// <inheritdoc />
     protected override async ValueTask EditActivityAsync(TActivity activity, AppointmentEventActivityViewModel model)

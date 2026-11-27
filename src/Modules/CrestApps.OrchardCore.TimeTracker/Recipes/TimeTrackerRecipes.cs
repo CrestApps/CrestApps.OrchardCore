@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.TimeTracker.Models;
 using CrestApps.OrchardCore.TimeTracker.Services;
 using Json.Schema;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -337,6 +338,13 @@ public class TimeTrackerDeploymentStepViewModel
 
 internal sealed class TimeTrackerDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, TimeTrackerDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public TimeTrackerDeploymentStepDisplayDriver(IStringLocalizer<TimeTrackerDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(TimeTrackerDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("TimeTrackerDeploymentStep_Summary", step).Location("Summary", "Content"),
@@ -347,7 +355,7 @@ internal sealed class TimeTrackerDeploymentStepDisplayDriver : DisplayDriver<Dep
         {
             model.IncludeEntries = step.IncludeEntries;
             model.Days = step.Days;
-        }).Location("Content");
+        }).Location(l => l.Zone("Content").Card(S["Time Tracker"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(TimeTrackerDeploymentStep step, UpdateEditorContext context)
     {

@@ -2,6 +2,7 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Chat.Interactions.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -11,13 +12,19 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
 {
     private readonly IAIProfileManager _profileManager;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatInteractionAgentsDisplayDriver"/> class.
     /// </summary>
     /// <param name="profileManager">The profile manager.</param>
-    public ChatInteractionAgentsDisplayDriver(IAIProfileManager profileManager)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public ChatInteractionAgentsDisplayDriver(
+        IAIProfileManager profileManager,
+        IStringLocalizer<ChatInteractionAgentsDisplayDriver> stringLocalizer)
     {
         _profileManager = profileManager;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(ChatInteraction interaction, BuildEditorContext context)
@@ -41,7 +48,7 @@ internal sealed class ChatInteractionAgentsDisplayDriver : DisplayDriver<ChatInt
                 Description = agent.Description,
                 IsSelected = interaction.AgentNames?.Contains(agent.Name) ?? false,
             }).OrderBy(entry => entry.DisplayText).ToArray();
-        }).Location("Parameters:5#Capabilities;3");
+        }).Location(l => l.Zone("Parameters", "5").Tab(S["Capabilities"], "3").Card(S["Agents & Tools"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

@@ -73,7 +73,7 @@ internal sealed class AIDeploymentCascadedRealtimeDisplayDriver : DisplayDriver<
             model.TextToSpeechDeployments = BuildSelectList(
                 deployments.Where(candidate => _capabilityService.GetCapabilities(candidate).SupportsFeature(AIDeploymentFeatureNames.TextToSpeech)),
                 S["Select a deployment that speaks the reply"]);
-        }).Location("Content:8");
+        }).Location(l => l.Zone("Content", "8").Card(S["Cascaded Realtime"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDeployment deployment, UpdateEditorContext context)

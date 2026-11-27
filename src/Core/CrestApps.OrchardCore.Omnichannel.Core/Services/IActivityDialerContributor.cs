@@ -65,6 +65,18 @@ public interface IActivityDialerContributor
         CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Takes an activity waiting in a campaign's dialer queue out of it, so the dialer no longer calls it, for an
+    /// activity moved to an agent or to work the dialer does not drive. Work the dialer is dialing, or an agent already
+    /// has, is left where it is.
+    /// </summary>
+    /// <param name="activityId">The activity identifier.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>What happened to the activity's place in the dialer.</returns>
+    Task<ActivityDialerWithdrawResult> WithdrawAsync(
+        string activityId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Returns the activities, of those given, that the dialer is working right now: being dialed, ringing an agent,
     /// or on a call an agent took. Changing such an activity under the dialer would pull it out from under a live call.
     /// </summary>

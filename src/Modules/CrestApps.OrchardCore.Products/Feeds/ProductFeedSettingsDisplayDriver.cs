@@ -40,26 +40,51 @@ public sealed class ProductFeedSettingsDisplayDriver : SiteDisplayDriver<Product
         => GroupId;
 
     public override IDisplayResult Edit(ISite site, ProductFeedSettings settings, BuildEditorContext context)
-        => Initialize<ProductFeedSettingsViewModel>("ProductFeedSettings_Edit", async model =>
-        {
-            var request = _httpContextAccessor.HttpContext?.Request;
-            var baseUrl = site.BaseUrl?.TrimEnd('/') ?? (request is null ? null : $"{request.Scheme}://{request.Host}{request.PathBase}");
-            var query = string.IsNullOrEmpty(settings.Key) ? string.Empty : "?key=" + Uri.EscapeDataString(settings.Key);
+    {
+        return Combine(
+            Initialize<ProductFeedSettingsViewModel>("ProductFeedSettings_Edit", model => FillAsync(model, site, settings, includeFeed: true))
+                .Location(l => l.Zone("Content", "1").Card(S["Feed Addresses"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ProductFeedPermissions.ManageProductFeeds))
+                .OnGroup(SettingsGroupId),
+            Initialize<ProductFeedSettingsViewModel>("ProductFeedSettingsDefaults_Edit", model => FillAsync(model, site, settings, includeFeed: false))
+                .Location(l => l.Zone("Content", "2").Card(S["Feed Defaults"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ProductFeedPermissions.ManageProductFeeds))
+                .OnGroup(SettingsGroupId),
+            Initialize<ProductFeedSettingsViewModel>("ProductFeedSettingsAgents_Edit", model => FillAsync(model, site, settings, includeFeed: false))
+                .Location(l => l.Zone("Content", "3").Card(S["AI Agents"], "30"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ProductFeedPermissions.ManageProductFeeds))
+                .OnGroup(SettingsGroupId),
+            Initialize<ProductFeedSettingsViewModel>("ProductFeedSettingsAccess_Edit", model => FillAsync(model, site, settings, includeFeed: false))
+                .Location(l => l.Zone("Content", "4").Card(S["Access"], "40"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ProductFeedPermissions.ManageProductFeeds))
+                .OnGroup(SettingsGroupId));
+    }
 
-            model.DefaultBrand = settings.DefaultBrand;
-            model.DefaultCondition = settings.DefaultCondition;
-            model.DefaultGoogleProductCategory = settings.DefaultGoogleProductCategory;
-            model.IncludeOutOfStock = settings.IncludeOutOfStock;
-            model.ShowToAgentsByDefault = settings.ShowToAgentsByDefault;
-            model.AgentCheckoutByDefault = settings.AgentCheckoutByDefault;
-            model.HasKey = !string.IsNullOrEmpty(settings.Key);
-            model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
-            model.XmlUrl = $"{baseUrl}/feeds/products.xml{query}";
-            model.CsvUrl = $"{baseUrl}/feeds/products.csv{query}";
-            model.Feed = await _feeds.GetAsync(currency: null, fresh: true);
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ProductFeedPermissions.ManageProductFeeds))
-        .OnGroup(SettingsGroupId);
+    // Every card of the page binds the same view model; only the first one shows the generated feed, so the others skip building it.
+    private async ValueTask FillAsync(ProductFeedSettingsViewModel model, ISite site, ProductFeedSettings settings, bool includeFeed)
+    {
+        model.DefaultBrand = settings.DefaultBrand;
+        model.DefaultCondition = settings.DefaultCondition;
+        model.DefaultGoogleProductCategory = settings.DefaultGoogleProductCategory;
+        model.IncludeOutOfStock = settings.IncludeOutOfStock;
+        model.ShowToAgentsByDefault = settings.ShowToAgentsByDefault;
+        model.AgentCheckoutByDefault = settings.AgentCheckoutByDefault;
+        model.HasKey = !string.IsNullOrEmpty(settings.Key);
+        model.HasBaseUrl = !string.IsNullOrWhiteSpace(site.BaseUrl);
+
+        if (!includeFeed)
+        {
+            return;
+        }
+
+        var request = _httpContextAccessor.HttpContext?.Request;
+        var baseUrl = site.BaseUrl?.TrimEnd('/') ?? (request is null ? null : $"{request.Scheme}://{request.Host}{request.PathBase}");
+        var query = string.IsNullOrEmpty(settings.Key) ? string.Empty : "?key=" + Uri.EscapeDataString(settings.Key);
+
+        model.XmlUrl = $"{baseUrl}/feeds/products.xml{query}";
+        model.CsvUrl = $"{baseUrl}/feeds/products.csv{query}";
+        model.Feed = await _feeds.GetAsync(currency: null, fresh: true);
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, ProductFeedSettings settings, UpdateEditorContext context)
     {

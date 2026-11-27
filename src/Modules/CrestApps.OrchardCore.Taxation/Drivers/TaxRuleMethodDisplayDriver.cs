@@ -62,7 +62,7 @@ internal sealed class TaxRuleMethodDisplayDriver : DisplayDriver<TaxRule>
                         .Select(t => new SelectListItem(t.Name, t.ItemId)),
                 ];
             }
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Calculation"], "40"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(TaxRule rule, UpdateEditorContext context)

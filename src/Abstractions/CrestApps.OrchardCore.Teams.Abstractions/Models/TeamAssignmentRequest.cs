@@ -16,6 +16,14 @@ public sealed class TeamAssignmentRequest
     public bool IncludeSubTeams { get; set; } = true;
 
     /// <summary>
+    /// Gets or sets the users considered instead of a team's members, for work whose candidates come from somewhere
+    /// else, such as the agents signed in to a queue or the users in a role. When set, <see cref="TeamId"/> and
+    /// <see cref="IncludeSubTeams"/> are not used, and the same availability, filter, load and strategy rules pick one
+    /// of them. <see langword="null"/> uses the team.
+    /// </summary>
+    public IReadOnlyCollection<string> CandidateUserIds { get; set; }
+
+    /// <summary>
     /// Gets or sets the kind of work, an open string the module that keeps the work names (such as <c>Ticket</c>). The
     /// members' load is read from the <see cref="Services.ITeamMemberLoadSource"/> of this kind.
     /// </summary>

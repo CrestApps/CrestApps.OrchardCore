@@ -7,6 +7,7 @@ user_manual:
   - user-manual/messaging
   - user-manual/entry-points-and-ivr
   - user-manual/channel-endpoints
+  - user-manual/messaging-routing-rules
 ---
 
 | | |
@@ -67,6 +68,7 @@ Every notification the server sends is logged at the `Information` level (delive
 1. Go to **Tools** → **Features**.
 2. Enable **SMS Messaging Channel**. This also enables the **Omnichannel Messaging Workspace** and everything it needs (Channel Endpoints, Contact Center Agent Services, Provider Webhook Inbox, SignalR, Orchard Core SMS).
 3. Optionally enable **Omnichannel Messaging Routed Distribution** to push department conversations to the least-loaded available agent. This needs Contact Center Work Distribution.
+4. Optionally add [routing rules](#routing-rules) at **Messaging** → **Routing Rules** to assign conversations nobody owns, such as the ones a workflow starts, to agents. They are part of the workspace; it enables the Teams feature they pick through.
 
 Enabling the workspace on its own gives you the inbox with nothing to send or receive on. That is expected: channels come from channel features.
 
@@ -140,6 +142,76 @@ While an automated (AI) activity is handling a contact on an endpoint, the works
 
 The conversation also records the activity's campaign (`MessagingConversation.CampaignId`, indexed), which is what the inbox's **Campaign** filter reads. A later handoff from another campaign moves the conversation to that campaign. Conversations handed off before version 7 of the messaging migration have no campaign recorded.
 
+## Routing rules
+
+A conversation nobody owns waits in the inbox until someone claims it. That includes every conversation a workflow's **Send Text Message** task or a broadcast starts without naming an agent: when the contact replies, the reply lands in a conversation that belongs to nobody, and a lead can go cold before anyone notices. **Routing rules** give such conversations to an agent automatically.
+
+Routing rules are part of the messaging workspace and work on every messaging channel: a rule's **Channels** condition picks channels, and leaving it empty takes them all, so a channel added later, such as email or WhatsApp, is routed by the same rules. Manage them at **Messaging** → **Routing Rules** (permission `ManageMessagingRoutingRules`). Enabled rules are tried from the lowest **Order** up. The first rule that applies and finds an agent assigns the conversation; a rule that applies but finds nobody passes it to the next rule, and a conversation no rule assigns stays where it is, exactly as without rules. A conversation that already has an agent, or is a person's own, is never touched.
+
+### When a rule applies
+
+| Moment | What it covers |
+| --- | --- |
+| **A contact replies to a conversation nobody owns** | A reply on an open (or closed) conversation that is unassigned or waiting in a queue's shared pool: the conversations workflows and broadcasts start, and the shared-pool queue's waiting threads. On by default. |
+| **A contact starts a new conversation** | A first message on a number whose entry point sends it to a queue or to nobody. A number whose entry point names one agent keeps going to that agent. On by default. |
+| **A workflow or broadcast starts a conversation without an agent** | The conversation is assigned as soon as the message is sent, before the contact replies. Off by default, because most texts a workflow sends are never answered. |
+| **A contact's message is still waiting for a person** | Every minute, the rule is tried again on conversations nobody owns whose contact wrote last and has waited for the **Wait** in minutes (5 by default). A conversation that found no agent available when the contact wrote goes to one as soon as one is. On by default. |
+
+A rule can also be limited to some **channels**, **business numbers**, **queues** (the queue that owns the conversation or, for a new one, the queue its entry point sends it to) and **campaigns**. An empty list takes every value.
+
+### Who gets the conversation
+
+| Agents | Who they are |
+| --- | --- |
+| **Agents signed in to a queue** | The agents signed in to the queue now, whatever their presence (available, on a call or on a break), but not those who are offline. |
+| **Every agent who works a queue** | Every agent allowed to take the queue's work, signed in or not. |
+| **Members of teams** | The members of the chosen [teams](../modules/teams.md) and of the teams under them, on the current day. |
+| **Users in roles** | The users in the chosen roles. |
+| **Specific users** | The users you pick. |
+
+For the two queue choices, leave **Queue** empty to use the conversation's own queue, and the queue's required skills apply as they do for calls. A conversation that belongs to no queue, such as one a workflow or a power dialer started, has no own queue, so a rule with **Queue** empty reads the agents of any queue for it (signed in to any queue, or entitled to any queue), without a queue's required skills; name the queue to limit the rule to one queue's agents. Only users with a Contact Center agent profile can get conversations; a profile is created the first time a user opens the workspace. By default a rule only picks agents **available for messaging** and **skips agents at their conversation limit**, where each live call counts as several conversations (`VoiceCapacityWeight`, 3 by default). An agent is available for messaging when two things are true: the **Available** switch at the top of their inbox is on, and their workspace has checked in recently, so the inbox is open in a browser. The switch is stored on the agent profile (`MessagingAgentAvailability`) and is on until the agent turns it off, so no setup is needed; being signed in to the soft phone does not count, because a pushed conversation is only visible in the inbox. Clear **Only agents available for messaging** on a rule to give conversations to agents who are not in the inbox. For the field-by-field guide to the editor, see [Messaging routing rules](../user-manual/messaging-routing-rules.md) in the User Manual.
+
+### How an agent is picked
+
+| Pick | The agent |
+| --- | --- |
+| **Round robin** | Who was given a conversation by a routing rule longest ago, so conversations go around the agents in turn. Ties go to the agent with fewer open conversations. |
+| **Fewest open conversations** | Who holds the fewest open conversations. |
+| **Least busy** | Who has the least work, counting open conversations and live calls. |
+
+The pick goes through the [Teams](../modules/teams.md) assignment service, the same round robin and least-loaded rules tickets and other work use. The round robin's turn is kept in the tenant's distributed cache, so it is shared by every server when the cache is (Redis), and starts over when the cache is cleared.
+
+### What the assignment does
+
+The conversation is assigned to the agent, who is notified as with any routed conversation, and its thread shows *Assigned to (agent) by the routing rule (name)*. A conversation that belongs to a queue stays the queue's, so supervisors still find it under the department, and when **Omnichannel Messaging Routed Distribution** is on, a conversation the agent does not open within the pickup grace window goes back to the queue as a routed one would. A conversation that belongs to no queue becomes the agent's own.
+
+### Exporting and importing routing rules
+
+Rules travel through the **Messaging routing rules** deployment step and the `MessagingRoutingRules` recipe step, matched by `ItemId`.
+
+```json
+{
+  "steps": [
+    {
+      "name": "MessagingRoutingRules",
+      "Rules": [
+        {
+          "ItemId": "4rr00000000000000000000001",
+          "DisplayText": "Lead replies to the sales team",
+          "Order": 10,
+          "Triggers": "ContactReplied, Waiting",
+          "WaitingMinutes": 5,
+          "Channels": [ "sms" ],
+          "CandidateSource": "QueueSignedIn",
+          "CandidateQueueId": "sales-queue-id",
+          "Strategy": "RoundRobin"
+        }
+      ]
+    }
+  ]
+}
+```
+
 ## Permissions
 
 | Permission | Display name | Grants |
@@ -151,6 +223,7 @@ The conversation also records the activity's campaign (`MessagingConversation.Ca
 | `SendGroupMessages` | Send group messages | Send broadcasts and multi-recipient messages. |
 | `SendMessagesDuringQuietHours` | Send messages outside business hours | Changes the quiet-hours banner to a plain notice without the unsociable-hour warning. Sending is never blocked, with or without it. |
 | `ManageMessaging` | Manage the messaging workspace | Manage templates (**Messaging** → **Templates**). |
+| `ManageMessagingRoutingRules` | Manage messaging routing rules | Manage the routing rules (**Messaging** → **Routing Rules**). Given to the **Administrator** and **Supervisor** roles. |
 
 The three conversation permissions narrow like Orchard Core's **View all content** and **View own content**: `ViewAllMessagingConversations` includes the queue permission, which includes the own permission. A conversation is always authorized against `ViewAllMessagingConversations`; for anybody who does not hold it, an authorization handler grants the conversations that are theirs through the narrower permissions. An agent never sees a conversation a colleague has claimed. None of the other permissions implies another. By default the **Agent** role gets `UseMessagingWorkspace` and `ViewQueueMessagingConversations`, and the **Supervisor** role gets `UseMessagingWorkspace`, `ViewAllMessagingConversations`, `SendGroupMessages`, `SendMessagesDuringQuietHours` and `ManageMessaging`. A role given `ViewOwnMessagingConversations` instead of the queue permission sees only its users' own conversations, which suits people who text from their own number and serve no queue.
 

@@ -1,13 +1,24 @@
 @using CrestApps.OrchardCore.Skills.Deployments
 @model SkillsDeploymentStepViewModel
 
-<h5>@T["Skills and certifications"]</h5>
-<p class="hint">@T["Exports every skill and certification."]</p>
-<div class="mb-3 form-check">
-    <input asp-for="IncludeAssignments" class="form-check-input" />
-    <label asp-for="IncludeAssignments" class="form-check-label">@T["Include the skills people hold"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Exports every skill and certification."]</span>
+    </div>
 </div>
-<div class="mb-3 form-check">
-    <input asp-for="IncludeCertificationRecords" class="form-check-input" />
-    <label asp-for="IncludeCertificationRecords" class="form-check-label">@T["Include the certificates people hold"]</label>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeAssignments" class="form-check-input" />
+            <label asp-for="IncludeAssignments" class="form-check-label">@T["Include the skills people hold"]</label>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IncludeCertificationRecords" class="form-check-input" />
+            <label asp-for="IncludeCertificationRecords" class="form-check-label">@T["Include the certificates people hold"]</label>
+        </div>
+    </div>
 </div>

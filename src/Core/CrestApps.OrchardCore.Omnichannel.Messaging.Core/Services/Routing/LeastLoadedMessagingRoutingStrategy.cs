@@ -1,7 +1,6 @@
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
-using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using Microsoft.Extensions.Options;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
@@ -22,18 +21,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routing;
 public sealed class LeastLoadedMessagingRoutingStrategy : IMessagingRoutingStrategy
 {
     private readonly IAgentProfileManager _agentProfileManager;
-    private readonly IMessagingConversationStore _conversationStore;
-    private readonly IMessagingAvailabilityService _availabilityService;
     private readonly IActivityQueueManager _queueManager;
-    private readonly IInteractionManager _interactionManager;
-
-    // Each active live voice interaction consumes this many conversation-equivalent slots of an agent's concurrency budget,
-    // so an agent on a call is meaningfully less available for routed conversations than an idle one.
-    private readonly int _voiceCapacityWeight;
+    private readonly MessagingAgentCapacity _capacity;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LeastLoadedMessagingRoutingStrategy"/> class.
     /// </summary>
+    /// <param name="agentProfileManager">The agent profiles, read for the queue's members.</param>
+    /// <param name="conversationStore">The conversations, counted for each agent's open assigned threads.</param>
+    /// <param name="availabilityService">The agents' messaging availability and limits.</param>
+    /// <param name="queueManager">The queues, read for their required skills.</param>
+    /// <param name="interactionManager">The interactions, counted for each agent's live calls.</param>
+    /// <param name="options">The routed distribution options, read for how much a live call weighs.</param>
     public LeastLoadedMessagingRoutingStrategy(
         IAgentProfileManager agentProfileManager,
         IMessagingConversationStore conversationStore,
@@ -43,11 +42,11 @@ public sealed class LeastLoadedMessagingRoutingStrategy : IMessagingRoutingStrat
         IOptions<MessagingRoutedDistributionOptions> options)
     {
         _agentProfileManager = agentProfileManager;
-        _conversationStore = conversationStore;
-        _availabilityService = availabilityService;
         _queueManager = queueManager;
-        _interactionManager = interactionManager;
-        _voiceCapacityWeight = Math.Max(0, options.Value.VoiceCapacityWeight);
+
+        // Each active live voice interaction consumes this many conversation-equivalent slots of an agent's concurrency
+        // budget, so an agent on a call is meaningfully less available for routed conversations than an idle one.
+        _capacity = new MessagingAgentCapacity(conversationStore, availabilityService, interactionManager, options.Value.VoiceCapacityWeight);
     }
 
     /// <inheritdoc/>
@@ -66,74 +65,30 @@ public sealed class LeastLoadedMessagingRoutingStrategy : IMessagingRoutingStrat
         var queue = await _queueManager.FindByIdAsync(queueId, cancellationToken);
         var requiredSkills = SkillTag.CreateAll(queue?.RequiredSkills ?? []);
 
-        // Both load figures are read once for the whole queue rather than once per candidate: routing runs on
-        // the inbound-message path, and a query per agent makes routing one message cost as much as the team is
-        // large.
-        var candidateIds = agents
-            .Where(agent => !string.IsNullOrEmpty(agent.ItemId))
-            .Select(agent => agent.ItemId)
-            .ToArray();
-
-        var smsLoads = await _conversationStore.CountOpenAssignedAsync(candidateIds, cancellationToken);
-        var voiceLoads = await _interactionManager.CountActiveByAgentIdsAsync(candidateIds, cancellationToken);
+        var loads = await _capacity.MeasureAsync(agents, cancellationToken);
 
         string bestAgentId = null;
         var bestLoad = int.MaxValue;
 
-        foreach (var agent in agents)
+        foreach (var load in loads)
         {
-            if (string.IsNullOrEmpty(agent.ItemId) ||
-                string.Equals(agent.ItemId, excludeAgentId, StringComparison.Ordinal))
-            {
-                continue;
-            }
-
-            // Derived: the agent both volunteered and still has a live session. Reading the flag alone pushed
-            // conversations at agents who had closed the browser.
-            if (!await _availabilityService.IsAvailableAsync(agent, cancellationToken))
-            {
-                continue;
-            }
-
-            var availability = _availabilityService.Get(agent);
-
-            if (!HasRequiredSkills(agent, requiredSkills))
-            {
-                continue;
-            }
-
-            var smsLoad = smsLoads.GetValueOrDefault(agent.ItemId);
-
-            // Capacity weighting: live voice work eats into the same concurrency budget.
-            var activeVoice = voiceLoads.GetValueOrDefault(agent.ItemId);
-            var load = smsLoad + (activeVoice * _voiceCapacityWeight);
-
-            if (load >= availability.EffectiveMaxConcurrent)
+            if (string.Equals(load.Agent.ItemId, excludeAgentId, StringComparison.Ordinal) ||
+                !load.IsAvailable ||
+                !MessagingAgentCapacity.HasRequiredSkills(load.Agent, requiredSkills) ||
+                !load.HasCapacity)
             {
                 continue;
             }
 
             // Least-loaded wins; ties break stably by agent id so selection is deterministic and testable.
-            if (load < bestLoad ||
-                (load == bestLoad && (bestAgentId is null || string.CompareOrdinal(agent.ItemId, bestAgentId) < 0)))
+            if (load.WeightedLoad < bestLoad ||
+                (load.WeightedLoad == bestLoad && (bestAgentId is null || string.CompareOrdinal(load.Agent.ItemId, bestAgentId) < 0)))
             {
-                bestLoad = load;
-                bestAgentId = agent.ItemId;
+                bestLoad = load.WeightedLoad;
+                bestAgentId = load.Agent.ItemId;
             }
         }
 
         return bestAgentId;
-    }
-
-    private static bool HasRequiredSkills(AgentProfile agent, IReadOnlyCollection<SkillTag> requiredSkills)
-    {
-        if (requiredSkills.Count == 0)
-        {
-            return true;
-        }
-
-        var agentSkills = new HashSet<SkillTag>(SkillTag.CreateAll(agent.Skills ?? []));
-
-        return requiredSkills.All(agentSkills.Contains);
     }
 }

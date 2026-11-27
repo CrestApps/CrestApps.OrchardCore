@@ -1,7 +1,10 @@
 @model CrestApps.OrchardCore.DncRegistry.ViewModels.CanadaDnclRegistrySettingsViewModel
 
-<h4 class="card-title">@T["Canada LNNTE-DNCL Registry"]</h4>
-<p class="hint">@T["Configure the connection to the Canadian National Do Not Call List (LNNTE-DNCL) API maintained by the CRTC."]</p>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Configure the connection to the Canadian National Do Not Call List (LNNTE-DNCL) API maintained by the CRTC."]</span>
+    </div>
+</div>
 
 <div class="ocat-wrapper" asp-validation-class-for="AccountNumber">
     <label class="ocat-label ocat-label-required" asp-for="AccountNumber">@T["Account number"]</label>

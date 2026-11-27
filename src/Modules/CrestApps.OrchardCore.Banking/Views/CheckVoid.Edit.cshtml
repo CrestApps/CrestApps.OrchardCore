@@ -1,0 +1,17 @@
+@model CheckVoidViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="VoidedOn">
+    <label asp-for="VoidedOn" class="ocat-label ocat-label-required">@T["Void date"]</label>
+    <div class="ocat-end">
+        <input asp-for="VoidedOn" class="form-control" type="date" />
+        <span asp-validation-for="VoidedOn" class="text-danger"></span>
+        <span class="hint">@T["What the check paid is reversed on this date, such as a bill that is owed again. It can't be before the check's date, and the feature the check pays may refuse a date in a closed period."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+    <div class="ocat-end">
+        <input asp-for="Reason" class="form-control" maxlength="500" />
+        <span class="hint">@T["Such as a wrong amount or a lost check."]</span>
+    </div>
+</div>

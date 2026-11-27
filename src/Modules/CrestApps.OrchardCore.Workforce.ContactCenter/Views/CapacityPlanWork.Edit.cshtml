@@ -1,0 +1,16 @@
+@model CapacityPlanEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="WeeklyWorkloadHours" class="ocat-label">@T["Handle hours a week"]</label>
+    <div class="ocat-end">
+        <input asp-for="WeeklyWorkloadHours" type="number" min="0" step="any" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["Leave empty to use the average of the last four weeks."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="GrowthPercentPerYear" class="ocat-label">@T["Growth a year %"]</label>
+    <div class="ocat-end">
+        <input asp-for="GrowthPercentPerYear" type="number" step="any" class="form-control" style="max-width: 12rem" />
+        <span class="hint">@T["Negative when the work shrinks."]</span>
+    </div>
+</div>

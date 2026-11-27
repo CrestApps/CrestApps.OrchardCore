@@ -69,7 +69,7 @@ public sealed class InteractionDocumentSettingsDisplayDriver : SiteDisplayDriver
             var items = await _indexProfileStore.GetByTypeAsync(AIConstants.AIDocumentsIndexingTaskType);
 
             viewModel.IndexProfiles = items.Select(x => new SelectListItem(x.Name, x.Name));
-        }).Location("Content:5%Documents;1")
+        }).Location(l => l.Zone("Content", "5").Card(S["Documents"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageChatInteractionSettings));
     }

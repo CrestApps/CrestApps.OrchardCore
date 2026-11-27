@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Ledgers;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Learning.Certifications.ViewModels;
 
@@ -44,6 +45,12 @@ public class EducationCreditTypeEditViewModel
     public string Description { get; set; }
 
     public bool AllowExternalLearning { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets the editor the display drivers build: its fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 public class ExternalLearningListViewModel
@@ -69,6 +76,12 @@ public class ExternalLearningReviewViewModel
     public string Id { get; set; }
 
     public string Note { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor the display drivers build: its fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 
     [BindNever]
     public ExternalLearningSubmission Submission { get; set; }

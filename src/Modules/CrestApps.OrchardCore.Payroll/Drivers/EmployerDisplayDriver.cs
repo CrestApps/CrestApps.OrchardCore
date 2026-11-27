@@ -172,47 +172,54 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
         return registrations;
     }
 
-    private ShapeResult Details(Employer employer)
-        => Initialize<EmployerViewModel>("EmployerFields_Edit", model =>
-        {
-            model.Name = employer.Name;
-            model.LegalName = employer.LegalName;
-            model.TaxId = employer.TaxId;
-            model.CountryPack = employer.CountryPack;
-            model.Currency = employer.Currency;
-            model.LogoPath = employer.LogoPath;
-            model.SignatoryName = employer.SignatoryName;
-            model.SignatoryTitle = employer.SignatoryTitle;
-            model.ContactName = employer.ContactName;
-            model.ContactEmail = employer.ContactEmail;
-            model.ContactPhone = employer.ContactPhone;
-            model.Active = employer.Status == EmployerStatus.Active;
-            model.WorkJurisdictions = string.Join(", ", employer.WorkJurisdictions ?? []);
-
-            foreach (var registration in employer.Registrations)
+    private CombinedResult Details(Employer employer)
+        => Combine(
+            Initialize<EmployerViewModel>("EmployerFields_Edit", model =>
             {
-                var rates = registration.Rates.Count == 0 ? [null] : registration.Rates.OrderBy(rate => rate.EffectiveFrom).Cast<DatedRate>().ToList();
+                model.Name = employer.Name;
+                model.LegalName = employer.LegalName;
+                model.TaxId = employer.TaxId;
+                model.CountryPack = employer.CountryPack;
+                model.Currency = employer.Currency;
+                model.LogoPath = employer.LogoPath;
+                model.Active = employer.Status == EmployerStatus.Active;
+            }).Location(l => l.Zone("Content", "1").Card(S["Employer"], "10")),
+            Initialize<EmployerViewModel>("EmployerContact_Edit", model =>
+            {
+                model.SignatoryName = employer.SignatoryName;
+                model.SignatoryTitle = employer.SignatoryTitle;
+                model.ContactName = employer.ContactName;
+                model.ContactEmail = employer.ContactEmail;
+                model.ContactPhone = employer.ContactPhone;
+            }).Location(l => l.Zone("Content", "1").Card(S["Signatory and Contact"], "20")),
+            Initialize<EmployerViewModel>("EmployerRegistrations_Edit", model =>
+            {
+                model.WorkJurisdictions = string.Join(", ", employer.WorkJurisdictions ?? []);
 
-                foreach (var rate in rates)
+                foreach (var registration in employer.Registrations)
                 {
-                    model.Registrations.Add(new EmployerRegistrationRow
-                    {
-                        Jurisdiction = registration.Jurisdiction,
-                        Agency = registration.Agency,
-                        AccountId = registration.AccountId,
-                        DepositFrequency = registration.DepositFrequency,
-                        Categories = string.Join(", ", registration.Categories ?? []),
-                        Rate = rate?.Rate.ToString("0.####", CultureInfo.InvariantCulture),
-                        RateFrom = rate?.EffectiveFrom,
-                    });
-                }
-            }
+                    var rates = registration.Rates.Count == 0 ? [null] : registration.Rates.OrderBy(rate => rate.EffectiveFrom).Cast<DatedRate>().ToList();
 
-            for (var i = 0; i < BlankRegistrationRows; i++)
-            {
-                model.Registrations.Add(new EmployerRegistrationRow());
-            }
-        }).Location("Content:1");
+                    foreach (var rate in rates)
+                    {
+                        model.Registrations.Add(new EmployerRegistrationRow
+                        {
+                            Jurisdiction = registration.Jurisdiction,
+                            Agency = registration.Agency,
+                            AccountId = registration.AccountId,
+                            DepositFrequency = registration.DepositFrequency,
+                            Categories = string.Join(", ", registration.Categories ?? []),
+                            Rate = rate?.Rate.ToString("0.####", CultureInfo.InvariantCulture),
+                            RateFrom = rate?.EffectiveFrom,
+                        });
+                    }
+                }
+
+                for (var i = 0; i < BlankRegistrationRows; i++)
+                {
+                    model.Registrations.Add(new EmployerRegistrationRow());
+                }
+            }).Location(l => l.Zone("Content", "1").Card(S["Tax Registrations"], "30")));
 
     private async Task<ShapeResult> AddressAsync(AddressEditorViewModel address)
     {
@@ -222,7 +229,7 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
         {
             model.Address = address;
             model.AddressEditor = editor;
-        }).Location("Content:3");
+        }).Location(l => l.Zone("Content", "3").Card(S["Address"], "40"));
     }
 
     private static AddressEditorOptions AddressOptions(string country)

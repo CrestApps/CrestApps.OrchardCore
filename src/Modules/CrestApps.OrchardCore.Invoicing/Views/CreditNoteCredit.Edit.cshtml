@@ -1,0 +1,24 @@
+@model CreditNoteEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+    <div class="ocat-end">
+        <input asp-for="Reason" class="form-control" maxlength="500" autocomplete="off" />
+        <span class="hint">@T["Why the invoice is credited, such as goods returned or a price corrected. Printed on the credit note."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Disposition">
+    <label asp-for="Disposition" class="ocat-label">@T["Give the credit by"]</label>
+    <div class="ocat-end">
+        <select asp-for="Disposition" asp-items="Model.Dispositions" class="form-select"></select>
+        <span class="hint">@T["Lowering what is owed works while the invoice is not paid in full. Once it is paid, refund the money or keep it as the customer's credit for their next purchase or invoice."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Notes">
+    <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Notes" rows="2" class="form-control" maxlength="4000"></textarea>
+    </div>
+</div>

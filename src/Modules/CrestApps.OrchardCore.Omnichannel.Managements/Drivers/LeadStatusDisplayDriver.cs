@@ -60,7 +60,7 @@ internal sealed class LeadStatusDisplayDriver : DisplayDriver<LeadStatus>
             model.Kind = entry.IsConverted
                 ? LeadStatusKind.Converted
                 : entry.IsClosed ? LeadStatusKind.Closed : LeadStatusKind.Open;
-        }).Location("Content:1%General;1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(LeadStatus entry, UpdateEditorContext context)

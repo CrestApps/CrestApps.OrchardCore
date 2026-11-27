@@ -1,0 +1,6 @@
+@model TimeOffTypeEditViewModel
+
+<div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+<div class="ocat-wrapper"><label asp-for="Description" class="ocat-label">@T["Description"]</label><div class="ocat-end"><textarea asp-for="Description" class="form-control" rows="2"></textarea><span class="hint">@T["Shown to workers when they choose a type."]</span></div></div>
+<div class="ocat-wrapper"><label asp-for="Color" class="ocat-label">@T["Color"]</label><div class="ocat-end"><input asp-for="Color" type="color" class="form-control form-control-color" /></div></div>
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>

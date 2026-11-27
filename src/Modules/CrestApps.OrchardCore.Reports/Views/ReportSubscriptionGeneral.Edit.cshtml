@@ -1,0 +1,18 @@
+@model ReportSubscriptionEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="ReportName">
+    <label asp-for="ReportName" class="ocat-label ocat-label-required">@T["Report"]</label>
+    <div class="ocat-end">
+        <select asp-for="ReportName" asp-items="Model.Reports" class="form-select"><option value="">@T["Choose a report"]</option></select>
+        <span asp-validation-for="ReportName"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="255" />
+        <span asp-validation-for="Name"></span>
+        <span class="hint">@T["Optional; the report's name when blank."]</span>
+    </div>
+</div>

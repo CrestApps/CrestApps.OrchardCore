@@ -3,6 +3,7 @@ using CrestApps.Core.AI;
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Core.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -15,13 +16,19 @@ public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDrive
 {
     private readonly PromptTemplateSelectionService _promptTemplateSelectionService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileTemplatePromptSelectionDisplayDriver"/> class.
     /// </summary>
     /// <param name="promptTemplateSelectionService">The prompt template selection service.</param>
-    public AIProfileTemplatePromptSelectionDisplayDriver(PromptTemplateSelectionService promptTemplateSelectionService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIProfileTemplatePromptSelectionDisplayDriver(
+        PromptTemplateSelectionService promptTemplateSelectionService,
+        IStringLocalizer<AIProfileTemplatePromptSelectionDisplayDriver> stringLocalizer)
     {
         _promptTemplateSelectionService = promptTemplateSelectionService;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(AIProfileTemplate template, BuildEditorContext context)
@@ -45,7 +52,7 @@ public sealed class AIProfileTemplatePromptSelectionDisplayDriver : DisplayDrive
         {
             promptSelectionModel.PromptTemplates = model.PromptTemplates;
             promptSelectionModel.AvailablePrompts = model.AvailablePrompts;
-        }).Location("Content:15%Instructions;4");
+        }).Location(l => l.Zone("Content", "15").Card(S["Instructions"], "4"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplate template, UpdateEditorContext context)

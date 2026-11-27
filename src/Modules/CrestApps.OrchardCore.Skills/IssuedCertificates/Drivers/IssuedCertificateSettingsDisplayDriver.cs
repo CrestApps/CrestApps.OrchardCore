@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Skills.IssuedCertificates.ViewModels;
 using CrestApps.OrchardCore.Skills.Models;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Records;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,9 +16,12 @@ internal sealed class IssuedCertificateSettingsDisplayDriver : DisplayDriver<Cer
 {
     private readonly ISession _session;
 
-    public IssuedCertificateSettingsDisplayDriver(ISession session)
+    internal readonly IStringLocalizer S;
+
+    public IssuedCertificateSettingsDisplayDriver(ISession session, IStringLocalizer<IssuedCertificateSettingsDisplayDriver> stringLocalizer)
     {
         _session = session;
+        S = stringLocalizer;
     }
 
     // Every driver of a model gets the model's name as its prefix; this card has its own.
@@ -40,7 +44,7 @@ internal sealed class IssuedCertificateSettingsDisplayDriver : DisplayDriver<Cer
             model.TemplateOptions = templates
                 .Select(index => new SelectListItem(index.DisplayText, index.ContentItemId, index.ContentItemId == certification.CertificateTemplateId))
                 .ToList();
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Issued Certificates"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Certification certification, UpdateEditorContext context)

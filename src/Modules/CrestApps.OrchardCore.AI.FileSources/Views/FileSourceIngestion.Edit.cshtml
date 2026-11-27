@@ -1,0 +1,54 @@
+@using CrestApps.Core.AI.Ingestion
+@using CrestApps.Core.AI.FileSources
+@using CrestApps.OrchardCore.AI.FileSources.ViewModels
+@using Microsoft.Extensions.Options
+
+@inject IOptions<FileSourceOptions> FileSourceOptions
+
+@model FileSourceFieldsViewModel
+
+@{
+    var defaults = FileSourceOptions.Value;
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="ReindexIntervalMinutes" class="ocat-label">@T["Re-read interval (minutes)"]</label>
+    <div class="ocat-end">
+        <input asp-for="ReindexIntervalMinutes" class="form-control" type="number" min="1" />
+        <span asp-validation-for="ReindexIntervalMinutes" class="text-danger"></span>
+        <span class="hint">@T["How often the background task re-reads this source and ingests what changed. Leave empty to use the default ({0} minutes). The task evaluates sources hourly, so intervals are honored to the nearest hour.", defaults.DefaultRunIntervalMinutes]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="UtilityDeploymentName" class="ocat-label">@T["Utility deployment"]</label>
+    <div class="ocat-end">
+        <select asp-for="UtilityDeploymentName" asp-items="Model.UtilityDeployments" class="form-select">
+            <option value="">@T["Use the deployment in the Utility slot"]</option>
+        </select>
+        @if (!Model.HasUtilityDeployments)
+        {
+            <div class="alert alert-warning mt-2 mb-0">
+                @T["No deployment can fill the Utility slot. Add one before relying on the short prompts ingestion runs."]
+            </div>
+        }
+        <span class="hint">@T["The deployment that answers the short prompts ingestion runs, such as reading a document's front matter."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxItemsPerRun" class="ocat-label">@T["Items per run"]</label>
+    <div class="ocat-end">
+        <input asp-for="MaxItemsPerRun" class="form-control" type="number" min="1" />
+        <span asp-validation-for="MaxItemsPerRun" class="text-danger"></span>
+        <span class="hint">@T["The most items one run will take on; the rest wait for the next. Leave empty to use the default ({0}). A first read of a large source is the expensive one, and capping it makes that cost predictable.", defaults.MaxItemsPerRun]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Language" class="ocat-label">@T["Language"]</label>
+    <div class="ocat-end">
+        <input asp-for="Language" class="form-control" placeholder="@T["e.g. en-US"]" />
+        <span class="hint">@T["The BCP-47 language tag this corpus is written in, when it is known and uniform. Leave empty when it is mixed."]</span>
+    </div>
+</div>

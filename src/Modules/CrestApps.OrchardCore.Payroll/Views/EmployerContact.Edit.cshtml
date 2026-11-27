@@ -1,0 +1,22 @@
+@model EmployerViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="SignatoryName" class="ocat-label">@T["Signatory"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="SignatoryName" class="form-control" style="max-width: 18rem" placeholder="@T["Name"]" />
+            <input asp-for="SignatoryTitle" class="form-control" style="max-width: 14rem" placeholder="@T["Title"]" aria-label="@T["Title"]" />
+        </div>
+        <span class="hint">@T["Printed as the signatory of checks."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ContactName" class="ocat-label">@T["Payroll contact"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="ContactName" class="form-control" style="max-width: 16rem" placeholder="@T["Name"]" />
+            <input asp-for="ContactEmail" type="email" class="form-control" style="max-width: 16rem" placeholder="@T["Email"]" aria-label="@T["Email"]" />
+            <input asp-for="ContactPhone" type="tel" class="form-control" style="max-width: 12rem" placeholder="@T["Phone"]" aria-label="@T["Phone"]" />
+        </div>
+    </div>
+</div>

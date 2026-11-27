@@ -61,7 +61,7 @@ internal sealed class OpportunityStageDisplayDriver : DisplayDriver<OpportunityS
             model.Probability = entry.Probability;
             model.IsClosed = entry.IsClosed;
             model.IsWon = entry.IsWon;
-        }).Location("Content:1%General;1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OpportunityStage entry, UpdateEditorContext context)

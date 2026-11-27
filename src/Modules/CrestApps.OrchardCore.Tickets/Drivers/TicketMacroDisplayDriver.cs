@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.Services;
 using CrestApps.OrchardCore.Tickets.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -18,10 +19,16 @@ internal sealed class TicketMacroDisplayDriver : DisplayDriver<MessageTemplate>
     private readonly ICatalog<TicketStatus> _statuses;
     private readonly ICatalog<TicketPriority> _priorities;
 
-    public TicketMacroDisplayDriver(ICatalog<TicketStatus> statuses, ICatalog<TicketPriority> priorities)
+    internal readonly IStringLocalizer S;
+
+    public TicketMacroDisplayDriver(
+        ICatalog<TicketStatus> statuses,
+        ICatalog<TicketPriority> priorities,
+        IStringLocalizer<TicketMacroDisplayDriver> stringLocalizer)
     {
         _statuses = statuses;
         _priorities = priorities;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(MessageTemplate template, BuildEditorContext context)
@@ -32,7 +39,7 @@ internal sealed class TicketMacroDisplayDriver : DisplayDriver<MessageTemplate>
             model.TeamId = MessagingTicketReplyTemplateSource.Read(template, TicketReplyTemplate.PropertyKeys.TeamId);
             model.Statuses = [.. (await _statuses.GetAllAsync()).OrderBy(status => status.Order).Select(status => new SelectListItem(status.Name, status.ItemId, status.ItemId == model.StatusId))];
             model.Priorities = [.. (await _priorities.GetAllAsync()).OrderByDescending(priority => priority.Rank).Select(priority => new SelectListItem(priority.Name, priority.ItemId, priority.ItemId == model.PriorityId))];
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["On a Ticket, Also"], "50"));
 
     public override async Task<IDisplayResult> UpdateAsync(MessageTemplate template, UpdateEditorContext context)
     {

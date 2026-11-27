@@ -33,7 +33,7 @@ public sealed class DownloadSettingsDisplayDriver : SiteDisplayDriver<DownloadSe
         {
             model.DownloadLimit = settings.DownloadLimit;
             model.LinkLifetimeDays = settings.LinkLifetimeDays;
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Downloads"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, DownloadsPermissions.ManageDownloads))
         .OnGroup(SettingsGroupId);
 

@@ -42,7 +42,7 @@ public sealed class OsrmSettingsDisplayDriver : SiteDisplayDriver<OsrmSettings>
                 model.BaseUrl = settings.BaseUrl;
                 model.Profile = settings.Profile;
             })
-            .Location("Content:5")
+            .Location(l => l.Zone("Content", "5").Card(S["OSRM"], "60"))
             .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, GeoPermissions.ManageGeoSettings))
             .OnGroup(SettingsGroupId);
 

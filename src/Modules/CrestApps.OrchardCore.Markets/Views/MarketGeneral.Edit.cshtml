@@ -1,0 +1,29 @@
+@model MarketEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name"></span>
+        <span class="hint">@T["What shoppers see in the market picker, such as Germany or Europe."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Countries">
+    <label asp-for="Countries" class="ocat-label ocat-label-required">@T["Countries"]</label>
+    <div class="ocat-end">
+        <input asp-for="Countries" class="form-control" placeholder="DE, AT" />
+        <span asp-validation-for="Countries"></span>
+        <span class="hint">@T["The two-letter codes of the market's countries, separated by commas. A country is in one market only."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check form-switch">
+            <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+            <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
+        </div>
+        <span class="hint dashed">@T["A market that's off isn't offered, and its shoppers see your store's own prices."]</span>
+    </div>
+</div>

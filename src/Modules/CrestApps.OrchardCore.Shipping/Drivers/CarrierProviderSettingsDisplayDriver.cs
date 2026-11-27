@@ -52,7 +52,7 @@ public sealed class CarrierProviderSettingsDisplayDriver : SiteDisplayDriver<Car
                 .OrderBy(item => item.Text)
                 .ToArray();
             model.HasProviders = _providers.Any();
-        }).Location("Content:1#Providers")
+        }).Location(l => l.Zone("Content", "1").Tab(S["Providers"], "1").Card(S["Carrier Providers"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, ShippingPermissions.ManageShipping))
         .OnGroup(SettingsGroupId);
 

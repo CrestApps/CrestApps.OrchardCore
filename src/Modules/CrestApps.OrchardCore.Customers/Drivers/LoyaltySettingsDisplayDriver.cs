@@ -37,7 +37,7 @@ public sealed class LoyaltySettingsDisplayDriver : CustomerSettingsDisplayDriver
             model.PointsPerUnit = settings.PointsPerUnit;
             model.PointValue = settings.PointValue;
             model.MinimumPointsToRedeem = settings.MinimumPointsToRedeem;
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Loyalty Points"], "10"))
         .RenderWhen(CanManageCustomersAsync)
         .OnGroup(SettingsGroupId);
 

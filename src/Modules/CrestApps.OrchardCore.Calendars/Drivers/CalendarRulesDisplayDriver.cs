@@ -25,7 +25,7 @@ internal sealed class CalendarRulesDisplayDriver : DisplayDriver<Calendar>
         {
             model.LimitOverlaps = calendar.ConflictPolicy == CalendarConflictPolicy.LimitConcurrent;
             model.Capacity = Math.Max(1, calendar.Capacity);
-        }).Location("Content:15%Overlaps;4");
+        }).Location(l => l.Zone("Content", "15").Card(S["Overlaps"], "4"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Calendar calendar, UpdateEditorContext context)

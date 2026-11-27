@@ -67,7 +67,7 @@ internal sealed class CalendarOwnerDisplayDriver : DisplayDriver<Calendar>
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .Select(role => new SelectListItem(role, role, string.Equals(role, calendar.OwnerId, StringComparison.OrdinalIgnoreCase)))
                 .ToList();
-        }).Location("Content:2%Owner;2");
+        }).Location(l => l.Zone("Content", "2").Card(S["Owner"], "2"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Calendar calendar, UpdateEditorContext context)

@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.RoutingRules;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
@@ -37,6 +38,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
     private readonly IMessagingAttachmentUrlProvider _attachmentUrlProvider;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IMessagingRoutingRuleEvaluator[] _routingRules;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="MessagingConversationService"/> class.
@@ -52,7 +54,8 @@ public sealed class MessagingConversationService : IMessagingConversationService
         IMessagingFirstResponseSlaService slaService,
         IMessagingAttachmentUrlProvider attachmentUrlProvider,
         IClock clock,
-        ILogger<MessagingConversationService> logger)
+        ILogger<MessagingConversationService> logger,
+        IEnumerable<IMessagingRoutingRuleEvaluator> routingRules = null)
     {
         _conversationStore = conversationStore;
         _channelResolver = channelResolver;
@@ -65,6 +68,7 @@ public sealed class MessagingConversationService : IMessagingConversationService
         _attachmentUrlProvider = attachmentUrlProvider;
         _clock = clock;
         _logger = logger;
+        _routingRules = routingRules?.ToArray() ?? [];
     }
 
     /// <inheritdoc/>
@@ -264,6 +268,13 @@ public sealed class MessagingConversationService : IMessagingConversationService
             conversation.Status = ConversationStatus.Open;
         }
 
+        // A workflow or another automated send that names no agent starts a conversation nobody owns. A routing rule
+        // that takes such conversations gives it to an agent at once, before the contact replies.
+        var routedByRule = isNew &&
+            string.IsNullOrEmpty(actingAgentId) &&
+            dispatch.Succeeded &&
+            await AssignByRoutingRulesAsync(conversation, cancellationToken);
+
         if (isNew)
         {
             await _conversationStore.CreateAsync(conversation, cancellationToken);
@@ -273,12 +284,36 @@ public sealed class MessagingConversationService : IMessagingConversationService
             await _conversationStore.UpdateAsync(conversation, cancellationToken);
         }
 
+        if (routedByRule)
+        {
+            await MessagingAssignmentNotifications.NotifyRoutedAsync(_notifier, conversation, previousAgentId: null, cancellationToken);
+        }
+
         return new MessagingSendResult
         {
             Succeeded = dispatch.Succeeded,
             Message = message,
             Error = dispatch.Succeeded ? null : message.ErrorCode,
         };
+    }
+
+    private async Task<bool> AssignByRoutingRulesAsync(MessagingConversation conversation, CancellationToken cancellationToken)
+    {
+        foreach (var evaluator in _routingRules)
+        {
+            var match = await evaluator.AssignAsync(new MessagingRoutingRuleRequest
+            {
+                Conversation = conversation,
+                Trigger = MessagingRoutingRuleTriggers.StartedWithoutAgent,
+            }, cancellationToken);
+
+            if (match is not null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <inheritdoc/>

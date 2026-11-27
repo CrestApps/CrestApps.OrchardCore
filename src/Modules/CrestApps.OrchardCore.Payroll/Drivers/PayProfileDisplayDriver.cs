@@ -113,7 +113,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
         if (context.GroupId == PayrollConstants.MyPayEditorGroup)
         {
             return Combine(
-                (await ElectionsAsync(profile, new PayProfileElectionsViewModel { NewEffectiveFrom = await TodayAsync() })).OnGroup(PayrollConstants.MyPayEditorGroup),
+                await ElectionsAsync(profile, new PayProfileElectionsViewModel { NewEffectiveFrom = await TodayAsync() }, PayrollConstants.MyPayEditorGroup),
                 (await DistributionAsync(profile, null)).OnGroup(PayrollConstants.MyPayEditorGroup));
         }
 
@@ -131,7 +131,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             var (typedElections, typedRows) = await UpdateElectionsAndDistributionAsync(profile, context);
 
             return Combine(
-                (await ElectionsAsync(profile, typedElections)).OnGroup(PayrollConstants.MyPayEditorGroup),
+                await ElectionsAsync(profile, typedElections, PayrollConstants.MyPayEditorGroup),
                 (await DistributionAsync(profile, typedRows)).OnGroup(PayrollConstants.MyPayEditorGroup));
         }
 
@@ -357,7 +357,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
         return result;
     }
 
-    private async Task<ShapeResult> MainAsync(EmployeePayProfile profile, bool isNew)
+    private async Task<CombinedResult> MainAsync(EmployeePayProfile profile, bool isNew)
     {
         var user = _httpContextAccessor.HttpContext?.User;
         var manage = await _scope.GetScopeAsync(user, PayrollPermissions.ManagePayProfiles);
@@ -376,7 +376,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             staffOptions = [.. (await _staff.SearchAsync(null, take: 500)).OrderBy(staff => staff.DisplayName, StringComparer.CurrentCultureIgnoreCase).Select(staff => new SelectListItem(staff.DisplayName, staff.ItemId))];
         }
 
-        return Initialize<PayProfileViewModel>("PayProfileFields_Edit", model =>
+        void Populate(PayProfileViewModel model)
         {
             model.IsNew = isNew;
             model.ProfileId = profile.ItemId;
@@ -403,7 +403,15 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             model.Schedules = [.. schedules.Where(schedule => schedule.Enabled || schedule.ItemId == profile.PayScheduleId).Select(schedule => new SelectListItem(schedule.Name, schedule.ItemId, schedule.ItemId == profile.PayScheduleId))];
             model.Teams = [.. teams.Select(team => new SelectListItem(team.Name, team.ItemId))];
             model.Blockers = blockers;
-        }).Location("Content:1");
+        }
+
+        return Combine(
+            Initialize<PayProfileViewModel>("PayProfileFields_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Pay Profile"], "10")),
+            Initialize<PayProfileViewModel>("PayProfileTaxId_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Tax ID"], "20")),
+            Initialize<PayProfileViewModel>("PayProfileAllocation_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Where the Cost Goes"], "30")));
     }
 
     /// <summary>
@@ -449,7 +457,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
         {
             model.Address = address;
             model.AddressEditor = editor;
-        }).Location("Content:3");
+        }).Location(l => l.Zone("Content", "3").Card(S["Home Address"], "40"));
     }
 
     /// <summary>
@@ -465,7 +473,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
                 || employer.Registrations.Any(registration => string.Equals(registration.Jurisdiction, "CA", StringComparison.OrdinalIgnoreCase)))
             && !CanadaSin.IsValid(taxId);
 
-    private async Task<ShapeResult> ElectionsAsync(EmployeePayProfile profile, PayProfileElectionsViewModel typed)
+    private async Task<CombinedResult> ElectionsAsync(EmployeePayProfile profile, PayProfileElectionsViewModel typed, string group = null)
     {
         var employer = string.IsNullOrEmpty(profile.EmployerId) ? null : await _employers.FindByIdAsync(profile.EmployerId);
         var jurisdictions = (employer?.Registrations ?? []).Select(registration => registration.Jurisdiction)
@@ -478,7 +486,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             .GroupBy(field => field.Name, StringComparer.Ordinal)
             .ToDictionary(group => group.Key, group => _localizerFactory.Localize(group.First().Label).Value, StringComparer.Ordinal);
 
-        return Initialize<PayProfileElectionsViewModel>("PayProfileElections_Edit", model =>
+        void Populate(PayProfileElectionsViewModel model)
         {
             model.NewJurisdiction = typed.NewJurisdiction;
             model.NewEffectiveFrom = typed.NewEffectiveFrom;
@@ -487,7 +495,16 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             model.Jurisdictions = jurisdictions;
             model.Fields = fieldSet?.Fields ?? [];
             model.FieldLabels = labels;
-        }).Prefix(Prefix + "Elections").Location("Content:5");
+        }
+
+        var history = Initialize<PayProfileElectionsViewModel>("PayProfileElections_Edit", Populate)
+            .Prefix(Prefix + "Elections")
+            .Location(l => l.Zone("Content", "5").Card(S["Tax Elections"], "50"));
+        var added = Initialize<PayProfileElectionsViewModel>("PayProfileNewElection_Edit", Populate)
+            .Prefix(Prefix + "Elections")
+            .Location(l => l.Zone("Content", "5").Card(S["New Tax Election"], "55"));
+
+        return group is null ? Combine(history, added) : Combine(history.OnGroup(group), added.OnGroup(group));
     }
 
     private async Task<ShapeResult> DistributionAsync(EmployeePayProfile profile, IList<NetPayRowViewModel> typed)
@@ -515,7 +532,7 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             {
                 model.Rows.Add(new NetPayRowViewModel());
             }
-        }).Prefix(Prefix + "Distribution").Location("Content:7");
+        }).Prefix(Prefix + "Distribution").Location(l => l.Zone("Content", "7").Card(S["Net Pay"], "60"));
     }
 
     private static AddressEditorOptions AddressOptions(string country)

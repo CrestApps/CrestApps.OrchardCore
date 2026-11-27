@@ -70,37 +70,3 @@
         <span class="hint">@T["Some carriers need one for labels."]</span>
     </div>
 </div>
-
-<div class="ocat-limited-wrapper">
-    <label asp-for="DefaultParcelLength" class="ocat-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Box length (in)"] : T["Box length (cm)"])</label>
-    <div class="ocat-limited">
-        <input asp-for="DefaultParcelLength" type="number" min="0" step="any" class="form-control" />
-    </div>
-</div>
-
-<div class="ocat-limited-wrapper">
-    <label asp-for="DefaultParcelWidth" class="ocat-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Width (in)"] : T["Width (cm)"])</label>
-    <div class="ocat-limited">
-        <input asp-for="DefaultParcelWidth" type="number" min="0" step="any" class="form-control" />
-    </div>
-</div>
-
-<div class="ocat-limited-wrapper">
-    <label asp-for="DefaultParcelHeight" class="ocat-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Height (in)"] : T["Height (cm)"])</label>
-    <div class="ocat-limited">
-        <input asp-for="DefaultParcelHeight" type="number" min="0" step="any" class="form-control" />
-    </div>
-</div>
-
-<div class="ocat-limited-wrapper">
-    <label asp-for="PackagingWeight" class="ocat-label">@(Model.WeightUnit == WeightUnit.Pound ? T["Box weight (lb)"] : T["Box weight (kg)"])</label>
-    <div class="ocat-limited">
-        <input asp-for="PackagingWeight" type="number" min="0" step="any" class="form-control" />
-    </div>
-</div>
-
-<div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <span class="hint">@T["The box size is optional: carriers price by weight without it. The box weight is added to the items' weight."]</span>
-    </div>
-</div>

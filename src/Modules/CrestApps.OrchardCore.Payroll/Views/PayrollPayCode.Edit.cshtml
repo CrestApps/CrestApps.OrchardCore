@@ -1,172 +1,24 @@
 @model PayrollPayCodeViewModel
-@using System.Globalization
 
-@{
-    var defaultText = Model.ClassDefault == "Exempt" ? T["Not taxed"] : T["Taxed"];
-}
-
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Payroll"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="Calculation">
-            <label asp-for="Calculation" class="ocat-label">@T["Calculated as"]</label>
-            <div class="ocat-end">
-                <select asp-for="Calculation" class="form-select" style="max-width: 24rem">
-                    <option value="HoursByRate">@T["Hours times the rate"]</option>
-                    <option value="FixedAmount">@T["An amount (from a pay item or an input)"]</option>
-                    <option value="PercentOfEarnings">@T["A percent of earnings"]</option>
-                    <option value="PercentOfDisposableEarnings">@T["A percent of disposable earnings (deductions)"]</option>
-                </select>
-                <span asp-validation-for="Calculation" class="text-danger"></span>
-            </div>
-        </div>
-        @if (Model.BaseCodes.Count > 0)
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="BaseCodeIds" class="ocat-label">@T["Percent of"]</label>
-                <div class="ocat-end">
-                    <select asp-for="BaseCodeIds" asp-items="Model.BaseCodes" class="form-select" multiple size="5" style="max-width: 24rem"></select>
-                    <span class="hint">@T["For a percent of earnings: the earnings it is taken of. None chosen for every earning."]</span>
-                </div>
-            </div>
-        }
-
-        <h6 class="mt-3">@T["Taxes"]</h6>
-        <p class="hint">@T["Whether the amount counts for each tax. A taxed earning adds to that tax's wages; a deduction not taxed is taken before that tax and lowers its wages. Left on the default, the class decides ({0}).", defaultText]</p>
-        <div class="table-responsive">
-            <table class="table table-sm align-middle" style="max-width: 40rem">
-                <thead>
-                    <tr>
-                        <th scope="col">@T["Tax"]</th>
-                        <th scope="col">@T["Treatment"]</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var category in Model.Categories)
-                    {
-                        var current = Model.Treatments.TryGetValue(category.Value, out var chosen) ? chosen : string.Empty;
-                        var name = Html.NameFor(m => m.Treatments) + "[" + category.Value + "]";
-
-                        <tr>
-                            <td>@category.Text</td>
-                            <td>
-                                <select class="form-select form-select-sm" name="@name" aria-label="@T["Treatment for {0}", category.Text]">
-                                    <option value="" selected="@(current == string.Empty)">@T["Default ({0})", defaultText]</option>
-                                    <option value="Taxed" selected="@(current == "Taxed")">@T["Taxed"]</option>
-                                    <option value="Exempt" selected="@(current == "Exempt")">@T["Not taxed"]</option>
-                                </select>
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
-
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="Supplemental" type="checkbox" class="form-check-input" />
-                    <label asp-for="Supplemental" class="form-check-label">@T["Supplemental pay"]</label>
-                    <span class="hint dashed">@T["Paid apart from regular wages, such as a bonus or a commission; a tax may withhold it at its supplemental rate."]</span>
-                </div>
-                <div class="form-check">
-                    <input asp-for="CountsInRegularRate" type="checkbox" class="form-check-input" />
-                    <label asp-for="CountsInRegularRate" class="form-check-label">@T["Counts in the regular rate"]</label>
-                    <span class="hint dashed">@T["The overtime premium is priced on the regular rate: pay for hours worked and promised bonuses count, pay for hours not worked does not."]</span>
-                </div>
-                <div class="form-check">
-                    <input asp-for="CountsAsHoursWorked" type="checkbox" class="form-check-input" />
-                    <label asp-for="CountsAsHoursWorked" class="form-check-label">@T["Counts as hours worked"]</label>
-                    <span class="hint dashed">@T["For overtime and for benefits that depend on hours worked."]</span>
-                </div>
-                <div class="form-check">
-                    <input asp-for="InRetroPay" type="checkbox" class="form-check-input" />
-                    <label asp-for="InRetroPay" class="form-check-label">@T["Recalculated by retro pay"]</label>
-                    <span class="hint dashed">@T["When a rate changes from a past day, retro pay pays the difference on this code for the past periods."]</span>
-                </div>
-            </div>
-        </div>
-
-        <h6 class="mt-3">@T["Limits"]</h6>
-        <div class="ocat-wrapper" asp-validation-class-for="PeriodLimit">
-            <label asp-for="PeriodLimit" class="ocat-label">@T["Per pay period"]</label>
-            <div class="ocat-end">
-                <input asp-for="PeriodLimit" class="form-control" inputmode="decimal" style="max-width: 10rem" />
-                <span asp-validation-for="PeriodLimit" class="text-danger"></span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="YearLimits">
-            <label class="ocat-label">@T["Per year"]</label>
-            <div class="ocat-end">
-                <table class="table table-sm mb-1" style="max-width: 26rem">
-                    <thead>
-                        <tr>
-                            <th scope="col">@T["From"]</th>
-                            <th scope="col">@T["Amount"]</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @for (var i = 0; i < Model.YearLimits.Count; i++)
-                        {
-                            <tr>
-                                <td><input asp-for="YearLimits[i].EffectiveFrom" type="date" class="form-control form-control-sm" aria-label="@T["From"]" /></td>
-                                <td><input asp-for="YearLimits[i].Amount" class="form-control form-control-sm" inputmode="decimal" aria-label="@T["Amount"]" /></td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-                <span asp-validation-for="YearLimits" class="text-danger"></span>
-                <span class="hint">@T["The most taken or paid in a calendar year, from a day on: add a row when the limit changes for a new year. Leave a row empty to remove it."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="LifetimeLimit">
-            <label asp-for="LifetimeLimit" class="ocat-label">@T["Ever"]</label>
-            <div class="ocat-end">
-                <input asp-for="LifetimeLimit" class="form-control" inputmode="decimal" style="max-width: 10rem" />
-                <span asp-validation-for="LifetimeLimit" class="text-danger"></span>
-                <span class="hint">@T["Amounts with a dot for decimals. A pay item can have lower limits and a goal of its own."]</span>
-            </div>
-        </div>
-
-        <h6 class="mt-3">@T["Rules"]</h6>
-        <div class="ocat-wrapper" asp-validation-class-for="Priority">
-            <label asp-for="Priority" class="ocat-label">@T["Priority"]</label>
-            <div class="ocat-end">
-                <input asp-for="Priority" type="number" min="0" max="10000" class="form-control" style="max-width: 8rem" />
-                <span asp-validation-for="Priority" class="text-danger"></span>
-                <span class="hint">@T["Deductions are taken smallest number first; when net pay is too small, the largest numbers are cut first."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Arrears">
-            <label asp-for="Arrears" class="ocat-label">@T["When pay is too small"]</label>
-            <div class="ocat-end">
-                <select asp-for="Arrears" class="form-select" style="max-width: 24rem">
-                    <option value="None">@T["Drop what could not be taken"]</option>
-                    <option value="CarryForward">@T["Owe it and take it on the next pay"]</option>
-                </select>
-                <span asp-validation-for="Arrears" class="text-danger"></span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Proration" class="ocat-label">@T["Part of a period"]</label>
-            <div class="ocat-end">
-                <select asp-for="Proration" class="form-select" style="max-width: 24rem">
-                    <option value="None">@T["Pay or take the whole amount"]</option>
-                    <option value="WorkingDays">@T["By working days employed"]</option>
-                    <option value="CalendarDays">@T["By calendar days employed"]</option>
-                </select>
-                <span class="hint">@T["For a fixed amount in a period the person was hired, left or had a pay change in."]</span>
-            </div>
-        </div>
-        @if (Model.FormBoxOptions.Count > 0)
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="FormBoxes" class="ocat-label">@T["Tax form boxes"]</label>
-                <div class="ocat-end">
-                    <select asp-for="FormBoxes" asp-items="Model.FormBoxOptions" class="form-select" multiple size="5" style="max-width: 24rem"></select>
-                    <span class="hint">@T["The boxes of year-end and quarterly forms the amounts are reported in."]</span>
-                </div>
-            </div>
-        }
+<div class="ocat-wrapper" asp-validation-class-for="Calculation">
+    <label asp-for="Calculation" class="ocat-label">@T["Calculated as"]</label>
+    <div class="ocat-end">
+        <select asp-for="Calculation" class="form-select" style="max-width: 24rem">
+            <option value="HoursByRate">@T["Hours times the rate"]</option>
+            <option value="FixedAmount">@T["An amount (from a pay item or an input)"]</option>
+            <option value="PercentOfEarnings">@T["A percent of earnings"]</option>
+            <option value="PercentOfDisposableEarnings">@T["A percent of disposable earnings (deductions)"]</option>
+        </select>
+        <span asp-validation-for="Calculation" class="text-danger"></span>
     </div>
 </div>
+@if (Model.BaseCodes.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="BaseCodeIds" class="ocat-label">@T["Percent of"]</label>
+        <div class="ocat-end">
+            <select asp-for="BaseCodeIds" asp-items="Model.BaseCodes" class="form-select" multiple size="5" style="max-width: 24rem"></select>
+            <span class="hint">@T["For a percent of earnings: the earnings it is taken of. None chosen for every earning."]</span>
+        </div>
+    </div>
+}

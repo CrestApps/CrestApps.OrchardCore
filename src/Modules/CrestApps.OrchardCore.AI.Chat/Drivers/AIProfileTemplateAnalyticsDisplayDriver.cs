@@ -40,7 +40,7 @@ internal sealed class AIProfileTemplateAnalyticsDisplayDriver : DisplayDriver<AI
                 MaxScore = g.MaxScore,
             })
         .ToList();
-        }).Location("Content:15#Data Processing & Metrics;10")
+        }).Location(l => l.Zone("Content", "15").Tab(S["Data Processing & Metrics"], "10").Card(S["Analytics"], "15"))
         .RenderWhen(() =>
         {
             if (template.Source != AITemplateSources.Profile)

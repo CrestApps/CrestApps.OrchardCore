@@ -164,6 +164,7 @@ public static partial class MessagingTelemetry
             ReassignmentRouter => "reassignment",
             HandoffQueueRouter => "handoff_queue",
             ExistingConversationRouter => "existing_conversation",
+            RoutingRulesRouter => "routing_rules",
             RoutedQueueRouter => "routed_queue",
             EndpointRouteRouter => "endpoint_route",
             FallbackRouter => "fallback",

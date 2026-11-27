@@ -155,7 +155,7 @@ public sealed class OutboundLinesTests
         var context = PostedFormUpdateModel.CreateContext(new OutboundLineEndpointViewModel { UserIds = ["user-1", " user-2 ", "user-1", ""] });
 
         // Act
-        await new OutboundLineEndpointDisplayDriver().UpdateAsync(endpoint, context);
+        await new OutboundLineEndpointDisplayDriver(RecipeRoundTrip.Localizer<OutboundLineEndpointDisplayDriver>()).UpdateAsync(endpoint, context);
 
         // Assert
         Assert.Equal(["user-1", "user-2"], ChannelEndpointOutboundLineResolver.GetUserIds(endpoint));
@@ -173,8 +173,8 @@ public sealed class OutboundLinesTests
         email.Channel = OmnichannelConstants.Channels.Email;
 
         // Act
-        var smsResult = new OutboundLineEndpointDisplayDriver().Edit(sms, context: null!);
-        var emailResult = new OutboundLineEndpointDisplayDriver().Edit(email, context: null!);
+        var smsResult = new OutboundLineEndpointDisplayDriver(RecipeRoundTrip.Localizer<OutboundLineEndpointDisplayDriver>()).Edit(sms, context: null!);
+        var emailResult = new OutboundLineEndpointDisplayDriver(RecipeRoundTrip.Localizer<OutboundLineEndpointDisplayDriver>()).Edit(email, context: null!);
 
         // Assert
         Assert.NotNull(smsResult);

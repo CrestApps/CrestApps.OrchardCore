@@ -12,6 +12,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 
@@ -28,6 +29,8 @@ public sealed class AppointmentsController : Controller
     private readonly AppointmentTypeStore _typeStore;
     private readonly SchedulingPageService _pageService;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<NewAppointmentViewModel> _newAppointmentDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -41,6 +44,8 @@ public sealed class AppointmentsController : Controller
     /// <param name="typeStore">The appointment type store.</param>
     /// <param name="pageService">The page builder.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="newAppointmentDisplayManager">The display manager of the booking editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public AppointmentsController(
@@ -50,6 +55,8 @@ public sealed class AppointmentsController : Controller
         AppointmentTypeStore typeStore,
         SchedulingPageService pageService,
         INotifier notifier,
+        IDisplayManager<NewAppointmentViewModel> newAppointmentDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<AppointmentsController> htmlLocalizer,
         IStringLocalizer<AppointmentsController> stringLocalizer)
     {
@@ -59,6 +66,8 @@ public sealed class AppointmentsController : Controller
         _typeStore = typeStore;
         _pageService = pageService;
         _notifier = notifier;
+        _newAppointmentDisplayManager = newAppointmentDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -123,6 +132,8 @@ public sealed class AppointmentsController : Controller
         ModelState.Clear();
         await FillAsync(model);
 
+        model.Editor = await _newAppointmentDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         return View(model);
     }
 
@@ -173,6 +184,9 @@ public sealed class AppointmentsController : Controller
         }
 
         await FillAsync(model);
+
+        // The booking is bound already; the editor is built once the open times are known, for the page that shows the errors.
+        model.Editor = await _newAppointmentDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
     }

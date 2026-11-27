@@ -1,0 +1,44 @@
+@model UsageMeterViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="255" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["Printed on invoices unless a plan names the line, such as API calls."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="Code">
+    <label asp-for="Code" class="ocat-label ocat-label-required">@T["Code"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Code" class="form-control" maxlength="64" />
+        <span asp-validation-for="Code" class="text-danger"></span>
+        <span class="hint">@T["The key systems record usage with, such as api-calls: lowercase letters, digits, dots, dashes or underscores."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="Unit">
+    <label asp-for="Unit" class="ocat-label">@T["Unit"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Unit" class="form-control" maxlength="50" />
+        <span class="hint">@T["Optional. Printed with the quantity on invoices, such as calls or GB."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Aggregation">
+    <label asp-for="Aggregation" class="ocat-label">@T["A period's usage is"]</label>
+    <div class="ocat-end">
+        <select asp-for="Aggregation" class="form-select">
+            <option value="@UsageAggregation.Sum">@T["The quantities added up (such as calls made)"]</option>
+            <option value="@UsageAggregation.Maximum">@T["The most at once (such as seats used)"]</option>
+            <option value="@UsageAggregation.Last">@T["The latest reading (such as storage at the end)"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Take usage on this meter"]</label>
+            <span class="hint dashed">@T["Turn it off to refuse new usage. Usage already recorded is still billed."]</span>
+        </div>
+    </div>
+</div>

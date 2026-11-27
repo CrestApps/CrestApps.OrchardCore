@@ -49,12 +49,12 @@ public sealed class AICompletionWithConfigDataSourceDisplayDriver : DisplayDrive
         var selectorResult = Initialize<AICompletionWithConfigDataSourceViewModel>("AICompletionWithConfigDataSource_Edit", async model =>
         {
             await PopulateAsync(activity, model);
-        }).Location("Content:1#Knowledge;2");
+        }).Location(l => l.Zone("Content", "1").Tab(S["Knowledge"], "2").Card(S["Data Source"], "10"));
 
         var retrievalResult = Initialize<AICompletionWithConfigDataSourceViewModel>("AICompletionWithConfigDataSourceRetrieval_Edit", async model =>
         {
             await PopulateAsync(activity, model);
-        }).Location("Content:2#Knowledge;2");
+        }).Location(l => l.Zone("Content", "2").Tab(S["Knowledge"], "2").Card(S["Data Source"], "10"));
 
         return Combine(selectorResult, retrievalResult);
     }

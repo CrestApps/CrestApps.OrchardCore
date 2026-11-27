@@ -18,13 +18,20 @@ public sealed class MessageTemplateDisplayDriver : DisplayDriver<MessageTemplate
     private readonly IOptions<MessageTemplateScopeOptions> _scopeOptions;
     private readonly IStringLocalizerFactory _localizerFactory;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="MessageTemplateDisplayDriver"/> class.
     /// </summary>
     /// <param name="scopeOptions">The scopes other modules registered.</param>
     /// <param name="localizerFactory">The localizer factory, for the scopes' titles.</param>
-    public MessageTemplateDisplayDriver(IOptions<MessageTemplateScopeOptions> scopeOptions, IStringLocalizerFactory localizerFactory)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public MessageTemplateDisplayDriver(
+        IOptions<MessageTemplateScopeOptions> scopeOptions,
+        IStringLocalizerFactory localizerFactory,
+        IStringLocalizer<MessageTemplateDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _scopeOptions = scopeOptions;
         _localizerFactory = localizerFactory;
     }
@@ -75,7 +82,7 @@ public sealed class MessageTemplateDisplayDriver : DisplayDriver<MessageTemplate
             {
                 model.Scopes.Add(new KeyValuePair<string, string>(template.Scope, template.Scope));
             }
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(MessageTemplate template, UpdateEditorContext context)

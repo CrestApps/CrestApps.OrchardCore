@@ -45,7 +45,7 @@ internal sealed class OpenAIProviderConnectionDisplayDriver : DisplayDriver<AIPr
 
             model.Endpoint = metadata.Endpoint?.ToString();
             model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Connection"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProviderConnection connection, UpdateEditorContext context)

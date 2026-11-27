@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Marketplace.Models;
 using CrestApps.OrchardCore.Marketplace.Navigation;
 using CrestApps.OrchardCore.Marketplace.Recipes;
 using CrestApps.OrchardCore.Marketplace.Services;
+using CrestApps.OrchardCore.Marketplace.ViewModels;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
@@ -52,6 +53,7 @@ public sealed class Startup : StartupBase
         services.AddContentPart<VendorPart>()
             .UseDisplayDriver<VendorPartDisplayDriver>();
         services.AddDisplayDriver<Vendor, VendorDisplayDriver>();
+        services.AddDisplayDriver<VendorEditViewModel, VendorEditDisplayDriver>();
         services.AddSiteDisplayDriver<MarketplaceSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(MarketplaceConstants.SettingsGroupId, MarketplacePermissions.ManageMarketplace);
 

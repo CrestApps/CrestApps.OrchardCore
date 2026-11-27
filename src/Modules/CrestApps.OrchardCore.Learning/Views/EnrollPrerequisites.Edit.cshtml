@@ -1,0 +1,11 @@
+@model EnrollViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IgnorePrerequisites" type="checkbox" class="form-check-input" />
+            <label asp-for="IgnorePrerequisites" class="form-check-label">@T["Skip prerequisites"]</label>
+            <span class="hint dashed">@T["Enroll the learner even when they have not completed the prerequisite courses."]</span>
+        </div>
+    </div>
+</div>

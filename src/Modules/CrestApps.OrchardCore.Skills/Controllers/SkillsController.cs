@@ -12,6 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 
@@ -26,6 +28,8 @@ public sealed class SkillsController : Controller
     private readonly ISkillManager _skillManager;
     private readonly ICertificationManager _certificationManager;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<SkillEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -36,18 +40,24 @@ public sealed class SkillsController : Controller
     /// <param name="skillManager">The skill manager.</param>
     /// <param name="certificationManager">The certification manager.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the skill editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public SkillsController(
         IAuthorizationService authorizationService,
         ISkillManager skillManager,
         ICertificationManager certificationManager,
         INotifier notifier,
+        IDisplayManager<SkillEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<SkillsController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _skillManager = skillManager;
         _certificationManager = certificationManager;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -120,6 +130,7 @@ public sealed class SkillsController : Controller
         };
 
         await FillAsync(model);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
 
         return View(model);
     }
@@ -149,6 +160,9 @@ public sealed class SkillsController : Controller
             return NotFound();
         }
 
+        await FillAsync(model);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
+
         skill.Name = model.Name;
         skill.Category = model.Category;
         skill.Description = model.Description;
@@ -164,8 +178,6 @@ public sealed class SkillsController : Controller
 
         if (!ModelState.IsValid)
         {
-            await FillAsync(model);
-
             return View(model);
         }
 

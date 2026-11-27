@@ -35,6 +35,7 @@ public sealed class LaborRulesStartup : StartupBase
             .AddIndexProvider<PredictabilityPayEntryIndexProvider>();
 
         services.AddDisplayDriver<LaborRuleSet, LaborRuleSetRowDisplayDriver>();
+        services.AddDisplayDriver<LaborRuleSetEditViewModel, LaborRuleSetEditDisplayDriver>();
         services.AddDisplayDriver<PredictabilityPayRowViewModel, PredictabilityPayRowDisplayDriver>();
         services.AddDisplayDriver<LaborRuleOverrideRowViewModel, LaborRuleOverrideRowDisplayDriver>();
         services.AddPermissionProvider<LaborRulesPermissionsProvider>();

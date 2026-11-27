@@ -6,6 +6,7 @@ using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Addresses.GooglePlaces;
 
@@ -21,14 +22,18 @@ public sealed class GooglePlacesSettingsDisplayDriver : SiteDisplayDriver<Google
     private readonly IAuthorizationService _authorizationService;
     private readonly IDataProtectionProvider _dataProtectionProvider;
 
+    internal readonly IStringLocalizer S;
+
     public GooglePlacesSettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IDataProtectionProvider dataProtectionProvider)
+        IDataProtectionProvider dataProtectionProvider,
+        IStringLocalizer<GooglePlacesSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _dataProtectionProvider = dataProtectionProvider;
+        S = stringLocalizer;
     }
 
     protected override string SettingsGroupId
@@ -38,7 +43,7 @@ public sealed class GooglePlacesSettingsDisplayDriver : SiteDisplayDriver<Google
         => Initialize<GooglePlacesSettingsViewModel>("GooglePlacesSettings_Edit", model =>
         {
             model.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ApiKey);
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Google Places"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, AddressPermissions.ManageAddressSuggestions))
         .OnGroup(SettingsGroupId);
 

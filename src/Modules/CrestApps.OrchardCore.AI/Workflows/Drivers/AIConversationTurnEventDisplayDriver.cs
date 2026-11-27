@@ -48,6 +48,13 @@ public sealed class AIConversationTurnEventDisplayDriver : ActivityDisplayDriver
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(AIConversationTurnEvent activity, BuildEditorContext context)
+    {
+        return Initialize<AIConversationTurnEventViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Filter"], "10"));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(AIConversationTurnEvent activity, UpdateEditorContext context)
     {
         var model = new AIConversationTurnEventViewModel();

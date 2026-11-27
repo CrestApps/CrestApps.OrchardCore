@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Checkout.Services;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -71,11 +72,18 @@ internal sealed class CouponsDeploymentSource : DeploymentSourceBase<CouponsDepl
 
 internal sealed class CouponsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, CouponsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public CouponsDeploymentStepDisplayDriver(IStringLocalizer<CouponsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(CouponsDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("CouponsDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("CouponsDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(CouponsDeploymentStep step, BuildEditorContext context)
-        => View("CouponsDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("CouponsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Coupons"], "10"));
 }

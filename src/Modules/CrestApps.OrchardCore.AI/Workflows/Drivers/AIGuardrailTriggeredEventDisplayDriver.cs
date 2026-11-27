@@ -3,6 +3,7 @@ using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Workflows.Models;
 using CrestApps.OrchardCore.AI.Workflows.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
@@ -16,13 +17,19 @@ public sealed class AIGuardrailTriggeredEventDisplayDriver : ActivityDisplayDriv
 {
     private readonly IAIProfileStore _profileStore;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIGuardrailTriggeredEventDisplayDriver"/> class.
     /// </summary>
     /// <param name="profileStore">The AI profile store.</param>
-    public AIGuardrailTriggeredEventDisplayDriver(IAIProfileStore profileStore)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIGuardrailTriggeredEventDisplayDriver(
+        IAIProfileStore profileStore,
+        IStringLocalizer<AIGuardrailTriggeredEventDisplayDriver> stringLocalizer)
     {
         _profileStore = profileStore;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -31,6 +38,13 @@ public sealed class AIGuardrailTriggeredEventDisplayDriver : ActivityDisplayDriv
         model.ProfileId = activity.ProfileId;
         model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
             .Select(profile => new SelectListItem(profile.DisplayText, profile.ItemId));
+    }
+
+    /// <inheritdoc/>
+    public override IDisplayResult Edit(AIGuardrailTriggeredEvent activity, BuildEditorContext context)
+    {
+        return Initialize<AIGuardrailTriggeredEventViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Profile"], "10"));
     }
 
     /// <inheritdoc/>

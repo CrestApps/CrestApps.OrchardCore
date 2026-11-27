@@ -1,0 +1,37 @@
+@model CustomerEditViewModel
+
+@{
+    var hasAccount = !string.IsNullOrEmpty(Model.UserId);
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Email">
+    <label asp-for="Email" class="ocat-label">@T["Email"]</label>
+    <div class="ocat-end">
+        @if (hasAccount)
+        {
+            <input asp-for="Email" class="form-control" readonly />
+            <span class="hint">@T["The account's email. It is changed on the account."]</span>
+        }
+        else
+        {
+            <input asp-for="Email" type="email" class="form-control" autocomplete="off" />
+            <span asp-validation-for="Email"></span>
+        }
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Phone">
+    <label asp-for="Phone" class="ocat-label">@T["Phone"]</label>
+    <div class="ocat-end">
+        <input asp-for="Phone" type="tel" class="form-control" autocomplete="off" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AcceptsMarketing" type="checkbox" class="form-check-input" />
+            <label asp-for="AcceptsMarketing" class="form-check-label">@T["Accepts marketing"]</label>
+        </div>
+        <span class="hint dashed">@T["The customer agreed to news and offers. Order and payment messages are always sent."]</span>
+    </div>
+</div>

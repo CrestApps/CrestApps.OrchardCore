@@ -1,0 +1,105 @@
+@model TaxFormViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DisplayName">
+    <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Title"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayName" class="form-control" maxlength="255" />
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+        <span class="hint">@T["What people see, such as Form 941 (quarterly federal return)."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="50" style="max-width: 16rem" readonly="@Model.IsUsed" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">
+            @if (Model.IsUsed)
+            {
+                @T["Filings were prepared from the form and keep its name, so it can't change."]
+            }
+            else
+            {
+                @T["The short name filings keep, such as US-941: letters, digits and dashes."]
+            }
+        </span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Jurisdiction">
+    <label asp-for="Jurisdiction" class="ocat-label @(Model.RequiresJurisdiction ? "ocat-label-required" : null)">@T["Jurisdiction"]</label>
+    <div class="ocat-end">
+        <input asp-for="Jurisdiction" class="form-control" maxlength="20" style="max-width: 10rem" />
+        <span asp-validation-for="Jurisdiction" class="text-danger"></span>
+        @if (Model.RequiresJurisdiction)
+        {
+            <span class="hint">@T["A filer registered in this jurisdiction files the form, such as US, CA or CA-QC."]</span>
+        }
+        else
+        {
+            <span class="hint">@T["The jurisdiction the form is for, such as US-MI. Leave it empty for a form any jurisdiction files."]</span>
+        }
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Source">
+    <label asp-for="Source" class="ocat-label ocat-label-required">@T["Prepared from"]</label>
+    <div class="ocat-end">
+        <select asp-for="Source" asp-items="Model.Sources" class="form-select" style="max-width: 18rem" data-reload-on-change="@(Model.IsNew ? Url.RouteUrl("TaxFormsCreate") : null)"></select>
+        <span asp-validation-for="Source" class="text-danger"></span>
+        <span class="hint">
+            @if (Model.IsNew)
+            {
+                @T["The module that prepares and files the form from its own records, such as Payroll from pay statements or Tax Returns from a return's figures. It decides which functions the formulas can call, so choose it first."]
+            }
+            else
+            {
+                @T["The module that prepares and files the form from its own records, such as Payroll from pay statements or Tax Returns from a return's figures. It decides which functions the formulas can call; save the form after changing it to see its functions."]
+            }
+        </span>
+    </div>
+</div>
+@if (Model.HasPeriod)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="Period" class="ocat-label">@T["Filed for"]</label>
+        <div class="ocat-end">
+            <select asp-for="Period" class="form-select" style="max-width: 14rem">
+                <option value="Year">@T["A year"]</option>
+                <option value="Quarter">@T["A quarter"]</option>
+            </select>
+        </div>
+    </div>
+}
+else
+{
+    <input type="hidden" asp-for="Period" />
+}
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Filers can prepare it"]</label>
+            <span class="hint dashed">@T["Turn a form off rather than deleting it once filings were prepared from it."]</span>
+        </div>
+    </div>
+</div>
+
+<script at="Foot">
+    (() => {
+        // A new form shows what its source has (its card, its functions, recipients or not), so choosing another source
+        // opens the page for it.
+        const source = document.querySelector('select[data-reload-on-change]');
+
+        source?.addEventListener('change', () => {
+            const url = new URL(source.getAttribute('data-reload-on-change'), window.location.href);
+
+            url.searchParams.set('source', source.value);
+            window.location.assign(url.toString());
+        });
+    })();
+</script>

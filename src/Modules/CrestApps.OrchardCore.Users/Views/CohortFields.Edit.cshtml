@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Users.Cohorts
+@model CohortEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Name" class="form-control" maxlength="255" autofocus required />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["Such as 2026 new hires or Warehouse supervisors. Each cohort has its own name."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-limited">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>

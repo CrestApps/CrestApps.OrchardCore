@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Learning.Credentials.ViewModels;
 
@@ -35,4 +36,9 @@ public class RevokeCredentialViewModel
     /// </summary>
     [BindNever]
     public bool AlreadyRevoked { get; set; }
+    /// <summary>
+    /// Gets or sets the editor the display drivers build: its fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

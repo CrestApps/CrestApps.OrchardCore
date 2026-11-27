@@ -1,0 +1,19 @@
+@model RequiredLearningEditViewModel
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="AudienceName" class="ocat-label">@T["Audience"]</label>
+    <div class="ocat-limited">
+        <select asp-for="AudienceName" asp-items="Model.Audiences" class="form-select">
+            <option value="">@T["No audience"]</option>
+        </select>
+        <span class="hint">@T["Everyone in the audience is required to complete it; people who join it later too. Audiences are under Content > User Audiences."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="UserNames">
+    <label asp-for="UserNames" class="ocat-label">@T["People"]</label>
+    <div class="ocat-limited">
+        <input asp-for="UserNames" class="form-control" />
+        <span class="hint">@T["User names, separated by commas, required besides the audience."]</span>
+    </div>
+</div>

@@ -1,0 +1,22 @@
+@model NewAppointmentViewModel
+
+<div class="ocat-wrapper">
+    <span class="ocat-label ocat-label-required">@T["Time"]</span>
+    <div class="ocat-end">
+        @if (Model.Slots.Count == 0)
+        {
+            <p class="text-muted mb-0">@T["There are no open times on this day."]</p>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var slot in Model.Slots)
+                {
+                    <input type="radio" class="btn-check" name="Start" id="slot-@slot.Key" value="@slot.Key" checked="@(slot.Key == Model.Start)" autocomplete="off" />
+                    <label class="btn btn-outline-primary" for="slot-@slot.Key">@slot.Value</label>
+                }
+            </div>
+            <span class="hint">@T["Open times on {0} ({1})", Model.Date, Model.TimeZoneId]</span>
+        }
+    </div>
+</div>

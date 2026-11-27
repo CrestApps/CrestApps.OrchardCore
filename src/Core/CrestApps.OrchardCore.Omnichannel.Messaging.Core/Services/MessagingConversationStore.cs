@@ -228,6 +228,29 @@ public sealed class MessagingConversationStore : DocumentCatalog<MessagingConver
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<MessagingConversation>> GetUnownedAwaitingReplyAsync(DateTime lastMessageBeforeUtc, int take, CancellationToken cancellationToken = default)
+    {
+        var open = ConversationStatus.Open.ToString();
+        var unassigned = ConversationAssignmentStatus.Unassigned.ToString();
+        var pooled = ConversationAssignmentStatus.Pooled.ToString();
+
+        // An unread thread is one whose contact wrote last: an agent's reply, or a workflow's text the contact never
+        // answered, marks it read, so neither is handed to an agent by the sweep.
+        var conversations = await Session.Query<MessagingConversation, MessagingConversationIndex>(
+                index => index.Status == open &&
+                    !index.IsRead &&
+                    (index.AssignmentStatus == unassigned || index.AssignmentStatus == pooled) &&
+                    index.LastMessageUtc != null &&
+                    index.LastMessageUtc <= lastMessageBeforeUtc,
+                collection: MessagingStorage.CollectionName)
+            .OrderBy(index => index.LastMessageUtc)
+            .Take(Math.Max(1, take))
+            .ListAsync(cancellationToken);
+
+        return conversations.ToArray();
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<MessagingConversation>> QueryAsync(MessagingInboxQuery query, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(query);

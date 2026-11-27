@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Products.Core.Listing;
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
@@ -10,6 +11,13 @@ namespace CrestApps.OrchardCore.Products.Drivers;
 
 public sealed class ProductPageSettingsDisplayDriver : ContentTypePartDefinitionDisplayDriver<ProductPart>
 {
+    internal readonly IStringLocalizer S;
+
+    public ProductPageSettingsDisplayDriver(IStringLocalizer<ProductPageSettingsDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
     {
         return Initialize<ProductPageSettingsViewModel>("ProductPageSettings_Edit", model =>
@@ -19,7 +27,7 @@ public sealed class ProductPageSettingsDisplayDriver : ContentTypePartDefinition
             model.ShowDetails = settings.ShowDetails;
             model.InquiryLabel = settings.InquiryLabel;
             model.InquiryUrl = settings.InquiryUrl;
-        }).Location("Content:10");
+        }).Location(l => l.Zone("Content", "10").Card(S["Product Page"], "30"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)

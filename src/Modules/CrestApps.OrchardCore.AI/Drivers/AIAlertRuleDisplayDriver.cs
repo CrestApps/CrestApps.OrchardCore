@@ -64,24 +64,13 @@ public sealed class AIAlertRuleDisplayDriver : DisplayDriver<AIAlertRule>
     /// <inheritdoc/>
     public override IDisplayResult Edit(AIAlertRule rule, BuildEditorContext context)
     {
-        return Initialize<AIAlertRuleViewModel>("AIAlertRuleFields_Edit", async model =>
-        {
-            model.Name = rule.Name;
-            model.Enabled = rule.Enabled;
-            model.Metric = rule.Metric;
-            model.ProfileId = rule.ProfileId;
-            model.Condition = rule.Condition;
-            model.Threshold = rule.Threshold;
-            model.WindowMinutes = rule.WindowMinutes;
-            model.MinimumSampleSize = rule.MinimumSampleSize;
-            model.CheckEveryMinutes = rule.CheckEveryMinutes;
-            model.NotifyEmails = rule.NotifyEmails;
-            model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
-                .Where(profile => !profile.Has<AIProfileVersionCopy>())
-                .OrderBy(profile => profile.DisplayText, StringComparer.CurrentCultureIgnoreCase)
-                .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId))
-                .ToList();
-        }).Location("Content:1");
+        return Combine(
+            Initialize<AIAlertRuleViewModel>("AIAlertRuleFields_Edit", model => Populate(rule, model))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<AIAlertRuleViewModel>("AIAlertRuleCondition_Edit", model => PopulateConditionAsync(rule, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Condition"], "20")),
+            Initialize<AIAlertRuleViewModel>("AIAlertRuleNotifications_Edit", model => Populate(rule, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Notifications"], "30")));
     }
 
     /// <inheritdoc/>
@@ -130,5 +119,30 @@ public sealed class AIAlertRuleDisplayDriver : DisplayDriver<AIAlertRule>
         }
 
         return Edit(rule, context);
+    }
+
+    private static void Populate(AIAlertRule rule, AIAlertRuleViewModel model)
+    {
+        model.Name = rule.Name;
+        model.Enabled = rule.Enabled;
+        model.Metric = rule.Metric;
+        model.ProfileId = rule.ProfileId;
+        model.Condition = rule.Condition;
+        model.Threshold = rule.Threshold;
+        model.WindowMinutes = rule.WindowMinutes;
+        model.MinimumSampleSize = rule.MinimumSampleSize;
+        model.CheckEveryMinutes = rule.CheckEveryMinutes;
+        model.NotifyEmails = rule.NotifyEmails;
+    }
+
+    private async ValueTask PopulateConditionAsync(AIAlertRule rule, AIAlertRuleViewModel model)
+    {
+        Populate(rule, model);
+
+        model.Profiles = (await _profileStore.GetByTypeAsync(AIProfileType.Chat))
+            .Where(profile => !profile.Has<AIProfileVersionCopy>())
+            .OrderBy(profile => profile.DisplayText, StringComparer.CurrentCultureIgnoreCase)
+            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId))
+            .ToList();
     }
 }

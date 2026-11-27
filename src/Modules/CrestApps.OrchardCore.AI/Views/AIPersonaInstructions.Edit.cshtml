@@ -1,0 +1,46 @@
+@using Microsoft.AspNetCore.Html
+@using CrestApps.OrchardCore.AI.ViewModels
+
+@model AIPersonaViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Instructions" class="ocat-label ocat-label-required">@T["Persona instructions"]</label>
+    <div class="ocat-end">
+        @* The Liquid token is passed as an argument: braces in a localized string are format placeholders. *@
+        <div class="hint mb-1">@T["Who the assistant is and how it talks: its personality, tone and manners. They go before the system instructions of every profile and interaction that uses this persona, so leave the task and the rules to the profile. Liquid is supported: use {0} to insert the assistant name.", new HtmlString("<code>{{ assistant_name }}</code>")]</div>
+        <textarea asp-for="Instructions" class="form-control content-preview-text" rows="8"></textarea>
+        <span asp-validation-for="Instructions" class="text-danger"></span>
+    </div>
+</div>
+
+<style asp-name="codemirror"></style>
+<style asp-name="easymde"></style>
+
+<script asp-name="easymde" at="Foot"></script>
+<script at="Foot" depends-on="easymde">
+    document.addEventListener('DOMContentLoaded', function () {
+        const isRtl = @(Orchard.IsRightToLeft() ? "true" : "false");
+
+        const instructionsElement = document.getElementById("@Html.IdFor(m => m.Instructions)");
+        const mde = new EasyMDE({
+            element: instructionsElement,
+            forceSync: true,
+            autoDownloadFontAwesome: false
+        });
+
+        mde.codemirror.on('change', function () {
+            document.dispatchEvent(new Event('contentpreview:render'));
+        });
+
+        if (isRtl) {
+            document.querySelectorAll('.editor-toolbar').forEach(function (toolbar) {
+                toolbar.style.direction = 'rtl';
+                toolbar.style.textAlign = 'right';
+            });
+
+            document.querySelectorAll('.CodeMirror').forEach(function (container) {
+                container.style.textAlign = 'right';
+            });
+        }
+    });
+</script>

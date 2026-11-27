@@ -62,40 +62,46 @@ internal sealed class McpResourceDisplayDriver : DisplayDriver<McpResource>
 
     public override IDisplayResult Edit(McpResource entry, BuildEditorContext context)
     {
-        return Initialize<McpResourceFieldsViewModel>("McpResourceFields_Edit", model =>
+        return Combine(
+            Initialize<McpResourceFieldsViewModel>("McpResourceGeneral_Edit", model => Populate(entry, context.IsNew, model))
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<McpResourceFieldsViewModel>("McpResourceSource_Edit", model => Populate(entry, context.IsNew, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Source"], "20")));
+    }
+
+    private void Populate(McpResource entry, bool isNew, McpResourceFieldsViewModel model)
+    {
+        model.IsNew = isNew;
+        model.Source = entry.Source;
+        model.McpPromptItemId = entry.ItemId;
+        model.DisplayText = entry.DisplayText;
+
+        // Get the supported variables from the options for this resource type.
+
+        if (!string.IsNullOrEmpty(entry.Source) &&
+            _mcpOptions.ResourceTypes.TryGetValue(entry.Source, out var typeEntry) &&
+                typeEntry.SupportedVariables is not null)
         {
-            model.IsNew = context.IsNew;
-            model.Source = entry.Source;
-            model.McpPromptItemId = entry.ItemId;
-            model.DisplayText = entry.DisplayText;
-
-            // Get the supported variables from the options for this resource type.
-
-            if (!string.IsNullOrEmpty(entry.Source) &&
-                _mcpOptions.ResourceTypes.TryGetValue(entry.Source, out var typeEntry) &&
-                    typeEntry.SupportedVariables is not null)
+            model.SupportedVariables = typeEntry.SupportedVariables
+            .Select(v => new McpResourceVariableViewModel
             {
-                model.SupportedVariables = typeEntry.SupportedVariables
-                .Select(v => new McpResourceVariableViewModel
-                {
-                    Name = v.Name,
-                    Description = v.Description?.Value,
-                })
-            .ToArray();
-            }
+                Name = v.Name,
+                Description = v.Description?.Value,
+            })
+        .ToArray();
+        }
 
-            if (entry.Resource is not null)
-            {
-                // Extract the user-provided path from the full URI for editing.
-                model.Path = Handlers.McpResourceHandler.ExtractPath(entry.Resource.Uri, entry.Source, entry.ItemId);
-                model.Name = entry.Resource.Name;
-                model.Description = entry.Resource.Description;
-                model.MimeType = entry.Resource.MimeType;
-            }
+        if (entry.Resource is not null)
+        {
+            // Extract the user-provided path from the full URI for editing.
+            model.Path = Handlers.McpResourceHandler.ExtractPath(entry.Resource.Uri, entry.Source, entry.ItemId);
+            model.Name = entry.Resource.Name;
+            model.Description = entry.Resource.Description;
+            model.MimeType = entry.Resource.MimeType;
+        }
 
-            // Build a URI preview for display.
-            model.UriPreview = Handlers.McpResourceHandler.BuildUri(entry.Source, entry.ItemId, model.Path);
-        }).Location("Content:1");
+        // Build a URI preview for display.
+        model.UriPreview = Handlers.McpResourceHandler.BuildUri(entry.Source, entry.ItemId, model.Path);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpResource entry, UpdateEditorContext context)

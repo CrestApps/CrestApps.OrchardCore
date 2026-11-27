@@ -75,7 +75,7 @@ internal sealed partial class DataConnectionDisplayDriver : DisplayDriver<DataCo
             model.Description = connection.Description;
             model.ConnectorDisplayName = descriptor?.DisplayName.Value ?? connection.Connector;
             model.ConnectorDescription = descriptor?.Description.Value;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(DataConnection connection, UpdateEditorContext context)

@@ -14,6 +14,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
@@ -38,6 +39,8 @@ public sealed class ReportSubscriptionsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly IDisplayManager<ReportSubscriptionEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -51,6 +54,8 @@ public sealed class ReportSubscriptionsController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
+        IDisplayManager<ReportSubscriptionEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<ReportSubscriptionsController> htmlLocalizer,
         IStringLocalizer<ReportSubscriptionsController> stringLocalizer)
     {
@@ -62,6 +67,8 @@ public sealed class ReportSubscriptionsController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -112,6 +119,8 @@ public sealed class ReportSubscriptionsController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         var subscription = new ReportSubscription { ItemId = IdGenerator.GenerateId(), CreatedUtc = _clock.UtcNow, CreatedBy = User.Identity?.Name };
 
@@ -165,6 +174,8 @@ public sealed class ReportSubscriptionsController : Controller
         {
             return NotFound();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         if (!await ApplyAsync(model, subscription))
         {
@@ -294,6 +305,7 @@ public sealed class ReportSubscriptionsController : Controller
 
         model.Reports = [.. reports.OrderBy(item => item.Text, StringComparer.CurrentCultureIgnoreCase)];
         model.Formats = [.. _exports.GetFormats().Select(format => new SelectListItem(_localizerFactory.Localize(format.DisplayName).Value, format.Name, format.Name == model.AttachmentFormat))];
+        model.Editor ??= await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, model.IsNew);
 
         return model;
     }

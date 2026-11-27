@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Telephony.Core.Models;
 using CrestApps.OrchardCore.Telephony.ViewModels;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
@@ -17,8 +18,13 @@ internal sealed class TelephonyExtensionDisplayDriver : DisplayDriver<TelephonyE
 {
     private readonly UserManager<IUser> _userManager;
 
-    public TelephonyExtensionDisplayDriver(UserManager<IUser> userManager)
+    internal readonly IStringLocalizer S;
+
+    public TelephonyExtensionDisplayDriver(
+        UserManager<IUser> userManager,
+        IStringLocalizer<TelephonyExtensionDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _userManager = userManager;
     }
 
@@ -57,7 +63,7 @@ internal sealed class TelephonyExtensionDisplayDriver : DisplayDriver<TelephonyE
             model.Number = extension.Number;
             model.UserId = extension.UserId;
             model.DisplayName = extension.DisplayName;
-        }).Location("Content:1%General;1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(TelephonyExtension extension, UpdateEditorContext context)

@@ -50,31 +50,51 @@ public sealed class ContactCenterRecordingSettingsDisplayDriver
         ContactCenterRecordingSettings settings,
         BuildEditorContext context)
     {
-        return Initialize<ContactCenterRecordingSettingsViewModel>(
-            "ContactCenterRecordingSettings_Edit",
-            model =>
-            {
-                model.RecordAllCalls = settings.RecordAllCalls;
-                model.ConsentModel = settings.ConsentModel;
-                model.RequireExplicitConsent = settings.RequireExplicitConsent;
-                model.EnableRecordingDisclosure = settings.EnableRecordingDisclosure;
-                model.RecordingDisclosureText = string.IsNullOrWhiteSpace(settings.RecordingDisclosureText)
-                    ? S["This call may be recorded for quality assurance and training purposes."].Value
-                    : settings.RecordingDisclosureText;
-                model.DiscloseOnInboundCalls = settings.DiscloseOnInboundCalls;
-                model.DiscloseOnAIVoiceCalls = settings.DiscloseOnAIVoiceCalls;
-                model.PromptAgentsToDisclose = settings.PromptAgentsToDisclose;
-                model.RetentionDays = settings.RetentionDays;
-                model.LegalHoldByDefault = settings.LegalHoldByDefault;
-                model.AllowAgentSecurePause = settings.AllowAgentSecurePause;
-                model.MaxSecurePauseSeconds = settings.MaxSecurePauseSeconds;
-                model.RequirePauseReason = settings.RequirePauseReason;
-            })
-            .Location("Content:4#Recording governance")
-            .OnGroup(SettingsGroupId)
-            .RenderWhen(() => _authorizationService.AuthorizeAsync(
-                _httpContextAccessor.HttpContext?.User,
-                ContactCenterPermissions.ManageContactCenter));
+        // Every card edits the same model under the same prefix, so UpdateAsync still binds it once.
+        void Populate(ContactCenterRecordingSettingsViewModel model)
+        {
+            model.RecordAllCalls = settings.RecordAllCalls;
+            model.ConsentModel = settings.ConsentModel;
+            model.RequireExplicitConsent = settings.RequireExplicitConsent;
+            model.EnableRecordingDisclosure = settings.EnableRecordingDisclosure;
+            model.RecordingDisclosureText = string.IsNullOrWhiteSpace(settings.RecordingDisclosureText)
+                ? S["This call may be recorded for quality assurance and training purposes."].Value
+                : settings.RecordingDisclosureText;
+            model.DiscloseOnInboundCalls = settings.DiscloseOnInboundCalls;
+            model.DiscloseOnAIVoiceCalls = settings.DiscloseOnAIVoiceCalls;
+            model.PromptAgentsToDisclose = settings.PromptAgentsToDisclose;
+            model.RetentionDays = settings.RetentionDays;
+            model.LegalHoldByDefault = settings.LegalHoldByDefault;
+            model.AllowAgentSecurePause = settings.AllowAgentSecurePause;
+            model.MaxSecurePauseSeconds = settings.MaxSecurePauseSeconds;
+            model.RequirePauseReason = settings.RequirePauseReason;
+        }
+
+        return Combine(
+            Initialize<ContactCenterRecordingSettingsViewModel>("ContactCenterRecordingSettings_Edit", Populate)
+                .Location(l => l.Zone("Content", "4").Tab(S["Recording Governance"], "4").Card(S["Recording"], "1"))
+                .OnGroup(SettingsGroupId)
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(
+                    _httpContextAccessor.HttpContext?.User,
+                    ContactCenterPermissions.ManageContactCenter)),
+            Initialize<ContactCenterRecordingSettingsViewModel>("ContactCenterRecordingSettingsDisclosure_Edit", Populate)
+                .Location(l => l.Zone("Content", "4").Tab(S["Recording Governance"], "4").Card(S["Recording Disclosure"], "2"))
+                .OnGroup(SettingsGroupId)
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(
+                    _httpContextAccessor.HttpContext?.User,
+                    ContactCenterPermissions.ManageContactCenter)),
+            Initialize<ContactCenterRecordingSettingsViewModel>("ContactCenterRecordingSettingsRetention_Edit", Populate)
+                .Location(l => l.Zone("Content", "4").Tab(S["Recording Governance"], "4").Card(S["Retention"], "3"))
+                .OnGroup(SettingsGroupId)
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(
+                    _httpContextAccessor.HttpContext?.User,
+                    ContactCenterPermissions.ManageContactCenter)),
+            Initialize<ContactCenterRecordingSettingsViewModel>("ContactCenterRecordingSettingsSecurePause_Edit", Populate)
+                .Location(l => l.Zone("Content", "4").Tab(S["Recording Governance"], "4").Card(S["Agent Secure Pause"], "4"))
+                .OnGroup(SettingsGroupId)
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(
+                    _httpContextAccessor.HttpContext?.User,
+                    ContactCenterPermissions.ManageContactCenter)));
     }
 
     /// <inheritdoc/>

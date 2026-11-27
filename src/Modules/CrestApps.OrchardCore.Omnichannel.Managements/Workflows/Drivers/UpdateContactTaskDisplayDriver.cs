@@ -31,6 +31,11 @@ public sealed class UpdateContactTaskDisplayDriver : ActivityDisplayDriver<Updat
         S = stringLocalizer;
     }
 
+    /// <inheritdoc />
+    public override IDisplayResult Edit(UpdateContactTask activity, BuildEditorContext context)
+        => Initialize<UpdateContactTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+
     /// <inheritdoc/>
     protected override void EditActivity(UpdateContactTask activity, UpdateContactTaskViewModel model)
     {

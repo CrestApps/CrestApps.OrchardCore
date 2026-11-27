@@ -69,41 +69,49 @@ public sealed class DispatchSettingsDisplayDriver : SiteDisplayDriver<DispatchSe
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(ISite site, DispatchSettings settings, BuildEditorContext context)
-        => Initialize<DispatchSettingsViewModel>("DispatchSettings_Edit", async model =>
-        {
-            var chosen = settings.GetTechnicianCapabilities().ToHashSet(StringComparer.OrdinalIgnoreCase);
+        => Combine(
+            BuildCard("DispatchSettingsVisits_Edit", settings, S["Visits"], "10"),
+            BuildCard("DispatchSettingsTechnicians_Edit", settings, S["Choosing Technicians"], "20"),
+            BuildCard("DispatchSettingsNotices_Edit", settings, S["Customer Notices"], "30"));
 
-            model.TechnicianCapabilities = [.. chosen];
-            model.CapabilityOptions = [.. (await _capabilities.ListAsync(includeDisabled: true)).Select(capability => new SelectListItem(capability.DisplayName, capability.Name, chosen.Contains(capability.Name)))];
-            var objective = settings.Objective ?? new DispatchObjective();
+    private ShapeResult BuildCard(string shapeType, DispatchSettings settings, string cardName, string cardPosition)
+        => Initialize<DispatchSettingsViewModel>(shapeType, model => PopulateAsync(settings, model))
+            .Location(l => l.Zone("Content", "1").Card(cardName, cardPosition))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, DispatchPermissions.ManageDispatchSettings))
+            .OnGroup(SettingsGroupId);
 
-            model.CreateVisitsForNewWorkOrders = settings.CreateVisitsForNewWorkOrders;
-            model.ArrivalWindowMinutes = settings.ArrivalWindowMinutes;
-            model.HorizonDays = settings.HorizonDays;
-            model.BufferMinutes = settings.BufferMinutes;
-            model.StrictTerritory = settings.StrictTerritory;
-            model.TimeZoneId = settings.TimeZoneId;
-            model.TravelWeight = objective.TravelWeight;
-            model.UrgencyWeight = objective.UrgencyWeight;
-            model.ProficiencyWeight = objective.ProficiencyWeight;
-            model.PreferredWeight = objective.PreferredWeight;
-            model.BalanceWeight = objective.BalanceWeight;
-            model.AtRiskMinutes = settings.AtRiskMinutes;
-            model.OptimizerSeconds = settings.OptimizerSeconds;
-            model.NoticesEnabled = settings.NoticesEnabled;
-            model.TrackingEnabled = settings.TrackingEnabled;
-            model.ReminderHour = settings.ReminderHour;
-            model.ScheduledText = settings.ScheduledText;
-            model.ReminderText = settings.ReminderText;
-            model.EnRouteText = settings.EnRouteText;
-            model.CompletedText = settings.CompletedText;
-            model.CanceledText = settings.CanceledText;
-            model.CanSendNotices = _senders.Any();
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, DispatchPermissions.ManageDispatchSettings))
-        .OnGroup(SettingsGroupId);
+    private async ValueTask PopulateAsync(DispatchSettings settings, DispatchSettingsViewModel model)
+    {
+        var chosen = settings.GetTechnicianCapabilities().ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-    /// <inheritdoc/>
+        model.TechnicianCapabilities = [.. chosen];
+        model.CapabilityOptions = [.. (await _capabilities.ListAsync(includeDisabled: true)).Select(capability => new SelectListItem(capability.DisplayName, capability.Name, chosen.Contains(capability.Name)))];
+        var objective = settings.Objective ?? new DispatchObjective();
+
+        model.CreateVisitsForNewWorkOrders = settings.CreateVisitsForNewWorkOrders;
+        model.ArrivalWindowMinutes = settings.ArrivalWindowMinutes;
+        model.HorizonDays = settings.HorizonDays;
+        model.BufferMinutes = settings.BufferMinutes;
+        model.StrictTerritory = settings.StrictTerritory;
+        model.TimeZoneId = settings.TimeZoneId;
+        model.TravelWeight = objective.TravelWeight;
+        model.UrgencyWeight = objective.UrgencyWeight;
+        model.ProficiencyWeight = objective.ProficiencyWeight;
+        model.PreferredWeight = objective.PreferredWeight;
+        model.BalanceWeight = objective.BalanceWeight;
+        model.AtRiskMinutes = settings.AtRiskMinutes;
+        model.OptimizerSeconds = settings.OptimizerSeconds;
+        model.NoticesEnabled = settings.NoticesEnabled;
+        model.TrackingEnabled = settings.TrackingEnabled;
+        model.ReminderHour = settings.ReminderHour;
+        model.ScheduledText = settings.ScheduledText;
+        model.ReminderText = settings.ReminderText;
+        model.EnRouteText = settings.EnRouteText;
+        model.CompletedText = settings.CompletedText;
+        model.CanceledText = settings.CanceledText;
+        model.CanSendNotices = _senders.Any();
+    }
+
     public override async Task<IDisplayResult> UpdateAsync(ISite site, DispatchSettings settings, UpdateEditorContext context)
     {
         if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, DispatchPermissions.ManageDispatchSettings))

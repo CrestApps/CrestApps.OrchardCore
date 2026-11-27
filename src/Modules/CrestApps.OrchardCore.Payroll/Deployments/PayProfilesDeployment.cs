@@ -164,7 +164,7 @@ internal sealed class PayProfilesDeploymentStepDisplayDriver : DisplayDriver<Dep
             View("PayProfilesDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(PayProfilesDeploymentStep step, BuildEditorContext context)
-        => Initialize<PayProfilesDeploymentStepViewModel>("PayProfilesDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData).Location("Content");
+        => Initialize<PayProfilesDeploymentStepViewModel>("PayProfilesDeploymentStep_Fields_Edit", model => model.IncludeSensitiveData = step.IncludeSensitiveData).Location(l => l.Zone("Content", "1").Card(S["Pay Profiles and Pay Items"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(PayProfilesDeploymentStep step, UpdateEditorContext context)
     {

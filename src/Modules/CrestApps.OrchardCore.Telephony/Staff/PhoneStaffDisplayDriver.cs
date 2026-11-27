@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Staff.Models;
 using CrestApps.OrchardCore.Telephony.Core.Services;
 using CrestApps.OrchardCore.Telephony.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -13,8 +14,13 @@ internal sealed class PhoneStaffDisplayDriver : DisplayDriver<StaffMember>
 {
     private readonly ITelephonyExtensionManager _extensions;
 
-    public PhoneStaffDisplayDriver(ITelephonyExtensionManager extensions)
+    internal readonly IStringLocalizer S;
+
+    public PhoneStaffDisplayDriver(
+        ITelephonyExtensionManager extensions,
+        IStringLocalizer<PhoneStaffDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _extensions = extensions;
     }
 
@@ -32,6 +38,6 @@ internal sealed class PhoneStaffDisplayDriver : DisplayDriver<StaffMember>
             model.ExtensionId = extension?.ItemId;
             model.Number = extension?.Number;
             model.Name = extension?.Name;
-        }).Location("Content:9");
+        }).Location(l => l.Zone("Content", "9").Card(S["Phone"], "9"));
     }
 }

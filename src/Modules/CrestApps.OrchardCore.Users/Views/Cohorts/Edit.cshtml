@@ -10,26 +10,7 @@
 <form asp-action="Edit" asp-route-id="@Model.CohortId" method="post" class="no-multisubmit">
     @Html.ValidationSummary()
 
-    <div class="card text-bg-theme mb-3">
-        <div class="card-header">@T["Cohort"]</div>
-        <div class="card-body">
-            <div class="ocat-limited-wrapper" asp-validation-class-for="Name">
-                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
-                <div class="ocat-limited">
-                    <input asp-for="Name" class="form-control" maxlength="255" autofocus required />
-                    <span asp-validation-for="Name" class="text-danger"></span>
-                    <span class="hint">@T["Such as 2026 new hires or Warehouse supervisors. Each cohort has its own name."]</span>
-                </div>
-            </div>
-
-            <div class="ocat-limited-wrapper">
-                <label asp-for="Description" class="ocat-label">@T["Description"]</label>
-                <div class="ocat-limited">
-                    <textarea asp-for="Description" class="form-control" rows="2"></textarea>
-                </div>
-            </div>
-        </div>
-    </div>
+    @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
         <button class="btn btn-primary" type="submit">@T["Save"]</button>

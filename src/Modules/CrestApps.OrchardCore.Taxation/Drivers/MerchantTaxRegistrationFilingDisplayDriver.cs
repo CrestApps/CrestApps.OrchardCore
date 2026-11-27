@@ -43,16 +43,19 @@ internal sealed class MerchantTaxRegistrationFilingDisplayDriver : DisplayDriver
     }
 
     public override IDisplayResult Edit(MerchantTaxRegistration registration, BuildEditorContext context)
-        => Initialize<MerchantTaxRegistrationFilingViewModel>("MerchantTaxRegistrationFiling_Edit", model =>
+        => Initialize<MerchantTaxRegistrationFilingViewModel>("MerchantTaxRegistrationFiling_Edit", async model =>
         {
             var filing = registration.Filing ?? new TaxFilingSchedule();
+            var forms = await _returns.GetFormsAsync();
+            var chosen = await _returns.GetFormsAsync(includeDisabled: true);
 
             model.Frequency = registration.Filing?.Frequency;
             model.DueMonthsAfterPeriod = filing.DueMonthsAfterPeriod;
             model.DueDay = filing.DueDay;
             model.MoveToNextBusinessDay = filing.MoveToNextBusinessDay;
-            model.Form = filing.Form;
-            model.AnnualForm = filing.AnnualForm;
+            // No form named is the generic one; a form is chosen by its own name, whatever case the schedule kept.
+            model.Form = chosen.TryGetValue(filing.Form ?? TaxationConstants.GenericTaxReturnFormName, out var form) ? form.Name : filing.Form;
+            model.AnnualForm = filing.AnnualForm is not null && chosen.TryGetValue(filing.AnnualForm, out var annualForm) ? annualForm.Name : filing.AnnualForm;
             model.AnnualDueMonthsAfterYear = filing.AnnualDueMonthsAfterYear;
             model.AnnualDueDay = filing.AnnualDueDay;
             model.Frequencies =
@@ -64,11 +67,13 @@ internal sealed class MerchantTaxRegistrationFilingDisplayDriver : DisplayDriver
             ];
             model.Forms =
             [
-                .. _returns.GetForms().Values
-                    .Select(form => new SelectListItem(_localizerFactory.Localize(form.DisplayName).Value, form.Name))
+                .. forms.Values
+                    .Concat(chosen.Values.Where(candidate => candidate.Name == model.Form || candidate.Name == model.AnnualForm))
+                    .DistinctBy(candidate => candidate.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(candidate => new SelectListItem(_localizerFactory.Localize(candidate.DisplayName).Value, candidate.Name))
                     .OrderBy(item => item.Text, StringComparer.CurrentCultureIgnoreCase),
             ];
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Returns"], "30"));
 
     public override async Task<IDisplayResult> UpdateAsync(MerchantTaxRegistration registration, UpdateEditorContext context)
     {
@@ -83,7 +88,13 @@ internal sealed class MerchantTaxRegistrationFilingDisplayDriver : DisplayDriver
             return Edit(registration, context);
         }
 
-        var forms = _returns.GetForms();
+        var forms = await _returns.GetFormsAsync(includeDisabled: true);
+
+        // The generic form is kept as no form named, so the returns prepared before keep finding it.
+        string NameOf(string name)
+            => !string.IsNullOrEmpty(name) && forms.TryGetValue(name, out var form) ? form.Name : null;
+
+        var periodicForm = NameOf(model.Form);
 
         registration.Filing = new TaxFilingSchedule
         {
@@ -91,8 +102,8 @@ internal sealed class MerchantTaxRegistrationFilingDisplayDriver : DisplayDriver
             DueMonthsAfterPeriod = model.DueMonthsAfterPeriod,
             DueDay = model.DueDay,
             MoveToNextBusinessDay = model.MoveToNextBusinessDay,
-            Form = !string.IsNullOrEmpty(model.Form) && forms.ContainsKey(model.Form) ? model.Form : null,
-            AnnualForm = !string.IsNullOrEmpty(model.AnnualForm) && forms.ContainsKey(model.AnnualForm) ? model.AnnualForm : null,
+            Form = string.Equals(periodicForm, TaxationConstants.GenericTaxReturnFormName, StringComparison.OrdinalIgnoreCase) ? null : periodicForm,
+            AnnualForm = NameOf(model.AnnualForm),
             AnnualDueMonthsAfterYear = model.AnnualDueMonthsAfterYear,
             AnnualDueDay = model.AnnualDueDay,
         };

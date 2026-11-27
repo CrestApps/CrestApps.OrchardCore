@@ -1,0 +1,43 @@
+@model TicketDeskViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Default team"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("TeamPicker", new { name = Html.NameFor(m => m.DefaultTeamId).ToString(), selectedValues = string.IsNullOrEmpty(Model.DefaultTeamId) ? Array.Empty<string>() : new[] { Model.DefaultTeamId } })
+        <span class="hint">@T["New tickets go to this team when their type names none, and are assigned to its members."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="AssignmentStrategy" class="ocat-label">@T["New tickets go to"]</label>
+    <div class="ocat-end">
+        <select asp-for="AssignmentStrategy" class="form-select">
+            <option value="">@T["Nobody: an agent takes them"]</option>
+            <option value="LeastLoaded">@T["The team member with the fewest open tickets"]</option>
+            <option value="RoundRobin">@T["Each team member in turn"]</option>
+        </select>
+        <span class="hint">@T["Only members who can take work now, as the checks below say, and who hold the skills the ticket type asks for are chosen. When no one can, the ticket stays unassigned and says why."]</span>
+    </div>
+</div>
+
+@if (Model.AvailabilitySourceOptions.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["A team member can take tickets now when"]</span>
+        <div class="ocat-end">
+            @for (var i = 0; i < Model.AvailabilitySourceOptions.Count; i++)
+            {
+                var option = Model.AvailabilitySourceOptions[i];
+                var id = Html.IdFor(m => m.AvailabilitySources) + "_" + i;
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="@id" name="@Html.NameFor(m => m.AvailabilitySources)" value="@option.Value" checked="@option.Selected" />
+                    <label class="form-check-label" for="@id">@option.Text</label>
+                </div>
+            }
+            <span class="hint">@T["Leave a check off when the people of this desk don't use it, such as the Contact Center phone for people who only work tickets."]</span>
+        </div>
+    </div>
+}

@@ -1,0 +1,75 @@
+@model PayScheduleViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="PayDateRule" class="ocat-label">@T["Paid"]</label>
+    <div class="ocat-end">
+        <select asp-for="PayDateRule" class="form-select" style="max-width: 22rem">
+            <option value="DaysAfterPeriodEnd">@T["A number of days after the period ends"]</option>
+            <option value="FixedDays">@T["On fixed days of the month"]</option>
+        </select>
+        <span class="hint">@T["Fixed days apply to monthly and twice-a-month schedules."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="PayDateOffsetDays">
+    <label asp-for="PayDateOffsetDays" class="ocat-label">@T["Days after the period ends"]</label>
+    <div class="ocat-end ocat-limited-wrapper"><input asp-for="PayDateOffsetDays" type="number" min="0" max="60" class="form-control" /></div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="FirstPayDay">
+    <label asp-for="FirstPayDay" class="ocat-label">@T["Fixed pay days"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            <input asp-for="FirstPayDay" type="number" min="0" max="31" class="form-control" style="max-width: 8rem" aria-label="@T["First period"]" />
+            <input asp-for="SecondPayDay" type="number" min="0" max="31" class="form-control" style="max-width: 8rem" aria-label="@T["Second period"]" />
+        </div>
+        <span class="hint">@T["The day of the month each period is paid; 0 is the last day of the month."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="NonBusinessDayShift" class="ocat-label">@T["On a day off"]</label>
+    <div class="ocat-end">
+        <select asp-for="NonBusinessDayShift" class="form-select" style="max-width: 18rem">
+            <option value="Before">@T["Pay the business day before"]</option>
+            <option value="After">@T["Pay the business day after"]</option>
+            <option value="None">@T["Keep the day"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="ApprovalLeadDays">
+    <label asp-for="ApprovalLeadDays" class="ocat-label">@T["Approve by"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="ApprovalLeadDays" type="number" min="0" max="30" class="form-control" />
+        <span class="hint">@T["Days before the pay date a pay run must be approved."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="ExtraPayPeriod" class="ocat-label">@T["A year with an extra pay date"]</label>
+    <div class="ocat-end">
+        <select asp-for="ExtraPayPeriod" class="form-select" style="max-width: 28rem">
+            <option value="Standard">@T["Pay the usual salary each time (the year pays one pay more)"]</option>
+            <option value="DivideByPayDates">@T["Divide the year's salary by that year's pay dates"]</option>
+        </select>
+        <span class="hint">@T["Some years have 27 pay dates every two weeks, or 53 every week. Hourly pay is not affected."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["In use"]</label>
+        </div>
+    </div>
+</div>
+@if (Model.NextPeriods.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Next periods"]</span>
+        <div class="ocat-end">
+            <ul class="list-unstyled mb-0">
+                @foreach (var period in Model.NextPeriods)
+                {
+                    <li>@period</li>
+                }
+            </ul>
+        </div>
+    </div>
+}

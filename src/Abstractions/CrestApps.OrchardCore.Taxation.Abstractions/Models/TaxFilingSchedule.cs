@@ -85,8 +85,9 @@ public sealed class TaxFilingSchedule
     public bool MoveToNextBusinessDay { get; set; } = true;
 
     /// <summary>
-    /// Gets or sets the name of the return form (an <c>ITaxReturnForm</c>) the periodic returns use, or
-    /// <see langword="null"/> for the built-in generic form.
+    /// Gets or sets the name of the return form the periodic returns use (a tax form of the sales tax source, or an
+    /// <c>ITaxReturnForm</c> a module adds), or <see langword="null"/> for the generic form
+    /// (<see cref="TaxationConstants.GenericTaxReturnFormName"/>).
     /// </summary>
     public string Form { get; set; }
 

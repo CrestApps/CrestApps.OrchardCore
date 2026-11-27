@@ -62,7 +62,7 @@ internal sealed class DataSourceSearchToolInstanceDisplayDriver : DisplayDriver<
             model.Strictness = settings.Strictness;
             model.Filter = settings.Filter;
             model.DataSources = await _dataSourceStore.GetAllAsync();
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Data Source"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstance instance, UpdateEditorContext context)

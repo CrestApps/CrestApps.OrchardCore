@@ -9,6 +9,7 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Security.Services;
 using OrchardCore.Settings;
 using OrchardCore.Users.ViewModels;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Subscriptions.Drivers;
 
@@ -27,6 +28,8 @@ public sealed class SubscriptionRoleSettingsDisplayDriver : SiteDisplayDriver<Su
     protected override string SettingsGroupId
         => SubscriptionSettingsDisplayDriver.GroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SubscriptionRoleSettingsDisplayDriver"/> class.
     /// </summary>
@@ -36,8 +39,10 @@ public sealed class SubscriptionRoleSettingsDisplayDriver : SiteDisplayDriver<Su
     public SubscriptionRoleSettingsDisplayDriver(
         IRoleService roleService,
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer<SubscriptionRoleSettingsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _roleService = roleService;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
@@ -74,7 +79,7 @@ public sealed class SubscriptionRoleSettingsDisplayDriver : SiteDisplayDriver<Su
             }
 
             model.Roles = roleEntries.ToArray();
-        }).Location("Content:10")
+        }).Location(l => l.Zone("Content", "10").Card(S["Default Roles"], "10"))
         .RenderWhen(() => Task.FromResult(roleNames.Any()))
         .OnGroup(SettingsGroupId);
     }

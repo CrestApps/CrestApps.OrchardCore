@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Taxation.Migrations;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Taxation.Recipes;
 using CrestApps.OrchardCore.Taxation.Services;
+using CrestApps.OrchardCore.Taxation.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
@@ -25,8 +26,8 @@ using OrchardCore.Security.Permissions;
 namespace CrestApps.OrchardCore.Taxation;
 
 /// <summary>
-/// Tax Returns: the periods each registration files for, the returns, their page and the filing schedule of a
-/// registration.
+/// Tax Returns: the periods each registration files for, the returns, their page, the filing schedule of a
+/// registration, and the sales tax source of Tax Forms whose forms work a return's boxes out.
 /// </summary>
 [Feature(TaxationConstants.Feature.Returns)]
 public sealed class TaxReturnsStartup : StartupBase
@@ -40,9 +41,11 @@ public sealed class TaxReturnsStartup : StartupBase
         services.AddDataMigration<TaxReturnsMigrations>()
             .AddIndexProvider<TaxReturnIndexProvider>();
         services.AddDisplayDriver<MerchantTaxRegistration, MerchantTaxRegistrationFilingDisplayDriver>();
+        services.AddDisplayDriver<TaxForm, SalesTaxFormSettingsDisplayDriver>();
         services.AddDisplayDriver<TaxReturnPeriodSummary, TaxReturnPeriodSummaryDisplayDriver>();
         services.AddDisplayDriver<TaxReturn, TaxReturnDisplayDriver>();
         services.AddDisplayDriver<TaxReturnPaymentEntry, TaxReturnPaymentEntryDisplayDriver>();
+        services.AddDisplayDriver<TaxReturnMarkFiledViewModel, TaxReturnMarkFiledDisplayDriver>();
         services.AddNavigationProvider<TaxReturnsAdminMenu>();
         services.AddPermissionProvider<TaxReturnsPermissionsProvider>();
     }

@@ -11,9 +11,8 @@
      data-ai-data-source-elasticsearch-base64-api-key-value="@ElasticsearchSourceMetadata.Base64ApiKeyAuthenticationType"
      data-ai-data-source-elasticsearch-key-id-and-key-value="@ElasticsearchSourceMetadata.KeyIdAndKeyAuthenticationType"
      hidden>
-    <fieldset class="ocat-wrapper">
-        <legend class="ocat-label">@T["Elasticsearch Connection"]</legend>
-        <div class="ocat-end">
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
             <div class="mb-3">
                 <label asp-for="IndexName" class="form-label ocat-label-required">@T["Index name"]</label>
                 <input asp-for="IndexName" class="form-control" />
@@ -134,5 +133,5 @@
             </div>
             </div>
         </div>
-    </fieldset>
+    </div>
 </div>

@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Skills.Drivers;
@@ -17,8 +18,9 @@ internal sealed class UserSkillsDisplayDriver : SkillSubjectSkillsDisplayDriverB
         ISkillManager skillManager,
         ISkillAssignmentService assignmentService,
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
-        : base(skillManager, assignmentService, httpContextAccessor, authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer<UserSkillsDisplayDriver> stringLocalizer)
+        : base(skillManager, assignmentService, httpContextAccessor, authorizationService, stringLocalizer)
     {
     }
 

@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Json.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -79,6 +81,24 @@ public class LearningStatementStoredEventViewModel
 /// </summary>
 public sealed class LearningStatementStoredEventDisplayDriver : ActivityDisplayDriver<LearningStatementStoredEvent, LearningStatementStoredEventViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LearningStatementStoredEventDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public LearningStatementStoredEventDisplayDriver(IStringLocalizer<LearningStatementStoredEventDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(LearningStatementStoredEvent activity, BuildEditorContext context)
+    {
+        return Initialize<LearningStatementStoredEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Trigger"], "10"));
+    }
+
     /// <inheritdoc />
     protected override void EditActivity(LearningStatementStoredEvent activity, LearningStatementStoredEventViewModel model)
         => model.Verbs = string.Join(Environment.NewLine, activity.Verbs);

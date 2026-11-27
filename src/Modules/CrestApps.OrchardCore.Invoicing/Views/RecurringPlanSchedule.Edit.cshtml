@@ -1,0 +1,93 @@
+@model RecurringPlanEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="255" autocomplete="off" required />
+        <span class="hint">@T["What the plan bills, such as Monthly hosting. Seen by staff; the invoices carry it as their reference unless you set one."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Frequency">
+    <label asp-for="Frequency" class="ocat-label">@T["Repeats"]</label>
+    <div class="ocat-limited">
+        <div class="input-group">
+            <span class="input-group-text">@T["Every"]</span>
+            <input asp-for="Interval" type="number" min="1" max="99" class="form-control" />
+            <select asp-for="Frequency" class="form-select">
+                <option value="Weekly">@T["week(s)"]</option>
+                <option value="Monthly">@T["month(s)"]</option>
+                <option value="Yearly">@T["year(s)"]</option>
+            </select>
+        </div>
+        <span class="hint">@T["Counted from the start date: a plan starting on the 15th runs on the 15th."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="CustomRule">
+    <label asp-for="CustomRule" class="ocat-label">@T["Custom schedule"]</label>
+    <div class="ocat-end">
+        <input asp-for="CustomRule" class="form-control font-monospace" maxlength="500" autocomplete="off" placeholder="FREQ=MONTHLY;BYMONTHDAY=1" />
+        <span class="hint">@T["Optional. A recurrence rule (RFC 5545) used instead of the above, such as FREQ=MONTHLY;BYMONTHDAY=-1 for the last day of each month."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="StartDate">
+    <label asp-for="StartDate" class="ocat-label">@T["Starts"]</label>
+    <div class="ocat-limited">
+        <input asp-for="StartDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" required />
+        <span class="hint">@T["The day of the first run. A day in the past is caught up when the plan starts, up to 12 runs at a time."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="EndDate">
+    <label asp-for="EndDate" class="ocat-label">@T["Ends"]</label>
+    <div class="ocat-limited">
+        <input asp-for="EndDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" />
+        <span class="hint">@T["Optional. No run happens after this day."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaxRuns">
+    <label asp-for="MaxRuns" class="ocat-label">@T["Number of invoices"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaxRuns" type="number" min="1" class="form-control" />
+        <span class="hint">@T["Optional. The plan completes after this many runs."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Mode">
+    <label asp-for="Mode" class="ocat-label">@T["Each run"]</label>
+    <div class="ocat-end">
+        <select asp-for="Mode" class="form-select">
+            <option value="@RecurringPlanMode.Draft">@T["Makes a draft invoice for me to check"]</option>
+            <option value="@RecurringPlanMode.Issue">@T["Issues the invoice"]</option>
+            <option value="@RecurringPlanMode.IssueAndSend">@T["Issues the invoice and e-mails it to the customer"]</option>
+            <option value="@RecurringPlanMode.IssueAndCharge">@T["Issues the invoice and charges the customer's saved payment method"]</option>
+        </select>
+        <span class="hint">@T["A run that can't issue its invoice keeps the draft and is shown as failed on the plan's page."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="PriceIncreasePercent">
+    <label asp-for="PriceIncreasePercent" class="ocat-label">@T["Price rise (%)"]</label>
+    <div class="ocat-limited">
+        <div class="input-group">
+            <input asp-for="PriceIncreasePercent" type="number" step="any" min="0" class="form-control" />
+            <span class="input-group-text">@T["every"]</span>
+            <input asp-for="PriceIncreaseEveryRuns" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["runs"]</span>
+        </div>
+        <span class="hint">@T["Optional. Raises the prices of the lines by this percent each time this many runs have passed, such as 5% every 12 runs."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="BillUnbilledCharges" />
+            <label class="form-check-label" asp-for="BillUnbilledCharges">@T["Also bill the customer's unbilled charges"]</label>
+            <span class="hint dashed">@T["Each run adds the charges kept to bill the customer (Commerce > Unbilled Charges) up to its day, with Invoicing Billing on."]</span>
+        </div>
+    </div>
+</div>

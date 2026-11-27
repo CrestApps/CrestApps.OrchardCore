@@ -2,67 +2,54 @@
 
 @if (Model.HostSuppliesKeys)
 {
-    <div class="alert alert-info">
-        @if (Model.IsConfigured)
-        {
-            @T["This site uses the Plaid keys the host supplies, so there is nothing to set here. Plaid bills the host for each linked account."]
-        }
-        else
-        {
-            @T["This site uses the Plaid keys the host supplies, and the host has not set them yet, so Plaid is off. Ask the host to set them."]
-        }
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="alert alert-info">
+                @if (Model.IsConfigured)
+                {
+                    @T["This site uses the Plaid keys the host supplies, so there is nothing to set here. Plaid bills the host for each linked account."]
+                }
+                else
+                {
+                    @T["This site uses the Plaid keys the host supplies, and the host has not set them yet, so Plaid is off. Ask the host to set them."]
+                }
+            </div>
+        </div>
     </div>
 }
 else
 {
-<p class="text-muted">@T["Plaid lets a person link their bank: they sign in to it in a Plaid window, choose the account, and the bank account is saved with the bank's own numbers and verified at once. Copy the client id and the secret of the environment from the Plaid dashboard (Developers > Keys). Plaid bills each linked account."]</p>
-
-<div class="ocat-wrapper" asp-validation-class-for="Environment">
-    <label asp-for="Environment" class="ocat-label">@T["Environment"]</label>
-    <div class="ocat-end">
-        <select asp-for="Environment" asp-items="Model.Environments" class="form-select"></select>
-        <span class="hint">@T["Sandbox links Plaid's test banks only. Each environment has its own secret."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="ClientId">
-    <label asp-for="ClientId" class="ocat-label">@T["Client id"]</label>
-    <div class="ocat-end">
-        <input asp-for="ClientId" class="form-control" maxlength="64" autocomplete="off" />
-        <span asp-validation-for="ClientId" class="text-danger"></span>
-        <span class="hint">@T["Leave it empty to turn Plaid off."]</span>
-    </div>
-</div>
-
-<div class="ocat-wrapper" asp-validation-class-for="SecretName">
-    <label asp-for="SecretName" class="ocat-label">@T["Secret"]</label>
-    <div class="ocat-end">
-        <select asp-for="SecretName" asp-items="Model.Secrets" class="form-select">
-            <option value="">@T["Choose a secret"]</option>
-        </select>
-        <span asp-validation-for="SecretName" class="text-danger"></span>
-        <span class="hint">@T["The Orchard secret (a text secret) that holds the Plaid secret. The secret is never kept in these settings. Add or change it under"] <a href="@Url.Action("Index", "Admin", new { area = "OrchardCore.Secrets" })">@T["Security > Secrets"]</a>.</span>
-    </div>
-</div>
-}
-
-@if (!string.IsNullOrEmpty(Model.WebhookUrl))
-{
-    <div class="ocat-wrapper">
-        <label class="ocat-label" for="plaid-webhook-url">@T["Webhook URL"]</label>
-        <div class="ocat-end">
-            <input id="plaid-webhook-url" class="form-control" value="@Model.WebhookUrl" readonly />
-            <span class="hint">@T["Sent to Plaid with each link, so you don't enter it anywhere. Plaid must reach it from the internet: an account whose number the bank made for Plaid is taken back to unverified when the person removes Plaid's access."]</span>
-        </div>
-    </div>
-}
-
-@if (Model.IsConfigured)
-{
     <div class="ocat-wrapper">
         <div class="ocat-end-offset">
-            <button class="btn btn-secondary" type="submit" formaction="@Url.Action("Test", "PlaidSettings", new { area = PlaidConstants.Features.Plaid })">@T["Test the connection"]</button>
-            <span class="hint">@(Model.HostSuppliesKeys ? T["Asks Plaid for a link token with the host's keys."] : T["Asks Plaid for a link token with the saved settings. Save your changes first."])</span>
+            <p class="text-muted">@T["Plaid lets a person link their bank: they sign in to it in a Plaid window, choose the account, and the bank account is saved with the bank's own numbers and verified at once. Copy the client id and the secret of the environment from the Plaid dashboard (Developers > Keys). Plaid bills each linked account."]</p>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="Environment">
+        <label asp-for="Environment" class="ocat-label">@T["Environment"]</label>
+        <div class="ocat-end">
+            <select asp-for="Environment" asp-items="Model.Environments" class="form-select"></select>
+            <span class="hint">@T["Sandbox links Plaid's test banks only. Each environment has its own secret."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="ClientId">
+        <label asp-for="ClientId" class="ocat-label">@T["Client id"]</label>
+        <div class="ocat-end">
+            <input asp-for="ClientId" class="form-control" maxlength="64" autocomplete="off" />
+            <span asp-validation-for="ClientId" class="text-danger"></span>
+            <span class="hint">@T["Leave it empty to turn Plaid off."]</span>
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="SecretName">
+        <label asp-for="SecretName" class="ocat-label">@T["Secret"]</label>
+        <div class="ocat-end">
+            <select asp-for="SecretName" asp-items="Model.Secrets" class="form-select">
+                <option value="">@T["Choose a secret"]</option>
+            </select>
+            <span asp-validation-for="SecretName" class="text-danger"></span>
+            <span class="hint">@T["The Orchard secret (a text secret) that holds the Plaid secret. The secret is never kept in these settings. Add or change it under"] <a href="@Url.Action("Index", "Admin", new { area = "OrchardCore.Secrets" })">@T["Security > Secrets"]</a>.</span>
         </div>
     </div>
 }

@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Payroll.Core.Canada;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -13,11 +14,18 @@ namespace CrestApps.OrchardCore.Payroll.Drivers;
 /// </summary>
 internal sealed class EmployerCanadaDisplayDriver : DisplayDriver<Employer>
 {
+    internal readonly IStringLocalizer S;
+
+    public EmployerCanadaDisplayDriver(IStringLocalizer<EmployerCanadaDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(Employer employer, BuildEditorContext context)
         => Initialize<EmployerCanadaViewModel>("EmployerCanada_Edit", model =>
         {
             model.DentalBenefitsCode = employer.GetCanadaSettings().DentalBenefitsCode;
-        }).Location("Content:6");
+        }).Location(l => l.Zone("Content", "6").Card(S["Canada"], "60"));
 
     public override async Task<IDisplayResult> UpdateAsync(Employer employer, UpdateEditorContext context)
     {

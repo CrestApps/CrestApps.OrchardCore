@@ -39,7 +39,7 @@ internal sealed class TicketDeskTimeDisplayDriver : DisplayDriver<TicketDesk>
                 .OrderBy(stage => stage.Position)
                 .ThenBy(stage => stage.Name, StringComparer.CurrentCultureIgnoreCase)
                 .Select(stage => new SelectListItem(stage.Name, stage.ItemId))];
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Time Tracking"], "70"));
 
     public override async Task<IDisplayResult> UpdateAsync(TicketDesk desk, UpdateEditorContext context)
     {

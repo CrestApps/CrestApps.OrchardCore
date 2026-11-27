@@ -46,6 +46,7 @@ public sealed class Startup : StartupBase
             .AddHandler<QuizPartHandler>();
 
         services.AddDisplayDriver<GradingQueueRow, GradingQueueRowDisplayDriver>();
+        services.AddDisplayDriver<GradeScaleEditViewModel, GradeScaleEditDisplayDriver>();
         services.AddPermissionProvider<AssessmentsPermissionsProvider>();
         services.AddNavigationProvider<AssessmentsAdminMenu>();
     }

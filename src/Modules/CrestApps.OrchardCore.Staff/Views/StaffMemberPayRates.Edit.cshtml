@@ -1,0 +1,12 @@
+@model CrestApps.OrchardCore.Staff.Drivers.StaffPayViewModel
+
+<div class="row g-2 fw-semibold small mb-1"><div class="col-md-4">@T["From"]</div><div class="col-md-4">@T["Rate"]</div><div class="col-md-4">@T["Kind of work"]</div></div>
+@for (var i = 0; i < Model.Rates.Count; i++)
+{
+    <div class="row g-2 mb-2">
+        <div class="col-md-4"><input type="date" name="@Html.NameFor(m => m.Rates[i].EffectiveFrom)" value="@Model.Rates[i].EffectiveFrom?.ToString("yyyy-MM-dd")" class="form-control" aria-label="@T["From"]" /></div>
+        <div class="col-md-4"><input name="@Html.NameFor(m => m.Rates[i].HourlyRate)" value="@Model.Rates[i].HourlyRate" class="form-control" inputmode="decimal" aria-label="@T["Rate"]" placeholder="25.50" /></div>
+        <div class="col-md-4"><input name="@Html.NameFor(m => m.Rates[i].ActivityCodeId)" value="@Model.Rates[i].ActivityCodeId" class="form-control" aria-label="@T["Kind of work"]" placeholder="@T["All work"]" /></div>
+    </div>
+}
+<span class="hint">@T["An hourly rate, or a rate per unit for pay by the unit. The rate that applies on a day is the latest one that has started; a rate for a kind of work wins over the general one."]</span>

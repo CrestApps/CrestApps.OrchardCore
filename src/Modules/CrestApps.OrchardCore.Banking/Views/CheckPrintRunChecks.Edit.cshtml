@@ -1,0 +1,26 @@
+@using CrestApps.OrchardCore.Currencies
+@model CheckPrintRunViewModel
+
+@if (Model.Checks.Count == 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <p class="mb-0">@T["No check of {0} waits to print.", Model.BankAccountName]</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <p class="hint">@T["They print in this order, oldest first. Clear a check to leave it for another run."]</p>
+            @foreach (var check in Model.Checks)
+            {
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="CheckIds" value="@check.ItemId" id="check-@check.ItemId" checked="@Model.CheckIds.Contains(check.ItemId)" />
+                    <label class="form-check-label" for="check-@check.ItemId">@T["{0}, {1} {2}, dated {3}", check.PayeeName, CurrencyScale.FormatForDisplay(check.Amount, check.Currency), check.Currency, check.CheckDate.ToString("d")]</label>
+                </div>
+            }
+        </div>
+    </div>
+}

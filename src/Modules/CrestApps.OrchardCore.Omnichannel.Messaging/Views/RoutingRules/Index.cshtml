@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.Core.Models
+
+@model ListCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="MessagingRoutingRules" title="@T["Routing Rules"]" />
+</zone>
+
+<p class="text-muted">@T["Rules that give conversations nobody owns to an agent. Enabled rules are tried from the lowest order up; the first that finds an agent assigns the conversation, and a conversation no rule assigns stays where it is."]</p>
+
+@* The form is necessary to generate an antiforgery token for the delete action. *@
+<form asp-action="Index" method="post" class="no-multisubmit" data-list-management data-client-side-search="true">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="button" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Routing Rule"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* The rows are rendered by the AdminList shape, in the order the rules are tried, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="MessagingRoutingRules" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> There are no routing rules at the moment."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Name" position="20" title="@T["Name"]" />
+            <admin-list-column name="Routing" position="30" title="@T["Routing"]" width="auto" />
+            <admin-list-column name="Order" position="40" title="@T["Order"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+
+    <div id="list-alert" class="alert alert-info my-3 d-none text-center" role="alert">
+        @T["Your search returned no results."]
+    </div>
+</form>
+
+<script asp-name="list-management-ui" at="Foot"></script>

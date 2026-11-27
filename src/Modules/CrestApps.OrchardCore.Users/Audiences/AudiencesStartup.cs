@@ -23,6 +23,7 @@ public sealed class AudiencesStartup : StartupBase
         services.AddPermissionProvider<UserAudiencePermissionProvider>();
         services.AddNavigationProvider<UserAudiencesAdminMenu>();
         services.AddDisplayDriver<UserAudienceRow, UserAudienceRowDisplayDriver>();
+        services.AddDisplayDriver<UserAudienceEditViewModel, UserAudienceEditDisplayDriver>();
         services.AddDisplayDriver<UserAudienceMemberRow, UserAudienceMemberRowDisplayDriver>();
     }
 }

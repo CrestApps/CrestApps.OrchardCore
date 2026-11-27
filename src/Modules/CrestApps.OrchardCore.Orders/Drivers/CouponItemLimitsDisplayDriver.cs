@@ -5,6 +5,7 @@ using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -21,11 +22,15 @@ internal sealed class CouponItemLimitsDisplayDriver : DisplayDriver<Coupon>
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly LinkGenerator _linkGenerator;
 
+    internal readonly IStringLocalizer S;
+
     public CouponItemLimitsDisplayDriver(
         CouponItemLookup lookup,
         IHttpContextAccessor httpContextAccessor,
-        LinkGenerator linkGenerator)
+        LinkGenerator linkGenerator,
+        IStringLocalizer<CouponItemLimitsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _lookup = lookup;
         _httpContextAccessor = httpContextAccessor;
         _linkGenerator = linkGenerator;
@@ -44,7 +49,7 @@ internal sealed class CouponItemLimitsDisplayDriver : DisplayDriver<Coupon>
             model.BuyCategoryIds = [.. coupon.BuyCategoryIds ?? []];
             model.InitialBuyProductsJson = ToJson(await _lookup.GetProductsAsync(model.BuyProductIds));
             model.InitialBuyCategoriesJson = ToJson(await _lookup.GetCategoriesAsync(model.BuyCategoryIds));
-        }).Location("Content:10");
+        }).Location(l => l.Zone("Content", "10").Card(S["Item Limits"], "100"));
 
     public override async Task<IDisplayResult> UpdateAsync(Coupon coupon, UpdateEditorContext context)
     {

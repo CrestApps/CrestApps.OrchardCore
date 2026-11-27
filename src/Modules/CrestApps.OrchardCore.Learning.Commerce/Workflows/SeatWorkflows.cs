@@ -4,6 +4,8 @@ using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
 using Json.Schema;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
@@ -139,6 +141,19 @@ public sealed class LicensePoolRunningLowEventDisplayDriver : ActivityDisplayDri
 
 public sealed class GiveSeatTaskDisplayDriver : ActivityDisplayDriver<GiveSeatTask, GiveSeatTaskViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    public GiveSeatTaskDisplayDriver(IStringLocalizer<GiveSeatTaskDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(GiveSeatTask activity, BuildEditorContext context)
+    {
+        return Initialize<GiveSeatTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Task"], "10"));
+    }
+
     protected override void EditActivity(GiveSeatTask activity, GiveSeatTaskViewModel model)
     {
         model.PoolId = activity.PoolId;

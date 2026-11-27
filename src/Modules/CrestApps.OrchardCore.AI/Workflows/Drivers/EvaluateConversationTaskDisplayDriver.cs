@@ -44,6 +44,16 @@ public sealed class EvaluateConversationTaskDisplayDriver : ActivityDisplayDrive
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(EvaluateConversationTask activity, BuildEditorContext context)
+    {
+        return Combine(
+            Initialize<EvaluateConversationTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Evaluation"], "10")),
+            Initialize<EvaluateConversationTaskViewModel>("EvaluateConversationTaskConversation_Fields_Edit", model => EditActivityAsync(activity, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Conversation"], "20")));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(EvaluateConversationTask activity, UpdateEditorContext context)
     {
         var model = new EvaluateConversationTaskViewModel();

@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Chat.Claude.Services;
 using CrestApps.OrchardCore.AI.Chat.Claude.Settings;
 using CrestApps.OrchardCore.AI.Chat.Claude.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -17,17 +18,23 @@ internal sealed class AIProfileClaudeDisplayDriver : DisplayDriver<AIProfile>
     private readonly ClaudeClientService _claudeClientService;
     private readonly ISiteService _siteService;
 
+    internal readonly IStringLocalizer S;
+
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIProfileClaudeDisplayDriver"/> class.
     /// </summary>
     /// <param name="claudeClientService">The claude client service.</param>
     /// <param name="siteService">The site service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public AIProfileClaudeDisplayDriver(
         ClaudeClientService claudeClientService,
-        ISiteService siteService)
+        ISiteService siteService,
+        IStringLocalizer<AIProfileClaudeDisplayDriver> stringLocalizer)
     {
         _claudeClientService = claudeClientService;
         _siteService = siteService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
@@ -42,7 +49,7 @@ internal sealed class AIProfileClaudeDisplayDriver : DisplayDriver<AIProfile>
             var siteSettings = await _siteService.GetSettingsAsync<ClaudeSettings>();
             model.IsClaudeConfigured = siteSettings.IsConfigured();
             model.AvailableModels = await LoadModelsAsync(siteSettings, model.ClaudeModel);
-        }).Location("Content:3.6%General;1");
+        }).Location(l => l.Zone("Content", "3.6").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

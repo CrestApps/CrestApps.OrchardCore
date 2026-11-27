@@ -32,6 +32,7 @@ public sealed class CohortsStartup : StartupBase
         services.AddPermissionProvider<CohortsPermissionProvider>();
         services.AddNavigationProvider<CohortsAdminMenu>();
         services.AddDisplayDriver<CohortRow, CohortRowDisplayDriver>();
+        services.AddDisplayDriver<CohortEditViewModel, CohortEditDisplayDriver>();
         services.AddDisplayDriver<CohortMemberRow, CohortMemberRowDisplayDriver>();
     }
 }

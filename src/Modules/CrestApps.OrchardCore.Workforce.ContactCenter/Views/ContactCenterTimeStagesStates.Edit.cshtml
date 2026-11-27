@@ -1,0 +1,18 @@
+@model ContactCenterTimeStagesViewModel
+
+@for (var i = 0; i < Model.States.Count; i++)
+{
+    <div class="ocat-wrapper">
+        <label for="state-@i" class="ocat-label">@Model.States[i].Label</label>
+        <div class="ocat-end">
+            <input type="hidden" asp-for="States[i].Key" />
+            <select id="state-@i" asp-for="States[i].StageId" class="form-select" style="max-width: 24rem">
+                <option value="">@T["Not tracked"]</option>
+                @foreach (var option in Model.StageOptions)
+                {
+                    <option value="@option.Value" selected="@(option.Value == Model.States[i].StageId)">@option.Text</option>
+                }
+            </select>
+        </div>
+    </div>
+}

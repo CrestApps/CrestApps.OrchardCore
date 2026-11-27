@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Dispatch.Services;
 using CrestApps.OrchardCore.Dispatch.ViewModels;
 using CrestApps.OrchardCore.WorkOrders.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -14,8 +15,13 @@ internal sealed class WorkOrderTechniciansDisplayDriver : DisplayDriver<WorkOrde
 {
     private readonly IDispatchSettingsProvider _settingsProvider;
 
-    public WorkOrderTechniciansDisplayDriver(IDispatchSettingsProvider settingsProvider)
+    internal readonly IStringLocalizer S;
+
+    public WorkOrderTechniciansDisplayDriver(
+        IDispatchSettingsProvider settingsProvider,
+        IStringLocalizer<WorkOrderTechniciansDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _settingsProvider = settingsProvider;
     }
 
@@ -25,7 +31,7 @@ internal sealed class WorkOrderTechniciansDisplayDriver : DisplayDriver<WorkOrde
             model.PreferredWorkerIds = [.. workOrder.PreferredWorkerIds ?? []];
             model.ExcludedWorkerIds = [.. workOrder.ExcludedWorkerIds ?? []];
             model.Capabilities = string.Join(",", (await _settingsProvider.GetAsync()).GetTechnicianCapabilities());
-        }).Location("Content:6");
+        }).Location(l => l.Zone("Content", "6").Card(S["Technicians"], "6"));
 
     public override async Task<IDisplayResult> UpdateAsync(WorkOrder workOrder, UpdateEditorContext context)
     {

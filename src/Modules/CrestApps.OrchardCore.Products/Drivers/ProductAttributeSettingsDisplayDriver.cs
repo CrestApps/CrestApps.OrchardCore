@@ -68,7 +68,7 @@ public sealed class ProductAttributeSettingsDisplayDriver : ContentPartFieldDefi
             viewModel.IsNumber = kind == ProductAttributeValueKind.Number;
             viewModel.CanHaveSwatches = kind is ProductAttributeValueKind.Text or ProductAttributeValueKind.Term;
             viewModel.IsTaxonomy = kind == ProductAttributeValueKind.Term && model.FieldDefinition.Name == "TaxonomyField";
-        }).Location("Content:20");
+        }).Location(l => l.Zone("Content", "20").Card(S["Product Listing"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentPartFieldDefinition model, UpdatePartFieldEditorContext context)

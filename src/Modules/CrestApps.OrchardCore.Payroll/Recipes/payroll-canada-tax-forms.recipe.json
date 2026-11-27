@@ -1,0 +1,464 @@
+{
+  "name": "PayrollCanadaTaxForms",
+  "displayName": "Canada Payroll: T4 and RL-1 tax forms",
+  "description": "Adds the Canadian tax forms worked out from the final pay statements: the T4 slips and T4 Summary for an employer registered in CA, and the RL-1 slips and RL-1 Summary for one registered in CA-QC. Running it again puts back the shipped fields and formulas of these forms. Edit the forms, or add others, under Taxation > Tax Forms; check the yearly maximums against the CRA's current figures before filing.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [
+    "payroll"
+  ],
+  "tags": [
+    "payroll",
+    "canada",
+    "tax forms",
+    "t4",
+    "rl-1"
+  ],
+  "steps": [
+    {
+      "name": "Feature",
+      "enable": [
+        "CrestApps.OrchardCore.Taxation.TaxForms",
+        "CrestApps.OrchardCore.Payroll",
+        "CrestApps.OrchardCore.Payroll.Canada"
+      ]
+    },
+    {
+      "name": "TaxForms",
+      "Forms": [
+        {
+          "Name": "CA-T4",
+          "DisplayName": "T4 slips and T4 Summary (remuneration paid)",
+          "Description": "The T4 slip of each employee paid Canadian source deductions in a year, one for each province of employment, and the T4 Summary: the slips' totals, the employer's CPP and EI, the total deductions, the remittances to the CRA and the balance.",
+          "Source": "Payroll",
+          "Jurisdiction": "CA",
+          "Period": "Year",
+          "HasRecipientStatements": true,
+          "StatementPerJurisdiction": true,
+          "RecipientCondition": null,
+          "MissingTaxIdNote": "{0}: no social insurance number on file.",
+          "Enabled": true,
+          "Values": [
+            {
+              "Name": "MaximumInsurableEarnings",
+              "Year": 2024,
+              "Amount": 63200
+            },
+            {
+              "Name": "MaximumInsurableEarnings",
+              "Year": 2025,
+              "Amount": 65700
+            },
+            {
+              "Name": "MaximumInsurableEarnings",
+              "Year": 2026,
+              "Amount": 68900
+            },
+            {
+              "Name": "MaximumPensionableEarnings",
+              "Year": 2024,
+              "Amount": 73200
+            },
+            {
+              "Name": "MaximumPensionableEarnings",
+              "Year": 2025,
+              "Amount": 81200
+            },
+            {
+              "Name": "MaximumPensionableEarnings",
+              "Year": 2026,
+              "Amount": 85000
+            }
+          ],
+          "Checks": [
+            {
+              "Condition": "ISACCOUNT(ACCOUNT('CA'), '#########RP####')",
+              "Note": "The employer's CA registration needs the CRA business number with its payroll program account, such as 123456789RP0001."
+            },
+            {
+              "Condition": "IN(DENTALCODE(), 1, 2, 3, 4, 5)",
+              "Note": "The employer needs its dental benefits code (T4 box 45) under Canada on the employer: every T4 slip reports it."
+            }
+          ],
+          "Fields": [
+            {
+              "Number": "14",
+              "Label": "14 Employment income",
+              "Level": "Recipient",
+              "Formula": "WAGES('IncomeTax')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "22",
+              "Label": "22 Income tax deducted",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-FIT', 'CA-*-PIT') - TAX('CA-QC-PIT')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "16",
+              "Label": "16 Employee's CPP contributions",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-CPP')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "16A",
+              "Label": "16A Employee's second CPP contributions",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-CPP2')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "17",
+              "Label": "17 Employee's QPP contributions",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-QC-QPP')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "17A",
+              "Label": "17A Employee's second QPP contributions",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-QC-QPP2')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "18",
+              "Label": "18 Employee's EI premiums",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-EI', 'CA-EI-QC')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "24",
+              "Label": "24 EI insurable earnings",
+              "Level": "Recipient",
+              "Formula": "LEAST(VALUE('MaximumInsurableEarnings'), TAXABLE('CA-EI', 'CA-EI-QC'))",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "26",
+              "Label": "26 CPP/QPP pensionable earnings",
+              "Level": "Recipient",
+              "Formula": "IF(HASTAX('CA-CPP', 'CA-QC-QPP'), LEAST(VALUE('MaximumPensionableEarnings'), GREATEST(WAGES('SocialInsurance'), IF(HASTAX('CA-QC-QPP'), TAXABLE('CA-QC-QPP'), TAXABLE('CA-CPP')))), 0)",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "55",
+              "Label": "55 Employee's PPIP premiums",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-QC-QPIP')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "56",
+              "Label": "56 PPIP insurable earnings",
+              "Level": "Recipient",
+              "Formula": "TAXABLE('CA-QC-QPIP')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "19",
+              "Label": "19 Employer's EI premiums",
+              "Level": "Filing",
+              "Formula": "TAX('CA-EI-ER', 'CA-EI-QC-ER')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "27",
+              "Label": "27 Employer's CPP contributions",
+              "Level": "Filing",
+              "Formula": "TAX('CA-CPP-ER')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "27A",
+              "Label": "27A Employer's second CPP contributions",
+              "Level": "Filing",
+              "Formula": "TAX('CA-CPP2-ER')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "80",
+              "Label": "80 Total deductions reported",
+              "Level": "Filing",
+              "Formula": "[16] + [16A] + [18] + [19] + [22] + [27] + [27A]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "82",
+              "Label": "82 Remittances",
+              "Level": "Filing",
+              "Formula": "DEPOSITS('CA')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "84",
+              "Label": "84 Overpayment",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [82] - [80])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "86",
+              "Label": "86 Balance due",
+              "Level": "Filing",
+              "Formula": "GREATEST(0, [80] - [82])",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "88",
+              "Label": "88 Total number of T4 slips filed",
+              "Level": "Filing",
+              "Formula": "RECIPIENTS()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            }
+          ],
+          "Statement": {
+            "Name": "T4 slip",
+            "Title": "T4 Statement of Remuneration Paid",
+            "Copy": "Copy for the employee: keep it for your records and use it to file your income tax return",
+            "TaxIdLabel": "Social insurance number",
+            "TaxIdFormat": "XXX XX{0}",
+            "FilerTaxIdLabel": "Employer's account number",
+            "FilerAccountJurisdiction": "CA",
+            "FileName": "T4"
+          },
+          "Properties": {
+            "PayrollTaxFormSettings": {
+              "Workers": "Employees",
+              "PeopleJurisdiction": "CA",
+              "ListJurisdictionAmounts": false,
+              "PayCodeFieldPrefix": null
+            }
+          }
+        },
+        {
+          "Name": "CA-RL1",
+          "DisplayName": "RL-1 slips and RL-1 Summary (Revenu Québec)",
+          "Description": "The RL-1 slip of each employee paid Quebec source deductions in a year, and the RL-1 Summary: the slips' totals, the employer's QPP, QPP2 and QPIP and its health services fund contribution, what is owed, the remittances to Revenu Québec and the balance.",
+          "Source": "Payroll",
+          "Jurisdiction": "CA-QC",
+          "Period": "Year",
+          "HasRecipientStatements": true,
+          "StatementPerJurisdiction": false,
+          "RecipientCondition": null,
+          "MissingTaxIdNote": "{0}: no social insurance number on file.",
+          "Enabled": true,
+          "Values": [],
+          "Checks": [
+            {
+              "Condition": "ISACCOUNT(ACCOUNT('CA-QC'), '##########TQ####')",
+              "Note": "The employer's CA-QC registration needs the Revenu Québec identification number, such as 1234567890TQ0001."
+            }
+          ],
+          "Fields": [
+            {
+              "Number": "A",
+              "Label": "A Employment income",
+              "Level": "Recipient",
+              "Formula": "WAGES('IncomeTax')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "E",
+              "Label": "E Québec income tax withheld",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-QC-PIT')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "B.A",
+              "Label": "B.A QPP contribution",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-QC-QPP')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "B.B",
+              "Label": "B.B Additional QPP contribution",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-QC-QPP2')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "C",
+              "Label": "C Employment insurance premium",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-EI-QC')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "G",
+              "Label": "G Pensionable salary or wages under the QPP",
+              "Level": "Recipient",
+              "Formula": "TAXABLE('CA-QC-QPP')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "H",
+              "Label": "H QPIP premium",
+              "Level": "Recipient",
+              "Formula": "TAX('CA-QC-QPIP')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "I",
+              "Label": "I Eligible salary or wages under the QPIP",
+              "Level": "Recipient",
+              "Formula": "TAXABLE('CA-QC-QPIP')",
+              "AddToFiling": true,
+              "AcceptsReportedAmounts": false,
+              "Print": "Always"
+            },
+            {
+              "Number": "QPP.Employer",
+              "Label": "Employer's QPP contribution",
+              "Level": "Filing",
+              "Formula": "TAX('CA-QC-QPP-ER')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "QPP2.Employer",
+              "Label": "Employer's additional QPP contribution",
+              "Level": "Filing",
+              "Formula": "TAX('CA-QC-QPP2-ER')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "QPIP.Employer",
+              "Label": "Employer's QPIP premium",
+              "Level": "Filing",
+              "Formula": "TAX('CA-QC-QPIP-ER')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "HSF",
+              "Label": "Contribution to the health services fund",
+              "Level": "Filing",
+              "Formula": "TAX('CA-QC-HSF')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "Owed",
+              "Label": "Total owed",
+              "Level": "Filing",
+              "Formula": "[B.A] + [B.B] + [E] + [H] + [QPP.Employer] + [QPP2.Employer] + [QPIP.Employer] + [HSF]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "Remitted",
+              "Label": "Remittances to Revenu Québec",
+              "Level": "Filing",
+              "Formula": "DEPOSITS('CA-QC')",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "Balance",
+              "Label": "Balance (below zero when overpaid)",
+              "Level": "Filing",
+              "Formula": "[Owed] - [Remitted]",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            },
+            {
+              "Number": "Slips",
+              "Label": "Number of RL-1 slips",
+              "Level": "Filing",
+              "Formula": "RECIPIENTS()",
+              "AddToFiling": false,
+              "AcceptsReportedAmounts": false,
+              "Print": "Never"
+            }
+          ],
+          "Statement": {
+            "Name": "RL-1 slip",
+            "Title": "RL-1 Employment and Other Income",
+            "Copy": "Copy for the employee: keep it for your records and use it to file your Quebec income tax return",
+            "TaxIdLabel": "Social insurance number",
+            "TaxIdFormat": "XXX XX{0}",
+            "FilerTaxIdLabel": "Identification number",
+            "FilerAccountJurisdiction": "CA-QC",
+            "FileName": "RL-1"
+          },
+          "Properties": {
+            "PayrollTaxFormSettings": {
+              "Workers": "Employees",
+              "PeopleJurisdiction": "CA-QC",
+              "ListJurisdictionAmounts": false,
+              "PayCodeFieldPrefix": null
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

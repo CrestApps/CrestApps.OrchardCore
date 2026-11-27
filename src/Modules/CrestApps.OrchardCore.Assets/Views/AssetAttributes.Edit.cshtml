@@ -1,0 +1,43 @@
+@model AssetEditViewModel
+
+@{
+    // The attribute values post under the section's prefix, as the dictionary model binding reads them.
+    var attributesName = Html.NameFor(m => m.AttributeValues).ToString();
+}
+
+@if (Model.Type?.Attributes.Count > 0)
+{
+    @foreach (var field in Model.Type.Attributes)
+    {
+    var id = "attribute-" + field.Name.Replace(' ', '-');
+    var value = Model.AttributeValues.GetValueOrDefault(field.Name);
+    <div class="ocat-wrapper">
+        <label for="@id" class="ocat-label">@field.Name</label>
+        <div class="ocat-end">
+            @switch (field.Kind)
+            {
+                case AssetAttributeKind.Number:
+                    <input id="@id" name="@(attributesName)[@field.Name]" type="number" step="any" value="@value" class="form-control" style="max-width: 12rem" />
+                    break;
+                case AssetAttributeKind.Date:
+                    <input id="@id" name="@(attributesName)[@field.Name]" type="date" value="@value" class="form-control" style="max-width: 12rem" />
+                    break;
+                case AssetAttributeKind.YesNo:
+                    <select id="@id" name="@(attributesName)[@field.Name]" class="form-select">
+                        <option value=""></option>
+                        <option value="Yes" selected="@(value == "Yes")">@T["Yes"]</option>
+                        <option value="No" selected="@(value == "No")">@T["No"]</option>
+                    </select>
+                    break;
+                default:
+                    <input id="@id" name="@(attributesName)[@field.Name]" value="@value" class="form-control" />
+                    break;
+            }
+        </div>
+    </div>
+    }
+}
+else if (Model.Type is null)
+{
+    <p class="hint">@T["Choose the type and save to fill in the values its type records."]</p>
+}

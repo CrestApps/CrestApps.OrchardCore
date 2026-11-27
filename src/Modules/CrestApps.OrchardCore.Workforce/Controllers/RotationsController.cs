@@ -12,6 +12,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -34,6 +36,8 @@ public sealed class RotationsController : Controller
     private readonly IWorkforceScopeService _scopeService;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<RotationEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -51,6 +55,8 @@ public sealed class RotationsController : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     public RotationsController(
         IAuthorizationService authorizationService,
         IShiftPatternManager patternManager,
@@ -61,7 +67,9 @@ public sealed class RotationsController : Controller
         ILocalClock localClock,
         INotifier notifier,
         IHtmlLocalizer<RotationsController> htmlLocalizer,
-        IStringLocalizer<RotationsController> stringLocalizer)
+        IStringLocalizer<RotationsController> stringLocalizer,
+        IDisplayManager<RotationEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor)
     {
         _authorizationService = authorizationService;
         _patternManager = patternManager;
@@ -73,6 +81,8 @@ public sealed class RotationsController : Controller
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
     }
 
     /// <summary>
@@ -163,6 +173,8 @@ public sealed class RotationsController : Controller
 
         await PopulateAsync(model, scope, pattern);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
         return View(model);
     }
 
@@ -180,6 +192,8 @@ public sealed class RotationsController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
         var isNew = string.IsNullOrEmpty(model.Id);
         var pattern = isNew
@@ -227,6 +241,8 @@ public sealed class RotationsController : Controller
         {
             model.Slots = Enumerable.Range(0, MaxWeeks * 7).Select(index => index < slots.Length ? slots[index] : null).ToArray();
             await PopulateAsync(model, scope, pattern);
+
+            model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
             return View(model);
         }

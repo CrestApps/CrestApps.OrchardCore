@@ -91,6 +91,8 @@ public sealed class AgentsStartup : StartupBase
             .AddScoped<IActivityDispositionHandler, ContactCenterActivityDispositionHandler>()
             // Every completion with a disposition is published, so a workflow can follow up on it.
             .AddScoped<IActivityDispositionHandler, ActivityDispositionAppliedPublisher>()
+            // A subject action's follow-up can go to the agent the call was placed or connected for.
+            .AddScoped<IActivityCallAgentResolver, InteractionActivityCallAgentResolver>()
             .AddScoped<IAgentSessionStore, AgentSessionStore>()
             .AddScoped<IAgentSessionManager, AgentSessionManager>()
             .AddScoped<IAgentSessionService, AgentSessionService>()

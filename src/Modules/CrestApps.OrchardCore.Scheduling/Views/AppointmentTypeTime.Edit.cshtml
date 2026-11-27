@@ -1,0 +1,6 @@
+@model AppointmentTypeViewModel
+
+<div class="ocat-wrapper"><label asp-for="DurationMinutes" class="ocat-label">@T["Length (minutes)"]</label><div class="ocat-end"><input asp-for="DurationMinutes" type="number" min="5" class="form-control" style="max-width: 10rem" /></div></div>
+<div class="ocat-wrapper"><label asp-for="SlotIntervalMinutes" class="ocat-label">@T["Start times every (minutes)"]</label><div class="ocat-end"><input asp-for="SlotIntervalMinutes" type="number" min="5" class="form-control" style="max-width: 10rem" /></div></div>
+<div class="ocat-wrapper"><label asp-for="BufferBeforeMinutes" class="ocat-label">@T["Free time before (minutes)"]</label><div class="ocat-end"><input asp-for="BufferBeforeMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /></div></div>
+<div class="ocat-wrapper"><label asp-for="BufferAfterMinutes" class="ocat-label">@T["Free time after (minutes)"]</label><div class="ocat-end"><input asp-for="BufferAfterMinutes" type="number" min="0" class="form-control" style="max-width: 10rem" /></div></div>

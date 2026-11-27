@@ -24,6 +24,8 @@ Payroll works out what you owe and prepares the forms; you deposit the money and
 
 A deposit counted in a filed return can't be deleted; amend the return instead.
 
+The forms are tax forms you can change or add to under **Commerce** → **Taxation** → **Tax Forms**: see [Tax forms](tax-forms.md).
+
 ## Prepare and file a form
 
 1. Open **Filings**, choose the employer and choose **Show**.

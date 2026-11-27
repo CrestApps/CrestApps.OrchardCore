@@ -64,10 +64,10 @@ internal sealed class AIProfileTemplateDeploymentDisplayDriver : DisplayDriver<A
 
         return Combine(
             Initialize<EditProfileDeploymentViewModel>("AIProfileChatDeployment_Edit", PopulateAsync)
-                .Location("Content:1%Deployments & Interactions;2")
+                .Location(l => l.Zone("Content", "1").Card(S["Deployments & Interactions"], "2"))
                 .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile)),
             Initialize<EditProfileDeploymentViewModel>("AIProfileUtilityDeployment_Edit", PopulateAsync)
-                .Location("Content:2%Deployments & Interactions;2")
+                .Location(l => l.Zone("Content", "2").Card(S["Deployments & Interactions"], "2"))
                 .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile)));
     }
 

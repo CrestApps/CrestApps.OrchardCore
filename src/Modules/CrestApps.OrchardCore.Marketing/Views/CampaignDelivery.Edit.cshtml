@@ -1,0 +1,20 @@
+@model CampaignEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="ScheduledLocal" class="ocat-label">@T["Send at"]</label>
+    <div class="ocat-end">
+        <input asp-for="ScheduledLocal" type="datetime-local" class="form-control" />
+        <span class="hint">@T["Optional, in the site's time zone. Blank sends it at once."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="TestEmail" class="ocat-label">@T["Send a test to"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="TestEmail" type="email" class="form-control" autocomplete="off" />
+            <button type="submit" name="submit" value="test" class="btn btn-outline-secondary">@T["Send test"]</button>
+        </div>
+        <span class="hint">@T["As the segment's first customer would get it."]</span>
+    </div>
+</div>

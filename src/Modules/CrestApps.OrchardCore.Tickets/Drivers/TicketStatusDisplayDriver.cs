@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Tickets.Models;
 using CrestApps.OrchardCore.Tickets.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -10,6 +11,17 @@ namespace CrestApps.OrchardCore.Tickets.Drivers;
 /// </summary>
 internal sealed class TicketStatusDisplayDriver : TicketSettingsDisplayDriverBase<TicketStatus>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TicketStatusDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TicketStatusDisplayDriver(IStringLocalizer<TicketStatusDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc/>
     protected override string Column => "Category";
 
@@ -23,7 +35,7 @@ internal sealed class TicketStatusDisplayDriver : TicketSettingsDisplayDriverBas
             model.PausesTimers = status.PausesTimers;
             model.Color = status.Color;
             model.Order = status.Order;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(TicketStatus status, UpdateEditorContext context)

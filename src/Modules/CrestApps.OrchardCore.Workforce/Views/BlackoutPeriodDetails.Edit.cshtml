@@ -1,0 +1,14 @@
+@model BlackoutPeriodEditViewModel
+
+<div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+<div class="ocat-wrapper">
+    <label asp-for="StartDate" class="ocat-label ocat-label-required">@T["Days"]</label>
+    <div class="ocat-end">
+        <div class="d-flex align-items-center gap-2">
+            <input asp-for="StartDate" type="date" class="form-control" style="max-width: 12rem" />
+            <span>@T["to"]</span>
+            <input asp-for="EndDate" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["To"]" />
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>

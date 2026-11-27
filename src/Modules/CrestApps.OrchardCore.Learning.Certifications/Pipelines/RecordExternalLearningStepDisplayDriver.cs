@@ -53,7 +53,11 @@ internal sealed class RecordExternalLearningStepDisplayDriver : DisplayDriver<Da
         => Initialize<RecordExternalLearningStepViewModel>($"{RecordExternalLearningStep.StepName}_Fields_Design", model => FillAsync(step, model)).Location("Design", "Content");
 
     public override IDisplayResult Edit(DataPipelineStep step, BuildEditorContext context)
-        => Initialize<RecordExternalLearningStepViewModel>($"{RecordExternalLearningStep.StepName}_Fields_Edit", model => FillAsync(step, model)).Location("Content");
+        => Combine(
+            Initialize<RecordExternalLearningStepViewModel>($"{RecordExternalLearningStep.StepName}_Fields_Edit", model => FillAsync(step, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Learning"], "10")),
+            Initialize<RecordExternalLearningStepViewModel>($"{RecordExternalLearningStep.StepName}CreditType_Fields_Edit", model => FillAsync(step, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Credit Type"], "20")));
 
     public override async Task<IDisplayResult> UpdateAsync(DataPipelineStep step, UpdateEditorContext context)
     {

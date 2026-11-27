@@ -35,20 +35,26 @@ internal sealed class SitemapWebCrawlerDisplayDriver : DisplayDriver<WebCrawler>
             return null;
         }
 
-        return Initialize<SitemapWebCrawlerViewModel>("SitemapWebCrawler_Edit", model =>
+        return Combine(
+            Initialize<SitemapWebCrawlerViewModel>("SitemapWebCrawlerSource_Edit", model => Populate(crawler, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Source"], "20")),
+            Initialize<SitemapWebCrawlerViewModel>("SitemapWebCrawlerLimits_Edit", model => Populate(crawler, model))
+                .Location(l => l.Zone("Content", "5.1").Card(S["Crawl Limits"], "30")));
+    }
+
+    private static void Populate(WebCrawler crawler, SitemapWebCrawlerViewModel model)
+    {
+        if (crawler.TryGet<SitemapWebCrawlerMetadata>(out var metadata))
         {
-            if (crawler.TryGet<SitemapWebCrawlerMetadata>(out var metadata))
-            {
-                model.BaseUrl = metadata.BaseUrl;
-                model.SitemapUrl = metadata.SitemapUrl;
-                model.MaxPages = metadata.MaxPages;
-                model.MaxConcurrentRequests = metadata.MaxConcurrentRequests;
-                model.RequestTimeoutSeconds = metadata.RequestTimeoutSeconds;
-                model.UserAgent = metadata.UserAgent;
-                model.IncludeUrlPatterns = JoinPatterns(metadata.IncludeUrlPatterns);
-                model.ExcludeUrlPatterns = JoinPatterns(metadata.ExcludeUrlPatterns);
-            }
-        }).Location("Content:5");
+            model.BaseUrl = metadata.BaseUrl;
+            model.SitemapUrl = metadata.SitemapUrl;
+            model.MaxPages = metadata.MaxPages;
+            model.MaxConcurrentRequests = metadata.MaxConcurrentRequests;
+            model.RequestTimeoutSeconds = metadata.RequestTimeoutSeconds;
+            model.UserAgent = metadata.UserAgent;
+            model.IncludeUrlPatterns = JoinPatterns(metadata.IncludeUrlPatterns);
+            model.ExcludeUrlPatterns = JoinPatterns(metadata.ExcludeUrlPatterns);
+        }
     }
 
     public override async Task<IDisplayResult> UpdateAsync(WebCrawler crawler, UpdateEditorContext context)

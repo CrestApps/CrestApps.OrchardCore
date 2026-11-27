@@ -1,4 +1,7 @@
 using System.Reflection;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
 
@@ -12,6 +15,22 @@ public sealed class AppointmentTaskDisplayDriver<TActivity> : ActivityDisplayDri
     where TActivity : AppointmentTaskActivity<TActivity>, ITask
 {
     private static readonly PropertyInfo[] _modelProperties = typeof(AppointmentTaskViewModel).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AppointmentTaskDisplayDriver{TActivity}"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AppointmentTaskDisplayDriver(IStringLocalizer<AppointmentTaskDisplayDriver<TActivity>> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<AppointmentTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
 
     /// <inheritdoc />
     protected override void EditActivity(TActivity activity, AppointmentTaskViewModel model)

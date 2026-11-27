@@ -1,9 +1,17 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.ContactCenter.ViewModels;
 
 public class AgentEntitlementViewModel
 {
+    /// <summary>
+    /// The editor built by the display drivers of this model, which groups the fields in cards.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     public string Id { get; set; }
 
     public string UserName { get; set; }

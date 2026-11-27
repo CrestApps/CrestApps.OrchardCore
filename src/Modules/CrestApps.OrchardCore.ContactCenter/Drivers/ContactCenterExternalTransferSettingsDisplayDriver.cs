@@ -72,7 +72,7 @@ public sealed class ContactCenterExternalTransferSettingsDisplayDriver
                     .ToList();
                 model.AllowUnlistedNumbers = settings.AllowUnlistedNumbers;
             })
-            .Location("Content:5#External transfer destinations")
+            .Location(l => l.Zone("Content", "5").Tab(S["External Transfer Destinations"], "5").Card(S["Approved Destinations"], "1"))
             .OnGroup(SettingsGroupId)
             .RenderWhen(() => _authorizationService.AuthorizeAsync(
                 _httpContextAccessor.HttpContext?.User,

@@ -28,6 +28,7 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
     private readonly IPayCodeManager _codes;
     private readonly IncomeTaxCategoryOptions _categories;
     private readonly PayrollFormBoxOptions _formBoxes;
+    private readonly ITaxFormManager _taxForms;
     private readonly IStringLocalizerFactory _localizerFactory;
 
     internal readonly IStringLocalizer S;
@@ -38,6 +39,7 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
         IPayCodeManager codes,
         IOptions<IncomeTaxCategoryOptions> categories,
         IOptions<PayrollFormBoxOptions> formBoxes,
+        ITaxFormManager taxForms,
         IStringLocalizerFactory localizerFactory,
         IStringLocalizer<PayrollPayCodeDisplayDriver> stringLocalizer)
     {
@@ -46,6 +48,7 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
         _codes = codes;
         _categories = categories.Value;
         _formBoxes = formBoxes.Value;
+        _taxForms = taxForms;
         _localizerFactory = localizerFactory;
         S = stringLocalizer;
     }
@@ -64,7 +67,7 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var settings = Read(code, model, context);
+        var settings = Read(code, model, context, [.. (await FormBoxChoicesAsync()).Select(choice => choice.Name)]);
 
         code.Put(settings);
 
@@ -77,8 +80,9 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
     /// <param name="code">The pay code, with its class already set.</param>
     /// <param name="model">The posted card.</param>
     /// <param name="context">The editor context, for errors; or <see langword="null"/>.</param>
+    /// <param name="formBoxes">The form boxes a pay code can report to; <see langword="null"/> for those registered in code.</param>
     /// <returns>The settings.</returns>
-    internal PayrollPayCodeSettings Read(PayCode code, PayrollPayCodeViewModel model, UpdateEditorContext context)
+    internal PayrollPayCodeSettings Read(PayCode code, PayrollPayCodeViewModel model, UpdateEditorContext context, IReadOnlyCollection<string> formBoxes = null)
     {
         var settings = new PayrollPayCodeSettings
         {
@@ -153,7 +157,7 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
 
         settings.YearLimits = [.. settings.YearLimits.OrderBy(limit => limit.EffectiveFrom)];
 
-        var boxes = _formBoxes.Boxes.Select(box => box.Name).ToHashSet(StringComparer.Ordinal);
+        var boxes = (formBoxes ?? [.. _formBoxes.Boxes.Select(box => box.Name)]).ToHashSet(StringComparer.Ordinal);
         var stored = code.GetPayrollSettings().FormBoxes;
 
         settings.FormBoxes = [.. (model.FormBoxes ?? []).Where(box => boxes.Contains(box) || stored.Contains(box)).Distinct(StringComparer.Ordinal)];
@@ -161,40 +165,79 @@ internal sealed class PayrollPayCodeDisplayDriver : DisplayDriver<PayCode>
         return settings;
     }
 
-    private ShapeResult Card(PayCode code, PayrollPayCodeViewModel typed)
-        => Initialize<PayrollPayCodeViewModel>("PayrollPayCode_Edit", async model =>
-        {
-            var settings = code.GetPayrollSettings();
-
-            model.Calculation = typed?.Calculation ?? settings.Calculation.ToString();
-            model.BaseCodeIds = typed?.BaseCodeIds ?? [.. settings.BaseCodeIds];
-            model.Supplemental = typed?.Supplemental ?? settings.Supplemental;
-            model.CountsInRegularRate = typed?.CountsInRegularRate ?? settings.CountsInRegularRate;
-            model.CountsAsHoursWorked = typed?.CountsAsHoursWorked ?? settings.CountsAsHoursWorked;
-            model.PeriodLimit = typed?.PeriodLimit ?? Text(settings.PeriodLimit);
-            model.LifetimeLimit = typed?.LifetimeLimit ?? Text(settings.LifetimeLimit);
-            model.Priority = typed?.Priority ?? settings.Priority;
-            model.Arrears = typed?.Arrears ?? settings.Arrears.ToString();
-            model.Proration = typed?.Proration ?? settings.Proration.ToString();
-            model.InRetroPay = typed?.InRetroPay ?? settings.InRetroPay;
-            model.FormBoxes = typed?.FormBoxes ?? [.. settings.FormBoxes];
-            model.Treatments = typed?.Treatments ?? settings.TaxTreatment.ToDictionary(pair => pair.Key, pair => pair.Value.ToString(), StringComparer.Ordinal);
-            model.YearLimits = typed?.YearLimits ?? [.. settings.YearLimits.Select(limit => new DatedAmountViewModel { EffectiveFrom = limit.EffectiveFrom, Amount = Text(limit.Amount) })];
-
-            for (var i = 0; i < BlankYearLimitRows; i++)
+    private CombinedResult Card(PayCode code, PayrollPayCodeViewModel typed)
+        => Combine(
+            Initialize<PayrollPayCodeViewModel>("PayrollPayCode_Edit", async model =>
             {
-                model.YearLimits.Add(new DatedAmountViewModel());
-            }
+                Populate(code, typed, model);
+                model.BaseCodes = [.. (await _codes.GetAllAsync())
+                    .Where(other => other.ItemId != code.ItemId && other.Class == PayCodeClass.Earning)
+                    .OrderBy(other => other.Code, StringComparer.OrdinalIgnoreCase)
+                    .Select(other => new SelectListItem($"{other.Code} · {other.Name}", other.ItemId, model.BaseCodeIds.Contains(other.ItemId)))];
+            }).Location(l => l.Zone("Content", "6").Card(S["Calculation"], "60"))
+            .RenderWhen(() => CanManageAsync()),
+            Initialize<PayrollPayCodeViewModel>("PayrollPayCodeTaxes_Edit", model =>
+            {
+                Populate(code, typed, model);
+                model.ClassDefault = PayrollPayCodeSettingsExtensions.DefaultTreatment(code.Class).ToString();
+                model.Categories = [.. _categories.Categories.Select(category => new SelectListItem(_localizerFactory.Localize(category.DisplayName).Value, category.Name))];
+            }).Location(l => l.Zone("Content", "6").Card(S["Taxes"], "61"))
+            .RenderWhen(() => CanManageAsync()),
+            Initialize<PayrollPayCodeViewModel>("PayrollPayCodeLimits_Edit", model => Populate(code, typed, model))
+                .Location(l => l.Zone("Content", "6").Card(S["Limits"], "62"))
+                .RenderWhen(() => CanManageAsync()),
+            Initialize<PayrollPayCodeViewModel>("PayrollPayCodeRules_Edit", async model =>
+            {
+                Populate(code, typed, model);
+                model.FormBoxOptions = [.. (await FormBoxChoicesAsync()).Select(choice => new SelectListItem(choice.Label, choice.Name, model.FormBoxes.Contains(choice.Name)))];
+            }).Location(l => l.Zone("Content", "6").Card(S["Rules"], "63"))
+            .RenderWhen(() => CanManageAsync()));
 
-            model.ClassDefault = PayrollPayCodeSettingsExtensions.DefaultTreatment(code.Class).ToString();
-            model.Categories = [.. _categories.Categories.Select(category => new SelectListItem(_localizerFactory.Localize(category.DisplayName).Value, category.Name))];
-            model.FormBoxOptions = [.. _formBoxes.Boxes.Select(box => new SelectListItem(_localizerFactory.Localize(box.DisplayName).Value, box.Name, model.FormBoxes.Contains(box.Name)))];
-            model.BaseCodes = [.. (await _codes.GetAllAsync())
-                .Where(other => other.ItemId != code.ItemId && other.Class == PayCodeClass.Earning)
-                .OrderBy(other => other.Code, StringComparer.OrdinalIgnoreCase)
-                .Select(other => new SelectListItem($"{other.Code} · {other.Name}", other.ItemId, model.BaseCodeIds.Contains(other.ItemId)))];
-        }).Location("Content:6")
-        .RenderWhen(() => CanManageAsync());
+    private static void Populate(PayCode code, PayrollPayCodeViewModel typed, PayrollPayCodeViewModel model)
+    {
+        var settings = code.GetPayrollSettings();
+
+        model.Calculation = typed?.Calculation ?? settings.Calculation.ToString();
+        model.BaseCodeIds = typed?.BaseCodeIds ?? [.. settings.BaseCodeIds];
+        model.Supplemental = typed?.Supplemental ?? settings.Supplemental;
+        model.CountsInRegularRate = typed?.CountsInRegularRate ?? settings.CountsInRegularRate;
+        model.CountsAsHoursWorked = typed?.CountsAsHoursWorked ?? settings.CountsAsHoursWorked;
+        model.PeriodLimit = typed?.PeriodLimit ?? Text(settings.PeriodLimit);
+        model.LifetimeLimit = typed?.LifetimeLimit ?? Text(settings.LifetimeLimit);
+        model.Priority = typed?.Priority ?? settings.Priority;
+        model.Arrears = typed?.Arrears ?? settings.Arrears.ToString();
+        model.Proration = typed?.Proration ?? settings.Proration.ToString();
+        model.InRetroPay = typed?.InRetroPay ?? settings.InRetroPay;
+        model.FormBoxes = typed?.FormBoxes ?? [.. settings.FormBoxes];
+        model.Treatments = typed?.Treatments ?? settings.TaxTreatment.ToDictionary(pair => pair.Key, pair => pair.Value.ToString(), StringComparer.Ordinal);
+        model.YearLimits = typed?.YearLimits ?? [.. settings.YearLimits.Select(limit => new DatedAmountViewModel { EffectiveFrom = limit.EffectiveFrom, Amount = Text(limit.Amount) })];
+
+        for (var i = 0; i < BlankYearLimitRows; i++)
+        {
+            model.YearLimits.Add(new DatedAmountViewModel());
+        }
+    }
+
+    // The boxes a pay code can report to: those of the tax forms that take pay codes, then those modules add in code.
+    private async Task<IReadOnlyList<(string Name, string Label)>> FormBoxChoicesAsync()
+    {
+        var choices = new List<(string Name, string Label)>();
+
+        foreach (var form in (await _taxForms.ListBySourceAsync(PayrollConstants.TaxFormSource)).Where(form => form.Enabled).OrderBy(form => form.DisplayName, StringComparer.CurrentCultureIgnoreCase))
+        {
+            foreach (var box in form.Fields.Where(box => box.AcceptsReportedAmounts && !string.IsNullOrEmpty(box.Number)))
+            {
+                choices.Add((form.PayCodeFieldPrefix() + box.Number, $"{form.DisplayName}: {box.Label ?? box.Number}"));
+            }
+        }
+
+        foreach (var box in _formBoxes.Boxes.Where(box => !choices.Any(choice => string.Equals(choice.Name, box.Name, StringComparison.Ordinal))))
+        {
+            choices.Add((box.Name, _localizerFactory.Localize(box.DisplayName).Value));
+        }
+
+        return choices;
+    }
 
     private decimal? Amount(string text, string field, UpdateEditorContext context)
     {

@@ -1,0 +1,18 @@
+@model BroadcastCreateViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="EndpointId">
+    <label asp-for="EndpointId" class="ocat-label ocat-label-required">@T["Send from"]</label>
+    <div class="ocat-end">
+        <select asp-for="EndpointId" asp-items="Model.Endpoints" id="endpoint-select" class="selectpicker show-tick" data-live-search="true" title="@T["Select the channel and address to send from"]"></select>
+        <span class="hint">@T["The address you pick decides the channel the broadcast is sent on."]</span>
+        <span asp-validation-for="EndpointId" class="text-danger"></span>
+    </div>
+</div>

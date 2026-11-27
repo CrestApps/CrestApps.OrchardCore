@@ -1,4 +1,7 @@
 using CrestApps.Core;
+using Azure.Core;
+using Azure.Core.Pipeline;
+using Azure.Security.KeyVault.Secrets;
 using CrestApps.OrchardCore.Cms.Web;
 using CrestApps.OrchardCore.ContactCenter;
 using CrestApps.OrchardCore.Diagnostics;
@@ -9,6 +12,19 @@ using OrchardCore.Logging;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseNLogHost();
+
+// Local development only: when every feature is enabled, the Azure Key Vault secret store resolves the SecretClient named by
+// "OrchardCore:Secrets:AzureKeyVault:AzureClient" (see appsettings.development.json). This stand-in never contacts Azure; a
+// real host registers a client for its own vault under that key.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddKeyedSingleton(
+        "local-development-fake",
+        (_, _) => new SecretClient(
+            new Uri("https://local-development-fake.vault.azure.net/"),
+            new LocalDevelopmentFakeCredential(),
+            new SecretClientOptions { Transport = new HttpClientTransport(new HttpClient(new LocalDevelopmentFakeVaultHandler())) }));
+}
 
 // The CrestApps metrics follow Orchard Core's own option for tagging metrics with the tenant, so one setting decides it
 // for every metric. Spans and logs carry the tenant either way.
@@ -67,3 +83,23 @@ if (!app.Environment.IsDevelopment())
 app.UseOrchardCore();
 
 await app.RunAsync();
+
+// Stand-ins for local development only: a credential that hands out a placeholder token, and an HTTP handler that answers
+// every Key Vault call with an empty page of secrets, so pages that list secrets work without a real vault.
+internal sealed class LocalDevelopmentFakeCredential : TokenCredential
+{
+    public override AccessToken GetToken(TokenRequestContext requestContext, CancellationToken cancellationToken)
+        => new("local-development-fake", new DateTimeOffset(2099, 1, 1, 0, 0, 0, TimeSpan.Zero));
+
+    public override ValueTask<AccessToken> GetTokenAsync(TokenRequestContext requestContext, CancellationToken cancellationToken)
+        => new(GetToken(requestContext, cancellationToken));
+}
+
+internal sealed class LocalDevelopmentFakeVaultHandler : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        => Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+        {
+            Content = new StringContent("{\"value\":[]}", System.Text.Encoding.UTF8, "application/json"),
+        });
+}

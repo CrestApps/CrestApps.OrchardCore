@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Commerce.StoreProfile.ViewModels
+
+@model StoreProfileSettingsViewModel
+
+@await DisplayAsync(Model.AddressEditor)
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span class="hint">@T["Optional. Where the store is: parcels ship from it and taxes are worked out from it unless the shipping and tax settings name another address. Leave it blank to remove it."]</span>
+    </div>
+</div>

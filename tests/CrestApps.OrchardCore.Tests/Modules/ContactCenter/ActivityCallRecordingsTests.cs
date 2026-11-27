@@ -259,7 +259,8 @@ public sealed class ActivityCallRecordingsTests
             new CallRecordingAccessEvaluator(SharedVoicemailAuthorizationServiceTests.CreateAuthorization(granted).Object),
             new CallRecordingAgentNameResolver(Mock.Of<global::YesSql.ISession>(MockBehavior.Strict), Array.Empty<IDisplayNameProvider>()),
             new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = SharedVoicemailAuthorizationServiceTests.CreatePrincipal() } },
-            localClock.Object);
+            localClock.Object,
+            RecipeRoundTrip.Localizer<OmnichannelActivityCallRecordingsDisplayDriver>());
     }
 
     private static BuildEditorContext Context(string groupId)

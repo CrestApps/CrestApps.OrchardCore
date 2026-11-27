@@ -7,9 +7,12 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Core.Deployments;
 using CrestApps.OrchardCore.Payroll.Core.Indexes;
+using CrestApps.OrchardCore.Payroll.Core.TaxForms;
+using CrestApps.OrchardCore.Taxation.Core.TaxForms;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Taxation.Models;
+using CrestApps.OrchardCore.Taxation.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -552,6 +555,8 @@ public sealed class PayrollFilingService : IPayrollFilingService
 {
     private readonly IPayrollFilingManager _filings;
     private readonly IEnumerable<IPayrollFilingForm> _forms;
+    private readonly ITaxFormManager _taxForms;
+    private readonly TaxFormFunctionCatalog _functions;
     private readonly PayStatementStore _statements;
     private readonly IPayCodeManager _codes;
     private readonly IPayProfileManager _profiles;
@@ -565,7 +570,9 @@ public sealed class PayrollFilingService : IPayrollFilingService
 
     /// <summary>Initializes a new instance of the <see cref="PayrollFilingService"/> class.</summary>
     /// <param name="filings">The filings.</param>
-    /// <param name="forms">The forms country packs add.</param>
+    /// <param name="forms">The forms modules add in code.</param>
+    /// <param name="taxForms">Taxation's tax forms; those of the Payroll source are filed here.</param>
+    /// <param name="functions">The functions of the tax forms' formulas.</param>
     /// <param name="statements">The statements.</param>
     /// <param name="codes">The pay codes.</param>
     /// <param name="profiles">The pay profiles.</param>
@@ -578,6 +585,8 @@ public sealed class PayrollFilingService : IPayrollFilingService
     public PayrollFilingService(
         IPayrollFilingManager filings,
         IEnumerable<IPayrollFilingForm> forms,
+        ITaxFormManager taxForms,
+        TaxFormFunctionCatalog functions,
         PayStatementStore statements,
         IPayCodeManager codes,
         IPayProfileManager profiles,
@@ -590,6 +599,8 @@ public sealed class PayrollFilingService : IPayrollFilingService
     {
         _filings = filings;
         _forms = forms;
+        _taxForms = taxForms;
+        _functions = functions;
         _statements = statements;
         _codes = codes;
         _profiles = profiles;
@@ -602,11 +613,37 @@ public sealed class PayrollFilingService : IPayrollFilingService
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<IPayrollFilingForm> FormsFor(Employer employer)
+    public async Task<IReadOnlyList<IPayrollFilingForm>> FormsForAsync(Employer employer, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(employer);
 
-        return [.. _forms.Where(form => employer.Registrations.Any(registration => string.Equals(registration.Jurisdiction, form.Jurisdiction, StringComparison.OrdinalIgnoreCase)))];
+        return [.. (await AllFormsAsync(enabledOnly: true, cancellationToken))
+            .Where(form => employer.Registrations.Any(registration => string.Equals(registration.Jurisdiction, form.Jurisdiction, StringComparison.OrdinalIgnoreCase)))];
+    }
+
+    /// <inheritdoc />
+    public async Task<IPayrollFilingForm> FindFormAsync(string name, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return null;
+        }
+
+        return (await AllFormsAsync(enabledOnly: false, cancellationToken)).FirstOrDefault(form => string.Equals(form.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    // The tax form records, by title, then the forms modules add in code under a name no record has.
+    private async Task<IReadOnlyList<IPayrollFilingForm>> AllFormsAsync(bool enabledOnly, CancellationToken cancellationToken)
+    {
+        var records = (await _taxForms.ListBySourceAsync(PayrollConstants.TaxFormSource, cancellationToken))
+            .Where(form => !enabledOnly || form.Enabled)
+            .OrderBy(form => form.DisplayName, StringComparer.CurrentCultureIgnoreCase)
+            .Select(form => (IPayrollFilingForm)new PayrollTaxFormFiling(form, _functions, S))
+            .ToList();
+
+        records.AddRange(_forms.Where(form => !records.Any(record => string.Equals(record.Name, form.Name, StringComparison.OrdinalIgnoreCase))));
+
+        return records;
     }
 
     /// <inheritdoc />
@@ -615,7 +652,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
         ArgumentNullException.ThrowIfNull(employer);
 
         var result = new PayrollFilingResult();
-        var definition = FormsFor(employer).FirstOrDefault(candidate => candidate.Name == form);
+        var definition = (await FormsForAsync(employer, cancellationToken)).FirstOrDefault(candidate => string.Equals(candidate.Name, form, StringComparison.OrdinalIgnoreCase));
 
         if (definition is null)
         {
@@ -646,12 +683,15 @@ public sealed class PayrollFilingService : IPayrollFilingService
         {
             filing = await _filings.NewAsync(cancellationToken: cancellationToken);
             filing.EmployerId = employer.ItemId;
-            filing.Form = form;
+            filing.Form = definition.Name;
             filing.Year = year;
             filing.Quarter = quarter;
         }
 
-        await FillAsync(employer, definition, filing, user, cancellationToken);
+        if (!await TryFillAsync(employer, definition, filing, user, result, cancellationToken))
+        {
+            return result;
+        }
 
         if (isNew)
         {
@@ -704,7 +744,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
         await TellAsync(PayrollFilingChangeKind.Filed, filing.EmployerId, filing.Year, filing, user, cancellationToken);
 
         // Each person with a statement in it is told their form is ready, with no amount.
-        if (_forms.FirstOrDefault(form => form.Name == filing.Form) is { HasPersonStatements: true } definition)
+        if (await FindFormAsync(filing.Form, cancellationToken) is { HasPersonStatements: true } definition)
         {
             foreach (var person in filing.People)
             {
@@ -738,7 +778,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
         }
 
         var employer = await _employers.FindByIdAsync(filing.EmployerId, cancellationToken);
-        var definition = employer is null ? null : FormsFor(employer).FirstOrDefault(candidate => candidate.Name == filing.Form);
+        var definition = employer is null ? null : (await FormsForAsync(employer, cancellationToken)).FirstOrDefault(candidate => string.Equals(candidate.Name, filing.Form, StringComparison.OrdinalIgnoreCase));
 
         if (definition is null)
         {
@@ -754,7 +794,12 @@ public sealed class PayrollFilingService : IPayrollFilingService
         amendment.Year = filing.Year;
         amendment.Quarter = filing.Quarter;
         amendment.AmendsId = filing.ItemId;
-        await FillAsync(employer, definition, amendment, user, cancellationToken);
+
+        if (!await TryFillAsync(employer, definition, amendment, user, result, cancellationToken))
+        {
+            return result;
+        }
+
         await _filings.CreateAsync(amendment, cancellationToken);
         result.Filing = amendment;
         await TellAsync(PayrollFilingChangeKind.Amended, amendment.EmployerId, amendment.Year, amendment, user, cancellationToken);
@@ -798,7 +843,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
         }
 
         // The year's wage statements, for each form that has a statement per person, when not filed yet.
-        foreach (var form in FormsFor(employer).Where(form => form.HasPersonStatements && !form.IsQuarterly))
+        foreach (var form in (await FormsForAsync(employer, cancellationToken)).Where(form => form.HasPersonStatements && !form.IsQuarterly))
         {
             var current = await _filings.FindCurrentAsync(employer.ItemId, form.Name, year, 0, cancellationToken);
 
@@ -856,6 +901,23 @@ public sealed class PayrollFilingService : IPayrollFilingService
         foreach (var observer in _services.GetServices<IPayrollFilingObserver>())
         {
             await observer.ChangedAsync(change, cancellationToken);
+        }
+    }
+
+    // Fills a filing, or reports a form whose formulas don't work (a tax form edited badly) as an error of the action.
+    private async Task<bool> TryFillAsync(Employer employer, IPayrollFilingForm definition, PayrollFiling filing, ClaimsPrincipal user, PayrollFilingResult result, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await FillAsync(employer, definition, filing, user, cancellationToken);
+
+            return true;
+        }
+        catch (InvalidOperationException exception) when (definition is PayrollTaxFormFiling)
+        {
+            result.Errors.Add(exception.Message);
+
+            return false;
         }
     }
 
@@ -923,6 +985,13 @@ public static class PayrollFilingsServiceCollectionExtensions
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<PayrollFiling>, PayrollFilingHandler>());
         services.TryAddScoped<ITaxLiabilityService, TaxLiabilityService>();
         services.TryAddScoped<IPayrollFilingService, PayrollFilingService>();
+        services.AddTaxFormsCore();
+        services.AddTaxFormSource(
+            PayrollConstants.TaxFormSource,
+            global::OrchardCore.Localization.LocalizationSource.Create<PayrollFilingService>("Payroll"),
+            global::OrchardCore.Localization.LocalizationSource.Create<PayrollFilingService>("Pay statements: the forms an employer files with the final statements of a quarter or a year, such as Forms 941 and W-2 or the T4."),
+            global::OrchardCore.Localization.LocalizationSource.Create<PayrollFilingService>("Pay codes"));
+        services.AddTaxFormFunctions<PayrollTaxFormFunctions>();
 
         return services;
     }

@@ -1,0 +1,56 @@
+@model ParentPolicyEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="TenantName" class="ocat-label @(Model.IsNew ? "ocat-label-required" : "")">@T["Tenant"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            if (Model.Candidates.Count == 0)
+            {
+                <div class="alert alert-info mb-0">@T["Every tenant is already part of a hierarchy. Create a tenant in the Tenants screen first."]</div>
+            }
+            else
+            {
+                <select asp-for="TenantName" asp-items="Model.Candidates" class="form-select" data-th-suggestions="@System.Text.Json.JsonSerializer.Serialize(Model.Suggestions, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))">
+                    <option value="">@T["Select a tenant"]</option>
+                </select>
+                <span class="hint">@T["An existing tenant that is not part of a hierarchy. Its address is replaced by the one below, and its users keep working at the new address."]</span>
+            }
+        }
+        else
+        {
+            <input value="@Model.TenantName" class="form-control" readonly />
+            <input asp-for="TenantName" type="hidden" />
+        }
+        <span asp-validation-for="TenantName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="DisplayName" class="ocat-label ocat-label-required">@T["Display name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayName" class="form-control" />
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+        <span class="hint">@T["Shown to the parent's users and in the tenant switcher of its child tenants."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Slug" class="ocat-label @(Model.IsNew ? "ocat-label-required" : "")">@T["Address"]</label>
+    <div class="ocat-end">
+        @if (Model.IsNew)
+        {
+            <div class="input-group">
+                <input asp-for="Slug" class="form-control" autocomplete="off" spellcheck="false" maxlength="40" />
+                <span class="input-group-text">.@Model.PlatformDomain</span>
+            </div>
+            <span class="hint">@T["Lowercase letters, digits and hyphens. Every tenant gets its own host name, never a path, so tenants never share a browser origin."]</span>
+        }
+        else
+        {
+            <input value="@Model.Host" class="form-control" readonly />
+            <input asp-for="Slug" type="hidden" />
+        }
+        <span asp-validation-for="Slug" class="text-danger"></span>
+    </div>
+</div>

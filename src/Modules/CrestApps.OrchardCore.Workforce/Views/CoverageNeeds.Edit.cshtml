@@ -1,0 +1,9 @@
+@model CoverageEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Rows" class="ocat-label ocat-label-required">@T["Rows"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Rows" class="form-control font-monospace" rows="8" placeholder="Monday 09:00-17:00 2 3&#10;Saturday 10:00-14:00 1 1&#10;2026-12-24 08:00-12:00 1 2 4"></textarea>
+        <span class="hint">@T["One per line: a weekday or a date (yyyy-MM-dd), a time range, then the minimum, the target and, if you want one, the maximum number of people. A date replaces that weekday's rows. Use 24:00 for midnight."]</span>
+    </div>
+</div>

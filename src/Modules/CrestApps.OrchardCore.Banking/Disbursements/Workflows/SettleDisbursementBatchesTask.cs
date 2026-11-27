@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Banking.Disbursements.Services;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
@@ -75,6 +77,18 @@ public sealed class SettleDisbursementBatchesTask : TaskActivity<SettleDisbursem
 /// </summary>
 public sealed class SettleDisbursementBatchesTaskDisplayDriver : ActivityDisplayDriver<SettleDisbursementBatchesTask, SettleDisbursementBatchesTaskViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    public SettleDisbursementBatchesTaskDisplayDriver(IStringLocalizer<SettleDisbursementBatchesTaskDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(SettleDisbursementBatchesTask activity, BuildEditorContext context)
+        => Initialize<SettleDisbursementBatchesTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivity(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settlement"], "10"));
+
     /// <inheritdoc />
     protected override void EditActivity(SettleDisbursementBatchesTask activity, SettleDisbursementBatchesTaskViewModel model)
     {

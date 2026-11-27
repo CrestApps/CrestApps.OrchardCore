@@ -1,0 +1,31 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumAmount">
+    <label asp-for="MinimumAmount" class="ocat-label">@T["Minimum amount"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MinimumAmount" type="number" step="0.01" min="0" class="form-control" />
+        <span asp-validation-for="MinimumAmount"></span>
+        <span class="hint">@T["Optional. The coupon does nothing below this. Only the items count, not shipping."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MaximumAmount">
+    <label asp-for="MaximumAmount" class="ocat-label">@T["Maximum amount"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MaximumAmount" type="number" step="0.01" min="0" class="form-control" />
+        <span asp-validation-for="MaximumAmount"></span>
+        <span class="hint">@T["Optional. The coupon does nothing above this, such as a code meant for small orders."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="MinimumQuantity">
+    <label asp-for="MinimumQuantity" class="ocat-label">@T["Minimum quantity"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MinimumQuantity" type="number" min="1" class="form-control" />
+        <span asp-validation-for="MinimumQuantity"></span>
+        <span class="hint">@T["Optional. How many of the items it counts the order needs, such as 3 for buy 3 or more and save."]</span>
+    </div>
+</div>

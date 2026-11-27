@@ -54,7 +54,7 @@ public sealed class AIMemoryIndexProfileDisplayDriver : DisplayDriver<IndexProfi
             model.EmbeddingDeploymentText = selectedDeployment != null ? GetDeploymentDisplayText(selectedDeployment) : model.EmbeddingDeploymentName;
             model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentName);
             model.IsLocked = !context.IsNew;
-        }).Location("Content:3");
+        }).Location(l => l.Zone("Content", "3").Card(S["Embedding"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(IndexProfile indexProfile, UpdateEditorContext context)

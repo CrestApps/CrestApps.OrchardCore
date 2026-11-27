@@ -4,9 +4,8 @@
 @model EditCopilotProfileViewModel
 
 <div class="d-none orchestrator-dependent orchestrator-dependent-copilot">
-    <fieldset class="ocat-wrapper">
-        <legend class="ocat-label">@T["Copilot Configuration"]</legend>
-        <div class="ocat-end">
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
             @if (!Model.IsCopilotConfigured)
             {
                 <div class="alert alert-warning">
@@ -114,7 +113,7 @@
                 </div>
             </div>
         </div>
-    </fieldset>
+    </div>
 </div>
 
 @if (Model.AuthenticationType == CopilotAuthenticationType.GitHubOAuth)

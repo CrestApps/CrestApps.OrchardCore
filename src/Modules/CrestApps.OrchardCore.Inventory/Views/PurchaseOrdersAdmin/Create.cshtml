@@ -1,7 +1,4 @@
 @model PurchaseOrderEditViewModel
-@{
-    var readOnly = false;
-}
 
 <zone Name="Title">
     <breadcrumb name="PurchaseOrdersCreate" title="@T["Add purchase order"]">
@@ -12,64 +9,7 @@
 <form asp-action="Create" method="post" class="no-multisubmit">
     <div asp-validation-summary="ModelOnly"></div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="Supplier">
-        <label asp-for="Supplier" class="ocat-label ocat-label-required">@T["Supplier"]</label>
-        <div class="ocat-end">
-            <input asp-for="Supplier" class="form-control" list="purchase-order-suppliers" autocomplete="off" disabled="@readOnly" />
-            <datalist id="purchase-order-suppliers">
-                @foreach (var supplier in Model.Suppliers)
-                {
-                    <option value="@supplier"></option>
-                }
-            </datalist>
-            <span asp-validation-for="Supplier"></span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="SupplierEmail" class="ocat-label">@T["Supplier's email"]</label>
-        <div class="ocat-end">
-            <input asp-for="SupplierEmail" type="email" class="form-control" autocomplete="off" disabled="@readOnly" />
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="LocationId" class="ocat-label">@T["Receive at"]</label>
-        <div class="ocat-end">
-            <select asp-for="LocationId" asp-items="Model.Locations" class="form-select" disabled="@(readOnly || Model.Order?.Received > 0)"></select>
-        </div>
-    </div>
-
-    <div class="ocat-limited-wrapper">
-        <label asp-for="Currency" class="ocat-label">@T["Costs in"]</label>
-        <div class="ocat-limited">
-            <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" disabled="@readOnly"></select>
-        </div>
-    </div>
-
-    <div class="ocat-limited-wrapper">
-        <label asp-for="ExpectedDate" class="ocat-label">@T["Expected"]</label>
-        <div class="ocat-limited">
-            <input asp-for="ExpectedDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" disabled="@readOnly" />
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <label asp-for="Note" class="ocat-label">@T["Note"]</label>
-        <div class="ocat-end">
-            <textarea asp-for="Note" rows="2" class="form-control" maxlength="2000" disabled="@readOnly"></textarea>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper">
-        <div class="ocat-end-offset">
-            <div class="form-check">
-                <input asp-for="StartWithLowStock" type="checkbox" class="form-check-input" />
-                <label asp-for="StartWithLowStock" class="form-check-label">@T["Start with the items that are low on stock where it's received"]</label>
-            </div>
-            <span class="hint dashed">@T["Each ordered up to twice its low-stock threshold. You can change the quantities before ordering."]</span>
-        </div>
-    </div>
+    @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
         <button type="submit" class="btn btn-primary">@T["Start the order"]</button>

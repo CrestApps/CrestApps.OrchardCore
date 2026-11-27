@@ -1,0 +1,21 @@
+@using CrestApps.OrchardCore.AI.FileSources.Sftp.ViewModels
+
+@model SftpFileSourceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Host" class="ocat-label ocat-label-required">@T["Host"]</label>
+    <div class="ocat-end">
+        <input asp-for="Host" class="form-control" placeholder="@T["sftp.example.com"]" />
+        <span asp-validation-for="Host" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Port" class="ocat-label">@T["Port"]</label>
+    <div class="ocat-end">
+        <input asp-for="Port" class="form-control" type="number" min="1" max="65535" placeholder="22" />
+        <span asp-validation-for="Port" class="text-danger"></span>
+        <span class="hint">@T["Leave empty to use 22."]</span>
+    </div>
+</div>
+

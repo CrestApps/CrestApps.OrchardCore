@@ -64,7 +64,7 @@ internal sealed class AgentStateReasonCodeDisplayDriver : DisplayDriver<AgentSta
             model.SortOrder = reasonCode.SortOrder;
             model.Enabled = reasonCode.Enabled;
             model.AppliesToOptions = GetAppliesToOptions(reasonCode.AppliesTo);
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "10"));
     }
 
     /// <inheritdoc/>

@@ -1,0 +1,26 @@
+@model AssetEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="InstallDate" class="ocat-label">@T["Installed"]</label>
+    <div class="ocat-end">
+        <input asp-for="InstallDate" type="date" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="WarrantyStart" class="ocat-label">@T["Warranty from"]</label>
+    <div class="ocat-end">
+        <input asp-for="WarrantyStart" type="date" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="WarrantyEnd" class="ocat-label">@T["Warranty until"]</label>
+    <div class="ocat-end">
+        <input asp-for="WarrantyEnd" type="date" class="form-control" style="max-width: 12rem" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="WarrantyProvider" class="ocat-label">@T["Warranty from whom"]</label>
+    <div class="ocat-end">
+        <input asp-for="WarrantyProvider" class="form-control" />
+    </div>
+</div>

@@ -1,5 +1,6 @@
 using CrestApps.Core.AI.Models;
 using CrestApps.OrchardCore.AI.WebMcp.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -12,6 +13,17 @@ namespace CrestApps.OrchardCore.AI.WebMcp.Drivers;
 /// </summary>
 public sealed class AIProfileWebMcpDisplayDriver : DisplayDriver<AIProfile>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AIProfileWebMcpDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIProfileWebMcpDisplayDriver(IStringLocalizer<AIProfileWebMcpDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(AIProfile profile, BuildEditorContext context)
     {
         return Initialize<EditProfileWebMcpViewModel>("AIProfileWebMcp_Edit", model =>
@@ -21,7 +33,7 @@ public sealed class AIProfileWebMcpDisplayDriver : DisplayDriver<AIProfile>
                 model.AllowPageTools = settings.AllowPageTools;
                 model.AllowConsequentialPageTools = settings.AllowPageTools && settings.AllowConsequentialPageTools;
             }
-        }).Location("Content:3#Capabilities;9");
+        }).Location(l => l.Zone("Content", "3").Tab(S["Capabilities"], "9").Card(S["WebMCP"], "40"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

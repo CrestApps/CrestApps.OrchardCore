@@ -1,0 +1,18 @@
+@model CampaignEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Subject">
+    <label asp-for="Subject" class="ocat-label ocat-label-required">@T["Subject"]</label>
+    <div class="ocat-end">
+        <input asp-for="Subject" class="form-control" maxlength="255" />
+        <span asp-validation-for="Subject" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Body">
+    <label asp-for="Body" class="ocat-label ocat-label-required">@T["Email"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Body" class="form-control font-monospace" rows="14"></textarea>
+        <span asp-validation-for="Body" class="text-danger"></span>
+        <span class="hint">@T["HTML with Liquid. Use {{{{ Customer.FirstName }}}}, {{{{ Customer.Name }}}}, {{{{ Customer.OrderCount }}}}, {{{{ Customer.TotalSpent }}}}, {{{{ StoreName }}}} and {{{{ UnsubscribeUrl }}}}. An unsubscribe link is added at the end when the email has none."]</span>
+    </div>
+</div>

@@ -1,0 +1,19 @@
+@model TimeStageEditViewModel
+
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["Categories"]</span>
+    <div class="ocat-end">
+        @if (Model.CategoryOptions.Count == 0)
+        {
+            <p class="hint mb-0">@T["No categories yet."] <a asp-action="EditCategory">@T["Add a category"]</a></p>
+        }
+        @foreach (var option in Model.CategoryOptions)
+        {
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" name="CategoryIds" value="@option.Value" id="category-@option.Value" checked="@option.Selected" />
+                <label class="form-check-label" for="category-@option.Value">@option.Text</label>
+            </div>
+        }
+        <span class="hint">@T["Its time adds to each category ticked, such as Work to both Payable and Billable."]</span>
+    </div>
+</div>

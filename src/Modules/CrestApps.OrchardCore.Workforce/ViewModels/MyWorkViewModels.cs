@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Workforce.ViewModels;
 
@@ -177,6 +178,12 @@ public class MyTimeOffViewModel
     /// Gets or sets the reason.
     /// </summary>
     public string Reason { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of the request, built by the display drivers of <see cref="MyTimeOffViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -349,6 +356,12 @@ public class MySettingsViewModel
     /// Gets or sets the site's public push key.
     /// </summary>
     public string PushPublicKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of what the worker hears about, built by the display drivers of <see cref="MySettingsViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 
     /// <summary>
     /// Gets or sets how many minutes before a shift the worker is reminded, or zero for none.

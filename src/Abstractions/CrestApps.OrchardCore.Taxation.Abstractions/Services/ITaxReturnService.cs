@@ -64,8 +64,9 @@ public sealed class TaxReturnDataContext
 
 /// <summary>
 /// A return form: the boxes of a jurisdiction's return and how they are worked out from the lines, such as a state's
-/// monthly sales and use tax return. The built-in generic form sums the lines by kind; a pack adds a jurisdiction's own
-/// form with its discounts, penalties and box numbers. Register one with <c>services.AddTaxReturnForm&lt;T&gt;()</c>.
+/// monthly sales and use tax return. Most forms are tax forms of the sales tax source, edited under Taxation &gt; Tax
+/// Forms (the generic form, which totals the lines by kind, is one); a form that needs code implements this interface
+/// and is registered with <c>services.AddTaxReturnForm&lt;T&gt;()</c>. A tax form of the same name wins.
 /// </summary>
 public interface ITaxReturnForm
 {
@@ -249,10 +250,13 @@ public interface ITaxReturnManager : ICatalogManager<TaxReturn>
 public interface ITaxReturnService
 {
     /// <summary>
-    /// Gets the forms registered, by name.
+    /// Gets the return forms, by name (ignoring case): the tax forms of the sales tax source (made on the Tax Forms page
+    /// or by a recipe), then the forms modules add in code under a name no tax form has.
     /// </summary>
+    /// <param name="includeDisabled">Whether to include the tax forms that are turned off, such as to work out or show a return prepared before.</param>
+    /// <param name="cancellationToken">A token to cancel the work.</param>
     /// <returns>The forms.</returns>
-    IReadOnlyDictionary<string, ITaxReturnForm> GetForms();
+    Task<IReadOnlyDictionary<string, ITaxReturnForm>> GetFormsAsync(bool includeDisabled = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Lists the periods the active registrations with a filing schedule file for that end in a span, with each one's

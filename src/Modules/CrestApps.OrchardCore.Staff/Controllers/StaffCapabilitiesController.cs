@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.Staff.Controllers;
@@ -18,6 +21,8 @@ public sealed class StaffCapabilitiesController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IStaffCapabilityService _capabilities;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<StaffCapabilityEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -25,11 +30,15 @@ public sealed class StaffCapabilitiesController : Controller
         IAuthorizationService authorizationService,
         IStaffCapabilityService capabilities,
         INotifier notifier,
+        IDisplayManager<StaffCapabilityEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<StaffCapabilitiesController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _capabilities = capabilities;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -58,7 +67,11 @@ public sealed class StaffCapabilitiesController : Controller
             return Forbid();
         }
 
-        return View("Edit", new StaffCapabilityEditViewModel { IsNew = true, Enabled = true, Position = 100 });
+        var model = new StaffCapabilityEditViewModel { IsNew = true, Enabled = true, Position = 100 };
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     [HttpPost]
@@ -82,7 +95,7 @@ public sealed class StaffCapabilitiesController : Controller
             return NotFound();
         }
 
-        return View(new StaffCapabilityEditViewModel
+        var model = new StaffCapabilityEditViewModel
         {
             Name = capability.Name,
             DisplayName = capability.DisplayName,
@@ -90,7 +103,11 @@ public sealed class StaffCapabilitiesController : Controller
             Position = capability.Position,
             Enabled = capability.Enabled,
             IsBuiltIn = capability.IsBuiltIn,
-        });
+        };
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -144,6 +161,10 @@ public sealed class StaffCapabilitiesController : Controller
             return NotFound();
         }
 
+        model.IsNew = isNew;
+        model.IsBuiltIn = existing?.IsBuiltIn ?? false;
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
+
         var errors = await _capabilities.SaveAsync(new StaffCapabilityDefinition
         {
             Name = model.Name,
@@ -159,9 +180,6 @@ public sealed class StaffCapabilitiesController : Controller
             {
                 ModelState.AddModelError(string.Empty, error);
             }
-
-            model.IsNew = isNew;
-            model.IsBuiltIn = existing?.IsBuiltIn ?? false;
 
             return View("Edit", model);
         }
