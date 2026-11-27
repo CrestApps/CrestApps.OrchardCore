@@ -696,9 +696,29 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
                 // each e-mail that goes out (TryFailedBeforeAsync, R10-M1), and the rest after the reminders. The reminder
                 // walk ends as soon as no more e-mail of this send goes out (today's limit, the sending window or a mail
                 // outage), so nothing is read or re-issued for reminders that would only wait.
-                // The held pass queues the failed-before ids it reads (it stops reading once nothing more of this send
-                // goes out), and tries one after each e-mail that went out. The sends count is read after each pass, not
-                // around its await, since the failed-before sends add to it while the pass runs.
+                // The failed-before ids are queued before the held pass, so one is tried after each e-mail that goes out
+                // even when the other held sends come first in the index: only while this send may still e-mail, and at
+                // most a page of them (as many as one run can interleave), so a large held list isn't read again on
+                // every run. The held pass queues the ones it reads after them. The sends count is read after each pass,
+                // not around its await, since the failed-before sends add to it while the pass runs.
+                if (!_emailLimit.IsClosed)
+                {
+                    await _invitationStore.VisitHeldByCollectorAsync(
+                        collector.ItemId,
+                        invitation =>
+                        {
+                            if (invitation.TryGet<SurveyInvitationHold>(out var hold) && hold?.LastFailedUtc is not null)
+                            {
+                                failedBefore.Enqueue(invitation.ItemId);
+                            }
+
+                            return Task.CompletedTask;
+                        },
+                        stop: () => failedBefore.Count >= SurveysConstants.PageSize || _emailLimit.IsClosed || StopRequested,
+                        SurveysConstants.PageSize,
+                        CancellationToken.None);
+                }
+
                 var heldSent = await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: false, failedBefore, TryFailedBeforeAsync);
 
                 sent += heldSent;

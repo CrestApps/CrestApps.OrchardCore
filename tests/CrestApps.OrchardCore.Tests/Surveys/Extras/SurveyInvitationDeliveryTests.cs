@@ -1283,6 +1283,68 @@ public sealed class SurveyInvitationDeliveryTests
     }
 
     [Fact]
+    public async Task RefusedHeldAddresses_ReadAfterTheOtherHeldSends_AreStillTriedBetweenThem()
+    {
+        // Arrange: R10-M1, two held addresses the mail server refuses every time (one attempt left each, the last counted
+        // an hour ago) and two first sends held by yesterday's limit, which the run reads first (checked below).
+        var sender = new RecordingSender { Outcome = invitation => invitation.Email.StartsWith("refused", StringComparison.Ordinal) ? SurveyInvitationDelivery.RetryLater : SurveyInvitationDelivery.Delivered };
+        await using var harness = await CreateAsync(sender, emailsPerDay: 100);
+        harness.Clock.UtcNow = _evening;
+        var survey = await harness.PublishAsync(RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1"))));
+        var collectorId = (await harness.RunAsync(services => services.GetRequiredService<SurveyInvitationService>().EnsureCollectorAsync(survey))).ItemId;
+        // Item ids that sort the held sends first: a page's documents come back by item id.
+        string[] refusedIds = ["zzrefused1", "zzrefused2"];
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyInvitationStore>();
+
+            foreach (var (id, email, failed) in new[] { ("00held1", "held1@example.com", false), ("00held2", "held2@example.com", false), (refusedIds[0], "refused1@example.com", true), (refusedIds[1], "refused2@example.com", true) })
+            {
+                var invitation = new SurveyInvitation { ItemId = id, SurveyId = survey.ItemId, CollectorId = collectorId, Email = email, Status = SurveyInvitationStatus.Pending, CreatedUtc = _evening.AddDays(-4) };
+
+                invitation.Put(failed
+                    ? new SurveyInvitationHold { HeldUtc = _evening.AddDays(-4), LastFailedUtc = _evening.AddHours(-1), FailedAttempts = SurveyInvitationHold.MaxSendAttempts - 1, LastCountedUtc = _evening.AddHours(-1) }
+                    : new SurveyInvitationHold { HeldUtc = _evening.AddDays(-1) });
+                await store.CreateAsync(invitation);
+            }
+
+            return true;
+        });
+        var visited = await harness.RunAsync(async services =>
+        {
+            var order = new List<string>();
+
+            await services.GetRequiredService<SurveyInvitationStore>().VisitHeldByCollectorAsync(collectorId, invitation =>
+            {
+                order.Add(invitation.Email);
+
+                return Task.CompletedTask;
+            });
+
+            return order;
+        });
+
+        // The case this test is about: the run reads the held sends before the refused ones.
+        Assert.Equal(["held", "held", "refused", "refused"], visited.Select(email => email[..^"N@example.com".Length]));
+
+        var tried = new List<string>();
+        sender.OnAttempt = invitation => tried.Add(invitation.Email);
+
+        // Act
+        await RemindAsync(harness, collectorId);
+
+        Assert.Equal(["held", "refused", "held", "refused"], tried.Select(email => email[..^"N@example.com".Length]));
+
+        // Assert: the refused addresses were tried between the held sends (held1, refused1, held2, refused2), so the
+        // first was confirmed by held2 and the second counted as the run's single last try: both used up their last
+        // attempt. Tried only after both held sends, they would have failed two in a row and counted nothing.
+        foreach (var id in refusedIds)
+        {
+            Assert.Equal(SurveyInvitationStatus.Bounced, (await FindAsync(harness, id)).Status);
+        }
+    }
+
+    [Fact]
     public async Task ARun_CountsTheFailedBeforeSendsThatGoOutBetweenTheOthers()
     {
         // Arrange: a first send held by yesterday's limit, and one held after the mail server failed it, which the mail
