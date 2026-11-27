@@ -37,13 +37,16 @@ namespace CrestApps.OrchardCore.Checkout
         public const string GuestTokenProtectorPurpose = "CrestApps.OrchardCore.Checkout.GuestOwnership.v1";
         public const int MaxGeneratedCodes = 5000;
         public const string PaymentStepKey = "Payment";
+        public const string SessionLockPrefix = "CHECKOUT_SESSION_";
         public const string SettingsGroupId = "checkout";
         public static class AttemptPolicies
         {
             public const string CheckoutStartNetwork = "checkout-start-network";
             public const string CouponCode = "coupon-code";
+            public const string CouponCodeAgentPlatform = "coupon-code-agent-platform";
             public const string PaymentBeginCheckout = "payment-begin-checkout";
             public const string PaymentBeginNetwork = "payment-begin-network";
+            public const string PaymentDeclineAgentPlatform = "payment-decline-agent-platform";
             public const string PaymentDeclineAttempt = "payment-decline-attempt";
             public const string PaymentDeclineCustomer = "payment-decline-customer";
             public const string PaymentDeclineEvent = "payment-decline-event";
@@ -912,6 +915,11 @@ namespace CrestApps.OrchardCore.Checkout.Services
         public static CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProvider FindByKey(this System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProvider> providers, string providerKey) { }
         public static string GetPaymentMethodName(this System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentProvider> providers, string providerKey) { }
     }
+    public enum CheckoutPaymentReleaseResult
+    {
+        Released = 0,
+        PaymentInProgress = 1,
+    }
     public sealed class CheckoutReconciliationResult
     {
         public CheckoutReconciliationResult() { }
@@ -1039,6 +1047,10 @@ namespace CrestApps.OrchardCore.Checkout.Services
     {
         CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentRefundProvider GetProvider(string key);
         System.Collections.Generic.IReadOnlyCollection<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentRefundProvider> GetProviders();
+    }
+    public interface ICheckoutPaymentReleaseService
+    {
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Checkout.Services.CheckoutPaymentReleaseResult> ReleaseAsync(string sessionId, System.Threading.CancellationToken cancellationToken = default);
     }
     public interface ICheckoutReconciliationService
     {

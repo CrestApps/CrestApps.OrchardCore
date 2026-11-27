@@ -69,5 +69,9 @@ public sealed partial class ExceptionHandlingRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Learning.Programs/Recipes/LearningRequirementsRecipeStep.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Learning/Recipes/LearningEnrollmentsRecipeStep.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Users/Audiences/UserAudiencesRecipeStep.cs"] = 1,
+
+        // Existing debt from main's #1371-#1377 (admin forms grouped in cards, Taxation tax forms, Omnichannel routing rules),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/TaxForms/TaxFormFormulas.cs"] = 1,
     };
 }

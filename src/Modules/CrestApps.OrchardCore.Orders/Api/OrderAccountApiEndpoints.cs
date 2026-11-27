@@ -148,7 +148,7 @@ internal static class OrderAccountApiEndpoints
         {
             httpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(refused.RetryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
 
-            return TypedResults.Problem(title: "Too many requests.", statusCode: StatusCodes.Status429TooManyRequests);
+            return ApiProblems.TooManyRequests("Too many quote requests. Try again later.");
         }
 
         var (quote, problems) = await quotes.RequestAsync(httpContext.User, request?.Message, request?.PurchaseOrderNumber, httpContext.RequestAborted);

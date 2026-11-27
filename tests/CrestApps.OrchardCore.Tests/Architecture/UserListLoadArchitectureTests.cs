@@ -39,6 +39,11 @@ public sealed partial class UserListLoadArchitectureTests
     {
         ["src/Modules/CrestApps.OrchardCore.Workforce/Api/WorkforceApiEndpoints.cs"] = 3,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/WorkforceSetupController.cs"] = 1,
+
+        // Existing debt from main's #1371-#1377 (admin forms grouped in cards, Taxation tax forms, Omnichannel routing rules),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/FollowUpRoutingSubjectActionDisplayDriver.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Drivers/MessagingRoutingRuleDisplayDriver.cs"] = 1,
     };
 
     private static readonly Lazy<(Dictionary<string, int> Assets, Dictionary<string, int> Teams)> _actual = new(ScanRequestPaths);

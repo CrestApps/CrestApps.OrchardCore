@@ -184,7 +184,7 @@ public sealed class TransactionPayLinkDoublePaymentTests
 
         await harness.HoldAsync("slow");
 
-        var (locker, locked) = await harness.Lock.TryAcquireLockAsync(DefaultCheckoutEngine.SessionLockPrefix + "slow", TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(10));
+        var (locker, locked) = await harness.Lock.TryAcquireLockAsync(CheckoutConstants.SessionLockPrefix + "slow", TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(10));
 
         harness.Clock.UtcNow += TimeSpan.FromMinutes(3);
 

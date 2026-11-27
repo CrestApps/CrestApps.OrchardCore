@@ -49,7 +49,7 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.ContentTransfer/BackgroundTasks/ImportFilesBackgroundTask.cs"] = 1758, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs"] = 1757, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.DncRegistry/Services/DefaultLocalDncListManager.cs"] = 1259,
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Controllers/ActivitiesController.cs"] = 2231,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Controllers/ActivitiesController.cs"] = 2259, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Reports/EnterpriseActivityReportProvider.cs"] = 891,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultContactActivityBatchLoader.cs"] = 1367,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/LeadConversionService.cs"] = 906,
@@ -60,24 +60,25 @@ public sealed class FileSizeRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Stripe/Endpoints/CreateWebhookEndpoint.cs"] = 871,
         ["src/Modules/CrestApps.OrchardCore.Stripe/Services/StripeCheckoutPaymentProvider.cs"] = 1024,
         ["src/Modules/CrestApps.OrchardCore.Telephony/Hubs/TelephonyHub.cs"] = 1237,
-        ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/ChildTenantsController.cs"] = 893,
+        ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/ChildTenantsController.cs"] = 909, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Transactions/Services/DefaultTransactionCommandService.cs"] = 1377, // raised for main's #1331 when PR #1319 merged main; lower as it is paid down
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs"] = 1153,
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs"] = 981, // raised for main's #1343 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs"] = 1176, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs"] = 1014, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
 
         // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
         // remove as it is paid down. Sizes as of main's #1336, which added index declarations to four of them.
         ["src/Core/CrestApps.OrchardCore.Banking.Core/Disbursements/Services/DisbursementService.cs"] = 886, // raised for main's #1357 when PR #1319 merged main; lower as it is paid down
-        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Controllers/ChecksController.cs"] = 1157, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Controllers/ChecksController.cs"] = 1181, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/TaxForms/TaxFormFormulas.cs"] = 855, // added for main's #1371-#1377 when PR #1319 merged main; split it to remove
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultSubjectActionExecutor.cs"] = 887, // added for main's #1371-#1377 when PR #1319 merged main; split it to remove
         ["src/Core/CrestApps.OrchardCore.Banking.Core/Checks/Services/CheckService.cs"] = 868, // added for main's #1359-#1365 when PR #1319 merged main; split it to remove
         ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/EFiling.cs"] = 840, // added for main's #1359-#1365 when PR #1319 merged main; split it to remove
-        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/TaxReturns.cs"] = 871, // added for main's #1359-#1365 when PR #1319 merged main; split it to remove
+        ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/TaxReturns.cs"] = 943, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Calculation/PayCalculationSteps.cs"] = 1122, // raised for main's #1356
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/Garnishments.cs"] = 1069,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs"] = 925, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs"] = 1211, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
-        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs"] = 929, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
-        ["src/Core/CrestApps.OrchardCore.Payroll.Core/UnitedStates/UnitedStatesFilings.cs"] = 1093, // raised for main's #1347 and #1356
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs"] = 998, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Core/CrestApps.OrchardCore.Taxation.Core/Services/IncomeTaxRules.cs"] = 1056, // raised for main's #1359-#1365 when PR #1319 merged main; lower as it is paid down
 
         // Existing debt from main's #1331 (Invoicing and Billing), baselined when PR #1319 merged main;
@@ -90,7 +91,7 @@ public sealed class FileSizeRatchetTests
         // remove as it is paid down.
         ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs"] = 1941,
         ["src/Core/CrestApps.OrchardCore.TimeTracker.Core/Services/DefaultTimeTrackerService.cs"] = 1006,
-        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketsController.cs"] = 1732,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketsController.cs"] = 1748, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Tickets/Portal/TicketPortalController.cs"] = 970,
 
         // Existing debt from main's #1343 (Learning), baselined when PR #1319 merged main;

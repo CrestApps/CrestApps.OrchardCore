@@ -13,7 +13,7 @@ const definition = /function\s+escapeHtml\b|\bescapeHtml\s*=\s*(?:function\b|\([
 // The copies still left. Each moves to the shared helper when its view is next touched (UX-7 extracts these scripts);
 // this list may only get shorter.
 const remaining = [
-    'src/Modules/CrestApps.OrchardCore.AI/Views/AIPersonaFields.Edit.cshtml',
+    'src/Modules/CrestApps.OrchardCore.AI/Views/AIPersonaVoice.Edit.cshtml',
     'src/Modules/CrestApps.OrchardCore.AI.Documents/Views/AICompletionWithConfigDocuments.Edit.cshtml',
     'src/Modules/CrestApps.OrchardCore.AI.Documents/Views/AIProfileDocuments.Edit.cshtml',
     'src/Modules/CrestApps.OrchardCore.AI.Documents/Views/ChatInteractionDocuments.Edit.cshtml',

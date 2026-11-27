@@ -35,7 +35,6 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// </remarks>
 public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 {
-    public const string SessionLockPrefix = "CHECKOUT_SESSION_";
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
@@ -212,7 +211,7 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 
     private async Task<PaymentBeginOutcome> BeginPaymentCoreAsync(string sessionId, BeginPaymentOptions options, TelemetryScope telemetry, CancellationToken cancellationToken)
     {
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutConstants.SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -249,26 +248,11 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
                 return Refused(telemetry, provider, "provider_unavailable", PaymentBeginOutcome.Failure("The selected payment method is not available."));
             }
 
-            // The network the payment comes from is kept on the checkout, so the card-testing protection counts a decline
-            // reported later, by a webhook or the sweep, against it too.
-            if (!string.IsNullOrEmpty(options.ClientNetworkKey) &&
-                (!session.TryGet<CheckoutClientInfo>(out var client) || !string.Equals(client.NetworkKey, options.ClientNetworkKey, StringComparison.Ordinal)))
+            await KeepClientNetworkAsync(session, options.ClientNetworkKey, cancellationToken);
+
+            if (RefuseUnsupportedBeforeGates(telemetry, provider, session, invoice) is { } unsupported)
             {
-                session.Put(new CheckoutClientInfo { NetworkKey = options.ClientNetworkKey });
-                session.ModifiedUtc = _clock.UtcNow;
-
-                await _sessionStore.SaveAsync(session, cancellationToken);
-            }
-
-            // A provider that can't take this payment is refused before the gates run, so nothing is held for a payment
-            // that was never going to be made. A gate may lower what is owed, never add an obligation, so the check
-            // after the gates still runs on what is left.
-            var obligationsBeforeGates = CheckoutObligations.GetExpectedObligationIds(invoice);
-
-            if (obligationsBeforeGates.Count > 0 &&
-                !TryValidateCapabilities(provider, obligationsBeforeGates, session.SettlesExistingBalance, session.SavePaymentMethod, out var earlyCapabilityError))
-            {
-                return Refused(telemetry, provider, "unsupported", PaymentBeginOutcome.Failure(earlyCapabilityError));
+                return unsupported;
             }
 
             // What the purchase needs is held before any provider is contacted, so a buyer who can't have it, such as
@@ -414,7 +398,7 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 
     private async Task<CheckoutCompletionResult> TryCompleteCoreAsync(string sessionId, CancellationToken cancellationToken)
     {
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutConstants.SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -640,7 +624,7 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 
     private async Task<CheckoutCompletionResult> CancelCoreAsync(string sessionId, string reason, CancellationToken cancellationToken)
     {
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutConstants.SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -712,7 +696,7 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 
     private async Task<CheckoutCompletionResult> ExpireCoreAsync(string sessionId, CancellationToken cancellationToken)
     {
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutConstants.SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {
@@ -754,13 +738,8 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 
             await CancelAttemptsAsync(session, "The checkout expired before it was completed.", cancellationToken);
 
-            // A checkout waiting on its payment is expired only once the provider canceled every payment still open: one
-            // the provider is still processing, such as a bank debit, must be left to finish.
-            if (session.Status == CheckoutSessionStatus.PaymentPending &&
-                (await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken)).Any(attempt => attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending))
+            if (await KeepWhileStillPayingAsync(session, cancellationToken))
             {
-                await _session.SaveChangesAsync(cancellationToken);
-
                 return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Pending };
             }
 

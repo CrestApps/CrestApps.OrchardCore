@@ -130,8 +130,8 @@ public sealed class AdherenceSelfExcuseTests
             services.GetRequiredService<ISession>(),
             services.GetRequiredService<IClock>(),
             Mock.Of<INotifier>(),
-            services.GetRequiredService<global::OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels.AdherenceExceptionEditViewModel>>(),
-            services.GetRequiredService<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>(),
+            Mock.Of<global::OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels.AdherenceExceptionEditViewModel>>(),
+            Mock.Of<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>(),
             Localizer<AdherenceExceptionsController>()), services, user);
 
     private static AdherenceController Adherence(IServiceProvider services, ClaimsPrincipal user)

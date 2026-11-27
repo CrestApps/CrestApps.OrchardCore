@@ -14,7 +14,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Core/CrestApps.OrchardCore.AgenticCommerce.Core/Services/AgentCheckoutService.cs: PayAsync"] = 166,
         ["src/Core/CrestApps.OrchardCore.Calendars.Core/ICalendar/ICalendarReader.cs: Read"] = 171,
         ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs: BeginObligationAsync"] = 153,
-        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs: BeginPaymentCoreAsync"] = 157,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs: BeginPaymentCoreAsync"] = 153,
         ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs: TryCompleteCoreAsync"] = 166,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.Claim.cs: ClaimConnectedCallAsync"] = 168,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.Expiry.cs: ReleaseAsync"] = 267,
@@ -89,7 +89,6 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/BackgroundTasks/AutomatedActivitiesProcessorBackgroundTask.cs: ProcessAsync"] = 258,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Controllers/ActivitiesController.cs: ManageActivitiesBulkActionPost"] = 166,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/BulkManageActivityFilterDisplayDriver.cs: UpdateAsync"] = 195,
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/OmnichannelActivityBatchDisplayDriver.cs: BuildEditor"] = 241,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/OmnichannelActivityBatchDisplayDriver.cs: UpdateAsync"] = 241,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/OmnichannelActivityDisplayDriver.cs: Edit"] = 172,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/OmnichannelActivityDisplayDriver.cs: UpdateAsync"] = 170,
@@ -98,7 +97,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/OmnichannelActivitiesStartup.cs: ConfigureServices"] = 221,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultContactActivityBatchLoader.cs: LoadAsync"] = 815,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Services/MessagingWorkspaceBuilder.cs: BuildInboxAsync"] = 157,
-        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Startup.cs: ConfigureServices"] = 201, // raised for main's #1330 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Startup.cs: ConfigureServices"] = 202, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/BackgroundTasks/SmsReEngagementBackgroundTask.cs: TryReEngageAsync"] = 278,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Handlers/SmsOmnichannelEventHandler.cs: HandleAsync"] = 857,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Sms/Services/SmsOmnichannelProcessor.cs: StartCoreAsync"] = 151,
@@ -153,5 +152,10 @@ public sealed partial class MethodLengthRatchetTests
         // Existing debt from main's #1359-#1365 (Plaid, Taxation returns and e-filing, Report Builder, Banking checks, Payroll),
         // baselined when PR #1319 merged main; remove as it is paid down.
         ["src/Core/CrestApps.OrchardCore.Reports.Core/DataSources/ReportIndexAggregator.cs: Build"] = 153,
+
+        // Existing debt from main's #1371-#1377 (admin forms grouped in cards, Taxation tax forms, Omnichannel routing rules),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/DialerFollowUpActivityHandler.cs: CreatingAsync"] = 153,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/OmnichannelActivityBatchDisplayDriver.cs: PopulateAsync"] = 231,
     };
 }

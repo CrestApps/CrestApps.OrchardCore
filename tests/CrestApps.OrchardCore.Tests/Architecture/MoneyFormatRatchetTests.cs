@@ -62,13 +62,12 @@ public sealed partial class MoneyFormatRatchetTests
         ["src/Modules/CrestApps.OrchardCore.Subscriptions/Reports/SubscriptionReportBase.cs"] = 1,
 
         // Shown to people, to move to CurrencyScale.Format (DRY-11).
-        ["src/Modules/CrestApps.OrchardCore.Orders/Views/DraftOrdersAdmin/Edit.cshtml"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Views/DraftOrderItems.Edit.cshtml"] = 1, // moved from DraftOrdersAdmin/Edit by main's #1376
         ["src/Modules/CrestApps.OrchardCore.Orders/Views/OrdersAdmin/_OrderActions.cshtml"] = 1,
         ["src/Modules/CrestApps.OrchardCore.PayLater/Drivers/OrderOfflinePaymentDisplayDriver.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Products/Views/ProductPart.Edit.cshtml"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Shipping/Services/ShippingSetupStep.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Shipping/Views/ShippingZones/Rates.cshtml"] = 1,
-        ["src/Modules/CrestApps.OrchardCore.Taxation/Views/Items/TaxRule.DefaultTags.SummaryAdmin.cshtml"] = 1,
 
         // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
         // remove as it is paid down.

@@ -176,7 +176,7 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
     private async Task CancelAsync(CheckoutSession session, PaymentAttempt read, string providerReference, CancellationToken cancellationToken)
     {
         var attemptId = read.ItemId;
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(DefaultCheckoutEngine.SessionLockPrefix + session.SessionId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutConstants.SessionLockPrefix + session.SessionId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

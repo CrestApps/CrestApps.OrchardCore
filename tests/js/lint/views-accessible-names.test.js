@@ -51,7 +51,7 @@ const tablesWithScopedHeaders = [
     'CrestApps.OrchardCore.Workforce/Views/TimeOff/Worker.cshtml',
     'CrestApps.OrchardCore.Workforce/Views/TimeOff/Create.cshtml',
     'CrestApps.OrchardCore.Fundraising/Views/AccountDonations/Index.cshtml',
-    'CrestApps.OrchardCore.ContactCenter/Views/AgentEntitlements/_EntitlementFields.cshtml',
+    'CrestApps.OrchardCore.ContactCenter/Views/AgentEntitlementQueues.Edit.cshtml',
     'CrestApps.OrchardCore.Receipts/Views/ReceiptDocument.cshtml',
     'CrestApps.OrchardCore.Reports/Views/Shared/_ReportSection.cshtml',
     'CrestApps.OrchardCore.Reports/Views/Shared/_ReportWidgetSections.cshtml',

@@ -1,6 +1,5 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Checkout;
-using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
@@ -225,7 +224,7 @@ public sealed class TransactionSettlementPaymentGate : ICheckoutPaymentGate
         if (attempts.Count == 0)
         {
             return _clock.UtcNow - hold.HeldUtc < BeginWindow ||
-                await _distributedLock.IsLockAcquiredAsync(DefaultCheckoutEngine.SessionLockPrefix + hold.SessionId);
+                await _distributedLock.IsLockAcquiredAsync(CheckoutConstants.SessionLockPrefix + hold.SessionId);
         }
 
         var applied = transaction.Events

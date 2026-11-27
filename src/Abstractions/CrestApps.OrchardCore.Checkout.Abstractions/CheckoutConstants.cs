@@ -6,6 +6,12 @@ namespace CrestApps.OrchardCore.Checkout;
 public static class CheckoutConstants
 {
     /// <summary>
+    /// The prefix of the distributed lock the checkout engine takes for a checkout session while it begins, completes or
+    /// expires its payment. Another service that must not act while a payment is being begun takes, or checks, the same lock.
+    /// </summary>
+    public const string SessionLockPrefix = "CHECKOUT_SESSION_";
+
+    /// <summary>
     /// The attempt policies Checkout registers. Each can be overridden by name under
     /// <c>CrestApps_Throttling:AttemptPolicies</c>.
     /// </summary>

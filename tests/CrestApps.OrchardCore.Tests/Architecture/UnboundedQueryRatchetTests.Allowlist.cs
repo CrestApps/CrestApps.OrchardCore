@@ -258,5 +258,10 @@ public sealed partial class UnboundedQueryRatchetTests
         // baselined when PR #1319 merged main; remove as it is paid down.
         ["src/Modules/CrestApps.OrchardCore.Taxation/Controllers/TaxReturnsController.cs"] = 1,
         ["src/Modules/CrestApps.OrchardCore.Taxation/Drivers/MerchantTaxRegistrationDisplayDriver.cs"] = 2,
+
+        // Existing debt from main's #1371-#1377 (admin forms grouped in cards, Taxation tax forms, Omnichannel routing rules),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/FollowUpRoutingSubjectActionDisplayDriver.cs"] = 1,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Messaging/Drivers/MessagingRoutingRuleDisplayDriver.cs"] = 4,
     };
 }

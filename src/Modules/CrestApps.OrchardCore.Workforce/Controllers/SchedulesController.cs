@@ -35,7 +35,7 @@ namespace CrestApps.OrchardCore.Workforce.Controllers;
 /// the change log.
 /// </summary>
 [Feature(WorkforceConstants.Features.ShiftPlanning)]
-public sealed class SchedulesController : Controller
+public sealed partial class SchedulesController : Controller
 {
     private const int CoverageIntervalMinutes = 30;
 
@@ -436,21 +436,9 @@ public sealed class SchedulesController : Controller
             return NotFound();
         }
 
-        // A manager never changes their own shift, nor gives one to themselves, on the strength of managing their own
-        // team; and a shift that started or ended is changed only with its own permission, so a day's adherence can't be
-        // rewritten before it is saved.
-        if ((!string.IsNullOrEmpty(published.Data.WorkerId) && !await _scopeService.CanDecideForWorkerAsync(User, published.Data.WorkerId, HttpContext.RequestAborted)) ||
-            (operation == "reassign" && !string.IsNullOrEmpty(workerId) && !await _scopeService.CanDecideForWorkerAsync(User, workerId, HttpContext.RequestAborted)))
+        if (await RefusePublishedShiftChangeAsync(published.Event, published.Data, operation == "reassign" ? workerId : null, clock, periodId, id) is { } refused)
         {
-            return Forbid();
-        }
-
-        if (published.Event.StartUtc <= clock.UtcNow &&
-            !await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ChangeStartedShifts))
-        {
-            await _notifier.ErrorAsync(H["This shift has started or ended. Changing it needs the permission to change shifts that have started or ended."]);
-
-            return RedirectToAction(nameof(Shift), new { periodId, id });
+            return refused;
         }
 
         var shifts = HttpContext.RequestServices.GetRequiredService<IShiftService>();

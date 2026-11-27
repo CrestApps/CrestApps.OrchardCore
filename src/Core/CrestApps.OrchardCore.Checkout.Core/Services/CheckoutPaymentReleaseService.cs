@@ -8,38 +8,6 @@ using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Checkout.Core.Services;
 
-/// <summary>
-/// What became of the payments begun for a checkout that is about to be edited.
-/// </summary>
-public enum CheckoutPaymentReleaseResult
-{
-    /// <summary>
-    /// No payment is live any more: the edit may go ahead.
-    /// </summary>
-    Released,
-
-    /// <summary>
-    /// A payment was taken already, or the provider would not cancel it: the edit must wait.
-    /// </summary>
-    PaymentInProgress,
-}
-
-/// <summary>
-/// Sets aside the payments begun for a checkout before it is edited. A payment is begun for the total of the moment; a
-/// buyer who then changes shipping, a code or a balance must pay the new total, so the old payment is canceled at the
-/// provider and superseded, which kills its client secret.
-/// </summary>
-public interface ICheckoutPaymentReleaseService
-{
-    /// <summary>
-    /// Cancels and supersedes every live payment of the checkout, under the checkout's lock.
-    /// </summary>
-    /// <param name="sessionId">The checkout session.</param>
-    /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>Whether the edit may go ahead.</returns>
-    Task<CheckoutPaymentReleaseResult> ReleaseAsync(string sessionId, CancellationToken cancellationToken = default);
-}
-
 /// <inheritdoc/>
 public sealed class CheckoutPaymentReleaseService : ICheckoutPaymentReleaseService
 {
@@ -96,7 +64,7 @@ public sealed class CheckoutPaymentReleaseService : ICheckoutPaymentReleaseServi
 
         // The same lock the engine takes to begin or complete a payment, so a payment can't be begun or settled while it
         // is being set aside.
-        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(DefaultCheckoutEngine.SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(CheckoutConstants.SessionLockPrefix + sessionId, _lockTimeout, _lockExpiration);
 
         if (!locked)
         {

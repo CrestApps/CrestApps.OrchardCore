@@ -52,11 +52,11 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Services/QueuedVoiceWorkOfferService.cs: QueuedVoiceWorkOfferService"] = 13,
         ["src/Modules/CrestApps.OrchardCore.ContactCenter/Services/VoiceAgentHandoffService.cs: VoiceAgentHandoffService"] = 15,
         ["src/Modules/CrestApps.OrchardCore.ContentTransfer/Controllers/AdminController.cs: AdminController"] = 26,
-        ["src/Modules/CrestApps.OrchardCore.Customers/Controllers/CustomersAdminController.cs: CustomersAdminController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Customers/Controllers/CustomersAdminController.cs: CustomersAdminController"] = 15, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.DataConnectors/Controllers/ConnectedDataSetsController.cs: ConnectedDataSetsController"] = 15,
         ["src/Modules/CrestApps.OrchardCore.Dispatch/Controllers/VisitsController.cs: VisitsController"] = 14,
         ["src/Modules/CrestApps.OrchardCore.Inventory/Controllers/InventoryAdminController.cs: InventoryAdminController"] = 14,
-        ["src/Modules/CrestApps.OrchardCore.Inventory/Controllers/PurchaseOrdersAdminController.cs: PurchaseOrdersAdminController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Inventory/Controllers/PurchaseOrdersAdminController.cs: PurchaseOrdersAdminController"] = 16, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Controllers/ActivitiesController.cs: ActivitiesController"] = 19,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/OmnichannelActivityBatchDisplayDriver.cs: OmnichannelActivityBatchDisplayDriver"] = 16,
         ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Drivers/OmnichannelActivityDisplayDriver.cs: OmnichannelActivityDisplayDriver"] = 15,
@@ -73,9 +73,9 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Services/ChildTenantManager.cs: ChildTenantManager"] = 15,
         ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrdersController.cs: WorkOrdersController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyTeamController.cs: MyTeamController"] = 13,
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs: MyWorkController"] = 18,
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs: SchedulesController"] = 13,
-        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/TimeOffController.cs: TimeOffController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/MyWorkController.cs: MyWorkController"] = 21, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/SchedulesController.cs: SchedulesController"] = 16, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/TimeOffController.cs: TimeOffController"] = 15, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/TimesheetsController.cs: TimesheetsController"] = 14,
 
         // Existing debt from main's #1332 (Payroll, Banking, Approvals, Income Tax, PDF), baselined when PR #1319 merged main;
@@ -83,8 +83,8 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Core/CrestApps.OrchardCore.Banking.Core/Disbursements/Services/DisbursementService.cs: DisbursementService"] = 15,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayProfileServices.cs: DefaultPayProfileService"] = 13,
         ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayRunServices.cs: DefaultPayRunService"] = 13,
-        ["src/Modules/CrestApps.OrchardCore.Approvals/Controllers/ApprovalRequestsController.cs: ApprovalRequestsController"] = 14,
-        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Controllers/ChecksController.cs: ChecksController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Approvals/Controllers/ApprovalRequestsController.cs: ApprovalRequestsController"] = 15, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.Banking/Checks/Controllers/ChecksController.cs: ChecksController"] = 18, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Payroll/Controllers/MyPayController.cs: MyPayController"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Payroll/Controllers/PayRunsController.cs: PayRunsController"] = 16,
         ["src/Modules/CrestApps.OrchardCore.Payroll/Drivers/PayProfileDisplayDriver.cs: PayProfileDisplayDriver"] = 14,
@@ -94,14 +94,14 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultCreditNoteCommandService.cs: DefaultCreditNoteCommandService"] = 15,
         ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultEstimateCommandService.cs: DefaultEstimateCommandService"] = 14,
         ["src/Core/CrestApps.OrchardCore.Invoicing.Core/Services/DefaultInvoiceCommandService.cs: DefaultInvoiceCommandService"] = 15,
-        ["src/Modules/CrestApps.OrchardCore.Invoicing/Controllers/InvoicesAdminController.cs: InvoicesAdminController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Controllers/InvoicesAdminController.cs: InvoicesAdminController"] = 16, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Transactions/Controllers/AdminController.cs: AdminController"] = 15,
 
         // Existing debt from main's #1330 (help desk), baselined when PR #1319 merged main;
         // remove as it is paid down.
         ["src/Core/CrestApps.OrchardCore.Tickets.Core/Services/DefaultTicketService.cs: DefaultTicketService"] = 16,
         ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketBoardsController.cs: TicketBoardsController"] = 15,
-        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketsController.cs: TicketsController"] = 19,
+        ["src/Modules/CrestApps.OrchardCore.Tickets/Controllers/TicketsController.cs: TicketsController"] = 20, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Tickets/Drivers/TicketPartDisplayDriver.cs: TicketPartDisplayDriver"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Tickets/Portal/TicketPortalController.cs: TicketPortalController"] = 15,
 
@@ -113,8 +113,8 @@ public sealed partial class ConstructorDependencyRatchetTests
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultShiftService.cs: DefaultShiftService"] = 13,
         ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/ContentTransfer/Moodle/MoodleImportHandler.cs: MoodleImportHandler"] = 14,
         ["src/Modules/CrestApps.OrchardCore.Learning.Commerce/Services/LearningPurchaseProcessor.cs: LearningPurchaseProcessor"] = 14,
-        ["src/Modules/CrestApps.OrchardCore.Learning.Credentials/Controllers/CredentialAwardsAdminController.cs: CredentialAwardsAdminController"] = 13,
-        ["src/Modules/CrestApps.OrchardCore.Learning/Controllers/EnrollmentsController.cs: EnrollmentsController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Credentials/Controllers/CredentialAwardsAdminController.cs: CredentialAwardsAdminController"] = 16, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
+        ["src/Modules/CrestApps.OrchardCore.Learning/Controllers/EnrollmentsController.cs: EnrollmentsController"] = 15, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
         ["src/Modules/CrestApps.OrchardCore.Learning/Services/LearnerPageService.cs: LearnerPageService"] = 13,
         // Existing debt from main's #1351 (protected files in Azure Blob Storage) and #1356 (US state and local payroll
         // taxes), baselined when PR #1319 merged main; remove as it is paid down.
@@ -122,6 +122,22 @@ public sealed partial class ConstructorDependencyRatchetTests
 
         // Existing debt from main's #1359-#1365 (Plaid, Taxation returns and e-filing, Report Builder, Banking checks, Payroll),
         // baselined when PR #1319 merged main; remove as it is paid down.
-        ["src/Modules/CrestApps.OrchardCore.Taxation/Controllers/TaxReturnsController.cs: TaxReturnsController"] = 15,
+        ["src/Modules/CrestApps.OrchardCore.Taxation/Controllers/TaxReturnsController.cs: TaxReturnsController"] = 16, // raised for main's #1371-#1377 when PR #1319 merged main; lower as it is paid down
+
+        // Existing debt from main's #1371-#1377 (admin forms grouped in cards, Taxation tax forms, Omnichannel routing rules),
+        // baselined when PR #1319 merged main; remove as it is paid down.
+        ["src/Core/CrestApps.OrchardCore.Payroll.Core/Services/PayrollFilings.cs: PayrollFilingService"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Controllers/EstimatesAdminController.cs: EstimatesAdminController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Invoicing/Controllers/RecurringPlansAdminController.cs: RecurringPlansAdminController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Learning.Assessments/Controllers/GradingController.cs: GradingController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Marketplace/Controllers/VendorsAdminController.cs: VendorsAdminController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Omnichannel.Managements/Services/DefaultSubjectActionExecutor.cs: DefaultSubjectActionExecutor"] = 15,
+        ["src/Modules/CrestApps.OrchardCore.Orders/Controllers/GiftCardsAdminController.cs: GiftCardsAdminController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.PointOfSale/Controllers/RegistersAdminController.cs: RegistersAdminController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.Subscriptions/Controllers/InstallmentPlansController.cs: InstallmentPlansController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.TenantHierarchy/Controllers/ChildTenantsController.cs: ChildTenantsController"] = 13,
+        ["src/Modules/CrestApps.OrchardCore.WorkOrders/Controllers/WorkOrderSettingsController.cs: WorkOrderSettingsController"] = 15,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/OpenShiftsController.cs: OpenShiftsController"] = 14,
+        ["src/Modules/CrestApps.OrchardCore.Workforce/Controllers/ShiftTradesController.cs: ShiftTradesController"] = 14,
     };
 }

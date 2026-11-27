@@ -106,7 +106,7 @@ public sealed class WorkforceSelfDecisionControllerTests
 
     private static TimeOffController TimeOff(IServiceProvider services, string userId, params string[] permissions)
         => WithUser(
-            ActivatorUtilities.CreateInstance<TimeOffController>(services, Mock.Of<INotifier>(), Mock.Of<IHtmlLocalizer<TimeOffController>>(), Mock.Of<ILocalClock>()),
+            ActivatorUtilities.CreateInstance<TimeOffController>(services, Mock.Of<INotifier>(), Mock.Of<IHtmlLocalizer<TimeOffController>>(), Mock.Of<ILocalClock>(), Mock.Of<global::OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Workforce.ViewModels.TimeOffRequestEditViewModel>>(), Mock.Of<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>()),
             services,
             CalendarTestHarness.User(userId, permissions));
 
