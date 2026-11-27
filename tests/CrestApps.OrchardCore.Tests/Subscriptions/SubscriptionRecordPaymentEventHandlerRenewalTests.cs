@@ -124,7 +124,8 @@ public sealed class SubscriptionRecordPaymentEventHandlerRenewalTests
             SiteServiceFactory.Create(new SubscriptionSettings { DunningGraceDays = 7 }),
             new TestClock(_now),
             [],
-            NullLogger<DefaultSubscriptionLifecycleService>.Instance);
+            NullLogger<DefaultSubscriptionLifecycleService>.Instance,
+            new FakePaymentProviderResolver("PayLater"));
 
         var handler = new SubscriptionRecordPaymentEventHandler(
             manager,

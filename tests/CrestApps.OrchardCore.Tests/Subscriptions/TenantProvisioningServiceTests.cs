@@ -361,6 +361,83 @@ public sealed class TenantProvisioningServiceTests
         Assert.Empty(subscription.Entitlements);
     }
 
+    /// <summary>
+    /// Round 3 (Medium): a site was built even when the subscription it was bought with had already ended, and nothing
+    /// suspended it afterwards. The job is given up and nothing is created.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WhenTheSubscriptionHasEnded_GivesUpAndCreatesNothing()
+    {
+        // Arrange
+        var subscription = new Subscription { ItemId = "sub-1", Status = SubscriptionStatus.Expired, CurrentPeriodEndUtc = _now.AddDays(-1) };
+        var (service, setup, store) = CreateService(new SubscriptionOnboardingSettings(), subscription: subscription);
+
+        // Act
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TenantProvisioningStatus.Abandoned, status);
+        Assert.Null(setup.Captured);
+        Assert.Null(store.Jobs.First().ProtectedAdminPassword);
+        Assert.Empty(subscription.Entitlements);
+    }
+
+    /// <summary>
+    /// Round 3 (Medium): a subscription that stopped being current while its site was being built had found no site to
+    /// suspend, so the site is suspended as soon as it exists.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_WhenTheSubscriptionIsNotCurrent_SuspendsTheNewSite()
+    {
+        // Arrange
+        var subscription = new Subscription { ItemId = "sub-1", Status = SubscriptionStatus.Paused, CurrentPeriodEndUtc = _now.AddDays(20) };
+        var handler = new RecordingLifecycleHandler();
+        var services = new ServiceCollection()
+            .AddSingleton<ISubscriptionLifecycleHandler>(handler)
+            .BuildServiceProvider();
+        var (service, setup, store) = CreateService(new SubscriptionOnboardingSettings(), subscription: subscription, services: services);
+
+        // Act
+        var status = await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TenantProvisioningStatus.Succeeded, status);
+        Assert.NotNull(setup.Captured);
+        var context = Assert.Single(handler.Contexts);
+        Assert.Same(subscription, context.Subscription);
+        Assert.Single(context.Subscription.Entitlements);
+        Assert.Equal(TenantProvisioningStatus.Succeeded, store.Jobs.First().Status);
+    }
+
+    [Fact]
+    public async Task ProvisionAsync_WhenTheSubscriptionIsCurrent_SuspendsNothing()
+    {
+        // Arrange
+        var handler = new RecordingLifecycleHandler();
+        var services = new ServiceCollection()
+            .AddSingleton<ISubscriptionLifecycleHandler>(handler)
+            .BuildServiceProvider();
+        var (service, _, _) = CreateService(new SubscriptionOnboardingSettings(), subscription: new Subscription { ItemId = "sub-1" }, services: services);
+
+        // Act
+        await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Empty(handler.Contexts);
+    }
+
+    private sealed class RecordingLifecycleHandler : SubscriptionLifecycleHandlerBase
+    {
+        public List<SubscriptionLifecycleContext> Contexts { get; } = [];
+
+        public override Task ChangedAsync(SubscriptionLifecycleContext context)
+        {
+            Contexts.Add(context);
+
+            return Task.CompletedTask;
+        }
+    }
+
     private static (TenantProvisioningService Service, RecordingSetupService Setup, InMemoryTenantProvisioningJobStore Store) CreateService(
         SubscriptionOnboardingSettings onboarding,
         ShellSettings existing = null,
@@ -371,7 +448,8 @@ public sealed class TenantProvisioningServiceTests
         string[] knownProfiles = null,
         string planRecipe = null,
         TenantProvisioningStatus status = TenantProvisioningStatus.Pending,
-        string planFeatureProfile = "sold-tenant")
+        string planFeatureProfile = "sold-tenant",
+        IServiceProvider services = null)
     {
         knownProfiles ??= ["sold-tenant"];
         planRecipe ??= recipeName;
@@ -417,7 +495,7 @@ public sealed class TenantProvisioningServiceTests
             setup,
             _protection,
             new LocalLock(NullLogger<LocalLock>.Instance),
-            new ServiceCollection().BuildServiceProvider(),
+            services ?? new ServiceCollection().BuildServiceProvider(),
             CreateSession(),
             new ProvisioningClock(_now),
             NullLogger<TenantProvisioningService>.Instance,

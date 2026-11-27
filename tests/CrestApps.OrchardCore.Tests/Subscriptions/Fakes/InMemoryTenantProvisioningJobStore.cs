@@ -89,4 +89,7 @@ internal sealed class InMemoryTenantProvisioningJobStore : ITenantProvisioningJo
 
     public Task<IReadOnlyList<TenantProvisioningJob>> GetByOwnerAsync(string ownerId, CancellationToken cancellationToken = default)
         => Task.FromResult<IReadOnlyList<TenantProvisioningJob>>([.. _jobs.Values.Where(job => job.OwnerId == ownerId)]);
+
+    public Task<IReadOnlyList<TenantProvisioningJob>> GetOpenAsync(CancellationToken cancellationToken = default)
+        => Task.FromResult<IReadOnlyList<TenantProvisioningJob>>([.. _jobs.Values.Where(job => !job.IsTerminal).OrderBy(job => job.CreatedUtc)]);
 }

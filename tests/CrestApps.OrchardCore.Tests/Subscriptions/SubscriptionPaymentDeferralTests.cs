@@ -61,8 +61,9 @@ public sealed class SubscriptionPaymentDeferralTests
             SiteServiceFactory.Create(new SubscriptionSettings { DunningGraceDays = 7 }),
             new TestClock(_now),
             [entitlements],
-            NullLogger<DefaultSubscriptionLifecycleService>.Instance);
-        var paid = new SubscriptionFirstPaymentTransactionHandler(lifecycle, manager, new CrestApps.OrchardCore.Tests.Transactions.FakeTransactionStore());
+            NullLogger<DefaultSubscriptionLifecycleService>.Instance,
+            new FakePaymentProviderResolver(PayLater));
+        var paid = new SubscriptionFirstPaymentTransactionHandler(lifecycle, manager, new CrestApps.OrchardCore.Tests.Transactions.FakeTransactionStore(), new FakePaymentProviderResolver(PayLater));
 
         // SEC-C5: Pay Later records one transaction per obligation. Paying the checkout's one-time balance (a sign-up fee,
         // a small item next to the plan) is not paying for the plan's first cycle.
@@ -95,6 +96,53 @@ public sealed class SubscriptionPaymentDeferralTests
         Assert.Equal(SubscriptionStatus.Active, subscription.Status);
         Assert.True(entitlements.Contexts[^1].Subscription.IsCurrent(_now));
         Assert.Equal(SubscriptionStatus.Incomplete, entitlements.Contexts[^1].PreviousStatus);
+    }
+
+    /// <summary>
+    /// Round 3 (Medium): a first payment that arrived late started the subscription on the schedule set at checkout, so a
+    /// buyer on payment terms paid for a period that was mostly over, and the next cycle was invoiced at once. Its first
+    /// period, and the period its transaction records for the renewal sweep, start when the payment arrives.
+    /// </summary>
+    [Fact]
+    public async Task ALateFirstPayment_StartsTheFirstPeriodWhenItArrives()
+    {
+        // Arrange
+        var store = new InMemorySubscriptionStore();
+        var manager = new SubscriptionManager(store, [], NullLogger<CatalogManager<Subscription>>.Instance);
+        await CreateActivationHandler(manager, new RecordingLifecycleHandler(), defers: true).CompletedAsync(CreateContext());
+
+        var paidAt = _now.AddDays(25);
+        var first = new Transaction
+        {
+            ItemId = "tx-1",
+            CheckoutSessionId = "session-1",
+            ObligationId = _planObligation,
+            Status = TransactionStatus.Paid,
+            Recurrence = new TransactionRecurrence { BillingDuration = 1, DurationType = DurationType.Month, PeriodStartUtc = _now, PeriodEndUtc = _now.AddMonths(1), CycleNumber = 1 },
+        };
+        var transactions = new CrestApps.OrchardCore.Tests.Transactions.FakeTransactionStore(first);
+        var providers = new FakePaymentProviderResolver(PayLater);
+        var lifecycle = new DefaultSubscriptionLifecycleService(
+            manager,
+            new LocalLock(NullLogger<LocalLock>.Instance),
+            SiteServiceFactory.Create(new SubscriptionSettings { DunningGraceDays = 7 }),
+            new TestClock(paidAt),
+            [],
+            NullLogger<DefaultSubscriptionLifecycleService>.Instance,
+            providers);
+        var handler = new SubscriptionFirstPaymentTransactionHandler(lifecycle, manager, transactions, providers);
+
+        // Act
+        await handler.StatusChangedAsync(first, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        // Assert
+        var subscription = Assert.Single(store.Subscriptions);
+        Assert.Equal(SubscriptionStatus.Active, subscription.Status);
+        Assert.Equal(paidAt, subscription.CurrentPeriodStartUtc);
+        Assert.Equal(paidAt.AddMonths(1), subscription.CurrentPeriodEndUtc);
+        Assert.Equal(paidAt.AddMonths(1), subscription.NextBillingUtc);
+        Assert.Equal(paidAt, first.Recurrence.PeriodStartUtc);
+        Assert.Equal(paidAt.AddMonths(1), first.Recurrence.GetNextCycleUtc());
     }
 
     [Fact]

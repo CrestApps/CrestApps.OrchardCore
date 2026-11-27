@@ -248,6 +248,14 @@ public sealed class SubscriptionAgreementsController : Controller
             return NotFound();
         }
 
+        // One waiting for its first payment bills nothing to suspend, and a paused one is what Resume starts.
+        if (subscription.Status == SubscriptionStatus.Incomplete)
+        {
+            await _notifier.WarningAsync(H["This subscription is waiting for its first payment. It becomes active when the payment arrives."]);
+
+            return RedirectToAction(nameof(Detail), new { itemId });
+        }
+
         await _lifecycleService.PauseAsync(itemId, string.IsNullOrWhiteSpace(reason) ? S["Paused by an administrator."].Value : reason.Trim());
 
         await _notifier.SuccessAsync(H["Billing was suspended."]);

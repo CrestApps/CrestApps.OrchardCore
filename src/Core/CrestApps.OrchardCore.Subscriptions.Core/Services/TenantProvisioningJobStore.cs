@@ -82,4 +82,20 @@ public sealed class TenantProvisioningJobStore : DocumentCatalog<TenantProvision
 
         return records.ToArray();
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<TenantProvisioningJob>> GetOpenAsync(CancellationToken cancellationToken = default)
+    {
+        var records = await Session
+            .Query<TenantProvisioningJob, TenantProvisioningJobIndex>(
+                x => x.Status == TenantProvisioningStatus.AwaitingPayment ||
+                    x.Status == TenantProvisioningStatus.Pending ||
+                    x.Status == TenantProvisioningStatus.Running ||
+                    x.Status == TenantProvisioningStatus.Failed,
+                collection: CollectionName)
+            .OrderBy(x => x.CreatedUtc)
+            .ListAsync(cancellationToken);
+
+        return records.ToArray();
+    }
 }

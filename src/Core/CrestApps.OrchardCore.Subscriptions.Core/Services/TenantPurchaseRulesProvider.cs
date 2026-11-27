@@ -44,12 +44,14 @@ public interface ITenantPurchaseRulesProvider
     /// Returns every reason the purchase is refused: <see cref="TenantPurchaseValidator.Validate"/>, and a prefix whose
     /// URLs this store already serves itself (the first segment of one of its routes or of one of its pages' paths, a
     /// module's or theme's id, or a top-level entry of the web root). The sites the request's buyer already owns don't
-    /// hold the names around their hosts against them.
+    /// hold the names around their hosts against them. A new purchase is also refused the name, prefix and hosts of a
+    /// site bought earlier that is not built yet, a site waiting for its payment included.
     /// </summary>
     /// <param name="request">The normalized request.</param>
     /// <param name="rules">The rules.</param>
     /// <param name="tenants">The settings of every tenant on the host.</param>
-    /// <param name="ignoreTenant">A tenant to leave out of the uniqueness checks.</param>
+    /// <param name="ignoreTenant">A tenant to leave out of the uniqueness checks: the one being set up. When set, the check
+    /// is the one made before a bought site is set up, and the sites not built yet hold nothing against it.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     Task<IReadOnlyList<TenantPurchaseError>> ValidateAsync(
         TenantPurchaseRequest request,
@@ -116,7 +118,25 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
     {
         var all = tenants?.ToList() ?? [];
         var owned = await GetOwnedTenantsAsync(request?.OwnerId, all, cancellationToken);
-        var errors = TenantPurchaseValidator.Validate(request, rules, all, ignoreTenant, owned).ToList();
+
+        // A site bought earlier and not built yet holds its name, prefix and hosts. A site waiting for its payment can wait
+        // for the length of the payment terms, and without the hold another buyer took its name meanwhile, which abandoned
+        // the first buyer's paid job.
+        var held = ignoreTenant is null ? await GetHeldSitesAsync(all, cancellationToken) : [];
+        List<TenantPurchaseError> errors;
+
+        try
+        {
+            errors = TenantPurchaseValidator.Validate(request, rules, [.. all, .. held], ignoreTenant, owned).ToList();
+        }
+        finally
+        {
+            foreach (var site in held)
+            {
+                site.Dispose();
+            }
+        }
+
         var prefix = request.Prefix?.Trim().Trim('/');
 
         // A site on a prefix of the store's own address takes every URL under it. The reserved list can't name every route
@@ -130,6 +150,31 @@ public sealed class TenantPurchaseRulesProvider : ITenantPurchaseRulesProvider
         }
 
         return errors;
+    }
+
+    // The sites bought and not built yet, as the tenants they will be. One whose tenant already exists (what a failed attempt
+    // leaves behind) is held by that tenant.
+    private async Task<List<ShellSettings>> GetHeldSitesAsync(List<ShellSettings> tenants, CancellationToken cancellationToken)
+    {
+        var held = new List<ShellSettings>();
+
+        foreach (var job in await _jobStore.GetOpenAsync(cancellationToken))
+        {
+            if (string.IsNullOrEmpty(job.TenantName) ||
+                tenants.Any(tenant => string.Equals(tenant.Name, job.TenantName, StringComparison.OrdinalIgnoreCase)))
+            {
+                continue;
+            }
+
+            held.Add(new ShellSettings
+            {
+                Name = job.TenantName,
+                RequestUrlPrefix = job.Prefix,
+                RequestUrlHost = job.Domains is { Length: > 0 } ? string.Join(',', job.Domains) : null,
+            });
+        }
+
+        return held;
     }
 
     // The sites the buyer owns: a tenant whose newest successful job is theirs. A name sold again after a site was removed

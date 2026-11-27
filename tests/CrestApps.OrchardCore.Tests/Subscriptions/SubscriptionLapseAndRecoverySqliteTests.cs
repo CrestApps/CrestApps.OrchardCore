@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Subscriptions.Core.Models;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Migrations;
 using CrestApps.OrchardCore.Subscriptions.Models;
+using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
 using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using CrestApps.OrchardCore.Tests.Utilities;
@@ -180,7 +181,7 @@ public sealed class SubscriptionLapseAndRecoverySqliteTests
     {
         await using var database = await Database.CreateAsync();
         await using var session = database.Store.CreateSession();
-        var (handler, subscriptions, transactions) = await SeedPastDueAsync(session, overdueRenewals: 0, overdueFee: true, providerSubscriptionId: "sub_provider_1");
+        var (handler, subscriptions, transactions) = await SeedPastDueAsync(session, overdueRenewals: 0, overdueFee: true, gateway: true);
 
         var fee = await transactions.GetByObligationAsync("session-1", "fee-ob", TestContext.Current.CancellationToken);
         fee.Status = TransactionStatus.Paid;
@@ -195,7 +196,7 @@ public sealed class SubscriptionLapseAndRecoverySqliteTests
         ISession session,
         int overdueRenewals,
         bool overdueFee = false,
-        string providerSubscriptionId = null)
+        bool gateway = false)
     {
         var clock = new TestClock(_now);
         var subscriptionStore = new SubscriptionStore(session, clock);
@@ -207,8 +208,11 @@ public sealed class SubscriptionLapseAndRecoverySqliteTests
             ItemId = "sub-1",
             Title = "Site plan",
             OwnerId = "owner-1",
-            ProviderKey = providerSubscriptionId is null ? "PayLater" : "Stripe",
-            ProviderSubscriptionId = providerSubscriptionId,
+            ProviderKey = gateway ? "Stripe" : "PayLater",
+
+            // Pay Later returns a generated reference for every agreement it takes, as a gateway does; only its capability
+            // tells the two apart.
+            ProviderSubscriptionId = gateway ? "sub_provider_1" : "pay_later_ref_1",
             CheckoutSessionId = "session-1",
             ObligationId = "plan-ob",
             Status = SubscriptionStatus.PastDue,
@@ -246,15 +250,17 @@ public sealed class SubscriptionLapseAndRecoverySqliteTests
 
         await session.SaveChangesAsync(TestContext.Current.CancellationToken);
 
+        var providers = new FakePaymentProviderResolver("PayLater");
         var lifecycle = new DefaultSubscriptionLifecycleService(
             manager,
             new LocalLock(NullLogger<LocalLock>.Instance),
             SiteServiceFactory.Create(new SubscriptionSettings { DunningGraceDays = 7 }),
             clock,
             [],
-            NullLogger<DefaultSubscriptionLifecycleService>.Instance);
+            NullLogger<DefaultSubscriptionLifecycleService>.Instance,
+            providers);
 
-        return (new SubscriptionFirstPaymentTransactionHandler(lifecycle, manager, transactions), manager, transactions);
+        return (new SubscriptionFirstPaymentTransactionHandler(lifecycle, manager, transactions, providers), manager, transactions);
     }
 
     private static Transaction Invoice(string itemId, string obligationId, int cycle, TransactionStatus status, bool overdue)

@@ -140,6 +140,17 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
             return job?.Status ?? TenantProvisioningStatus.Abandoned;
         }
 
+        // A site exists for as long as its subscription. One built after its subscription ended runs with nothing left to
+        // suspend it, since the transition that ended the subscription found no site.
+        if (TenantProvisioningPaymentRelease.HaveEnded(await FindSubscriptionsAsync(job, cancellationToken), _clock.UtcNow))
+        {
+            TenantProvisioningPaymentRelease.MarkSubscriptionEnded(job, _clock.UtcNow);
+            await _jobStore.UpdateAsync(job, cancellationToken);
+            telemetry.SetOutcome(SubscriptionsTelemetry.ProvisioningAbandoned);
+
+            return job.Status;
+        }
+
         job.Status = TenantProvisioningStatus.Running;
         job.AttemptCount++;
 
@@ -181,26 +192,7 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
 
         if (failure is null)
         {
-            job.Status = TenantProvisioningStatus.Succeeded;
-            job.CompletedUtc = now;
-            job.NextAttemptUtc = null;
-            job.LastError = null;
-            job.SiteUrl = BuildSiteUrl(job);
-
-            // The password was only needed to create the administrator. Keeping it afterwards means holding
-            // a customer's secret for the life of the record for no reason.
-            job.ProtectedAdminPassword = null;
-
-            try
-            {
-                await GrantEntitlementAsync(job, cancellationToken);
-            }
-            catch (Exception exception) when (exception is not OperationCanceledException)
-            {
-                // The site exists and the customer has paid; a subscription that could not record the entitlement is an
-                // operator's to fix, not a reason to report the site as failed.
-                _logger.LogError(exception, "The tenant '{TenantName}' was created but its subscription entitlement could not be recorded for job '{JobId}'.", job.TenantName, job.ItemId);
-            }
+            await CompleteAsync(job, now, cancellationToken);
         }
         else
         {
@@ -255,6 +247,44 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         await RaiseAsync(job, failure);
 
         return job.Status;
+    }
+
+    private async Task CompleteAsync(TenantProvisioningJob job, DateTime now, CancellationToken cancellationToken)
+    {
+        job.Status = TenantProvisioningStatus.Succeeded;
+        job.CompletedUtc = now;
+        job.NextAttemptUtc = null;
+        job.LastError = null;
+        job.SiteUrl = BuildSiteUrl(job);
+
+        // The password was only needed to create the administrator. Keeping it afterwards means holding
+        // a customer's secret for the life of the record for no reason.
+        job.ProtectedAdminPassword = null;
+
+        try
+        {
+            await GrantEntitlementAsync(job, cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // The site exists and the customer has paid; a subscription that could not record the entitlement is an
+            // operator's to fix, not a reason to report the site as failed.
+            _logger.LogError(exception, "The tenant '{TenantName}' was created but its subscription entitlement could not be recorded for job '{JobId}'.", job.TenantName, job.ItemId);
+        }
+    }
+
+    // The subscription the site belongs to, or every subscription of the checkout it was bought with when the job names none.
+    private async Task<IReadOnlyList<Subscription>> FindSubscriptionsAsync(TenantProvisioningJob job, CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrEmpty(job.SubscriptionId) &&
+            await _subscriptionManager.FindByIdAsync(job.SubscriptionId, cancellationToken) is { } subscription)
+        {
+            return [subscription];
+        }
+
+        return string.IsNullOrEmpty(job.CheckoutSessionId)
+            ? []
+            : await _subscriptionManager.GetByCheckoutSessionAsync(job.CheckoutSessionId, cancellationToken);
     }
 
     // Whether the job's site name is held by an uninitialized tenant this job didn't create: the leftover of another
@@ -529,15 +559,8 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     // the entitlement from ever reaching a tenant this job did not create.
     private async Task GrantEntitlementAsync(TenantProvisioningJob job, CancellationToken cancellationToken)
     {
-        var subscription = !string.IsNullOrEmpty(job.SubscriptionId)
-            ? await _subscriptionManager.FindByIdAsync(job.SubscriptionId, cancellationToken)
-            : null;
-
-        if (subscription is null && !string.IsNullOrEmpty(job.CheckoutSessionId))
-        {
-            var subscriptions = await _subscriptionManager.GetByCheckoutSessionAsync(job.CheckoutSessionId, cancellationToken);
-            subscription = subscriptions.Count > 0 ? subscriptions[0] : null;
-        }
+        var subscriptions = await FindSubscriptionsAsync(job, cancellationToken);
+        var subscription = subscriptions.Count > 0 ? subscriptions[0] : null;
 
         if (subscription is null)
         {
@@ -572,6 +595,19 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
         });
 
         await _subscriptionManager.UpdateAsync(subscription, cancellationToken: cancellationToken);
+
+        // The subscription stopped being current while the site was being built (it lapsed, was paused or was canceled
+        // outright), and the transition that did it found no site to suspend; nothing else would follow to suspend it. One
+        // still waiting for its first payment is being started by that payment, which released this job.
+        if (!subscription.IsCurrent(_clock.UtcNow) && subscription.Status != SubscriptionStatus.Incomplete)
+        {
+            // Saved first: the site's entitlement acts only on a tenant its job records as created.
+            await _jobStore.UpdateAsync(job, cancellationToken);
+            await _serviceProvider.GetServices<ISubscriptionLifecycleHandler>().InvokeAsync(
+                (handler, context) => handler.ChangedAsync(context),
+                new SubscriptionLifecycleContext(subscription, subscription.Status),
+                _logger);
+        }
     }
 
     private async Task RaiseAsync(TenantProvisioningJob job, string failure)

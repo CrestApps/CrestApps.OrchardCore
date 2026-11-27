@@ -278,6 +278,9 @@ public sealed class TenantProvisioningStartup : StartupBase
         // A site bought with a promise to pay is created once its transaction is paid.
         services.AddScoped<TenantProvisioningPaymentRelease>();
         services.AddScoped<ITransactionEventHandler, TenantProvisioningPaymentReceivedHandler>();
+
+        // One whose subscription ended first is given up, which frees the name, prefix and hosts held for it.
+        services.AddScoped<ISubscriptionLifecycleHandler, TenantProvisioningSubscriptionEndedHandler>();
         services.AddDisplayDriver<CheckoutFlow, TenantProvisioningStepDisplayDriver>();
 
         // A site that keeps serving after the customer stops paying costs the owner money indefinitely, so

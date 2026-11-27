@@ -196,7 +196,8 @@ public sealed class SubscriptionLifecycleBackgroundTaskTests
             SiteServiceFactory.Create(new SubscriptionSettings { DunningGraceDays = 7 }),
             new TestClock(_now),
             handlers,
-            NullLogger<DefaultSubscriptionLifecycleService>.Instance);
+            NullLogger<DefaultSubscriptionLifecycleService>.Instance,
+            new FakePaymentProviderResolver("PayLater"));
 
         var provider = new Mock<ICheckoutPaymentProvider>();
         provider.SetupGet(p => p.Key).Returns(seed.ProviderKey);

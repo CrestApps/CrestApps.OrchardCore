@@ -25,6 +25,35 @@ public sealed class SubscriptionResumeTests
     public async Task Resume_StartsOnlyASubscriptionThatIsNotWaitingForItsFirstPayment(SubscriptionStatus status, bool resumed)
     {
         // Arrange
+        var (controller, lifecycle) = CreateController(status);
+
+        // Act
+        await controller.Resume("sub-1");
+
+        // Assert
+        lifecycle.Verify(service => service.ResumeAsync("sub-1", It.IsAny<CancellationToken>()), resumed ? Times.Once() : Times.Never());
+    }
+
+    /// <summary>
+    /// Round 3 (Low): pausing a subscription waiting for its first payment turned it into one Resume starts.
+    /// </summary>
+    [Theory]
+    [InlineData(SubscriptionStatus.Incomplete, false)]
+    [InlineData(SubscriptionStatus.Active, true)]
+    public async Task Pause_SuspendsOnlyASubscriptionThatIsNotWaitingForItsFirstPayment(SubscriptionStatus status, bool paused)
+    {
+        // Arrange
+        var (controller, lifecycle) = CreateController(status);
+
+        // Act
+        await controller.Pause("sub-1", reason: null);
+
+        // Assert
+        lifecycle.Verify(service => service.PauseAsync("sub-1", It.IsAny<string>(), It.IsAny<CancellationToken>()), paused ? Times.Once() : Times.Never());
+    }
+
+    private static (SubscriptionAgreementsController Controller, Mock<ISubscriptionLifecycleService> Lifecycle) CreateController(SubscriptionStatus status)
+    {
         var subscription = new Subscription { ItemId = "sub-1", Status = status };
         var subscriptions = new Mock<ISubscriptionManager>();
         subscriptions.Setup(manager => manager.FindByIdAsync("sub-1", It.IsAny<CancellationToken>())).ReturnsAsync(subscription);
@@ -37,6 +66,9 @@ public sealed class SubscriptionResumeTests
         var htmlLocalizer = new Mock<IHtmlLocalizer<SubscriptionAgreementsController>>();
         htmlLocalizer.Setup(localizer => localizer[It.IsAny<string>()]).Returns((string name) => new LocalizedHtmlString(name, name));
 
+        var stringLocalizer = new Mock<IStringLocalizer<SubscriptionAgreementsController>>();
+        stringLocalizer.Setup(localizer => localizer[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));
+
         var controller = new SubscriptionAgreementsController(
             subscriptions.Object,
             lifecycle.Object,
@@ -44,15 +76,11 @@ public sealed class SubscriptionResumeTests
             Mock.Of<INotifier>(),
             new SubscriptionDisplayText(Array.Empty<ICheckoutPaymentProvider>(), Mock.Of<IStringLocalizer<SubscriptionDisplayText>>()),
             htmlLocalizer.Object,
-            Mock.Of<IStringLocalizer<SubscriptionAgreementsController>>())
+            stringLocalizer.Object)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };
 
-        // Act
-        await controller.Resume("sub-1");
-
-        // Assert
-        lifecycle.Verify(service => service.ResumeAsync("sub-1", It.IsAny<CancellationToken>()), resumed ? Times.Once() : Times.Never());
+        return (controller, lifecycle);
     }
 }

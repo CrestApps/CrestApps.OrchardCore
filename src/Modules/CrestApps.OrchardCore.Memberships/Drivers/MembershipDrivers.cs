@@ -64,6 +64,13 @@ internal sealed class MembershipPartDisplayDriver : ContentPartDisplayDriver<Mem
         // the roles the product has.
         if (!await CanChangeRolesAsync())
         {
+            // A membership with no roles sells nothing: the buyer pays and is put in no role. A new product, or one saved
+            // before roles were required, waits for someone who may choose them.
+            if (part.RoleNames is not { Length: > 0 })
+            {
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.RoleNames), S["This membership has no roles yet. Someone who may assign roles to users must choose them before it can be saved."]);
+            }
+
             return Edit(part, context);
         }
 
