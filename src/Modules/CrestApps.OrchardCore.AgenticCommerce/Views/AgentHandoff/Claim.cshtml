@@ -1,0 +1,16 @@
+@* A hand-off link opened for the first time. The checkout is given to this browser only when the buyer continues: a link
+   preview or a mail scanner that fetches the link first would otherwise take it. The form posts back to the same link. *@
+
+<zone Name="Title">
+    <breadcrumb name="AgentCheckoutClaim" title="@T["Continue your checkout"]" />
+</zone>
+
+<div class="container my-4" style="max-width: 640px;">
+    <h1 class="h3 mb-3">@T["Continue your checkout"]</h1>
+    <p>@T["Your checkout is ready. Continue to finish it in this browser."]</p>
+
+    <form method="post" action="@((Context.Request.PathBase + Context.Request.Path).Value)">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn btn-primary">@T["Continue"]</button>
+    </form>
+</div>

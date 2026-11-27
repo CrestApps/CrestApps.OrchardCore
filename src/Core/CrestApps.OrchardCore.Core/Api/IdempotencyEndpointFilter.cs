@@ -120,6 +120,14 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
                 return Replay(storedMeanwhile, httpContext, policy, fingerprint, checkFingerprint);
             }
 
+            // A key used before the upgrade was kept under the caller as it was named then, in plain text and without the
+            // request's fingerprint, so its answer can be neither trusted nor matched. Its request did run, though, so it
+            // isn't run again: the caller is told to send it with a new key if it still needs to run.
+            if (await cache.ExistsUnprotectedAsync(GetLegacyCacheKey(httpContext, key, policy), httpContext.RequestAborted))
+            {
+                return policy?.Conflict?.Invoke(httpContext) ?? ApiProblems.Conflict(ApiProblems.Codes.IdempotencyKeyReused, "This idempotency key was used before the store was upgraded; send this request with a new key if it still needs to run.");
+            }
+
             var result = await next(context);
 
             // Where a created thing is only shows once the result has written its Location header, so a created
@@ -182,12 +190,24 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
     }
 
     internal static string GetCacheKey(HttpContext httpContext, string key, IdempotencyPolicy policy = null)
-    {
-        var caller = ResolveCaller(httpContext, policy);
+        => BuildCacheKey(httpContext, ResolveCaller(httpContext, policy), key);
 
+    // Where a key's answer was kept before each kind of caller had its own prefix. Such an answer expires within a day of
+    // the upgrade.
+    internal static string GetLegacyCacheKey(HttpContext httpContext, string key, IdempotencyPolicy policy = null)
+        => BuildCacheKey(
+            httpContext,
+            policy?.Caller?.Invoke(httpContext) ??
+                httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
+                httpContext.User?.FindFirstValue("sub") ??
+                FirstGuestHeader(httpContext),
+            key);
+
+    private static string BuildCacheKey(HttpContext httpContext, string caller, string key)
+    {
         var scope = $"{httpContext.Request.PathBase}|{httpContext.Request.Method}|{httpContext.Request.Path}|{caller}|{key}";
 
-        // The prefix predates the move out of Commerce; it stays so answers kept before an upgrade are still found.
+        // The prefix predates the move out of Commerce.
         return "commerce-api-idempotency:" + Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(scope)));
     }
 
@@ -358,6 +378,10 @@ public sealed class IdempotencyEndpointFilter : IEndpointFilter
                 return null;
             }
         }
+
+        // Whether anything is kept under the key, read without decrypting it.
+        public async Task<bool> ExistsUnprotectedAsync(string key, CancellationToken cancellationToken)
+            => await _cache.GetAsync(key, cancellationToken) is not null;
 
         public Task SetStringAsync(string key, string value, DistributedCacheEntryOptions options, CancellationToken cancellationToken)
             => _cache.SetStringAsync(key, _protector is null ? value : _protector.Protect(value), options, cancellationToken);

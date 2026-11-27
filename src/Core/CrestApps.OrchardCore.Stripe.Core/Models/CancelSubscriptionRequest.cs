@@ -26,7 +26,8 @@ public sealed class CancelSubscriptionRequest : StripeWriteRequest
     /// Gets or sets a value indicating whether an immediate cancellation also voids the subscription's latest invoice
     /// while it is open. Stripe only stops collecting an open invoice when its subscription is canceled; the buyer could
     /// still pay it with its client secret. The invoice is voided first, and the subscription is canceled only after that,
-    /// so one whose latest invoice was paid in the meantime is not canceled: the cancellation fails instead.
+    /// so one whose latest invoice was paid in the meantime is not canceled: the cancellation fails instead. A latest
+    /// invoice paid for nothing, such as a trial's, collected no money and doesn't stop the cancellation.
     /// </summary>
     public bool VoidOpenInvoice { get; set; }
 }

@@ -84,6 +84,9 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<ICheckoutHandler, OrderCheckoutHandler>();
 
+        // An order opened from its pay link on two devices is paid by one checkout only.
+        services.AddScoped<ICheckoutPaymentGate, OrderPaymentGate>();
+
 
         // Wrong gift card codes, order lookups and accounts made from an order are limited per network (and per e-mail).
 

@@ -59,7 +59,9 @@ public sealed class PaymentVelocityGate : ICheckoutPaymentGate
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        if (string.IsNullOrEmpty(context.ProviderKey) || _providerResolver.GetProvider(context.ProviderKey)?.Capabilities?.IsCardNotPresent != true)
+        // A charge the merchant starts on a saved card, such as a renewal or an autopay, has no card tester at the
+        // keyboard. Stopping it during a run of declines would only make honest renewals fail.
+        if (context.IsOffSession || string.IsNullOrEmpty(context.ProviderKey) || _providerResolver.GetProvider(context.ProviderKey)?.Capabilities?.IsCardNotPresent != true)
         {
             return;
         }

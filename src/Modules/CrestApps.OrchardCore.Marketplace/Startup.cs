@@ -55,7 +55,8 @@ public sealed class Startup : StartupBase
         services.AddSingleton<IBackgroundTask, MarketplaceBackgroundTask>();
 
         services.AddContentPart<VendorPart>()
-            .UseDisplayDriver<VendorPartDisplayDriver>();
+            .UseDisplayDriver<VendorPartDisplayDriver>()
+            .AddHandler<Handlers.VendorPartHandler>();
         services.AddDisplayDriver<Vendor, VendorDisplayDriver>();
         services.AddDisplayDriver<VendorEditViewModel, VendorEditDisplayDriver>();
         services.AddSiteDisplayDriver<MarketplaceSettingsDisplayDriver>();

@@ -106,6 +106,38 @@ public sealed class IdempotencyEndpointFilterTests
         Assert.Equal(2, calls);
     }
 
+    /// <summary>
+    /// An answer kept before the upgrade sits under the caller as it was named then, in plain text and without the
+    /// request's fingerprint. It can't be replayed, but its request ran: a retry with its key is refused, not run again.
+    /// </summary>
+    [Fact]
+    public async Task ARetryOfARequestAnsweredBeforeTheUpgrade_IsNotRunAgain()
+    {
+        // Arrange
+        var filter = new IdempotencyEndpointFilter();
+        var calls = 0;
+
+        ValueTask<object> Next(EndpointFilterInvocationContext context)
+        {
+            calls++;
+
+            return ValueTask.FromResult<object>(TypedResults.Ok(new { id = "order-2" }));
+        }
+
+        var retry = Request();
+        var legacyKey = IdempotencyEndpointFilter.GetLegacyCacheKey(retry, "key-1");
+
+        await _services.GetRequiredService<IDistributedCache>().SetStringAsync(legacyKey, """{"StatusCode":200,"Body":"{\"id\":\"order-1\"}"}""", TestContext.Current.CancellationToken);
+
+        // Act
+        var result = await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(retry), Next);
+
+        // Assert
+        Assert.Equal(0, calls);
+        Assert.NotEqual(legacyKey, IdempotencyEndpointFilter.GetCacheKey(retry, "key-1"));
+        Assert.Equal(StatusCodes.Status409Conflict, IdempotencyEndpointFilter.Capture(result).StatusCode);
+    }
+
     private DefaultHttpContext Request()
     {
         var httpContext = new DefaultHttpContext { RequestServices = _services };

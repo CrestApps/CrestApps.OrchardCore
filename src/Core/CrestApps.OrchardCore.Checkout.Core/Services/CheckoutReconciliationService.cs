@@ -101,6 +101,7 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
 
         var settled = new HashSet<string>(StringComparer.Ordinal);
         var failed = new HashSet<string>(StringComparer.Ordinal);
+        var open = new HashSet<string>(StringComparer.Ordinal);
 
         // An obligation is only settled by an attempt that is both succeeded and carries a provider
         // transaction id. This keeps obligation evaluation in lock-step with the payment-metadata
@@ -116,7 +117,15 @@ public sealed class CheckoutReconciliationService : ICheckoutReconciliationServi
             {
                 failed.Add(attempt.ObligationId);
             }
+            else if (attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending)
+            {
+                open.Add(attempt.ObligationId);
+            }
         }
+
+        // An attempt that ended (a declined card, a payment canceled after too many declined cards) doesn't fail an
+        // obligation the buyer is paying again with a newer attempt that can still succeed at the provider.
+        failed.ExceptWith(open);
 
         // Evaluate the union of the caller's expected obligations and every obligation that actually has a
         // durable attempt, so a charge that exists but was omitted from the expected set can never be

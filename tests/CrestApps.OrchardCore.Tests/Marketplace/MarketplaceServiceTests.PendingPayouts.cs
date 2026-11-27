@@ -481,6 +481,10 @@ public sealed partial class MarketplaceServiceTests
                 .Where(name => name?.StartsWith("metadata[", StringComparison.Ordinal) == true)
                 .ToDictionary(name => name["metadata[".Length..^1], name => form[name]);
             var id = "tr_" + (Transfers.Count + 1);
+
+            // A transfer funded by a charge takes the charge's transfer group, whatever group it asked for. The order's
+            // charge has none, so Stripe makes one from its PaymentIntent and gives it to both.
+            var transferGroup = string.IsNullOrEmpty(form["source_transaction"]) ? form["transfer_group"] : "group_pi_1";
             var json = JsonSerializer.Serialize(new Dictionary<string, object>
             {
                 ["id"] = id,
@@ -488,13 +492,13 @@ public sealed partial class MarketplaceServiceTests
                 ["amount"] = long.Parse(form["amount"], System.Globalization.CultureInfo.InvariantCulture),
                 ["currency"] = form["currency"],
                 ["destination"] = form["destination"],
-                ["transfer_group"] = form["transfer_group"],
+                ["transfer_group"] = transferGroup,
                 ["source_transaction"] = form["source_transaction"],
                 ["metadata"] = metadata,
                 ["created"] = new DateTimeOffset(Now).ToUnixTimeSeconds(),
             });
 
-            Transfers.Add((id, form["destination"], form["transfer_group"], form["source_transaction"], metadata, json));
+            Transfers.Add((id, form["destination"], transferGroup, form["source_transaction"], metadata, json));
 
             if (key is not null)
             {

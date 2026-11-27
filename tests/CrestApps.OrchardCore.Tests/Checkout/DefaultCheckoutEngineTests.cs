@@ -329,6 +329,41 @@ public sealed class DefaultCheckoutEngineTests
         Assert.Equal(CheckoutSessionStatus.PaymentPending, session.Status);
     }
 
+    /// <summary>
+    /// The sweep asks the provider about a checkout waiting on its payment on every run. Each run must not make the
+    /// checkout look fresh, or an abandoned 3-D Secure checkout never becomes old enough to expire.
+    /// </summary>
+    [Fact]
+    public async Task TryCompleteAsync_WhenStillWaitingOnTheProvider_KeepsTheTimeItStartedWaiting()
+    {
+        // Arrange
+        var attemptStore = new InMemoryPaymentAttemptStore();
+        var clock = new TestClock(DateTime.UtcNow);
+
+        var provider = new RecordingProvider(ProviderKey)
+        {
+            Verification = _ => new PaymentVerificationResult { Status = PaymentStatus.Unknown },
+        };
+
+        var (engine, sessionStore) = CreateEngine(attemptStore, provider, clock: clock);
+        sessionStore.Seed(CreateSession(oneTimeAmount: 30m));
+
+        await engine.BeginPaymentAsync("session-1", new BeginPaymentOptions { ProviderKey = ProviderKey }, TestContext.Current.CancellationToken);
+        await engine.TryCompleteAsync("session-1", TestContext.Current.CancellationToken);
+
+        var startedWaitingUtc = (await sessionStore.GetAsync("session-1", TestContext.Current.CancellationToken)).ModifiedUtc;
+
+        // Act
+        clock.UtcNow = clock.UtcNow.AddMinutes(30);
+        await engine.TryCompleteAsync("session-1", TestContext.Current.CancellationToken);
+
+        // Assert
+        var session = await sessionStore.GetAsync("session-1", TestContext.Current.CancellationToken);
+
+        Assert.Equal(CheckoutSessionStatus.PaymentPending, session.Status);
+        Assert.Equal(startedWaitingUtc, session.ModifiedUtc);
+    }
+
     [Fact]
     public async Task TryCompleteAsync_WhenProviderReportsFailure_FailsAndDoesNotFulfill()
     {

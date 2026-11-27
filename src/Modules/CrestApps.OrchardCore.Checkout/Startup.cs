@@ -87,6 +87,9 @@ public sealed class Startup : StartupBase
 
         // An edit sets aside a payment begun for the old total, so the buyer pays the new one.
         services.AddScoped<ICheckoutPaymentReleaseService, CheckoutPaymentReleaseService>();
+
+        // A record paid by checkout (an order, a transaction) is paid by one checkout at a time.
+        services.AddScoped<ICheckoutPaymentHoldService, CheckoutPaymentHoldService>();
         services.AddScoped<ICheckoutPaymentProviderResolver, CheckoutPaymentProviderResolver>();
         services.AddScoped<ICheckoutRecurringPaymentProviderResolver, CheckoutRecurringPaymentProviderResolver>();
 
@@ -148,6 +151,7 @@ public sealed class Startup : StartupBase
         // or not Orchard Core's Rate Limits feature is enabled. Each can be overridden by name in configuration.
         services
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, 30, TimeSpan.FromMinutes(10))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginSite, 120, TimeSpan.FromMinutes(10))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginCheckout, 8, TimeSpan.FromHours(24))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork, 5, TimeSpan.FromMinutes(30), blockDuration: TimeSpan.FromMinutes(30))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineCustomer, 5, TimeSpan.FromHours(1), blockDuration: TimeSpan.FromHours(1))

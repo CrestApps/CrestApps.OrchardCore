@@ -341,6 +341,7 @@ public sealed class TransactionPayLinkDoublePaymentTests
                     distributedLock,
                     Mock.Of<ISession>(),
                     NullLogger<CheckoutPaymentReleaseService>.Instance))
+                .AddSingleton<ICheckoutPaymentHoldService, CheckoutPaymentHoldService>()
                 .AddSingleton(Mock.Of<ISession>())
                 .AddSingleton<IClock>(Clock)
                 .AddSingleton<IStringLocalizer<TransactionSettlementPaymentGate>>(new PassThroughStringLocalizer<TransactionSettlementPaymentGate>())

@@ -116,6 +116,46 @@ public sealed class PaymentThrottleKeyTests
         Assert.Equal(StatusCodes.Status429TooManyRequests, statuses[^1]);
     }
 
+    /// <summary>
+    /// One holder of an IPv6 /48 has 65,536 /64 networks. Rotating through them gave a fresh per-network budget with each,
+    /// so beginning a payment is also counted per site.
+    /// </summary>
+    [Fact]
+    public async Task BeginningPaymentsFromManyNetworksOfOneIPv6Site_IsRefusedOnceTheSitesBudgetIsSpent()
+    {
+        // Arrange
+        var options = new AttemptLimitOptions();
+        options.AddPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, 30, TimeSpan.FromMinutes(10));
+        options.AddPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginSite, 120, TimeSpan.FromMinutes(10));
+
+        var limiter = new DistributedAttemptLimiter(
+            new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())),
+            new LocalLock(NullLogger<LocalLock>.Instance),
+            new ShellSettings { Name = "Default" },
+            Mock.Of<IClock>(clock => clock.UtcNow == DateTime.UtcNow),
+            Options.Create(options),
+            NullLogger<DistributedAttemptLimiter>.Instance);
+
+        var sessions = Mock.Of<ICheckoutSessionStore>();
+        var begin = typeof(PaymentEndpoints).GetMethod("BeginAsync", BindingFlags.NonPublic | BindingFlags.Static);
+        var statuses = new List<int>();
+
+        // Act: each begin comes from its own /64 of the same /48.
+        for (var i = 0; i < 121; i++)
+        {
+            var httpContext = CreateContext($"2001:db8:1:{i:x}::1");
+            httpContext.RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider();
+
+            var result = await (Task<IResult>)begin.Invoke(null, ["session-" + i, new PaymentEndpoints.BeginPaymentRequest { ProviderKey = "card" }, httpContext, sessions, Mock.Of<ICheckoutEngine>(), limiter, CancellationToken.None]);
+
+            statuses.Add(((IStatusCodeHttpResult)result).StatusCode ?? 0);
+        }
+
+        // Assert
+        Assert.All(statuses.Take(120), status => Assert.Equal(StatusCodes.Status404NotFound, status));
+        Assert.Equal(StatusCodes.Status429TooManyRequests, statuses[^1]);
+    }
+
     [Fact]
     public void StatusKey_StillSeparatesCheckouts()
     {

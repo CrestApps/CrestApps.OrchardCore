@@ -105,6 +105,7 @@ The paths come after the tenant's base address.
 | `POST acp/checkout_sessions/{id}/cancel` | ACP | Cancels a checkout. A checkout that can't be canceled gets `405`. |
 | `POST acp/mcp` | ACP over MCP | ACP's MCP binding (JSON-RPC). |
 | `GET agentic-commerce/continue/{token}` | Agentic Commerce | The hand-off link. See [When the buyer must act](#when-the-buyer-must-act). With `ec_version`, the embedded checkout page; see [Embedded checkout](#embedded-checkout-ucp). |
+| `POST agentic-commerce/continue/{token}` | Agentic Commerce | The hand-off page's **Continue** button, with the antiforgery token: gives the checkout to the browser. |
 | `GET agentic-commerce/embedded/{token}/checkout` | UCP | The embedded checkout page reads its checkout as UCP JSON (`{ "checkout": { ... } }`). |
 | `POST agentic-commerce/embedded/{token}/auth` | UCP | The embedded checkout page has the store check the platform's credential (`{ "credential": "..." }`). |
 
@@ -229,7 +230,7 @@ Some things only the buyer can do in a browser: approve a payment their bank ask
 
 Every checkout that isn't completed, canceled or expired carries a `continue_url`. It is the hand-off link, `agentic-commerce/continue/{token}`, unless the payment provider gave a page of its own for the bank's check. The token is signed with `SignedTokenService` and lasts two days. When the buyer opens it:
 
-- a guest's checkout that no browser has yet is given to that browser (a new guest token), and a linked buyer's checkout stays theirs. It is given once: opened again, the link hands the checkout to nobody else;
+- a guest's checkout that no browser has yet is given to that browser (a new guest token), and a linked buyer's checkout stays theirs. It is given only when the buyer presses **Continue** on the page the link opens, which posts back to the same link with the antiforgery token: a link preview, a chat app's unfurler or a mail scanner that fetches the link first gets that page and takes nothing. It is given once: opened again, the link hands the checkout to nobody else. A platform that embeds the checkout (`ec_version`) gets it on the first open, as before;
 - in the browser that has the checkout (or the linked buyer, signed in), a completed checkout opens its confirmation page, and an open one its next step;
 - in any other browser, such as the buyer's phone after they paid on their laptop, the link shows a page with none of the order's details. When the order was placed, it says so and points to **Sign in** (or **My orders**) and **Find your order**, which e-mails the order's link to the address given at checkout. Otherwise it says the checkout was opened elsewhere and can only be continued there, with **Sign in** for a buyer who checked out with an account.
 

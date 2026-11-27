@@ -15,7 +15,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Core/CrestApps.OrchardCore.Calendars.Core/ICalendar/ICalendarReader.cs: Read"] = 171,
         ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs: BeginObligationAsync"] = 153,
         ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs: BeginPaymentCoreAsync"] = 153,
-        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs: TryCompleteCoreAsync"] = 166,
+        ["src/Core/CrestApps.OrchardCore.Checkout.Core/Services/DefaultCheckoutEngine.cs: TryCompleteCoreAsync"] = 165,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.Claim.cs: ClaimConnectedCallAsync"] = 168,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.Expiry.cs: ReleaseAsync"] = 267,
         ["src/Core/CrestApps.OrchardCore.ContactCenter.Core/Services/ActivityReservationService.cs: CompensateAsync"] = 163,

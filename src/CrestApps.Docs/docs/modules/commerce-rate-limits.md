@@ -58,6 +58,7 @@ policy off.
 | Policy | Default | Counts |
 | --- | --- | --- |
 | `payment-begin-network` | 30 per 10 minutes | Payments begun from one network |
+| `payment-begin-site` | 120 per 10 minutes | Payments begun from one IPv6 site (the /48), so a holder rotating through its /64 networks gets no fresh budget; an IPv4 caller counts against `payment-begin-network` only |
 | `payment-begin-checkout` | 8 per 24 hours | Card payments begun on one checkout |
 | `payment-decline-network` | 5 per 30 minutes, then blocked 30 minutes | Declined card payments from one network |
 | `payment-decline-customer` | 5 per hour, then blocked an hour | Declined card payments of one signed-in customer |

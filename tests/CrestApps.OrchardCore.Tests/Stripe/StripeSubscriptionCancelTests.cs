@@ -26,11 +26,31 @@ public sealed class StripeSubscriptionCancelTests
     [Fact]
     public async Task AFirstInvoicePaidJustBeforeTheCancel_LeavesTheSubscriptionActive()
     {
-        var stripe = new StripeHandler { InvoiceStatus = "paid", SubscriptionStatus = "active" };
+        var stripe = new StripeHandler { InvoiceStatus = "paid", SubscriptionStatus = "active", AmountPaid = 2500 };
 
         await Assert.ThrowsAnyAsync<Exception>(() => Create(stripe).CancelAsync(Request()));
 
         Assert.DoesNotContain("DELETE /v1/subscriptions/sub_1", stripe.Calls);
+    }
+
+    /// <summary>
+    /// A trial, or a first cycle a coupon made free, has a first invoice Stripe marks paid for 0.00. Nothing was collected,
+    /// so a checkout canceled before it finished still cancels the subscription, or Stripe would bill the buyer when the
+    /// trial ends.
+    /// </summary>
+    [Fact]
+    public async Task AFirstInvoicePaidForNothing_StillLetsTheSubscriptionBeCanceled()
+    {
+        // Arrange
+        var stripe = new StripeHandler { InvoiceStatus = "paid", SubscriptionStatus = "trialing", AmountPaid = 0 };
+
+        // Act
+        var canceled = await Create(stripe).CancelAsync(Request());
+
+        // Assert
+        Assert.Equal("canceled", canceled.Status);
+        Assert.Contains("DELETE /v1/subscriptions/sub_1", stripe.Calls);
+        Assert.DoesNotContain("POST /v1/invoices/in_1/void", stripe.Calls);
     }
 
     [Fact]
@@ -70,7 +90,7 @@ public sealed class StripeSubscriptionCancelTests
     [Fact]
     public async Task SupersedingASubscriptionAttempt_WhoseFirstInvoiceWasJustPaid_LeavesTheSubscriptionActive()
     {
-        var stripe = new StripeHandler { InvoiceStatus = "paid", SubscriptionStatus = "active" };
+        var stripe = new StripeHandler { InvoiceStatus = "paid", SubscriptionStatus = "active", AmountPaid = 2500 };
 
         var result = await CreateProvider(stripe).CancelAsync(Superseding(), TestContext.Current.CancellationToken);
 
@@ -118,6 +138,8 @@ public sealed class StripeSubscriptionCancelTests
 
         public string SubscriptionStatus { get; set; }
 
+        public long AmountPaid { get; set; }
+
         public List<string> Calls { get; } = [];
 
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -155,7 +177,7 @@ public sealed class StripeSubscriptionCancelTests
         }
 
         private string Invoice()
-            => $$"""{"id":"in_1","object":"invoice","status":"{{InvoiceStatus}}","currency":"usd","amount_paid":0}""";
+            => $$"""{"id":"in_1","object":"invoice","status":"{{InvoiceStatus}}","currency":"usd","amount_paid":{{AmountPaid}}}""";
 
         private static HttpResponseMessage Json(HttpStatusCode status, string body)
             => new(status) { Content = new StringContent(body, Encoding.UTF8, "application/json") };

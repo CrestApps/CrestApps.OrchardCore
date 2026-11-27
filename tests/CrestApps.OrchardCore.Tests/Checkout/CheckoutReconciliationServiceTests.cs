@@ -346,6 +346,34 @@ public sealed class CheckoutReconciliationServiceTests
         Assert.Empty(metadata.Payments);
     }
 
+    [Fact]
+    public async Task ReconcileAsync_WhenAnEndedAttemptHasANewerOpenAttempt_LeavesObligationOutstanding()
+    {
+        // Arrange: a payment canceled after too many declined cards, then paid again with a newer attempt still waiting
+        // on the bank. The ended attempt must not fail the checkout while the newer one can still succeed.
+        var canceled = NewAttempt("obligation-1", PaymentAttemptState.Failed);
+        var retry = NewAttempt("obligation-1", PaymentAttemptState.Pending);
+        retry.ItemId = "attempt-retry";
+
+        var store = new InMemoryPaymentAttemptStore(canceled, retry);
+
+        var provider = new FakeCheckoutPaymentProvider(ProviderKey, _ => new PaymentVerificationResult
+        {
+            Status = PaymentStatus.Unknown,
+        });
+
+        var service = CreateService(store, provider);
+        var session = NewSession();
+
+        // Act
+        var result = await service.ReconcileAsync(session, ["obligation-1"], TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(result.IsFullySettled);
+        Assert.Empty(result.FailedObligationIds);
+        Assert.Contains("obligation-1", result.OutstandingObligationIds);
+    }
+
     private static CheckoutReconciliationService CreateService(
         IPaymentAttemptStore store,
         params ICheckoutPaymentProvider[] providers)

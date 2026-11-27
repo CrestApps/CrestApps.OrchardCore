@@ -300,10 +300,12 @@ internal sealed class StripeConnectPayoutProvider : IVendorPayoutProvider
             return null;
         }
 
+        // Not filtered by transfer group: a transfer funded by the order's charge (source_transaction) takes the charge's
+        // group, which Stripe names after the PaymentIntent, not the order number it asked for. Missing it here would
+        // answer "no transfer" and pay the vendor again; the transfer is matched on its metadata instead.
         var options = new TransferListOptions
         {
             Destination = vendor.StripeAccountId,
-            TransferGroup = string.IsNullOrEmpty(order?.OrderNumber) ? null : order.OrderNumber,
             Created = new DateRangeOptions { GreaterThanOrEqual = disbursement.CreatedUtc.AddDays(-1) },
             Limit = 100,
         };
