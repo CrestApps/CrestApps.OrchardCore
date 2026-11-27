@@ -248,6 +248,7 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Approvals` | Approvals | [Approvals](./modules/approvals) |
 | `CrestApps.OrchardCore.Payroll.PaySetup` | Pay Setup | [Payroll](./modules/payroll) |
 | `CrestApps.OrchardCore.Payroll` | Payroll | [Payroll](./modules/payroll) |
+| `CrestApps.OrchardCore.Payroll.MultipleEmployers` | Multiple Employers | [Payroll](./modules/payroll#multiple-employers) |
 | `CrestApps.OrchardCore.Payroll.UnitedStates` | United States Payroll Filings | [Payroll](./modules/payroll#united-states) |
 | `CrestApps.OrchardCore.Payroll.Canada` | Canada Payroll Filings | [Payroll](./modules/payroll#canada) |
 | `CrestApps.OrchardCore.Taxation.IncomeTax` | Income Tax | [Taxation](./modules/taxation#income-tax) |

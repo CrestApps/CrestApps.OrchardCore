@@ -15,7 +15,7 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
 jobs:
-  # The distributed gate needs a Redis service container, which GitHub Actions only supports on Linux
+  # The distributed gate needs Redis and PostgreSQL service containers, which GitHub Actions only supports on Linux
   # runners, so it cannot join the cross-platform matrix below. Publishing depends on it so a release
   # can never ship without the distributed contract having passed.
   distributed_test:
@@ -32,8 +32,22 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
+      # The migration safety gate and the query plan budgets run against a real PostgreSQL, each in its own schema,
+      # and throw rather than skip without it.
+      postgres:
+        image: postgres:17-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     env:
       CONTACT_CENTER_REDIS_CONFIGURATION: localhost:6379,abortConnect=false
+      CONTACT_CENTER_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
     steps:
     - uses: actions/checkout@v7
     - uses: actions/setup-dotnet@v6
@@ -88,7 +102,7 @@ jobs:
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true -p:Version=${{ steps.get_version.outputs.VERSION }}
     - name: Unit Tests
       run: |
-        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj
+        pwsh ./tests/run-unit-tests.ps1 -Configuration Release
     - name: JavaScript unit tests
       run: |
         npm ci --ignore-scripts

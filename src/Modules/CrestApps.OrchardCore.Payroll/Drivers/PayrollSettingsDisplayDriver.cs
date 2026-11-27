@@ -16,7 +16,8 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Payroll.Drivers;
 
 /// <summary>
-/// Settings &gt; Payroll: separation of duties and the defaults of a new employer.
+/// Settings &gt; Payroll: separation of duties and calculation. Multiple Employers adds the defaults of a new employer
+/// (<see cref="PayrollNewEmployerSettingsDisplayDriver"/>).
 /// </summary>
 internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSettings>
 {
@@ -56,10 +57,6 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
             Initialize<PayrollSettingsViewModel>("PayrollSettingsCalculation_Edit", model => Populate(settings, model))
                 .Location(l => l.Zone("Content", "1").Card(S["Calculation"], "20"))
                 .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ManagePayrollSettings))
-                .OnGroup(SettingsGroupId),
-            Initialize<PayrollSettingsViewModel>("PayrollSettingsNewEmployer_Edit", model => Populate(settings, model))
-                .Location(l => l.Zone("Content", "1").Card(S["New Employers"], "30"))
-                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ManagePayrollSettings))
                 .OnGroup(SettingsGroupId));
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, PayrollSettings settings, UpdateEditorContext context)
@@ -81,8 +78,6 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
         settings.AllowPreparerToApprove = model.AllowPreparerToApprove;
         settings.AllowChangingOwnPay = model.AllowChangingOwnPay;
         settings.EmployeeReview = model.EmployeeReview;
-        settings.DefaultCountryPack = string.IsNullOrWhiteSpace(model.DefaultCountryPack) ? null : model.DefaultCountryPack.Trim().ToUpperInvariant();
-        settings.DefaultCurrency = string.IsNullOrWhiteSpace(model.DefaultCurrency) ? null : model.DefaultCurrency.Trim().ToUpperInvariant();
         settings.TaxProvider = string.IsNullOrEmpty(model.TaxProvider) ? null : model.TaxProvider;
 
         if (string.IsNullOrWhiteSpace(model.MinimumNetPay))
@@ -109,8 +104,6 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
         model.AllowPreparerToApprove = settings.AllowPreparerToApprove;
         model.AllowChangingOwnPay = settings.AllowChangingOwnPay;
         model.EmployeeReview = settings.EmployeeReview;
-        model.DefaultCountryPack = settings.DefaultCountryPack;
-        model.DefaultCurrency = settings.DefaultCurrency;
         model.TaxProvider = settings.TaxProvider;
         model.MinimumNetPay = settings.MinimumNetPay == 0 ? null : settings.MinimumNetPay.ToString("0.##", CultureInfo.InvariantCulture);
         model.MinimumHourlyWage = settings.MinimumHourlyWage?.ToString("0.####", CultureInfo.InvariantCulture);
@@ -133,5 +126,56 @@ internal sealed class PayrollSettingsDisplayDriver : SiteDisplayDriver<PayrollSe
         context.Updater.ModelState.AddModelError(Prefix, field, S["Type an amount of zero or more, with a dot for decimals."]);
 
         return null;
+    }
+}
+
+/// <summary>
+/// With Multiple Employers on: the country pack and currency a new employer starts with, on Settings &gt; Payroll.
+/// </summary>
+internal sealed class PayrollNewEmployerSettingsDisplayDriver : SiteDisplayDriver<PayrollSettings>
+{
+    private readonly IHttpContextAccessor _httpContextAccessor;
+    private readonly IAuthorizationService _authorizationService;
+
+    internal readonly IStringLocalizer S;
+
+    public PayrollNewEmployerSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IStringLocalizer<PayrollNewEmployerSettingsDisplayDriver> stringLocalizer)
+    {
+        _httpContextAccessor = httpContextAccessor;
+        _authorizationService = authorizationService;
+        S = stringLocalizer;
+    }
+
+    protected override string SettingsGroupId
+        => PayrollConstants.SettingsGroupId;
+
+    public override IDisplayResult Edit(ISite site, PayrollSettings settings, BuildEditorContext context)
+        => Initialize<PayrollSettingsViewModel>("PayrollSettingsNewEmployer_Edit", model =>
+        {
+            model.DefaultCountryPack = settings.DefaultCountryPack;
+            model.DefaultCurrency = settings.DefaultCurrency;
+        })
+            .Location(l => l.Zone("Content", "1").Card(S["New Employers"], "30"))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ManagePayrollSettings))
+            .OnGroup(SettingsGroupId);
+
+    public override async Task<IDisplayResult> UpdateAsync(ISite site, PayrollSettings settings, UpdateEditorContext context)
+    {
+        if (!await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, PayrollPermissions.ManagePayrollSettings))
+        {
+            return null;
+        }
+
+        var model = new PayrollSettingsViewModel();
+
+        await context.Updater.TryUpdateModelAsync(model, Prefix);
+
+        settings.DefaultCountryPack = string.IsNullOrWhiteSpace(model.DefaultCountryPack) ? null : model.DefaultCountryPack.Trim().ToUpperInvariant();
+        settings.DefaultCurrency = string.IsNullOrWhiteSpace(model.DefaultCurrency) ? null : model.DefaultCurrency.Trim().ToUpperInvariant();
+
+        return Edit(site, settings, context);
     }
 }

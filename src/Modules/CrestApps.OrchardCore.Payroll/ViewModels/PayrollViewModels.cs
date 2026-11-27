@@ -37,6 +37,9 @@ public class EmployerViewModel
 
     public bool Active { get; set; } = true;
 
+    [BindNever]
+    public bool ShowStatus { get; set; }
+
     public IList<EmployerRegistrationRow> Registrations { get; set; } = [];
 
     public string WorkJurisdictions { get; set; }
@@ -368,6 +371,8 @@ public class StaffPayrollCardViewModel
 
     [BindNever]
     public bool CanAdd { get; set; }
+
+    public bool ShowEmployer { get; set; }
 }
 
 /// <summary>
@@ -486,9 +491,6 @@ public class PayRunsIndexViewModel
     public string EmployerId { get; set; }
 
     [BindNever]
-    public IList<SelectListItem> Employers { get; set; } = [];
-
-    [BindNever]
     public bool CanAdd { get; set; }
 
     [BindNever]
@@ -500,9 +502,14 @@ public class PayRunsIndexViewModel
 /// </summary>
 public class PayRunViewModel
 {
-    public string EmployerId { get; set; }
+    public string Title { get; set; }
 
     public string PayScheduleId { get; set; }
+
+    /// <summary>Gets or sets who is paid: <c>Schedule</c> (everyone on the pay schedule) or <c>People</c>.</summary>
+    public string Paid { get; set; }
+
+    public string[] StaffMemberIds { get; set; } = [];
 
     public string Type { get; set; }
 
@@ -515,10 +522,53 @@ public class PayRunViewModel
     public string SupplementalMethod { get; set; }
 
     [BindNever]
+    public IList<SelectListItem> Schedules { get; set; } = [];
+}
+
+/// <summary>
+/// The employer filter of a payroll page (pay runs, liabilities, filings, year end). Built with
+/// <c>IDisplayManager&lt;PayrollEmployerFilter&gt;</c>: the company's own payroll renders nothing, and Multiple
+/// Employers adds the employer picker, so a page names its employer only when there is more than one.
+/// </summary>
+public sealed class PayrollEmployerFilter
+{
+    /// <summary>Gets or sets the employer shown.</summary>
+    public string EmployerId { get; set; }
+
+    /// <summary>Gets or sets the employers the user may choose.</summary>
+    public IList<SelectListItem> Employers { get; set; } = [];
+
+    /// <summary>Gets or sets the id of the form the picker submits, or <see langword="null"/> for the one it is in.</summary>
+    public string FormId { get; set; }
+}
+
+/// <summary>
+/// The display types of <see cref="PayrollEmployerFilter"/>.
+/// </summary>
+public static class PayrollEmployerFilterDisplayTypes
+{
+    /// <summary>A small picker in an admin list's toolbar that submits its form when changed.</summary>
+    public const string Toolbar = "Toolbar";
+
+    /// <summary>A labeled picker among the other fields of a page's filter form.</summary>
+    public const string Field = "Field";
+
+    /// <summary>A filter card of its own, for a page whose only filter is the employer.</summary>
+    public const string Card = "Card";
+}
+
+/// <summary>
+/// The employer of a pay run, a pay profile or a payroll page's filter, chosen with Multiple Employers on.
+/// </summary>
+public class PayrollEmployerViewModel
+{
+    public string EmployerId { get; set; }
+
+    [BindNever]
     public IList<SelectListItem> Employers { get; set; } = [];
 
     [BindNever]
-    public IList<SelectListItem> Schedules { get; set; } = [];
+    public string Hint { get; set; }
 }
 
 /// <summary>

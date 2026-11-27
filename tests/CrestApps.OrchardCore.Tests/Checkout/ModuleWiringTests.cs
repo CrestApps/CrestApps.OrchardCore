@@ -127,12 +127,13 @@ public sealed partial class ModuleWiringTests
             or "CrestApps.OrchardCore.Wizard";
     }
 
+    // Build output is skipped rather than walked and filtered: walking every bin and obj folder under src made this the
+    // slowest test in the suite. node_modules holds no C# source.
     private static IEnumerable<string> EnumerateSources(string root)
-        => Directory
-            .EnumerateFiles(root, "*.cs", SearchOption.AllDirectories)
-            .Where(file =>
-                !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) &&
-                !file.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal));
+        => SourceTreeFiles.Enumerate(
+            root,
+            "*.cs",
+            directory => SourceTreeFiles.IsBuildOutputDirectory(directory) || Path.GetFileName(directory) == "node_modules");
 
     // Constants that name, by their value, a collection declared through an option rather than by the same constant.
     private static readonly HashSet<string> _namedByValue = new(StringComparer.Ordinal)

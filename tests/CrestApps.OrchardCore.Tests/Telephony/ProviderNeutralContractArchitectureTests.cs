@@ -97,8 +97,8 @@ public sealed partial class ProviderNeutralContractArchitectureTests
         // Arrange: without this floor the previous test would pass vacuously if the keys were simply deleted
         // rather than relocated, and the relocation would stop being proven.
         var owningModule = Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Asterisk");
-        var sources = Directory
-            .EnumerateFiles(owningModule, "*.cs", SearchOption.AllDirectories)
+        var sources = SourceTreeFiles
+            .Enumerate(owningModule, "*.cs", SourceTreeFiles.IsBuildOutputDirectory)
             .Where(file => !IsGenerated(file))
             .Select(File.ReadAllText)
             .ToList();
@@ -120,8 +120,8 @@ public sealed partial class ProviderNeutralContractArchitectureTests
         var asteriskRoot = Path.Combine(FindRepositoryRoot(), "src", "Modules", "CrestApps.OrchardCore.Asterisk");
         var providerSource = string.Join(
             '\n',
-            Directory
-                .EnumerateFiles(asteriskRoot, "*.cs", SearchOption.AllDirectories)
+            SourceTreeFiles
+                .Enumerate(asteriskRoot, "*.cs", SourceTreeFiles.IsBuildOutputDirectory)
                 .Where(file => !IsGenerated(file))
                 .Select(file => StripComments(File.ReadAllText(file))));
 
@@ -149,7 +149,7 @@ public sealed partial class ProviderNeutralContractArchitectureTests
                 throw new InvalidOperationException($"The provider-neutral project '{project}' was not found.");
             }
 
-            foreach (var file in Directory.EnumerateFiles(projectRoot, "*.cs", SearchOption.AllDirectories))
+            foreach (var file in SourceTreeFiles.Enumerate(projectRoot, "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
             {
                 if (!IsGenerated(file))
                 {
@@ -163,7 +163,7 @@ public sealed partial class ProviderNeutralContractArchitectureTests
     {
         var sourceRoot = Path.Combine(FindRepositoryRoot(), "src");
 
-        foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
+        foreach (var file in SourceTreeFiles.Enumerate(sourceRoot, "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
         {
             if (!IsGenerated(file))
             {

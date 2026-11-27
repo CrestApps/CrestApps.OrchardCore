@@ -411,6 +411,17 @@ public sealed class PayrollFilingsTests
         Assert.IsType<Microsoft.AspNetCore.Mvc.ForbidResult>(results.Item4);
     }
 
+    private static global::OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Payroll.ViewModels.PayrollEmployerFilter> Filters()
+    {
+        var filters = new Moq.Mock<global::OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Payroll.ViewModels.PayrollEmployerFilter>>();
+
+        filters
+            .Setup(manager => manager.BuildDisplayAsync(Moq.It.IsAny<CrestApps.OrchardCore.Payroll.ViewModels.PayrollEmployerFilter>(), Moq.It.IsAny<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModel>(), Moq.It.IsAny<string>(), Moq.It.IsAny<string>()))
+            .Returns(Task.FromResult(Moq.Mock.Of<global::OrchardCore.DisplayManagement.IShape>()));
+
+        return filters.Object;
+    }
+
     private static CrestApps.OrchardCore.Payroll.Controllers.PayrollFilingsController Controller(IServiceProvider services, ClaimsPrincipal user)
     {
         var controller = new CrestApps.OrchardCore.Payroll.Controllers.PayrollFilingsController(
@@ -424,6 +435,10 @@ public sealed class PayrollFilingsTests
             services.GetRequiredService<global::OrchardCore.Modules.ILocalClock>(),
             Moq.Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
             new CrestApps.OrchardCore.Tests.Doubles.SourceTextLocalizerFactory(),
+            services.GetRequiredService<IPayrollCompanyService>(),
+            Filters(),
+            Moq.Mock.Of<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>(),
+            Microsoft.Extensions.Options.Options.Create(new PayrollEmployerOptions { MultipleEmployers = true }),
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughHtmlLocalizer<CrestApps.OrchardCore.Payroll.Controllers.PayrollFilingsController>(),
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CrestApps.OrchardCore.Payroll.Controllers.PayrollFilingsController>());
 

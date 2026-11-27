@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.ViewModels;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
@@ -14,7 +15,9 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Payroll.Drivers;
 
 /// <summary>
-/// The rows of the employer list and the employer editor: details, contact, tax registrations and the address.
+/// The rows of the employer list and the employer editor: details, contact, tax registrations and the address. The
+/// company's own payroll edits the company with it, as "Company" and with no "Runs payroll" switch; Multiple Employers
+/// edits every employer.
 /// </summary>
 internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
 {
@@ -23,11 +26,18 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
     private readonly IAddressEditorService _addressEditor;
     private readonly IShapeFactory _shapeFactory;
     private readonly ISiteService _siteService;
+    private readonly bool _multipleEmployers;
 
     internal readonly IStringLocalizer S;
 
-    public EmployerDisplayDriver(IAddressEditorService addressEditor, IShapeFactory shapeFactory, ISiteService siteService, IStringLocalizer<EmployerDisplayDriver> stringLocalizer)
+    public EmployerDisplayDriver(
+        IAddressEditorService addressEditor,
+        IShapeFactory shapeFactory,
+        ISiteService siteService,
+        IOptions<PayrollEmployerOptions> employerOptions,
+        IStringLocalizer<EmployerDisplayDriver> stringLocalizer)
     {
+        _multipleEmployers = employerOptions?.Value.MultipleEmployers ?? false;
         _addressEditor = addressEditor;
         _shapeFactory = shapeFactory;
         _siteService = siteService;
@@ -90,7 +100,11 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
         employer.ContactName = model.ContactName;
         employer.ContactEmail = model.ContactEmail;
         employer.ContactPhone = model.ContactPhone;
-        employer.Status = model.Active ? EmployerStatus.Active : EmployerStatus.Inactive;
+        // The company always runs payroll; only Multiple Employers shows the switch.
+        if (_multipleEmployers)
+        {
+            employer.Status = model.Active ? EmployerStatus.Active : EmployerStatus.Inactive;
+        }
         employer.Registrations = ReadRegistrations(model.Registrations, context);
         employer.WorkJurisdictions = [.. (model.WorkJurisdictions ?? string.Empty).Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
@@ -183,7 +197,8 @@ internal sealed class EmployerDisplayDriver : DisplayDriver<Employer>
                 model.Currency = employer.Currency;
                 model.LogoPath = employer.LogoPath;
                 model.Active = employer.Status == EmployerStatus.Active;
-            }).Location(l => l.Zone("Content", "1").Card(S["Employer"], "10")),
+                model.ShowStatus = _multipleEmployers;
+            }).Location(l => l.Zone("Content", "1").Card(_multipleEmployers ? S["Employer"] : S["Company"], "10")),
             Initialize<EmployerViewModel>("EmployerContact_Edit", model =>
             {
                 model.SignatoryName = employer.SignatoryName;

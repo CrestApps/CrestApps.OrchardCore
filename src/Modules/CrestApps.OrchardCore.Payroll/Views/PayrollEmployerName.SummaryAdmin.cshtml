@@ -1,0 +1,8 @@
+@model ShapeViewModel<string>
+@inject CrestApps.OrchardCore.Payroll.Services.PayrollNames Names
+
+@* With Multiple Employers on: the employer of a row, such as a pay run's. *@
+@if (!string.IsNullOrEmpty(Model.Value))
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Employer"]"><i class="fa-solid fa-building me-1" aria-hidden="true"></i>@(await Names.EmployerAsync(Model.Value))</span>
+}

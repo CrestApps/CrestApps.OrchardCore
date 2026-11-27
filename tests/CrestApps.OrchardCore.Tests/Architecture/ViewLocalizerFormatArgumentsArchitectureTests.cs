@@ -30,7 +30,7 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
         var scannedViewCount = 0;
 
         // Act
-        foreach (var fullPath in Directory.EnumerateFiles(modulesRoot, "*.cshtml", SearchOption.AllDirectories))
+        foreach (var fullPath in SourceTreeFiles.Enumerate(modulesRoot, "*.cshtml", SourceTreeFiles.IsBuildOutputDirectory))
         {
             if (IsBuildOutput(fullPath))
             {
@@ -162,7 +162,7 @@ public sealed class ViewLocalizerFormatArgumentsArchitectureTests
         var violations = new List<string>();
 
         // Act
-        foreach (var fullPath in Directory.EnumerateFiles(Path.Combine(repositoryRoot, "src", "Modules"), "*.cshtml", SearchOption.AllDirectories))
+        foreach (var fullPath in SourceTreeFiles.Enumerate(Path.Combine(repositoryRoot, "src", "Modules"), "*.cshtml", SourceTreeFiles.IsBuildOutputDirectory))
         {
             if (IsBuildOutput(fullPath))
             {

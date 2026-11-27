@@ -63,8 +63,8 @@ public sealed class ProviderWriteIdempotencyArchitectureTests
         // Arrange
         // The declaration above is a claim. This is the evidence.
         var repositoryRoot = FindRepositoryRoot();
-        var testSources = Directory
-            .EnumerateFiles(Path.Combine(repositoryRoot, "tests"), "*.cs", SearchOption.AllDirectories)
+        var testSources = SourceTreeFiles
+            .Enumerate(Path.Combine(repositoryRoot, "tests"), "*.cs", directory => Path.GetFileName(directory) == "obj")
             .Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .Select(File.ReadAllText)
             .ToArray();

@@ -1,4 +1,6 @@
 @model PayRunDetailsViewModel
+@inject CrestApps.OrchardCore.Payroll.Services.PayrollNames Names
+@inject Microsoft.Extensions.Options.IOptions<PayrollEmployerOptions> EmployerOptions
 @using System.Globalization
 @using CrestApps.OrchardCore.Currencies
 @inject OrchardCore.Modules.ILocalClock LocalClock
@@ -23,14 +25,14 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="PayrollPayRunsDetails" title="@T["Pay run {0}", run.Number]">
+    <breadcrumb name="PayrollPayRunsDetails" title="@T["{0}", Names.Run(run)]">
         <breadcrumb-item id="PayrollPayRuns" action="Index" controller="PayRuns" area="CrestApps.OrchardCore.Payroll">@T["Pay runs"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
 <div class="card mb-3">
     <div class="card-header d-flex align-items-center">
-        <span class="me-auto">@T["{0} · {1}", Model.EmployerName, run.Type]</span>
+        <span class="me-auto">@(EmployerOptions.Value.MultipleEmployers ? T["{0} · {1} · run {2}", Model.EmployerName, run.Type, run.Number] : T["{0} · run {1}", run.Type, run.Number])</span>
         <span class="badge @(run.Status is PayRunStatus.Approved or PayRunStatus.Paid ? "text-bg-success" : "ta-badge") fw-normal">@StatusText(run.Status)</span>
     </div>
     <div class="card-body">

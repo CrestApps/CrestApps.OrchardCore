@@ -1,0 +1,15 @@
+@model PayrollEmployerViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="EmployerId">
+    <label asp-for="EmployerId" class="ocat-label ocat-label-required">@T["Employer"]</label>
+    <div class="ocat-end">
+        <select asp-for="EmployerId" asp-items="Model.Employers" class="form-select">
+            <option value="">@T["Choose…"]</option>
+        </select>
+        <span asp-validation-for="EmployerId" class="text-danger"></span>
+        @if (!string.IsNullOrEmpty(Model.Hint))
+        {
+            <span class="hint">@Model.Hint</span>
+        }
+    </div>
+</div>

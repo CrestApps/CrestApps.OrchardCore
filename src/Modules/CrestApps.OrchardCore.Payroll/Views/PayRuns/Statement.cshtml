@@ -1,4 +1,6 @@
 @model PayStatementViewModel
+@inject CrestApps.OrchardCore.Payroll.Services.PayrollNames Names
+@inject Microsoft.Extensions.Options.IOptions<PayrollEmployerOptions> EmployerOptions
 @using System.Globalization
 @using CrestApps.OrchardCore.Currencies
 
@@ -20,14 +22,14 @@
         <breadcrumb-item id="PayrollPayRuns" action="Index" controller="PayRuns" area="CrestApps.OrchardCore.Payroll">@T["Pay runs"]</breadcrumb-item>
         @if (Model.Run is { } run)
         {
-            <breadcrumb-item id="PayrollPayRunsDetails" action="Details" controller="PayRuns" area="CrestApps.OrchardCore.Payroll" route-id="@run.ItemId">@T["Pay run {0}", run.Number]</breadcrumb-item>
+            <breadcrumb-item id="PayrollPayRunsDetails" action="Details" controller="PayRuns" area="CrestApps.OrchardCore.Payroll" route-id="@run.ItemId">@Names.Run(run)</breadcrumb-item>
         }
     </breadcrumb>
 </zone>
 
 <div class="card mb-3">
     <div class="card-header d-flex">
-        <span class="me-auto">@T["{0} · paid {1}", statement.Snapshot?.EmployerName ?? string.Empty, statement.PayDate.ToString("d", CultureInfo.CurrentCulture)]</span>
+        <span class="me-auto">@(EmployerOptions.Value.MultipleEmployers ? T["{0} · paid {1}", statement.Snapshot?.EmployerName ?? string.Empty, statement.PayDate.ToString("d", CultureInfo.CurrentCulture)] : T["Paid {0}", statement.PayDate.ToString("d", CultureInfo.CurrentCulture)])</span>
         <span class="badge ta-badge fw-normal">@StatusName(statement)</span>
     </div>
     <div class="card-body">

@@ -12,6 +12,9 @@ paths-ignore:
   - "docs/**"
   - "BenchmarkDotNet.Artifacts/**"
   - "TestResults/**"
+  # Test projects are not shipped, and they are over a quarter of the C# in the repository. Leaving them out keeps the
+  # analysis on the code that runs on a site and shortens the C# analysis accordingly.
+  - "tests/**"
   # Third-party / generated files that should not be analysed.
   - "**/Assets/js/flatpickr-culture.js"
 

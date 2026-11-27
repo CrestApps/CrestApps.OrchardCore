@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    # A pull request that only changes documentation has no code to analyze.
+    paths-ignore:
+      - '**/*.md'
+      - 'mkdocs.yml'
+      - 'src/CrestApps.Docs/**'
   schedule:
     - cron: "25 14 * * 1"
   workflow_dispatch:

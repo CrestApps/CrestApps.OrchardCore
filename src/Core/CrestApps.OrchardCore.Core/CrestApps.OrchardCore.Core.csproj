@@ -19,6 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Written inline at the foot of every page by AddInvariantNumberInputs(); see ModelBinding. -->
+    <EmbeddedResource Include="Assets\js\invariant-number-inputs.js" LogicalName="CrestApps.OrchardCore.Core.invariant-number-inputs.js" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../../Abstractions/CrestApps.OrchardCore.Abstractions/CrestApps.OrchardCore.Abstractions.csproj" />
     <PackageReference Include="CrestApps.Core" />
     <PackageReference Include="OrchardCore.Admin.Abstractions" />

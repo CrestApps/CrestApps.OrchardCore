@@ -1,0 +1,7 @@
+@model ShapeViewModel<PayrollEmployerFilter>
+
+<div class="btn-group filter">
+    <select name="employerId" form="@Model.Value.FormId" asp-items="Model.Value.Employers" class="form-select form-select-sm" onchange="this.form.submit()" aria-label="@T["Employer"]">
+        <option value="">@T["Every employer"]</option>
+    </select>
+</div>
