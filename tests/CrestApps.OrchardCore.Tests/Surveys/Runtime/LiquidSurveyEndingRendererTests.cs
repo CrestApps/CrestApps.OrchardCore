@@ -3,10 +3,10 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Doubles;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
-using Fluid;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
+using Moq;
 using OrchardCore.Infrastructure.Html;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Runtime;
@@ -78,6 +78,35 @@ public sealed class LiquidSurveyEndingRendererTests
         Assert.Contains("&lt;img", html, StringComparison.Ordinal);
     }
 
+    // R11-L4: the ending runs restricted Liquid, as the invitation templates do. A filter of Orchard Core's full surface
+    // (here markdownify) is not run, and the message shows without its Liquid, never as template code.
+    [Fact]
+    public async Task Render_AFilterOutsideTheRestrictedSet_IsNotRun()
+    {
+        // Arrange
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var (definition, response) = Answered("hello");
+        var ending = new SurveyEnding { Id = "e1", Name = "thanks", Message = "<p>Thanks {{ \"**bold**\" | markdownify }}</p>" };
+
+        // Act
+        var html = await RenderAsync(harness, definition, response, ending);
+
+        // Assert
+        Assert.DoesNotContain("<strong>", html, StringComparison.Ordinal);
+        Assert.DoesNotContain("markdownify", html, StringComparison.Ordinal);
+        Assert.Contains("Thanks", html, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Renderer_DoesNotTakeOrchardCoresLiquidTemplateManager()
+    {
+        // Act: the full Liquid surface reads content by id, saved queries and the site settings.
+        var parameters = typeof(LiquidSurveyEndingRenderer).GetConstructors().SelectMany(constructor => constructor.GetParameters());
+
+        // Assert
+        Assert.DoesNotContain(parameters, parameter => parameter.ParameterType == typeof(global::OrchardCore.Liquid.ILiquidTemplateManager));
+    }
+
     private static (SurveyDefinition Definition, SurveyResponse Response) Answered(string answer)
     {
         var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("comment")));
@@ -95,10 +124,9 @@ public sealed class LiquidSurveyEndingRendererTests
         {
             var renderer = new LiquidSurveyEndingRenderer(
                 services.GetRequiredService<SurveyPipingRenderer>(),
-                LiquidDoubles.Manager(),
                 new HtmlSanitizerService(Options.Create(new HtmlSanitizerOptions())),
                 services.GetRequiredService<ISurveyControlRegistry>(),
-                Options.Create(TemplateOptions.Default),
+                Mock.Of<global::OrchardCore.Modules.ILocalClock>(clock => clock.GetLocalTimeZoneAsync() == Task.FromResult<global::OrchardCore.Modules.ITimeZone>(null)),
                 NullLogger<LiquidSurveyEndingRenderer>.Instance);
 
             return renderer.RenderAsync(new Survey { Name = "s", Title = "Survey" }, definition, response, ending);

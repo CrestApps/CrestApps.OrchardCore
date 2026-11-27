@@ -1,60 +1,58 @@
 using System.Text.Encodings.Web;
+using System.Text.RegularExpressions;
 using System.Text.Unicode;
+using CrestApps.OrchardCore.Core.Liquid;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Models;
-using Fluid;
 using Fluid.Values;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using OrchardCore.Infrastructure.Html;
-using OrchardCore.Liquid;
+using OrchardCore.Modules;
 
 namespace CrestApps.OrchardCore.Surveys.Services;
 
 /// <summary>
 /// Renders an ending's message: the author's message as Liquid first, with the survey, the response, the answers by
-/// question name and the score; then piping of <c>{name}</c> references; then the HTML sanitizer.
+/// question name and the score, in restricted Liquid (<see cref="RestrictedLiquid"/>, as the invitation templates); then
+/// piping of <c>{name}</c> references; then the HTML sanitizer.
 /// </summary>
 /// <remarks>
 /// A respondent's text never reaches the Liquid parser. Only the message the author wrote is parsed; answers are
 /// values of the model, and every value Liquid writes is HTML-encoded with <c>{</c> and <c>}</c> encoded too, so the
 /// piping that follows cannot read a reference out of an answer. Piped values are HTML-encoded with their braces
-/// encoded as well.
+/// encoded as well. Anyone who may edit a draft writes the message, so it runs with the restricted filters and the four
+/// values above only, never Orchard Core's full Liquid surface (content by id, saved queries, the site settings).
 /// </remarks>
-public sealed class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
+public sealed partial class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
 {
     private static readonly HtmlEncoder _encoder = CreateEncoder();
 
     private readonly SurveyPipingRenderer _piping;
-    private readonly ILiquidTemplateManager _liquid;
     private readonly IHtmlSanitizerService _sanitizer;
     private readonly ISurveyControlRegistry _registry;
-    private readonly TemplateOptions _templateOptions;
+    private readonly ILocalClock _localClock;
     private readonly ILogger _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LiquidSurveyEndingRenderer"/> class.
     /// </summary>
     /// <param name="piping">The piping renderer.</param>
-    /// <param name="liquid">The Liquid template manager.</param>
     /// <param name="sanitizer">The HTML sanitizer.</param>
     /// <param name="registry">The control registry.</param>
-    /// <param name="templateOptions">The Liquid template options.</param>
+    /// <param name="localClock">The local clock, for the site's time zone in dates.</param>
     /// <param name="logger">The logger.</param>
     public LiquidSurveyEndingRenderer(
         SurveyPipingRenderer piping,
-        ILiquidTemplateManager liquid,
         IHtmlSanitizerService sanitizer,
         ISurveyControlRegistry registry,
-        IOptions<TemplateOptions> templateOptions,
+        ILocalClock localClock,
         ILogger<LiquidSurveyEndingRenderer> logger)
     {
         _piping = piping;
-        _liquid = liquid;
         _sanitizer = sanitizer;
         _registry = registry;
-        _templateOptions = templateOptions.Value;
+        _localClock = localClock;
         _logger = logger;
     }
 
@@ -72,7 +70,7 @@ public sealed class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
             return string.Empty;
         }
 
-        if (message.Contains("{{", StringComparison.Ordinal) || message.Contains("{%", StringComparison.Ordinal))
+        if (RestrictedLiquid.HasLiquid(message))
         {
             try
             {
@@ -89,13 +87,27 @@ public sealed class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
                     }
                 }
 
-                message = await _liquid.RenderStringAsync(message, _encoder, null, new Dictionary<string, FluidValue>
+                var options = RestrictedLiquid.Options;
+                var rendered = await RestrictedLiquid.RenderAsync(message, new Dictionary<string, FluidValue>(StringComparer.Ordinal)
                 {
-                    ["Survey"] = FluidValue.Create(new Dictionary<string, object> { ["Name"] = survey?.Name, ["Title"] = survey?.Title }, _templateOptions),
-                    ["Response"] = FluidValue.Create(new Dictionary<string, object> { ["Number"] = response.Number, ["Status"] = response.Status.ToString(), ["Percent"] = response.Percent, ["Passed"] = response.Passed }, _templateOptions),
-                    ["Answers"] = FluidValue.Create(answers, _templateOptions),
+                    ["Survey"] = FluidValue.Create(new Dictionary<string, object> { ["Name"] = survey?.Name, ["Title"] = survey?.Title }, options),
+                    ["Response"] = FluidValue.Create(new Dictionary<string, object> { ["Number"] = response.Number, ["Status"] = response.Status.ToString(), ["Percent"] = response.Percent, ["Passed"] = response.Passed }, options),
+                    ["Answers"] = FluidValue.Create(answers, options),
                     ["Score"] = response.Score is { } score ? NumberValue.Create(score) : NilValue.Instance,
-                });
+                }, _encoder, await RestrictedLiquidContexts.CreateAsync(_localClock));
+
+                if (rendered is null)
+                {
+                    // The message doesn't parse or uses a filter outside the restricted set (an ending published before
+                    // endings were restricted; the definition validator refuses it now): it shows without its Liquid, so
+                    // respondents never see template code.
+                    _logger.LogWarning("The ending message of a survey doesn't parse or uses a Liquid filter that isn't available in it; it was shown without its Liquid.");
+                    message = WithoutLiquid(message);
+                }
+                else
+                {
+                    message = rendered;
+                }
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -108,6 +120,17 @@ public sealed class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
 
         return _sanitizer.Sanitize(message);
     }
+
+    /// <summary>
+    /// Removes the Liquid tags and outputs (<c>{{ ... }}</c> and <c>{% ... %}</c>) from a message, keeping its text.
+    /// </summary>
+    /// <param name="message">The message.</param>
+    /// <returns>The message without its Liquid.</returns>
+    internal static string WithoutLiquid(string message)
+        => string.IsNullOrEmpty(message) ? message : LiquidMarkup().Replace(message, string.Empty);
+
+    [GeneratedRegex(@"\{\{.*?\}\}|\{%.*?%\}", RegexOptions.Singleline | RegexOptions.CultureInvariant, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex LiquidMarkup();
 
     private static HtmlEncoder CreateEncoder()
     {

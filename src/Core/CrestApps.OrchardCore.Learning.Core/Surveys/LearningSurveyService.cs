@@ -233,6 +233,11 @@ public sealed class LearningSurveyService : ILearningSurveyService
             return (null, SurveyErrorCode.NotInAudience);
         }
 
+        if (!LearningEnrollmentAccessRule.MayStartAttempt(survey, access.Enrollment))
+        {
+            return (null, SurveyErrorCode.NotInAudience);
+        }
+
         var enrollment = access.Enrollment;
         var anonymous = survey.Access?.Anonymity == AnonymityMode.Anonymous;
         var properties = new JsonObject

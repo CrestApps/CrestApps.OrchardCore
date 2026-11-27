@@ -70,6 +70,36 @@ public sealed class SurveyEmbedResolver
     }
 
     /// <summary>
+    /// Resolves an embedded link by its collector's token alone: the collector, when it is open and may be embedded, its
+    /// open survey and the published version.
+    /// </summary>
+    /// <param name="token">The collector's token.</param>
+    /// <returns>The survey, its published version and the collector, each <see langword="null"/> when not found.</returns>
+    public async Task<(Survey Survey, SurveyVersion Version, SurveyCollector Collector)> ResolveByTokenAsync(string token)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+        {
+            return (null, null, null);
+        }
+
+        var collector = await _collectorStore.FindByTokenAsync(token.Trim());
+
+        if (collector is null || collector.Status != CollectorStatus.Open || !CanEmbed(collector))
+        {
+            return (null, null, null);
+        }
+
+        var survey = await _surveyStore.FindByIdAsync(collector.SurveyId);
+
+        if (survey is null || survey.Status != SurveyStatus.Open)
+        {
+            return (survey, null, null);
+        }
+
+        return (survey, await _versionCache.GetPublishedAsync(survey), collector);
+    }
+
+    /// <summary>
     /// Gets whether a collector's link may be embedded in a page: not an invitation or kiosk collector.
     /// </summary>
     /// <param name="collector">The collector.</param>

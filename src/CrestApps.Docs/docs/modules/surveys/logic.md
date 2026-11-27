@@ -38,15 +38,15 @@ The runner script (`survey-runner.js`) evaluates plain rules of the current page
 
 When a page is completed, its `Branches` are evaluated in order; the first that holds goes to a **later** page or to an ending. Without a branch, the next visible page in the plan follows. Skipped pages leave the page path and their answers are dropped. Going back (when the survey and the page allow it) saves the page without checking it.
 
-After the last page, the response is scored and then the first ending whose condition holds is used, else the default ending, so an ending on `score` reads this response's score. A branch that goes to an ending names it directly. An ending with the outcome **Screened out** ends the response as screened out. Ending messages are Liquid with sanitized HTML; a redirect goes only to the site or a host listed in the site settings.
+After the last page, the response is scored and then the first ending whose condition holds is used, else the default ending, so an ending on `score` reads this response's score. A branch that goes to an ending names it directly. An ending with the outcome **Screened out** ends the response as screened out. Ending messages are restricted Liquid with sanitized HTML; a redirect goes only to the site or a host listed in the site settings.
 
 An ending message renders in this order (`LiquidSurveyEndingRenderer`):
 
-1. The message the author wrote is rendered as Liquid, with `Survey` (`Name`, `Title`), `Response` (`Number`, `Status`, `Percent`, `Passed`), `Answers` (each answer by question name, through the type's `FormatAnswer`) and `Score`. Every value Liquid writes is HTML-encoded, with `{` and `}` encoded too.
+1. The message the author wrote is rendered as restricted Liquid (`RestrictedLiquid`, the same building block as the invitation templates: the standard filters plus `date`, `format_date`, `local`, `utc` and `t`, a step limit, and no functions), with `Survey` (`Name`, `Title`), `Response` (`Number`, `Status`, `Percent`, `Passed`), `Answers` (each answer by question name, through the type's `FormatAnswer`) and `Score`. Every value Liquid writes is HTML-encoded, with `{` and `}` encoded too.
 2. `{name}` references are piped in, HTML-encoded with their braces encoded.
 3. The result is sanitized.
 
-A respondent's text never reaches the Liquid parser: an answer such as `{{ Site.SiteName }}` shows as written. An ending message that holds Liquid is not sanitized when it is saved (the sanitizer would encode its operators); its output is.
+Anyone who may edit a draft writes the message, so it never runs with Orchard Core's full Liquid surface (content by id, saved queries, the site settings). A message (or a translation of it) that uses another filter, or doesn't parse, is an error of the definition (`ending-liquid`); an ending published like that before shows without its Liquid tags, never as template code. A respondent's text never reaches the Liquid parser: an answer such as `{{ Site.SiteName }}` shows as written. An ending message that holds Liquid is not sanitized when it is saved (the sanitizer would encode its operators); its output is.
 
 ## Piping
 

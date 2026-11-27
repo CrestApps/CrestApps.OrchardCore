@@ -507,12 +507,7 @@ public sealed class SurveyRunnerController : Controller
             CanReview = response.Status == SurveyResponseStatus.Completed && (shows & ReviewShows.Responses) != 0,
             CanReopen = response.Status == SurveyResponseStatus.Completed && definition.Navigation?.AllowEditAfterSubmit == true && survey.Status == SurveyStatus.Open && !closed,
             ShowScore = definition.Scoring?.Enabled == true && definition.Scoring.ShowScoreToRespondent && (shows & ReviewShows.Score) != 0 && response.Grading == GradingStatus.Graded,
-            // A response started without a collector (a course item's survey) reaches the totals through the response itself.
-            ResultsUrl = definition.Review?.ResultsVisibility is not (ResultsVisibility.AfterAnswer or ResultsVisibility.Always)
-                ? null
-                : collector is not null
-                    ? Url.Content("~/s/" + collector.Token + "/results")
-                    : response.Status == SurveyResponseStatus.Completed ? Url.Content("~/s/r/" + response.ItemId + "/results") : null,
+            ResultsUrl = ResultsLink(definition, collector, response),
         };
 
         // A consumer that started the response (a course item) may ask for a link back; only a local URL is followed.
@@ -646,6 +641,34 @@ public sealed class SurveyRunnerController : Controller
         }
 
         return await ResultsCoreAsync(survey, () => Task.FromResult(response.Status == SurveyResponseStatus.Completed));
+    }
+
+    private string ResultsLink(SurveyDefinition definition, SurveyCollector collector, SurveyResponse response)
+        => ResultsPath(definition, collector, response) is { } path ? Url.Content(path) : null;
+
+    /// <summary>
+    /// Gets the app-relative path of the totals the Done page links to, or <see langword="null"/> when it shows no link.
+    /// A public link's own totals page serves its respondents. A response started without a collector (a course item's
+    /// survey) or through an invitation reaches the totals through the response itself: an invitation collector's token
+    /// is not given to the invitee, who could otherwise pass it around as a public link.
+    /// </summary>
+    /// <param name="definition">The published definition.</param>
+    /// <param name="collector">The collector the response came through, or <see langword="null"/>.</param>
+    /// <param name="response">The response.</param>
+    /// <returns>The path, or <see langword="null"/>.</returns>
+    internal static string ResultsPath(SurveyDefinition definition, SurveyCollector collector, SurveyResponse response)
+    {
+        if (definition?.Review?.ResultsVisibility is not (ResultsVisibility.AfterAnswer or ResultsVisibility.Always))
+        {
+            return null;
+        }
+
+        if (collector is not null && collector.Kind != SurveyCollectorKinds.Invitation)
+        {
+            return "~/s/" + collector.Token + "/results";
+        }
+
+        return response?.Status == SurveyResponseStatus.Completed ? "~/s/r/" + response.ItemId + "/results" : null;
     }
 
     private async Task<IActionResult> ResultsCoreAsync(Survey survey, Func<Task<bool>> hasAnswered)

@@ -12,6 +12,6 @@
 @if (response.CompletedUtc is { } completed)
 {
     var duration = CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.ShownDuration(completed - response.StartedUtc, anonymous);
-    <span class="badge ta-badge fw-normal" title="@T["Duration"]"><i class="fa-solid fa-stopwatch" aria-hidden="true"></i> @(anonymous ? duration.ToString(@"h\:mm") : duration.ToString(@"h\:mm\:ss"))</span>
+    <span class="badge ta-badge fw-normal" title="@T["Duration"]"><i class="fa-solid fa-stopwatch" aria-hidden="true"></i> @CrestApps.OrchardCore.Surveys.Core.Results.SurveyDurations.Hours(duration, withSeconds: !anonymous)</span>
 }
 <span class="badge ta-badge fw-normal" title="@T["Respondent"]"><i class="fa-regular fa-user" aria-hidden="true"></i> @await RespondentNames.GetAsync(response)</span>

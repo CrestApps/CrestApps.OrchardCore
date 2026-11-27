@@ -357,6 +357,23 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
             {
                 CheckRule(context, map, ending.Condition.Rule, definition.Pages.Count, allowSamePage: true, null, null);
             }
+
+            // An ending's message is restricted Liquid, as the respondent sees it rendered: the author learns here, not
+            // from a message shown as written.
+            // Translations of the message render the same way.
+            var messages = definition.Translations?.Values
+                .Select(texts => texts.TryGetValue(CrestApps.OrchardCore.Surveys.Core.Translations.SurveyTextKeys.EndingMessage(ending.Id), out var text) ? text : null)
+                .Prepend(ending.Message) ?? [ending.Message];
+
+            foreach (var message in messages)
+            {
+                if (!CrestApps.OrchardCore.Core.Liquid.RestrictedLiquid.TryValidate(message, out var liquidError))
+                {
+                    context.AddError("ending-liquid", S["The message of the ending {0} isn't valid Liquid for an ending: {1}", ending.Title ?? ending.Name ?? string.Empty, liquidError ?? string.Empty]);
+
+                    break;
+                }
+            }
         }
 
         foreach (var quota in definition.Quotas)

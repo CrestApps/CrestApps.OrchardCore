@@ -30,6 +30,32 @@ public sealed partial class SurveyDefinitionValidatorTests
         Assert.Contains("duplicate-name", await CodesAsync(definition));
     }
 
+    // R11-L4: an ending's message is restricted Liquid, so a filter of Orchard Core's full surface is an error the author
+    // sees, and the four values and the restricted filters are fine.
+    [Theory]
+    [InlineData("Thanks {{ Answers.name | upcase }}, your score is {{ Score }}.", false)]
+    [InlineData("{{ \"**done**\" | markdownify }}", true)]
+    [InlineData("{% if Response.Passed %}Well done{% endif", true)]
+    public async Task ValidateAsync_AnEndingsLiquid_IsCheckedAgainstTheRestrictedSet(string message, bool error)
+    {
+        var definition = AuthoringDefinitions.TwoPages();
+        definition.Endings[0].Message = message;
+
+        Assert.Equal(error, (await CodesAsync(definition)).Contains("ending-liquid"));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_ATranslatedEndingsLiquid_IsCheckedToo()
+    {
+        var definition = AuthoringDefinitions.TwoPages();
+        definition.Translations["fr"] = new Dictionary<string, string>
+        {
+            [CrestApps.OrchardCore.Surveys.Core.Translations.SurveyTextKeys.EndingMessage("e1")] = "{{ \"merci\" | markdownify }}",
+        };
+
+        Assert.Contains("ending-liquid", await CodesAsync(definition));
+    }
+
     [Fact]
     public async Task ValidateAsync_DuplicateIds_IsAnError()
     {

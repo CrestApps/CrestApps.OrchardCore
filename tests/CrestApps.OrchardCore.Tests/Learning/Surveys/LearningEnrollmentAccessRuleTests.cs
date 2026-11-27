@@ -223,6 +223,50 @@ public sealed class LearningEnrollmentAccessRuleTests
         Assert.Equal(SurveyErrorCode.SignInRequired, decision.Error);
     }
 
+    // R11-L3: a completed enrollment keeps its access to review the course, but a new quiz attempt would change the grade
+    // and the credentials after the fact. The old start required an active enrollment; this restores it.
+    [Theory]
+    [InlineData(EnrollmentStatus.Active, true)]
+    [InlineData(EnrollmentStatus.Completed, false)]
+    [InlineData(EnrollmentStatus.Pending, false)]
+    public async Task CheckStart_AQuizAttempt_NeedsAnActiveEnrollment(EnrollmentStatus status, bool allowed)
+    {
+        // Arrange
+        var access = Enrolled();
+        access.Enrollment.Status = status;
+        var context = Context(LearningSurveyContexts.Enrollment("e1"));
+        context.Survey.Kind = SurveyKinds.Quiz;
+
+        // Act
+        var decision = await Rule(access).CheckStartAsync(context);
+
+        // Assert
+        Assert.Equal(allowed, decision.IsAllowed);
+    }
+
+    [Fact]
+    public async Task CheckStartResumeComplete_ACompletedEnrollment_StillAnswersACourseSurveyAndFinishesAnAttempt()
+    {
+        // Arrange: a course survey (feedback) after completion, and a quiz attempt started before the course completed.
+        var access = Enrolled();
+        access.Enrollment.Status = EnrollmentStatus.Completed;
+        var feedback = Context(LearningSurveyContexts.Enrollment("e1"));
+        feedback.Survey.Kind = SurveyKinds.Survey;
+        var attempt = Context(LearningSurveyContexts.Enrollment("e1"));
+        attempt.Survey.Kind = SurveyKinds.Quiz;
+        var rule = Rule(access);
+
+        // Act
+        var started = await rule.CheckStartAsync(feedback);
+        var resumed = await rule.CheckResumeAsync(attempt);
+        var completed = await rule.CheckCompleteAsync(attempt);
+
+        // Assert
+        Assert.True(started.IsAllowed);
+        Assert.True(resumed.IsAllowed);
+        Assert.True(completed.IsAllowed);
+    }
+
     private static CourseItemAccess Enrolled()
         => new()
         {

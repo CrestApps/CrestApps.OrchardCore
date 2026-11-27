@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Learning.Core.Services;
+using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -38,6 +39,19 @@ public sealed class LearningEnrollmentAccessRule : ISurveyAccessRule
         _serviceProvider = serviceProvider;
     }
 
+    /// <summary>
+    /// Gets whether an enrollment may start a response of a course item's survey. A quiz attempt needs an active
+    /// enrollment: a completed one keeps its access to review the course, but a new attempt would change the grade, the
+    /// credentials and the certifications after the fact. A course survey (feedback) may still be answered after
+    /// completion.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="enrollment">The learner's enrollment.</param>
+    /// <returns><see langword="true"/> when the response may start.</returns>
+    public static bool MayStartAttempt(Survey survey, Enrollment enrollment)
+        => enrollment is not null
+            && (!string.Equals(survey?.Kind, SurveyKinds.Quiz, StringComparison.Ordinal) || enrollment.Status == EnrollmentStatus.Active);
+
     /// <inheritdoc />
     public string Name => "LearningEnrollment";
 
@@ -46,19 +60,19 @@ public sealed class LearningEnrollmentAccessRule : ISurveyAccessRule
 
     /// <inheritdoc />
     public Task<SurveyAccessDecision> CheckStartAsync(SurveyAccessContext context)
-        => CheckAsync(context);
+        => CheckAsync(context, starting: true);
 
     /// <inheritdoc />
     public Task<SurveyAccessDecision> CheckResumeAsync(SurveyAccessContext context)
-        => CheckAsync(context);
+        => CheckAsync(context, starting: false);
 
     /// <inheritdoc />
     public Task<SurveyAccessDecision> CheckCompleteAsync(SurveyAccessContext context)
-        => CheckAsync(context);
+        => CheckAsync(context, starting: false);
 
     // The same check runs when a response starts, resumes and completes: a learner withdrawn from the course, or an item
     // unpublished or moved out of it meanwhile, stops the response there.
-    private async Task<SurveyAccessDecision> CheckAsync(SurveyAccessContext context)
+    private async Task<SurveyAccessDecision> CheckAsync(SurveyAccessContext context, bool starting)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -106,6 +120,11 @@ public sealed class LearningEnrollmentAccessRule : ISurveyAccessRule
         var access = await _courseAccess.GetItemAccessAsync(user, item);
 
         if (access.Reason != CourseItemAccessReason.Enrolled || access.Enrollment is null)
+        {
+            return SurveyAccessDecision.Deny(SurveyErrorCode.NotInAudience);
+        }
+
+        if (starting && !MayStartAttempt(context.Survey, access.Enrollment))
         {
             return SurveyAccessDecision.Deny(SurveyErrorCode.NotInAudience);
         }

@@ -4,7 +4,8 @@ using CrestApps.OrchardCore.Surveys.Services;
 namespace CrestApps.OrchardCore.Surveys.Core.Access;
 
 /// <summary>
-/// An invitation gives one response: an expired, opted-out or used invitation is refused.
+/// An invitation gives one response: an expired, opted-out or used invitation is refused, and an invitation collector
+/// starts nothing without an invitation.
 /// </summary>
 public sealed class InvitationRule : ISurveyAccessRule
 {
@@ -19,9 +20,18 @@ public sealed class InvitationRule : ISurveyAccessRule
     {
         var invitation = context.Invitation;
 
-        if (invitation is null || context.IsTest)
+        if (context.IsTest)
         {
             return Task.FromResult(SurveyAccessDecision.Allow);
+        }
+
+        if (invitation is null)
+        {
+            // An invitation collector's link is a start through an invitation only: its token on its own is not a public
+            // link, or an invitee could start more responses than the one an invitation gives.
+            return Task.FromResult(context.Collector?.Kind == SurveyCollectorKinds.Invitation
+                ? SurveyAccessDecision.Deny(SurveyErrorCode.InvitationInvalid)
+                : SurveyAccessDecision.Allow);
         }
 
         if (!string.Equals(invitation.SurveyId, context.Survey.ItemId, StringComparison.Ordinal)

@@ -5,9 +5,14 @@ using Shortcodes;
 namespace CrestApps.OrchardCore.Surveys.Services;
 
 /// <summary>
-/// The <c>[survey name="..." collector="..." display="button|link"]...[/survey]</c> shortcode: a button or a link to a
-/// survey's public link. The content between the tags, when there is any, is the text.
+/// The <c>[survey token="..." display="button|link"]...[/survey]</c> shortcode: a button or a link to a survey's public
+/// link. The content between the tags, when there is any, is the text.
 /// </summary>
+/// <remarks>
+/// The shortcode takes a collector's token, the secret part of the link itself, and never a survey's name or id: a
+/// content author with no Surveys permission could otherwise print the link of any open survey from its technical name,
+/// which is a slug of its title. Whoever has the token already has the link, so the shortcode gives away nothing more.
+/// </remarks>
 internal sealed class SurveyShortcodeProvider : IShortcodeProvider
 {
     private readonly SurveyEmbedResolver _resolver;
@@ -38,7 +43,7 @@ internal sealed class SurveyShortcodeProvider : IShortcodeProvider
             return null;
         }
 
-        var (survey, version, collector) = await _resolver.ResolveAsync(arguments.Named("name") ?? arguments.At(0), arguments.Named("collector"));
+        var (survey, version, collector) = await _resolver.ResolveByTokenAsync(arguments.Named("token") ?? arguments.At(0));
 
         if (survey is null || version is null || collector is null)
         {
