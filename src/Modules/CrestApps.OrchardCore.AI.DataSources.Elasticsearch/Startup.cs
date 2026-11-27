@@ -2,6 +2,7 @@ using CrestApps.Core.AI.DataSources;
 using CrestApps.Core.AI.Models;
 using CrestApps.Core.Elasticsearch;
 using CrestApps.Core.Infrastructure;
+using CrestApps.Core.Services;
 using CrestApps.Core.Infrastructure.Indexing.DataSources;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Recipes;
@@ -10,12 +11,14 @@ using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Drivers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Handlers;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Models;
 using CrestApps.OrchardCore.AI.DataSources.Elasticsearch.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Elasticsearch;
+using OrchardCore.Environment.Shell.Configuration;
 using OrchardCore.Indexing;
 using OrchardCore.Indexing.Core;
 using OrchardCore.Modules;
@@ -52,6 +55,13 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<AIDataSource, ElasticsearchAIDataSourceDisplayDriver>();
         // The search client connects through the egress guard (review 11, C14).
         services.TryAddSingleton<AIEgressTransport>();
+
+        // The global connection reads with the host's credentials, so another tenant reads only the indexes the host
+        // approved for it; a self-managed URL a save checked is held to the same rule when it connects (review 3).
+        services.AddOptions<ElasticsearchSharedConnectionOptions>()
+            .Configure<IShellConfiguration>((options, configuration) => configuration.GetSection(ElasticsearchSharedConnectionOptions.SectionName).Bind(options));
+        services.TryAddSingleton<ElasticsearchSharedConnectionAccess>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<AIDataSource>, ElasticsearchCheckedUrlHandler>());
         services.AddAIDataSourceSourceHandler<ElasticsearchAIDataSourceSourceHandler>(AIDataSourceSourceTypes.Elasticsearch);
         services.Configure<IngestionSourceSecretOptions>(options => options.Protect<AIDataSource>(nameof(ElasticsearchSourceMetadata), AIDataSourceProtectionConstants.SourceSecretPurpose));
 

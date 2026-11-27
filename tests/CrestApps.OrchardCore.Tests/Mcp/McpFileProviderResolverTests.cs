@@ -47,6 +47,28 @@ public sealed class McpFileProviderResolverTests : IDisposable
         Assert.False(provider.GetFileInfo(".env").Exists);
     }
 
+    [Theory]
+    [InlineData(" .env")]
+    [InlineData("/ .env")]
+    [InlineData(".env ")]
+    [InlineData("docs/ .env")]
+    public void Resolve_WithoutProviderName_HidesADotFileBehindSpaces(string path)
+    {
+        // Arrange
+        // Review 3: the tenant folder trims the path, so " .env" (a URI's "%20.env") read the hidden ".env".
+        var folder = Path.Combine(_appData, "Sites", "Default", DefaultMcpFileProviderResolver.TenantFolderName);
+        Directory.CreateDirectory(Path.Combine(folder, "docs"));
+        File.WriteAllText(Path.Combine(folder, ".env"), "KEY=value");
+        File.WriteAllText(Path.Combine(folder, "docs", ".env"), "KEY=value");
+        var provider = CreateResolver().Resolve(string.Empty);
+
+        // Act
+        var file = provider.GetFileInfo(path);
+
+        // Assert
+        Assert.False(file.Exists);
+    }
+
     [Fact]
     public void Resolve_WithUnknownProviderName_ReturnsNull()
     {

@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
+using OrchardCore.Environment.Shell;
 using OrchardCore.Environment.Shell.Configuration;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.DataSources;
@@ -127,6 +128,7 @@ public sealed class PostgreSQLDataSourceOptionsConfigurationTests
             Mock.Of<IDataProtectionProvider>(),
             Options.Create(new PostgreSQLDataSourceOptions { ConnectionString = globalConnectionString }),
             logger,
+            new PostgreSQLConnectionGuard(new ShellSettings { Name = ShellSettings.DefaultShellName }, Options.Create(new PostgreSQLSharedConnectionOptions())),
         ]);
     }
 

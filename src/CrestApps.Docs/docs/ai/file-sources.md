@@ -127,6 +127,23 @@ value is saved as *PASVEX*, and a connection saved before this rule is held to *
 `CrestApps_AI:FileTransfer:AllowPrivateNetwork` to `true` in the tenant's configuration; link-local addresses and the
 cloud metadata services are refused even then. The same rules apply to the FTP and SFTP MCP resources.
 
+The connection then goes to the address that was checked, not to whatever the name resolves to a moment later, so a
+name that answers with a public address first and an internal one second can't reach an internal server. An SFTP server
+and proxy are connected to by address: the server is verified by its host key, not by its name. So is an FTP server
+over plain FTP (anonymous or not), with the *Auto* encryption mode, or with **Accept any certificate**, where the name
+proves nothing.
+
+:::warning[Known limit: an FTP server held to its TLS certificate keeps its name]
+
+With the *Explicit* or *Implicit* encryption mode and the certificate checked, the FTP client checks the certificate
+against the name it connects with and takes no separate name for the check, so connecting by address would fail every
+valid certificate. That connection keeps the name, which the client resolves again. A name that answers differently the
+second time reaches no service: the server must present a valid certificate for the name before it receives the
+credentials or a command. The TCP connection and the TLS handshake are still made, so keep egress rules on the network
+too, refusing private, loopback, link-local and cloud metadata addresses.
+
+:::
+
 A stored password, private key, or passphrase is never sent back to the editor. Leaving the field blank on
 save keeps the stored value while the connection signs in to the same account on the same server; type a new one to
 replace it. Changing the host, the port or the user name, or for SFTP the host key fingerprint, drops the stored

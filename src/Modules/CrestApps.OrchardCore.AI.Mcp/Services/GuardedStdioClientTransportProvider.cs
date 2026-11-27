@@ -35,6 +35,10 @@ internal sealed class GuardedStdioClientTransportProvider : IMcpClientTransportP
         "UV_INDEX_URL", "UV_EXTRA_INDEX_URL", "PIP_INDEX_URL", "PIP_EXTRA_INDEX_URL", "DOCKER_HOST",
     ];
 
+    // The extensions Windows runs a bare name with, in the default PATHEXT order. A name with another extension is a
+    // different program, so it must be allowed as it is.
+    private static readonly string[] _executableExtensions = [".com", ".exe", ".bat", ".cmd"];
+
     /// <summary>
     /// Initializes a new instance of the <see cref="GuardedStdioClientTransportProvider"/> class.
     /// </summary>
@@ -81,15 +85,28 @@ internal sealed class GuardedStdioClientTransportProvider : IMcpClientTransportP
             throw new InvalidOperationException($"This local (stdio) MCP connection sets {variable}, which the host's allowed environment variables don't include.");
         }
 
+        // On Windows the command runs through cmd.exe, which looks in the working directory before PATH: an allowed bare
+        // name would start a file of that name the connection's working directory holds (review 3).
+        if (_options.AllowedCommands.Length > 0 &&
+            OperatingSystem.IsWindows() &&
+            FindShadowingFile(metadata?.Command, metadata?.WorkingDirectory ?? Environment.CurrentDirectory) is not null)
+        {
+            _logger.LogWarning("The local MCP connection '{ConnectionId}' was not started: its working directory holds a file its command would start.", connection.ItemId);
+
+            throw new InvalidOperationException("The working directory of this local (stdio) MCP connection holds a file with its command's name, which would start instead of the program the host allows.");
+        }
+
         return _inner.GetAsync(connection);
     }
 
     /// <summary>
     /// Whether a command may be started under the allowlist. An empty list allows any command. A bare command name, such
-    /// as <c>npx</c> or <c>npx.cmd</c>, must be in the list with or without its extension. A command given as a path is
-    /// allowed only when that exact path is in the list: with <c>["npx"]</c>, <c>\\host\share\npx.exe</c> is refused.
-    /// The list limits the program only; its arguments and working directory are not checked, so <c>npx -y</c> with any
-    /// package name still runs that package. Environment variables that change which program runs are refused separately.
+    /// as <c>npx</c> or <c>npx.cmd</c>, must be in the list as it is, or without an executable extension (<c>.exe</c>,
+    /// <c>.cmd</c>, <c>.bat</c> or <c>.com</c>): with <c>["npx"]</c>, <c>npx.anything</c> is refused. A command given as a
+    /// path, a drive-relative one such as <c>C:npx</c> included, is allowed only when that exact path is in the list: with
+    /// <c>["npx"]</c>, <c>\\host\share\npx.exe</c> is refused. The list limits the program only; its arguments and working
+    /// directory are not checked, so <c>npx -y</c> with any package name still runs that package. Environment variables
+    /// that change which program runs are refused separately.
     /// </summary>
     /// <param name="command">The command to start.</param>
     /// <param name="allowedCommands">The commands the host allows.</param>
@@ -107,17 +124,49 @@ internal sealed class GuardedStdioClientTransportProvider : IMcpClientTransportP
 
         var trimmed = command.Trim();
 
-        if (trimmed.IndexOfAny(['/', '\\']) >= 0)
+        if (IsPath(trimmed))
         {
             return allowedCommands.Any(allowed => string.Equals(allowed?.Trim(), trimmed, StringComparison.OrdinalIgnoreCase));
         }
 
-        var withoutExtension = Path.GetFileNameWithoutExtension(trimmed);
+        var extension = Path.GetExtension(trimmed);
+        var withoutExtension = _executableExtensions.Contains(extension, StringComparer.OrdinalIgnoreCase)
+            ? trimmed[..^extension.Length]
+            : trimmed;
 
         return allowedCommands.Any(allowed =>
-            string.Equals(allowed, trimmed, StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(allowed, withoutExtension, StringComparison.OrdinalIgnoreCase));
+            string.Equals(allowed?.Trim(), trimmed, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(allowed?.Trim(), withoutExtension, StringComparison.OrdinalIgnoreCase));
     }
+
+    /// <summary>
+    /// Returns the file in a working directory that a bare command name would start before the program on <c>PATH</c>
+    /// (<c>cmd.exe</c> looks in the working directory first), or <see langword="null"/>. A command given as a path starts
+    /// that path, so it has none.
+    /// </summary>
+    /// <param name="command">The command to start.</param>
+    /// <param name="workingDirectory">The directory the command starts in.</param>
+    internal static string FindShadowingFile(string command, string workingDirectory)
+    {
+        var trimmed = command?.Trim();
+
+        if (string.IsNullOrEmpty(trimmed) || IsPath(trimmed) || string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            return null;
+        }
+
+        IEnumerable<string> candidates = _executableExtensions.Contains(Path.GetExtension(trimmed), StringComparer.OrdinalIgnoreCase)
+            ? [trimmed]
+            : [trimmed, .. _executableExtensions.Select(extension => trimmed + extension)];
+
+        return candidates
+            .Select(candidate => Path.Combine(workingDirectory, candidate))
+            .FirstOrDefault(File.Exists);
+    }
+
+    // A separator or a drive (C:npx) makes a command a path, which runs that file rather than one found on PATH.
+    private static bool IsPath(string command)
+        => command.IndexOfAny(['/', '\\', ':']) >= 0;
 
     /// <summary>
     /// Returns the first environment variable a connection sets that the host does not allow, or <see langword="null"/>.

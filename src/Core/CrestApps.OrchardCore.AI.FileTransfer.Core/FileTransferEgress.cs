@@ -9,6 +9,7 @@ using CrestApps.Core.AI.Sftp;
 using CrestApps.Core.AI.Sftp.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.AI.FileTransfer.Core.Services;
+using FluentFTP;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -17,9 +18,10 @@ namespace CrestApps.OrchardCore.AI.FileTransfer.Core;
 /// <summary>
 /// Puts the <see cref="FileTransferEgressPolicy"/> on CrestApps.Core's FTP and SFTP connectors and MCP resource types,
 /// which build their clients themselves: the server and proxy are checked when a file source is saved through the
-/// catalog, and before every connection (review 11). The package still resolves the name again when it connects; an
-/// SFTP server is then held to its host key, and an FTP server to its TLS certificate, so a name that answers
-/// differently the second time reaches no service, though the connection attempt itself is made.
+/// catalog, and before every connection (review 11). The package then connects to the address that was checked (review 3):
+/// an SFTP server is verified by its host key, and a plain FTP server, or one whose certificate is not checked, has no
+/// name to prove. Only an FTP server held to its TLS certificate keeps its name, which the package resolves again; a name
+/// that answers differently the second time reaches no service, though the connection attempt itself is made.
 /// </summary>
 public static class FileTransferEgress
 {
@@ -46,13 +48,7 @@ public static class FileTransferEgress
                     serviceProvider.GetRequiredService<FileTransferEgressPolicy>(),
                     source => FtpHosts(source.GetOrCreate<FtpConnectionMetadata>()),
                     (source, policy) => FtpDataConnectionRefusal(source.GetOrCreate<FtpConnectionMetadata>(), policy),
-                    (source, policy) =>
-                    {
-                        if (HoldFtpDataConnection(source.GetOrCreate<FtpConnectionMetadata>(), policy) is { } held)
-                        {
-                            source.Put(held);
-                        }
-                    }));
+                    (source, policy) => source.Put(PrepareFtpConnection(source.GetOrCreate<FtpConnectionMetadata>(), policy))));
 
     /// <summary>
     /// Guards the SFTP ingestion connector. Call it after <c>AddCoreSftpIngestionConnector</c>.
@@ -62,7 +58,11 @@ public static class FileTransferEgress
         => services.AddFileTransferHostOptions()
             .DecorateKeyed<IIngestionConnector>(SftpIngestionConnector.ConnectorName, (serviceProvider, inner) => inner is EgressGuardedIngestionConnector
                 ? inner
-                : new EgressGuardedIngestionConnector(inner, serviceProvider.GetRequiredService<FileTransferEgressPolicy>(), source => SftpHosts(source.GetOrCreate<SftpConnectionMetadata>())));
+                : new EgressGuardedIngestionConnector(
+                    inner,
+                    serviceProvider.GetRequiredService<FileTransferEgressPolicy>(),
+                    source => SftpHosts(source.GetOrCreate<SftpConnectionMetadata>()),
+                    prepare: (source, policy) => source.Put(PrepareSftpConnection(source.GetOrCreate<SftpConnectionMetadata>(), policy))));
 
     /// <summary>
     /// Guards the FTP MCP resource type. Call it after <c>AddCoreAIFtpMcpResources</c>.
@@ -78,9 +78,9 @@ public static class FileTransferEgress
                     resource => FtpHosts(resource.TryGet<FtpConnectionMetadata>(out var metadata) ? metadata : null),
                     (resource, policy) =>
                     {
-                        if (resource.TryGet<FtpConnectionMetadata>(out var metadata) && HoldFtpDataConnection(metadata, policy) is { } held)
+                        if (resource.TryGet<FtpConnectionMetadata>(out var metadata))
                         {
-                            resource.Put(held);
+                            resource.Put(PrepareFtpConnection(metadata, policy));
                         }
                     }));
 
@@ -92,7 +92,81 @@ public static class FileTransferEgress
         => services.AddFileTransferResourceValidation()
             .DecorateKeyed<IMcpResourceTypeHandler>(SftpResourceConstants.Type, (serviceProvider, inner) => inner is EgressGuardedMcpResourceTypeHandler
                 ? inner
-                : new EgressGuardedMcpResourceTypeHandler(inner, serviceProvider.GetRequiredService<FileTransferEgressPolicy>(), resource => SftpHosts(resource.TryGet<SftpConnectionMetadata>(out var metadata) ? metadata : null)));
+                : new EgressGuardedMcpResourceTypeHandler(
+                    inner,
+                    serviceProvider.GetRequiredService<FileTransferEgressPolicy>(),
+                    resource => SftpHosts(resource.TryGet<SftpConnectionMetadata>(out var metadata) ? metadata : null),
+                    (resource, policy) =>
+                    {
+                        if (resource.TryGet<SftpConnectionMetadata>(out var metadata))
+                        {
+                            resource.Put(PrepareSftpConnection(metadata, policy));
+                        }
+                    }));
+
+    /// <summary>
+    /// Holds an FTP connection to the policy just before it connects: the server is checked, the data connection type is
+    /// held to a safe one (<see cref="HoldFtpDataConnection"/>), and the server is named by the address that was checked,
+    /// so the package connects there rather than to whatever the name resolves to a moment later (review 3). Only a TLS
+    /// connection that validates the server's certificate keeps the name, which the certificate must match: the client
+    /// takes no separate name for the certificate, so an address would fail every valid certificate. The package still
+    /// resolves that name again, so the connection attempt is made, but a server that cannot prove the name gets neither
+    /// the credentials nor a request. Pass a copy: the connection's host is changed.
+    /// </summary>
+    /// <param name="metadata">A copy of the connection.</param>
+    /// <param name="policy">The host's file transfer policy.</param>
+    /// <returns>The connection.</returns>
+    /// <exception cref="InvalidOperationException">The server is on the site's own network, or could not be found.</exception>
+    public static FtpConnectionMetadata PrepareFtpConnection(FtpConnectionMetadata metadata, FileTransferEgressPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        ArgumentNullException.ThrowIfNull(policy);
+
+        var address = policy.ResolveAllowed(metadata.Host);
+
+        HoldFtpDataConnection(metadata, policy);
+
+        if (address is not null && !ChecksFtpCertificateName(metadata))
+        {
+            metadata.Host = address.ToString();
+        }
+
+        return metadata;
+    }
+
+    /// <summary>
+    /// Holds an SFTP connection to the policy just before it connects: the server and the proxy are checked, and named by
+    /// the addresses that were checked. The server is verified by its host key, not by its name, so nothing is lost
+    /// (review 3). Pass a copy: the connection's hosts are changed.
+    /// </summary>
+    /// <param name="metadata">A copy of the connection.</param>
+    /// <param name="policy">The host's file transfer policy.</param>
+    /// <returns>The connection.</returns>
+    /// <exception cref="InvalidOperationException">The server or the proxy is on the site's own network, or could not be found.</exception>
+    public static SftpConnectionMetadata PrepareSftpConnection(SftpConnectionMetadata metadata, FileTransferEgressPolicy policy)
+    {
+        ArgumentNullException.ThrowIfNull(metadata);
+        ArgumentNullException.ThrowIfNull(policy);
+
+        if (policy.ResolveAllowed(metadata.Host) is { } address)
+        {
+            metadata.Host = address.ToString();
+        }
+
+        if (policy.ResolveAllowed(metadata.ProxyHost) is { } proxyAddress)
+        {
+            metadata.ProxyHost = proxyAddress.ToString();
+        }
+
+        return metadata;
+    }
+
+    // Whether the FTP client checks the server's certificate against the host name: TLS (Explicit or Implicit, not Auto,
+    // which falls back to plain FTP, as the package's own policy reads it) without accepting any certificate.
+    internal static bool ChecksFtpCertificateName(FtpConnectionMetadata metadata)
+        => !metadata.ValidateAnyCertificate &&
+            Enum.TryParse<FtpEncryptionMode>(metadata.EncryptionMode, ignoreCase: true, out var mode) &&
+            mode is FtpEncryptionMode.Explicit or FtpEncryptionMode.Implicit;
 
     /// <summary>
     /// The field of an FTP connection whose data connection type could send the data channel to the site's own network,

@@ -535,6 +535,13 @@ OrchardCore__CrestApps__AI__DataSources__Elasticsearch__Url=http://search.exampl
 A connection stored on a data source wins over both sections. See
 [AI Data Sources](ai/data-sources/index.md).
 
+The configured connection signs in with the host's credentials, so only the default tenant may read any index or table
+through it. Another tenant reads only what its own configuration lists: `SharedConnectionIndexes` under
+`CrestApps:AI:DataSources:Elasticsearch` and `SharedConnectionTables` under `CrestApps:AI:DataSources:PostgreSQL`.
+`AllowHostIdentity` under the PostgreSQL section lets a tenant's own connection string sign in as the host (no password,
+or a file on the host's disk). See
+[Which tenants may use it](ai/data-sources/elasticsearch.md#which-tenants-may-use-it).
+
 ### AI documents in Azure Blob Storage
 
 | | |

@@ -54,7 +54,7 @@ When the **Data Connectors** feature is on, the source editor also offers **Data
 
 A self-managed URL may not be on the site's own network (loopback, private or link-local addresses, or a host name that resolves to one, such as `http://elasticsearch:9200` inside Docker), in the editor, the API and the **AIDataSource** recipe step. A host that runs Elasticsearch on a private network sets `CrestApps:AI:Egress:AllowPrivateNetwork` to `true`. The URL is checked only when it is new or changed, so a data source saved before the check keeps working and can still be edited; changing its URL to another private address needs the setting. A URL that was stored but not used, while the data source was in Elastic Cloud mode or read through a data connection, counts as new: it is checked when the data source switches to its own self-managed settings. An Elastic Cloud ID names its cluster too: the client connects to the address the ID decodes to (`https://<elasticsearch-id>.<host>`), so that address goes through the same rule, and an ID that is not an Elastic Cloud ID is refused. A Cloud ID is checked when it is new or changed, and again before every sync, since no Elastic Cloud deployment is on the site's own network.
 
-The client also checks the address it actually connects to. An Elastic Cloud cluster is held to the rule above. A self-managed cluster may stay on a private network, so a saved Docker cluster keeps syncing, but it never reaches the link-local range or a cloud metadata service (such as `169.254.169.254`), whatever its name resolves to later. A data source that reads through an Elasticsearch data connection follows the data connectors' network rule.
+The client also checks the address it actually connects to, and follows no redirect. An Elastic Cloud cluster is held to the rule above. A self-managed URL that a save checked is held to it too, so a host name that resolved to a public address when the data source was saved and resolves to a private one at sync is refused. Only a data source saved before the check, whose URL has not changed since, may stay on a private network, so a saved Docker cluster keeps syncing; the first save that changes its URL, or moves it to Elastic Cloud or a data connection, ends that. Either way the client never reaches the link-local range or a cloud metadata service (such as `169.254.169.254`), whatever its name resolves to later. A data source that reads through an Elasticsearch data connection follows the data connectors' network rule.
 
 ## Global connection
 
@@ -106,6 +106,26 @@ OrchardCore__CrestApps__Elasticsearch__Password
 ```
 
 Connection settings stored on a data source always win over the configured values. This section is separate from `OrchardCore:OrchardCore_Elasticsearch`, which configures the Orchard Core Elasticsearch feature that owns the Orchard-managed indexes.
+
+### Which tenants may use it
+
+The global connection reads with the host's credentials, so it reaches every index they can read, other tenants' included. The default tenant may read any index through it. Another tenant may read only the indexes the host lists for it in `SharedConnectionIndexes` under the data source section, when a data source is saved and again before every sync; any other index name is refused, and so is a pattern or a list of indexes unless the host listed that exact text. The operator lists them in the tenant's own configuration (for example `App_Data/Sites/<tenant>/appsettings.json`, or the `OrchardCore:<tenant>` section of the host's configuration), which tenant administrators can't change:
+
+```json
+{
+  "CrestApps": {
+    "AI": {
+      "DataSources": {
+        "Elasticsearch": {
+          "SharedConnectionIndexes": [ "tenant-a-docs" ]
+        }
+      }
+    }
+  }
+}
+```
+
+A data source on another tenant that already reads an index through the global connection stops syncing until its index is listed, or until it is given its own connection settings or a data connection.
 
 ## Filters on an Elasticsearch knowledge base
 
