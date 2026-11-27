@@ -49,7 +49,8 @@ jobs:
 
   # The required status check of the "Merge queue for main" ruleset. It reports on every pull request
   # event so a pull request can join the merge queue, and in the queue it passes only when every suite passed on both
-  # operating systems. On a pull request it fails only when a labelled run actually failed.
+  # operating systems. On a pull request it fails only when a labelled run actually failed, not when a newer run
+  # replaced it.
   merge_gate:
     name: Merge gate
     needs: build_test
@@ -70,6 +71,13 @@ jobs:
             echo "::error::Every suite must pass on both operating systems before the group merges."
             exit 1
           fi
+          exit 0
+        fi
+
+        # A run cancelled on a pull request was replaced by a newer one for the same pull request (a new push, or the
+        # labelled and opened events of a pull request created with the label), and that run reports its own gate.
+        if [ "$RESULT" = "cancelled" ]; then
+          echo "::notice::This run was replaced by a newer Full - CI run, which reports the result."
           exit 0
         fi
 

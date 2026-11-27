@@ -37,7 +37,7 @@ env:
 
 jobs:
   dotnet:
-    name: ${{ matrix.suite == 'unit' && 'Unit tests' || matrix.suite == 'activation' && 'Feature activation tests' || 'Integration tests' }} (${{ matrix.os }})
+    name: ${{ matrix.suite == 'unit' && 'Unit tests' || matrix.suite == 'activation' && 'Feature activation tests' || 'Integration tests' }} (${{ matrix.os }}${{ matrix.os == 'windows-latest' && matrix.suite == 'unit' && format(', {0}/3', matrix.shard) || '' }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -46,6 +46,24 @@ jobs:
         # The Contact Center feature activation suite is the longest integration suite, so it has its own job and
         # runs beside the others instead of before them.
         suite: [unit, activation, integration]
+        # The unit tests take about four times as long on a Windows runner as on a Linux one, and the Windows runner
+        # was already busy on all four cores. They are split over three jobs there (tests/run-unit-tests.ps1 -Shard);
+        # every other job runs once. The split depends only on the test assembly, so the three jobs cover every
+        # test class exactly once.
+        shard: [1, 2, 3]
+        exclude:
+          - os: ubuntu-latest
+            shard: 2
+          - os: ubuntu-latest
+            shard: 3
+          - suite: activation
+            shard: 2
+          - suite: activation
+            shard: 3
+          - suite: integration
+            shard: 2
+          - suite: integration
+            shard: 3
     steps:
     - uses: actions/checkout@v7
       with:
@@ -61,7 +79,7 @@ jobs:
     - name: Cache NuGet packages
       uses: ./.github/actions/cache-nuget-packages
       with:
-        save: ${{ inputs.save-nuget-cache && matrix.suite == 'unit' }}
+        save: ${{ inputs.save-nuget-cache && matrix.suite == 'unit' && matrix.shard == 1 }}
     - name: Prepare the Aspire CLI bundle
       uses: ./.github/actions/prepare-aspire-cli-bundle
     - name: Build
@@ -81,7 +99,7 @@ jobs:
       uses: actions/cache@v6
       with:
         path: TestResults/unit/timings.json
-        key: unit-test-timings-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+        key: unit-test-timings-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
         restore-keys: |
           unit-test-timings-${{ runner.os }}-
     - name: Unit Tests
@@ -89,12 +107,12 @@ jobs:
       shell: bash
       run: |
         set -o pipefail
-        pwsh ./tests/run-unit-tests.ps1 -Configuration Release 2>&1 | tee test-output.txt
+        pwsh ./tests/run-unit-tests.ps1 -Configuration Release -Shard ${{ matrix.shard }} -ShardCount ${{ matrix.os == 'windows-latest' && 3 || 1 }} 2>&1 | tee test-output.txt
     - name: Upload the unit test results
       if: failure() && matrix.suite == 'unit'
       uses: actions/upload-artifact@v7
       with:
-        name: unit-test-results-${{ matrix.os }}
+        name: unit-test-results-${{ matrix.os }}-${{ matrix.shard }}
         path: TestResults/unit/
         retention-days: 14
     - name: TEMP report failed tests as annotations
