@@ -8,7 +8,7 @@ user_manual:
   - user-manual/learning/certifications
 ---
 
-The **Skills** module keeps one skill catalog for the site. Contact Center routing and workforce scheduling read the same skills, so a person's skills are set once. It adds:
+The **Skills** module keeps one skill catalog for the site. Contact Center routing and workforce scheduling read the same skills, so a person's skills are set once. A skill is how good someone is at something (1 to 5); which pool someone belongs to, such as agent, technician or cashier, is a Staff capability instead (see [Capabilities](./staff.md#capabilities)). It adds:
 
 - **Skills**: a name, a category, a description and an optional required certification.
 - **Skill assignments**: a person holds a skill at a proficiency from 1 to 5, optionally between two dates. A person is an Orchard Core user, or a workforce worker who may have no user account.
@@ -141,6 +141,10 @@ Skills are matched by name in any case. A new name adds a skill; a known one in 
 ## Reports
 
 With Reports on, the **Skill holders** report (`skills-skill-holders`, View skills) shows who holds each enabled skill today: holders and average level per skill, and one row per person and skill with the level, the effective dates and who gave it, up to 5,000 rows. The **Category (framework)** filter (`SkillsReportFilters.Category`) narrows it to one category; the date range counts the skills given or changed in it.
+
+## Admin menu
+
+**Content** → **Skills**, **Certification Types** and **Certificates** sit under Orchard's **Content** menu (id `content`, `NavigationConstants.AdminMenuContentPosition`), so they merge with the Contents module's items. A site without the Contents feature still shows **Content** with Orchard's icon: the module has a copy of Orchard's `NavigationItemText-content.Id.cshtml`, as Teams and Agreements do.
 
 ## Permissions
 

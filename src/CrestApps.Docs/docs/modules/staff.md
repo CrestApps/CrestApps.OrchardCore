@@ -63,14 +63,24 @@ Each staff member is a YesSql document in the `Staff` collection, with `StaffMem
 
 ### Capabilities
 
-Capabilities put people in pools: who the dispatch board offers, who can take calls, who can be booked, who runs a register. **Staff** → **Capabilities** (people with **Manage staff**) lists them on an admin list:
+Capabilities put people in pools: who the dispatch board offers, who can take calls, who can be booked, who runs a register. **Staff** → **Capabilities** (people with **Manage staff**) lists them on an admin list with a client-side search (name, technical name and description):
 
 - **Built in** ones are seeded by the modules whose code relies on them. Admins change their label, description and order, or turn them off (**Offered**); **Reset to defaults** drops those changes. They can't be deleted or renamed.
-- **Custom** ones are added by admins with a key (letters, digits, dots, dashes, underscores; fixed once saved), a name, a description and a position, and can be deleted. Staff members who had a deleted one keep it until they are saved again.
+- **Custom** ones are added by admins (**Add Capability**) with a technical name (letters, digits, dots, dashes, underscores; fixed once saved), a name, a description and a position, and can be deleted. Staff members who had a deleted one keep it until they are saved again.
 
 A capability that is turned off isn't offered in the editor, filters, pickers or settings; staff members who have it keep it. `IStaffCapabilityService` lists the capabilities as they apply (`ListAsync`, `FindAsync`), saves (`SaveAsync`) and deletes or resets (`DeleteAsync`); the admin's records are kept in one document, `StaffCapabilitiesDocument`, and travel in the Staff recipe and deployment steps (`Capabilities`). `StaffQuery.Capabilities` finds staff with any of several, and the staff picker's `capability` argument takes several, comma-separated.
 
-How good someone is at something belongs in [Skills](./skills.md), which Dispatch and scheduling match on; capabilities only decide the pools.
+How good someone is at something belongs in [Skills](./skills.md), which Dispatch and scheduling match on; capabilities only decide the pools. The two work together and never duplicate each other:
+
+| | Capability (Staff) | Skill (Skills) |
+| --- | --- | --- |
+| Question | Which pool is the person in? | How good is the person at something? |
+| Value | Yes or no, on `StaffMember.Capabilities` | A proficiency from 1 to 5 with effective dates, optionally needing a valid certification |
+| Set by | Admins, or code (`IStaffAccountService.EnsureAsync` gives agents, cashiers and bookable people theirs) | Admins and `ISkillAssignmentService` |
+| Read by | `StaffQuery.Capabilities`, the `StaffPicker`'s `capability`, settings that name a pool | `SkillRequirement` with `HoldsAllAsync`, Contact Center routing, scheduling, team assignment |
+| Owner | Staff (no extra feature) | The optional Skills feature |
+
+A module that needs "who may be offered for this work" registers a capability with `AddStaffCapability`; one that needs "who is good enough" asks for a `SkillRequirement`. Both pages say so in a hint at the top.
 
 ### The staff profile
 

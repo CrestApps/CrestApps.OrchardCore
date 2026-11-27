@@ -40,7 +40,7 @@ The **Agreements** background task (hourly) runs `AgreementLifecycle`: an active
 
 ## Pages
 
-**Content** → **Agreements** in the admin menu lists the agreements (the admin list's List and Grid layouts) with their status and hours; the editor has the general values, the **Covered hours** panel with how the hours stand now, and the panels other modules add through display drivers on `Agreement`. An account's page lists its agreements with the hours used, and links to a new agreement for it.
+**Content** → **Agreements** in the admin menu (under Orchard's `content` menu item, with a copy of Orchard's `NavigationItemText-content.Id.cshtml` so a site without the Contents feature still shows its icon) lists the agreements (the admin list's List and Grid layouts) with their status and hours; the editor has the general values, the **Covered hours** panel with how the hours stand now, and the panels other modules add through display drivers on `Agreement`. An account's page lists its agreements with the hours used, and links to a new agreement for it.
 
 ## Reports
 

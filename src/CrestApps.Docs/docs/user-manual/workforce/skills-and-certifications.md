@@ -18,9 +18,24 @@ The same skills are used across the site. When Contact Center is on, the agents'
 
 <AskYourAdmin />
 
+## Skills or capabilities?
+
+The site has two ways to say what someone does, and they answer different questions:
+
+| | Skill (**Content** → **Skills**) | Capability (**Staff** → **Capabilities**) |
+| --- | --- | --- |
+| Answers | How good is this person at something? | Which pool does this person belong to? |
+| Examples | Spanish, boiler servicing, forklift driving | Contact Center agent, technician, cashier, bookable, instructor |
+| Value | A level from 1 (trainee) to 5 (expert), from a date, and can need a valid certificate | Yes or no |
+| Who sets it | You, on the person's skills | You on the staff editor, or a module by itself: signing in to a queue makes someone an agent, opening a register makes them a cashier |
+| What reads it | Contact Center routing, shift planning, work order and team assignments that ask for a skill at a level | Pickers, filters and settings that offer only the people of a pool, such as the technicians a work order can be sent to |
+| Feature | Skills | Staff (always there with Staff) |
+
+Use both together: the dispatch board offers the people with the **Technician** capability, and a job that needs gas work picks among them the ones holding **Gas safety** at level 3 or more.
+
 ## Add a skill
 
-Open **Content** → **Skills** and choose **Add skill**.
+Open **Content** → **Skills** and choose **Add Skill**.
 
 | Field | What it does |
 | --- | --- |
