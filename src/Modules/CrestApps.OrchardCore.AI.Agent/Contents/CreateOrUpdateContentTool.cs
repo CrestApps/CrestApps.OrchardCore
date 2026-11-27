@@ -237,12 +237,7 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         else
         {
-            var contentItemPreparationService = arguments.Services.GetRequiredService<ContentItemPreparationService>();
-            contentItem = await contentItemPreparationService.PrepareAsync(
-                contentDefinition,
-                inputNode,
-                contentItem,
-                cancellationToken);
+            contentItem = await PrepareUpdateAsync(arguments.Services, contentDefinition, inputNode, contentItem, cancellationToken);
 
             await contentManager.UpdateAsync(contentItem);
 
@@ -293,6 +288,30 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
     // The caller edits the item, and publishes it unless it stays a draft. Orchard Core decides by the item, so an
     // author edits only their own content and a content type with its own permissions is honored.
+    // The caller was authorized for the item as it is owned now, so the payload never changes who owns it: the merge would
+    // otherwise take an Owner or Author from it.
+    private static async Task<ContentItem> PrepareUpdateAsync(
+        IServiceProvider services,
+        ContentTypeDefinition contentDefinition,
+        JsonObject inputNode,
+        ContentItem contentItem,
+        CancellationToken cancellationToken)
+    {
+        var owner = contentItem.Owner;
+        var author = contentItem.Author;
+
+        var prepared = await services.GetRequiredService<ContentItemPreparationService>().PrepareAsync(
+            contentDefinition,
+            inputNode,
+            contentItem,
+            cancellationToken);
+
+        prepared.Owner = owner;
+        prepared.Author = author;
+
+        return prepared;
+    }
+
     private static async Task<bool> MayWriteAsync(IServiceProvider services, ContentItem contentItem, bool isDraft)
         => await AIToolCallerAuthorization.IsAuthorizedAsync(services, CommonPermissions.EditContent, contentItem) &&
             (isDraft || await AIToolCallerAuthorization.IsAuthorizedAsync(services, CommonPermissions.PublishContent, contentItem));
@@ -385,12 +404,11 @@ public sealed class CreateOrUpdateContentTool : AIFunction
 
         // A signed-in caller owns what they create, as in Orchard Core's editor, which sets the owner before it checks
         // that the caller may edit the new item.
+        // The owner the payload names is never kept, so a caller can't create an item in someone else's name.
         if (AIToolCallerAuthorization.IsSignedIn(principal))
         {
-            if (string.IsNullOrEmpty(contentItem.Owner))
-            {
-                contentItem.Owner = principal.FindFirstValue(ClaimTypes.NameIdentifier);
-            }
+            contentItem.Owner = principal.FindFirstValue(ClaimTypes.NameIdentifier);
+            contentItem.Author = principal.Identity?.Name;
 
             return;
         }

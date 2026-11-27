@@ -49,7 +49,7 @@ public sealed partial class MethodLengthRatchetTests
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultSchedulePlanningService.cs: PublishAsync"] = 202,
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultTimeClockService.cs: PunchAsync"] = 167,
         ["src/Core/CrestApps.OrchardCore.Workforce.Core/Services/DefaultTimesheetCalculator.cs: Calculate"] = 204,
-        ["src/Modules/CrestApps.OrchardCore.AI.Agent/Contents/CreateOrUpdateContentTool.cs: InvokeCoreAsync"] = 206,
+        ["src/Modules/CrestApps.OrchardCore.AI.Agent/Contents/CreateOrUpdateContentTool.cs: InvokeCoreAsync"] = 201,
         ["src/Modules/CrestApps.OrchardCore.AI.Agent/Tenants/SetupTenantTool.cs: InvokeCoreAsync"] = 211,
         ["src/Modules/CrestApps.OrchardCore.AI.Documents/Drivers/AIProfileDocumentsDisplayDriver.cs: UpdateAsync"] = 154,
         ["src/Modules/CrestApps.OrchardCore.AI.Documents/Drivers/AIProfileTemplateDocumentsDisplayDriver.cs: UpdateAsync"] = 151,

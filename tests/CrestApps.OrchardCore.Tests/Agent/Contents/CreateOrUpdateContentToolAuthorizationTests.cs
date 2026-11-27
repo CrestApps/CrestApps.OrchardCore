@@ -101,6 +101,50 @@ public sealed class CreateOrUpdateContentToolAuthorizationTests
         Assert.Equal("hub-user", created?.Owner);
     }
 
+    [Fact]
+    public async Task InvokeAsync_AnUpdateNamingAnotherOwner_KeepsTheItemsOwner()
+    {
+        // Arrange (round 3 follow-up): the payload is merged into the item after the caller was authorized for it as it is
+        // owned, so an Owner in the payload would hand the item to someone else.
+        var mine = new ContentItem { ContentItemId = "mine", ContentType = "Article", Owner = "author", Author = "author-name" };
+        var contentManager = new Mock<IContentManager>();
+        contentManager.Setup(manager => manager.GetAsync("mine", It.IsAny<VersionOptions>())).ReturnsAsync(mine);
+        contentManager.Setup(manager => manager.ValidateAsync(It.IsAny<ContentItem>())).ReturnsAsync(new ContentValidateResult());
+        ContentItem updated = null;
+        contentManager.Setup(manager => manager.UpdateAsync(It.IsAny<ContentItem>())).Callback<ContentItem>(item => updated = item).Returns(Task.CompletedTask);
+        using var services = BuildServices(contentManager.Object, Caller("author"));
+
+        // Act
+        var result = await InvokeAsync(services, """{ "ContentItemId": "mine", "ContentType": "Article", "Owner": "someone-else", "Author": "someone" }""");
+
+        // Assert
+        Assert.NotEqual(AIToolCallerAuthorization.NotAllowedMessage, result);
+        Assert.NotNull(updated);
+        Assert.Equal("author", updated.Owner);
+        Assert.Equal("author-name", updated.Author);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_ANewItemNamingAnotherOwner_IsOwnedByTheCaller()
+    {
+        // Arrange
+        var contentManager = new Mock<IContentManager>();
+        contentManager.Setup(manager => manager.NewAsync("Article")).ReturnsAsync(() => new ContentItem { ContentType = "Article" });
+        contentManager.Setup(manager => manager.ValidateAsync(It.IsAny<ContentItem>())).ReturnsAsync(new ContentValidateResult());
+        ContentItem created = null;
+        contentManager
+            .Setup(manager => manager.CreateAsync(It.IsAny<ContentItem>(), It.IsAny<VersionOptions>()))
+            .Callback<ContentItem, VersionOptions>((item, _) => created = item)
+            .ReturnsAsync(true);
+        using var services = BuildServices(contentManager.Object, Caller("author"));
+
+        // Act
+        await InvokeAsync(services, """{ "ContentType": "Article", "Owner": "someone-else" }""");
+
+        // Assert
+        Assert.Equal("author", created?.Owner);
+    }
+
     private static ClaimsPrincipal Caller(string userId)
         => new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, userId)], "Test"));
 
