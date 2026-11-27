@@ -1,18 +1,17 @@
 using System.Security.Claims;
-using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace CrestApps.OrchardCore.AI.Endpoints.Api;
+namespace CrestApps.OrchardCore.AI.Core.ApiKeys;
 
 /// <summary>
-/// Holds every API key (or signed-in API caller) to a quota of model calls on the completion routes. A browser key is
-/// public by design and its origin check trusts a header a script can set, so without a quota a copied key spends
-/// model money without a ceiling.
+/// Holds every API key (or signed-in API caller) to a quota of model calls on the routes that run a model: the
+/// completion routes and the AG-UI endpoint. A browser key is public by design and its origin check trusts a header a
+/// script can set, so without a quota a copied key spends model money without a ceiling.
 /// </summary>
-internal sealed class AICompletionQuotaFilter : IEndpointFilter
+public sealed class AICompletionQuotaFilter : IEndpointFilter
 {
     /// <summary>
     /// The attempt policy that counts completion calls per key. Its limit can be changed under
@@ -35,9 +34,14 @@ internal sealed class AICompletionQuotaFilter : IEndpointFilter
     /// </summary>
     public const string RateLimitGroup = "ai-completion";
 
+    /// <inheritdoc/>
     public async ValueTask<object> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
     {
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(next);
+
         var httpContext = context.HttpContext;
+
         // A caller with neither an API key nor a user id is still held to a quota, counted by its network.
         var key = GetQuotaKey(httpContext.User) ?? "net:" + ClientNetworkKey.NetworkOnly(httpContext);
         var limiter = httpContext.RequestServices.GetRequiredService<IAttemptLimiter>();

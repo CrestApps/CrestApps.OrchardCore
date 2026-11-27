@@ -40,6 +40,9 @@ internal sealed class A2AApiKeyAuthenticationHandler : ConfiguredApiKeyAuthentic
     protected override string CallerId => "a2a-api-key-user";
 
     protected override string CallerName => "A2A API Key User";
+
+    // The one key every agent shares stands for no one, so the profile's tools give its callers no user's rights.
+    protected override bool IsAnonymousKey => true;
 }
 
 internal sealed class A2AApiKeyAuthenticationOptions : AuthenticationSchemeOptions

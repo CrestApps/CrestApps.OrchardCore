@@ -52,20 +52,10 @@ internal sealed class ContentItemPreparationService
         ArgumentNullException.ThrowIfNull(contentItemNode);
 
         var contentType = contentDefinition.Name;
-        var contentItemId = GetStringPropertyValue(contentItemNode, nameof(ContentItem.ContentItemId));
-        var contentItem = existingContentItem;
-        var isUpdate = false;
 
-        if (contentItem is null && !string.IsNullOrWhiteSpace(contentItemId))
-        {
-            contentItem = await _contentManager.GetAsync(contentItemId, VersionOptions.DraftRequired);
-            isUpdate = contentItem is not null;
-        }
-
-        if (contentItem is null)
-        {
-            contentItem = await _contentManager.NewAsync(contentType);
-        }
+        // Only the item the caller was authorized for is updated. Any other item, a nested one included, is built new:
+        // loading one by the id the payload names would add a draft to someone else's item and merge the payload into it.
+        var contentItem = existingContentItem ?? await _contentManager.NewAsync(contentType);
 
         await PrepareNestedContentItemsAsync(contentDefinition, contentItemNode, cancellationToken);
 
@@ -76,7 +66,7 @@ internal sealed class ContentItemPreparationService
             throw new InvalidOperationException($"The content item payload for '{contentType}' could not be mapped to a content item.");
         }
 
-        if (isUpdate || existingContentItem is not null)
+        if (existingContentItem is not null)
         {
             contentItem.Merge(payloadModel, _updateJsonMergeSettings);
         }
@@ -177,15 +167,8 @@ internal sealed class ContentItemPreparationService
 
     private async ValueTask<ContentTypeDefinition> ResolveContentDefinitionAsync(JsonObject contentItemNode)
     {
+        // A nested item names its type: it is built new, so it is never read from the item an id names.
         var contentType = GetStringPropertyValue(contentItemNode, nameof(ContentItem.ContentType));
-        var contentItemId = GetStringPropertyValue(contentItemNode, nameof(ContentItem.ContentItemId));
-
-        if (string.IsNullOrWhiteSpace(contentType) && !string.IsNullOrWhiteSpace(contentItemId))
-        {
-            var existingContentItem = await _contentManager.GetAsync(contentItemId, VersionOptions.DraftRequired);
-
-            contentType = existingContentItem?.ContentType;
-        }
 
         if (string.IsNullOrWhiteSpace(contentType))
         {

@@ -1,3 +1,4 @@
+using CrestApps.Core.AI;
 using CrestApps.Core.AI.Profiles;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.ContactCenter;
@@ -30,13 +31,63 @@ public sealed class SupervisionStartupEndpointTests
     }
 
     [Fact]
-    public void TheAICallsEndpoints_RequireTheAIFeature()
+    public void TheAICallsEndpoints_RequireTheAIChatServicesFeature()
     {
+        // Arrange (round 3, High 5): the transcript endpoint takes the chat prompt store, which AI Chat Services
+        // registers, not AI Services; gated on AI Services alone, the tenant still failed to build its endpoints.
         var required = typeof(SupervisionAICallsStartup).GetCustomAttributes(typeof(RequireFeaturesAttribute), false)
             .Cast<RequireFeaturesAttribute>()
             .SelectMany(attribute => attribute.RequiredFeatureNames);
 
-        Assert.Contains(AIConstants.Feature.Area, required);
+        // Act & Assert
+        Assert.Contains(AIConstants.Feature.ChatCore, required);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public void TheAICallsEndpoints_BindOnlyWithTheChatPromptStore(bool withChatServices, bool binds)
+    {
+        // Arrange: a tenant with AI Services but without AI Chat Services has the profiles, not the chat prompt store.
+        var services = new WithAIServices(new ServiceCollection().AddLogging().AddRouting().BuildServiceProvider(), withChatServices);
+        var routes = new TestRouteBuilder(services);
+
+        new SupervisionAICallsStartup().Configure(null, routes, services);
+
+        // Act
+        var exception = Record.Exception(() => routes.DataSources.SelectMany(source => source.Endpoints).ToList());
+
+        // Assert: this is why the startup waits for AI Chat Services.
+        Assert.Equal(binds, exception is null);
+    }
+
+    // Answers like a tenant with AI Services: every service is there, and the chat prompt store only with AI Chat Services.
+    private sealed class AIServicesOnly : IServiceProviderIsService
+    {
+        private readonly bool _withChatServices;
+
+        public AIServicesOnly(bool withChatServices)
+            => _withChatServices = withChatServices;
+
+        public bool IsService(Type serviceType)
+            => (_withChatServices || serviceType != typeof(IAIChatSessionPromptStore)) &&
+                !serviceType.IsPrimitive &&
+                serviceType != typeof(string);
+    }
+
+    private sealed class WithAIServices : IServiceProvider
+    {
+        private readonly IServiceProvider _inner;
+        private readonly AIServicesOnly _isService;
+
+        public WithAIServices(IServiceProvider inner, bool withChatServices)
+        {
+            _inner = inner;
+            _isService = new AIServicesOnly(withChatServices);
+        }
+
+        public object GetService(Type serviceType)
+            => serviceType == typeof(IServiceProviderIsService) ? _isService : _inner.GetService(serviceType);
     }
 
     // Answers like a tenant without the AI feature: every service is there except the AI ones.

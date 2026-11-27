@@ -1,12 +1,15 @@
+using System.Security.Claims;
 using System.Text.Encodings.Web;
 using CrestApps.Core.AI.Models;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Net.Http.Headers;
 using OrchardCore.Modules;
 using OrchardCore.Security;
+using OrchardCore.Security.Services;
 
 namespace CrestApps.OrchardCore.AI.Core.ApiKeys;
 
@@ -69,7 +72,28 @@ public sealed class AIApiKeyAuthenticationHandler : AuthenticationHandler<Authen
             await _store.UpdateAsync(stored, Context.RequestAborted);
         }
 
-        return AuthenticateResult.Success(new AuthenticationTicket(AIApiKeys.CreatePrincipal(stored), Scheme.Name));
+        var principal = AIApiKeys.CreatePrincipal(stored);
+
+        await AddRolePermissionsAsync(principal, stored);
+
+        return AuthenticateResult.Success(new AuthenticationTicket(principal, Scheme.Name));
+    }
+
+    // Orchard Core grants a user the permissions of their roles from the permission claims it signs them in with, not
+    // from their role claims, so a key gets its roles' permissions the same way, as OpenID client credentials do.
+    private async Task AddRolePermissionsAsync(ClaimsPrincipal principal, AIApiKey stored)
+    {
+        if (stored.Kind == AIApiKeyKind.Browser ||
+            principal.Identity is not ClaimsIdentity identity ||
+            Context.RequestServices?.GetService<IRoleService>() is not { } roleService)
+        {
+            return;
+        }
+
+        foreach (var role in stored.Roles.Where(role => !string.IsNullOrEmpty(role)))
+        {
+            identity.AddClaims(await roleService.GetRoleClaimsAsync(role, Context.RequestAborted));
+        }
     }
 
     private string ReadKey()

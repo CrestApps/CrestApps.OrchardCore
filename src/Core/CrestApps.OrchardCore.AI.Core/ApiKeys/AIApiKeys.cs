@@ -54,6 +54,12 @@ public static class AIApiKeys
     /// </summary>
     public const string ProfileClaimType = "crestapps_api_key_profile";
 
+    /// <summary>
+    /// The claim on a caller signed in with a key that stands for no one in particular, such as a browser key or the A2A
+    /// host's key. AI tools treat such a caller as not signed in (<see cref="AIToolCallerAuthorization.IsSignedIn"/>).
+    /// </summary>
+    public const string AnonymousKeyClaimType = "crestapps_anonymous_key";
+
     private const string ScopePrefix = "ai.";
 
     // OpenIddict keeps the scopes of a validated token in its own claim type.
@@ -155,8 +161,10 @@ public static class AIApiKeys
 
         if (stored.Kind == AIApiKeyKind.Browser)
         {
-            // A browser key only chats with its profiles: no roles, no other scope.
+            // A browser key only chats with its profiles: no roles, no other scope. It is public, so the tools of the
+            // profiles treat its caller as a visitor.
             claims.Add(new Claim(ScopeClaimType, ScopePrefix + Scopes.Chat));
+            claims.Add(new Claim(AnonymousKeyClaimType, "true"));
             claims.AddRange(stored.AllowedProfileIds.Where(id => !string.IsNullOrEmpty(id)).Select(id => new Claim(ProfileClaimType, id)));
         }
         else

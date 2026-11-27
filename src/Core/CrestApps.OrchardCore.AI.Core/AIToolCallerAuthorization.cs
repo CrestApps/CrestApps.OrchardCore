@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using CrestApps.Core.Security;
+using CrestApps.OrchardCore.AI.Core.ApiKeys;
 using CrestApps.OrchardCore.AI.Core.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -42,10 +44,9 @@ public static class AIToolCallerAuthorization
         ArgumentNullException.ThrowIfNull(services);
         ArgumentNullException.ThrowIfNull(permission);
 
-        // The chat hubs publish the connection's caller through the user accessor, where HttpContext may be missing.
-        var user = services.GetService<IUserAccessor>()?.User ?? services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var user = GetCaller(services);
 
-        if (user?.Identity?.IsAuthenticated != true)
+        if (!IsSignedIn(user))
         {
             return false;
         }
@@ -54,6 +55,30 @@ public static class AIToolCallerAuthorization
 
         return authorizationService is not null && await authorizationService.AuthorizeAsync(user, permission, resource);
     }
+
+    /// <summary>
+    /// Gets the person driving the conversation. The chat hubs publish the connection's caller through the user
+    /// accessor, where HttpContext may be missing; otherwise it is the request's user.
+    /// </summary>
+    /// <param name="services">The services of the tool invocation.</param>
+    /// <returns>The caller, or <see langword="null"/> when there is none.</returns>
+    public static ClaimsPrincipal GetCaller(IServiceProvider services)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+
+        return services.GetService<IUserAccessor>()?.User ?? services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+    }
+
+    /// <summary>
+    /// Whether the caller is signed in as someone. A caller signed in with a key that stands for no one in particular
+    /// (a browser key, the A2A host's key) is not: it holds no user's rights, and Orchard Core would otherwise give it
+    /// those of the Authenticated role.
+    /// </summary>
+    /// <param name="user">The caller.</param>
+    /// <returns><see langword="true"/> when the caller is a signed-in user or a key with roles of its own.</returns>
+    public static bool IsSignedIn(ClaimsPrincipal user)
+        => user?.Identity?.IsAuthenticated == true &&
+            !user.HasClaim(claim => claim.Type == AIApiKeys.AnonymousKeyClaimType);
 
     /// <summary>
     /// Whether the caller may use a tool: they hold the permission registered for it

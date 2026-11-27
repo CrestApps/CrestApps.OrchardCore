@@ -93,6 +93,8 @@ Authentication is configured via shell configuration (e.g., `appsettings.json`):
 | `RequireAccessPermission` | `bool` | `true` | When `true`, authenticated users must also have the `AccessA2AHost` permission |
 | `ExposeAgentsAsSkill` | `bool` | `false` | When `true`, all agents are combined into a single card with skills instead of individual cards |
 
+The `ApiKey` method gives every caller one shared key, which stands for no one in particular. The AI tools of the agents treat such a caller as a visitor who is not signed in, so a tool that checks the caller's permission refuses it. Use `OpenId` to give a client roles, and with them the permissions its tools need.
+
 ---
 
 ## Permissions

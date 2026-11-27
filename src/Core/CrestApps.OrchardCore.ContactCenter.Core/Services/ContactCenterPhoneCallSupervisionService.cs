@@ -560,10 +560,13 @@ public sealed partial class ContactCenterPhoneCallSupervisionService : IContactC
         var engagements = await _engagements.ListAsync(callId, cancellationToken);
 
         // The key is authorized on its user segment, so the call it names must be that user's: their current call, or one
-        // an engagement was opened on for them. An AI call's key was authorized on the call itself.
-        if (!string.Equals(monitoredUserId, AICallUserMarker, StringComparison.Ordinal) &&
-            !engagements.Any(engagement => string.Equals(engagement.MonitoredUserId, monitoredUserId, StringComparison.Ordinal)) &&
-            await FindCallAsync(monitoredUserId, callId, cancellationToken) is null)
+        // an engagement was opened on for them. An AI call's key is authorized for anyone who may monitor every AI call, so
+        // the call it names must be an AI call someone listens to; any other id would end whatever call it names.
+        var isNamedUsersCall = engagements.Any(engagement => string.Equals(engagement.MonitoredUserId, monitoredUserId, StringComparison.Ordinal)) ||
+            (!string.Equals(monitoredUserId, AICallUserMarker, StringComparison.Ordinal) &&
+                await FindCallAsync(monitoredUserId, callId, cancellationToken) is not null);
+
+        if (!isNamedUsersCall)
         {
             return SupervisorEngagementResult.Failure("The call could not be found.");
         }
