@@ -42,6 +42,16 @@ dotnet add package CrestApps.OrchardCore.OpenAI
 
 After installing packages, enable the required features in **Tools** → **Features** inside the Orchard admin.
 
+### Read form numbers the same in every language
+
+A number box sends its value with a dot ("12.50") in every language, while ASP.NET Core reads what a form sends in the visitor's language. In a language that writes decimals with a comma, such as German, Dutch or French, a price of 12.50 would be saved as 1250 or not at all. Call `AddInvariantNumberInputs()` in your host's `Program.cs` so every tenant reads and shows form numbers the same way in every language:
+
+```csharp
+builder.Services.AddOrchardCms(orchardCore => orchardCore.AddInvariantNumberInputs());
+```
+
+It turns on ASP.NET Core's `FormInputRenderMode.DetectCultureFromInputType`, which also writes `asp-for` date and time boxes invariantly, and adds a short script to every page that marks each number, date and time box of a form when the form is sent, so a language with another calendar, such as Thai, reads dates right too.
+
 Modules that need connection strings, API keys or tuning values read them from `appsettings.json`, environment variables or a secret store. The [Configuration Reference](configuration.md) lists every section, the environment-variable form of each key, and which source wins when a value is set in more than one place.
 
 ## Release notes

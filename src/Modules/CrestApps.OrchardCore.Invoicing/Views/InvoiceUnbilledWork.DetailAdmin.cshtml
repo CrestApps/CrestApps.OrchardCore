@@ -83,6 +83,8 @@
                             <input type="hidden" name="timeFrom" value="@Model.TimeFrom?.ToString("yyyy-MM-dd")" />
                             <input type="hidden" name="timeThrough" value="@Model.TimeThrough?.ToString("yyyy-MM-dd")" />
                             <input type="hidden" name="timeRate" value="@Model.TimeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                            @* A hidden field isn't a number input, so the page script doesn't name it: read the rate invariantly. *@
+                            <input type="hidden" name="__Invariant" value="timeRate" />
                             <ul class="list-group mb-2">
                                 @foreach (var entry in time)
                                 {

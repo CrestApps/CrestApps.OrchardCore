@@ -63,6 +63,9 @@ builder.Services
             // Enable WAL + a busy timeout on every SQLite connection so the app's concurrent writers do not fail
             // with "database is locked". Applied to all tenants; a no-op on non-SQLite providers.
             .AddSqliteConnectionTuning()
+            // Number inputs post "12.50" in every language: reads and writes form numbers invariantly in every tenant,
+            // so a decimal-comma culture such as de-DE doesn't read it as 1250.
+            .AddInvariantNumberInputs()
             // Installs the tenant hierarchy guards in every tenant. They do nothing for a tenant that is not a parent
             // or a child tenant.
             .AddTenantHierarchy();

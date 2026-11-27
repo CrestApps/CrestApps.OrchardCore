@@ -16,6 +16,12 @@ public sealed class PayRun : CatalogItem, IModifiedUtcAwareModel
     /// <summary>Gets or sets the number, given when the run is added.</summary>
     public string Number { get; set; }
 
+    /// <summary>
+    /// Gets or sets the name people know the run by, such as "Biweekly pay, Nov 16 – Nov 29, 2026". Made from the
+    /// schedule, the type, the people and the dates when the run is added without one.
+    /// </summary>
+    public string Title { get; set; }
+
     /// <summary>Gets or sets the employer.</summary>
     public string EmployerId { get; set; }
 
@@ -34,7 +40,10 @@ public sealed class PayRun : CatalogItem, IModifiedUtcAwareModel
     /// <summary>Gets or sets the pay date.</summary>
     public DateOnly PayDate { get; set; }
 
-    /// <summary>Gets or sets the staff members paid, or none for every active profile of the employer on the schedule.</summary>
+    /// <summary>
+    /// Gets or sets the staff members paid, or none for every active profile of the employer on the schedule. People
+    /// named are paid whatever their schedule, such as the final pay of someone who left.
+    /// </summary>
     public IList<string> StaffMemberIds { get; set; } = [];
 
     /// <summary>Gets or sets how supplemental pay is withheld.</summary>

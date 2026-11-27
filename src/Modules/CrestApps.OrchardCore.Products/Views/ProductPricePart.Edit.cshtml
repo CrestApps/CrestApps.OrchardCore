@@ -7,7 +7,7 @@
     <legend class="h6">@T["Prices"]</legend>
     <span class="hint d-block mb-2">@T["The ways this product can be bought. A buyer picks one at checkout. A price with a billing interval makes the product subscribable."]</span>
 
-    <div id="product-prices">
+    <div id="product-prices" data-product-prices>
         @for (var i = 0; i < Model.Prices.Count; i++)
         {
             var price = Model.Prices[i];
@@ -136,58 +136,7 @@
         }
     </div>
 
-    <button type="button" class="btn btn-secondary btn-sm" id="product-price-add">@T["Add a Price"]</button>
+    <button type="button" class="btn btn-secondary btn-sm" id="product-price-add" data-product-price-add>@T["Add a Price"]</button>
 </fieldset>
 
-<script at="Foot">
-    document.addEventListener('DOMContentLoaded', () => {
-        const container = document.getElementById('product-prices');
-
-        // The recurring fields only mean anything for a recurring price, so they follow the selector
-        // rather than sitting there inviting values that are then thrown away on save.
-        function bindKind(row) {
-            const kind = row.querySelector('select[name$=".Kind"]');
-            const fields = row.querySelector('[data-recurring-fields]');
-
-            if (!kind || !fields) {
-                return;
-            }
-
-            kind.addEventListener('change', () => {
-                fields.classList.toggle('d-none', kind.value !== 'Recurring');
-            });
-        }
-
-        container.querySelectorAll('.product-price-row').forEach(bindKind);
-
-        document.getElementById('product-price-add').addEventListener('click', () => {
-            const rows = container.querySelectorAll('.product-price-row');
-
-            const clone = rows[rows.length - 1].cloneNode(true);
-            const next = rows.length;
-
-            clone.querySelectorAll('input, select').forEach(field => {
-                ['name', 'id'].forEach(attribute => {
-                    const value = field.getAttribute(attribute);
-
-                    if (value) {
-                        field.setAttribute(attribute, value.replace(/[\[_](\d+)[\]_]/, match => match.replace(/\d+/, next)));
-                    }
-                });
-
-                if (field.type === 'checkbox') {
-                    field.checked = false;
-                } else if (field.name && field.name.endsWith('.PriceId')) {
-                    // A blank id is what tells the server this is a new price rather than an edit of the
-                    // one it was cloned from.
-                    field.value = '';
-                } else if (field.tagName === 'INPUT') {
-                    field.value = '';
-                }
-            });
-
-            container.appendChild(clone);
-            bindKind(clone);
-        });
-    });
-</script>
+<script asp-name="product-price-editor" at="Foot"></script>

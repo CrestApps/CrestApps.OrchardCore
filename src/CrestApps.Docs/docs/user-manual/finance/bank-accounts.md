@@ -61,8 +61,8 @@ Changing the routing number or the account number always takes the account back 
 
 When **Plaid Bank Account Linking** is set up, the account holder can link their bank instead of anyone typing the numbers: they sign in to their bank in a Plaid window and choose the account. The bank's own routing and account numbers are saved and the account is **Verified** at once, with **Plaid** as how it was checked. Their bank password goes to the bank, never to this site.
 
-- On **Banking** → **My Bank Accounts**, choose **Add bank account**, then **Link your bank with Plaid**. Enter the name of the account holder, choose **Link your bank** and follow the Plaid window. The account is named after the bank and its last digits unless you give it a name.
-- To replace the numbers of an account you already have, open it and choose **Link your bank with Plaid instead**.
+- On **Banking** → **My Bank Accounts**, choose **Add bank account**, then **Link your Bank**. Enter the name of the account holder, choose **Link your Bank** and follow the Plaid window. The account is named after the bank and its last digits unless you give it a name.
+- To replace the numbers of an account you already have, open it and choose **Link your Bank instead**.
 - An administrator can open any account and choose **Link with Plaid** from the action bar's menu, for example while sitting with the account holder, who signs in to their own bank.
 
 If the bank can't give the numbers at once, nothing is saved and you can enter the numbers yourself. Some banks (such as Chase, PNC and US Bank) give an account number made for Plaid: if the account holder later removes Plaid's access at their bank, that number stops working, so the account goes back to **Unverified** with the reason, and no payment goes to it until it is linked again or the numbers are entered.
@@ -81,7 +81,7 @@ If the bank can't give the numbers at once, nothing is saved and you can enter t
 2. Under **Security** → **Secrets**, add a text secret holding the Plaid secret, such as one named Plaid.Secret. The Plaid settings never keep the secret itself.
 3. Under **Configuration** → **Settings** → **Plaid**, choose the environment, enter the client id, choose the secret and save. Choose **Test the connection** to check that Plaid accepts them.
 
-The **Link your bank with Plaid** buttons show once the settings work. Plaid bills each linked account. To turn Plaid off, empty the client id.
+The **Link your Bank** buttons show once the Plaid feature is on and its settings work. Plaid bills each linked account. To turn Plaid off, empty the client id.
 
 If your provider supplies the Plaid keys for you, the page says so and has nothing to fill in; **Test the connection** checks their keys.
 

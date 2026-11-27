@@ -40,7 +40,7 @@ public sealed class PayRunsController : Controller
     private readonly PayrollNames _names;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<PayRun> _displayManager;
-    private readonly IShapeFactory _shapeFactory;
+    private readonly IDisplayManager<PayrollEmployerFilter> _filterDisplay;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -59,7 +59,7 @@ public sealed class PayRunsController : Controller
         PayrollNames names,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<PayRun> displayManager,
-        IShapeFactory shapeFactory,
+        IDisplayManager<PayrollEmployerFilter> filterDisplay,
         INotifier notifier,
         IHtmlLocalizer<PayRunsController> htmlLocalizer,
         IStringLocalizer<PayRunsController> stringLocalizer)
@@ -76,7 +76,7 @@ public sealed class PayRunsController : Controller
         _names = names;
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
-        _shapeFactory = shapeFactory;
+        _filterDisplay = filterDisplay;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -97,17 +97,19 @@ public sealed class PayRunsController : Controller
         var model = new PayRunsIndexViewModel
         {
             EmployerId = chosen.Length == 1 && employers.Count > 1 ? chosen[0] : null,
-            Employers = [.. employers.Select(employer => new SelectListItem(employer.Name, employer.ItemId, employer.ItemId == employerId))],
             CanAdd = !(await _scope.GetScopeAsync(User, PayrollPermissions.PreparePayRuns, HttpContext.RequestAborted)).IsEmpty,
         };
 
+        // Multiple Employers places its employer picker in the toolbar; the company's own payroll shows none.
         model.List = new AdminListContext<PayRun>
         {
             Source = await _runs.ListByEmployersAsync(chosen, HttpContext.RequestAborted),
-            ToolbarActions = await _shapeFactory.CreateAsync<PayRunsIndexViewModel>("PayrollRunEmployerFilter", filter =>
+            ToolbarActions = await _filterDisplay.BuildDisplayAsync(new PayrollEmployerFilter
             {
-                filter.Employers = model.Employers;
-            }),
+                EmployerId = model.EmployerId,
+                FormId = "payroll-runs-filter",
+                Employers = [.. employers.Select(employer => new SelectListItem(employer.Name, employer.ItemId, employer.ItemId == model.EmployerId))],
+            }, _updateModelAccessor.ModelUpdater, PayrollEmployerFilterDisplayTypes.Toolbar),
         };
 
         return View(model);
@@ -153,7 +155,7 @@ public sealed class PayRunsController : Controller
         if (await CatalogEntryValidation.ValidateAsync(_runs, run, _updateModelAccessor.ModelUpdater, string.Empty) && ModelState.IsValid)
         {
             await _service.OpenAsync(run, User, HttpContext.RequestAborted);
-            await _notifier.SuccessAsync(H["Pay run {0} has been added. Enter its inputs, then calculate it.", run.Number]);
+            await _notifier.SuccessAsync(H["{0} has been added. Enter its inputs, then calculate it.", _names.Run(run)]);
 
             return RedirectToAction(nameof(Details), new { id = run.ItemId });
         }
@@ -192,7 +194,7 @@ public sealed class PayRunsController : Controller
             return Forbid();
         }
 
-        await NotifyAsync(await _service.CalculateAsync(run, User, cancellationToken: HttpContext.RequestAborted), H["Pay run {0} has been calculated.", run.Number]);
+        await NotifyAsync(await _service.CalculateAsync(run, User, cancellationToken: HttpContext.RequestAborted), H["{0} has been calculated.", _names.Run(run)]);
 
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -211,7 +213,7 @@ public sealed class PayRunsController : Controller
             return Forbid();
         }
 
-        await NotifyAsync(await _service.SubmitAsync(run, User, HttpContext.RequestAborted), H["Pay run {0} has been submitted for approval.", run.Number]);
+        await NotifyAsync(await _service.SubmitAsync(run, User, HttpContext.RequestAborted), H["{0} has been submitted for approval.", _names.Run(run)]);
 
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -273,7 +275,7 @@ public sealed class PayRunsController : Controller
             return Forbid();
         }
 
-        await NotifyAsync(await _service.CancelAsync(run, S["Cancelled on the pay run's page."], HttpContext.RequestAborted), H["Pay run {0} has been cancelled.", run.Number]);
+        await NotifyAsync(await _service.CancelAsync(run, S["Cancelled on the pay run's page."], HttpContext.RequestAborted), H["{0} has been cancelled.", _names.Run(run)]);
 
         return RedirectToAction(nameof(Details), new { id });
     }
@@ -456,7 +458,7 @@ public sealed class PayRunsController : Controller
             return Forbid();
         }
 
-        await NotifyAsync(await _service.ProcessAsync(run, User, HttpContext.RequestAborted), H["Pay run {0} has been processed.", run.Number]);
+        await NotifyAsync(await _service.ProcessAsync(run, User, HttpContext.RequestAborted), H["{0} has been processed.", _names.Run(run)]);
 
         return RedirectToAction(nameof(Details), new { id });
     }

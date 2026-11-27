@@ -144,7 +144,6 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             profile.StaffMemberId = model.StaffMemberId;
         }
 
-        profile.EmployerId = model.EmployerId;
         profile.PayScheduleId = string.IsNullOrEmpty(model.PayScheduleId) ? null : model.PayScheduleId;
         profile.WorkerType = Enum.TryParse<PayWorkerType>(model.WorkerType, out var workerType) ? workerType : PayWorkerType.Employee;
         profile.OvertimeStatus = Enum.TryParse<OvertimeStatus>(model.OvertimeStatus, out var overtime) ? overtime : OvertimeStatus.NonExempt;
@@ -361,7 +360,6 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
     {
         var user = _httpContextAccessor.HttpContext?.User;
         var manage = await _scope.GetScopeAsync(user, PayrollPermissions.ManagePayProfiles);
-        var employers = (await _employers.ListAsync()).Where(employer => manage.Allows(employer.ItemId) || employer.ItemId == profile.EmployerId).ToList();
         var schedules = await _schedules.GetAllAsync();
         var teams = _services.GetService<PayrollTeamsFeature>() is not null && _services.GetService<ITeamManager>() is { } teamManager ? (await teamManager.ListTreeAsync()).Select(item => item.Team).ToList() : [];
         IReadOnlyDictionary<string, string> staffNames = string.IsNullOrEmpty(profile.StaffMemberId) ? new Dictionary<string, string>() : await _staff.GetNamesAsync([profile.StaffMemberId]);
@@ -383,7 +381,6 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             model.StaffMemberId = profile.StaffMemberId;
             model.StaffName = staffNames.GetValueOrDefault(profile.StaffMemberId ?? string.Empty);
             model.StaffMembers = staffOptions;
-            model.EmployerId = profile.EmployerId;
             model.PayScheduleId = profile.PayScheduleId;
             model.WorkerType = profile.WorkerType.ToString();
             model.OvertimeStatus = profile.OvertimeStatus.ToString();
@@ -399,7 +396,6 @@ internal sealed class PayProfileDisplayDriver : DisplayDriver<EmployeePayProfile
             model.TaxIdHint = profile.TaxId is { HasValue: true } ? profile.TaxId.ToString() : null;
             model.CanRevealTaxId = canReveal;
             model.SameTaxIdStaff = SameTaxIdLabels(same, manage, sameNames, S["another pay profile"]);
-            model.Employers = [.. employers.Select(employer => new SelectListItem(employer.Name, employer.ItemId, employer.ItemId == profile.EmployerId))];
             model.Schedules = [.. schedules.Where(schedule => schedule.Enabled || schedule.ItemId == profile.PayScheduleId).Select(schedule => new SelectListItem(schedule.Name, schedule.ItemId, schedule.ItemId == profile.PayScheduleId))];
             model.Teams = [.. teams.Select(team => new SelectListItem(team.Name, team.ItemId))];
             model.Blockers = blockers;

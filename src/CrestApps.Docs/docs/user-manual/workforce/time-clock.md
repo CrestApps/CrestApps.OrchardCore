@@ -10,7 +10,7 @@ The time clock records when workers start and stop work, turns their punches int
 
 | | |
 | --- | --- |
-| **Menu** | **Workforce** → **Time Management** → **Timesheets**, Attendance, Past Payroll Exports, Time Clock Policies, Time Clock Kiosks; **Tools** → **Data Pipelines**; **Payroll** → **Setup** → **Pay Schedules**, Pay Codes |
+| **Menu** | **Workforce** → **Time Management** → **Timesheets**, Attendance, Past Payroll Exports, Time Clock Policies, Time Clock Kiosks; **Tools** → **Data Pipelines**; **Payroll** → **Management** → **Pay Schedules**, Pay Codes |
 | **Permission** | Manage time clock policies, Approve timesheets, Edit punches, Lock timesheets for payroll, Export payroll data, Clock in and out |
 | **Feature** | Workforce Time Clock (it needs Workforce and Time Tracker) |
 
@@ -27,8 +27,8 @@ Every punch of a worker who has a login also keeps their day in [Time Tracker](.
 
 ## Setting it up
 
-1. Under **Payroll** → **Setup** → **Pay Schedules**, choose **Add pay schedule**: how often workers are paid, the first day of any one period for weekly and two-weekly pay, the day the overtime week starts, and the pay date. The editor shows the next periods. See [Pay schedules and pay codes](../finance/pay-setup.md).
-2. Under **Payroll** → **Setup** → **Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday (time and a half), weekend (time and a half) and unpaid codes are added when the feature is turned on. Give a code an **export code** when your payroll system calls it something else.
+1. Under **Payroll** → **Management** → **Pay Schedules**, choose **Add pay schedule**: how often workers are paid, the first day of any one period for weekly and two-weekly pay, the day the overtime week starts, and the pay date. The editor shows the next periods. See [Pay schedules and pay codes](../finance/pay-setup.md).
+2. Under **Payroll** → **Management** → **Pay Codes**, check the codes. Regular, overtime, double time, paid time off, predictability pay, holiday (time and a half), weekend (time and a half) and unpaid codes are added when the feature is turned on. Give a code an **export code** when your payroll system calls it something else.
 3. Under **Workforce** → **Time Management** → **Time Clock Policies**, choose **Add policy** (see below).
 4. Under **Teams**, give the team its **time clock policy**. Sub-teams use their parent's. A team with no policy, and no parent with one, doesn't clock time.
 5. For kiosks, give each worker an **employee number** (their badge number) and a PIN under **Workers** → **Actions** → **Time clock**.
@@ -130,5 +130,5 @@ If your site had chosen CSV columns for the earlier export, the update turned th
 
 ## Pay codes
 
-Pay codes are kept under **Payroll** → **Setup** → **Pay Codes** and shared with payroll (see [Pay schedules and pay codes](../finance/pay-setup.md)). The time clock uses the earning and memo codes in use: regular, overtime and double time for worked hours, holiday and weekend codes instead of the regular one on those days, and a shift differential for the hours in its window. A shift differential's hours, in the worker's time, and the days it starts on are set in the **Shift differential hours** card of the pay code.
+Pay codes are kept under **Payroll** → **Management** → **Pay Codes** and shared with payroll (see [Pay schedules and pay codes](../finance/pay-setup.md)). The time clock uses the earning and memo codes in use: regular, overtime and double time for worked hours, holiday and weekend codes instead of the regular one on those days, and a shift differential for the hours in its window. A shift differential's hours, in the worker's time, and the days it starts on are set in the **Shift differential hours** card of the pay code.
 

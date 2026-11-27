@@ -152,7 +152,14 @@ public sealed class OpenPayRunTask : PayrollTaskActivity<OpenPayRunTask>
         var runs = Services.GetRequiredService<IPayRunManager>();
         var run = await runs.NewAsync();
 
-        run.EmployerId = await EvaluateAsync(EmployerId, workflowContext);
+        // An empty employer keeps the company the new run starts with.
+        var employerId = await EvaluateAsync(EmployerId, workflowContext);
+
+        if (!string.IsNullOrWhiteSpace(employerId))
+        {
+            run.EmployerId = employerId.Trim();
+        }
+
         run.PayScheduleId = await EvaluateAsync(PayScheduleId, workflowContext);
         run.Type = Enum.TryParse<PayRunType>(await EvaluateAsync(RunType, workflowContext), ignoreCase: true, out var type) ? type : PayRunType.Regular;
 
@@ -174,6 +181,7 @@ public sealed class OpenPayRunTask : PayrollTaskActivity<OpenPayRunTask>
         {
             workflowContext.Output["PayRunId"] = open.ItemId;
             workflowContext.Output["PayRunNumber"] = open.Number;
+            workflowContext.Output["PayRunTitle"] = open.Title;
             workflowContext.LastResult = open.ItemId;
 
             return Outcome("Exists");
@@ -188,6 +196,7 @@ public sealed class OpenPayRunTask : PayrollTaskActivity<OpenPayRunTask>
 
         workflowContext.Output["PayRunId"] = run.ItemId;
         workflowContext.Output["PayRunNumber"] = run.Number;
+        workflowContext.Output["PayRunTitle"] = run.Title;
         workflowContext.LastResult = run.ItemId;
 
         return Outcome("Done");

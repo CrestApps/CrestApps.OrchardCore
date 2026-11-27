@@ -23,11 +23,11 @@
 
 @if (linkProviders.Count > 0)
 {
-    <div class="alert alert-info mb-3" role="region" aria-label="@T["Link your bank"]">
+    <div class="alert alert-info mb-3" role="region" aria-label="@T["Link your Bank"]">
         <p>@T["Sign in to your bank and choose the account: its numbers are filled in for you and it is verified at once, so it can receive payments right away."]</p>
         @foreach (var provider in linkProviders)
         {
-            <a class="btn btn-primary me-2" role="button" href="@Url.Action("Link", new { provider = provider.Name })">@T["Link Your Bank With {0}", provider.DisplayName]</a>
+            <a class="btn btn-primary me-2" role="button" href="@Url.Action("Link", new { provider = provider.Name })">@(linkProviders.Count == 1 ? T["Link Your Bank"] : T["Link Your Bank With {0}", provider.DisplayName])</a>
         }
         <p class="mt-3 mb-0">@T["Or enter the numbers yourself below. The account is then verified later."]</p>
     </div>

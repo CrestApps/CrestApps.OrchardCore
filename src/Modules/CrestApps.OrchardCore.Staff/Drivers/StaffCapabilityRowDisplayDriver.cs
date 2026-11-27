@@ -21,6 +21,7 @@ internal sealed class StaffCapabilityRowDisplayDriver : DisplayDriver<StaffCapab
         if (context.Shape is Shape row)
         {
             row.Classes.Add("item");
+            row.Attributes["data-filter-value"] = $"{capability.DisplayName} {capability.Name} {capability.Description}".ToLowerInvariant();
         }
 
         return Combine(

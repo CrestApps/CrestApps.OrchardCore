@@ -25,6 +25,10 @@ All live in the `Assets` YesSql collection.
 - **`Asset`**: `Number` (the next `A-00042` when left empty, unique), `Name`, `AssetTypeId`, `ProductId`, `SerialNumber`, `Manufacturer`, `Model`, `OwnerKind` (`Internal`, `Customer`, `Account`, `Contact`) and `OwnerId` (required unless internal), `Location` (an `Address`, with coordinates once geocoded; a changed address loses its old ones), `ParentAssetId` (the hierarchy; an asset can't be inside itself, directly or further up), `Status` (`Active`, `InService`, `OutOfService`, `Retired`), `InstallDate`, `Warranty` (`StartDate`, `EndDate`, `Provider`, `Terms`; `Covers(date)`), `Attributes` (values of its type's attributes, by name), `Documents` (media paths) and `Fleet`.
 - **`AssetMeterReading`** (only ever added): `AssetId`, `Meter`, `Value`, `Utc`, `Source` (`Manual`, `WorkOrder`, `Api`), `SourceId`, `RecordedBy`.
 
+`AssetStore.ListByCategoryAsync(category, statuses)` lists the assets whose type is of a category, such as every vehicle, by name; the asset list filters the same way with `category` (for example `assets?category=Vehicle`).
+
+**Assets in use.** A module whose records point to assets registers an `IAssetUsage` with `services.AddAssetUsage<TUsage>()`: `GetUsageAsync(asset)` returns why the asset is in use, such as "Its purchase is posted to the ledger.", or `null`. `AssetStore` refuses to delete an asset in use (an `InvalidOperationException` with the reasons), so no path deletes it; the admin page says why and suggests setting its state to **Retired** instead. `AssetStore.GetUsageReasonsAsync` returns the reasons.
+
 `AssetService.RecordReadingAsync` refuses a meter the asset's type doesn't have, and a reading of a cumulative meter lower than the last one before it. `ReadingsAsync`, `ChildrenAsync` and `AncestorsAsync` read an asset's history and hierarchy.
 
 ## Owners
@@ -43,7 +47,7 @@ With Omnichannel Management on, a CRM contact's page, and with Accounts on, an a
 
 ## Fleet
 
-For a vehicle, equipment or tool the business owns, `AssetFleet` keeps `Schedulable`, `CalendarId`, `Plate`, `Vin`, `Capacity`, `FuelType`, `HomeBase`, `DefaultDriverWorkerId`, `CarriesStock` and `StockLocationId`.
+`AssetFleet` keeps `Schedulable`, `CalendarId`, `Plate`, `Vin`, `Capacity`, `FuelType`, `HomeBase`, `DefaultDriverWorkerId`, `CarriesStock` and `StockLocationId`. The plate and VIN of a vehicle the business owns are edited in the editor's **Vehicle** card with or without Fleet (with Fleet on, also for equipment and tools); the rest is Fleet's, for vehicles, equipment and tools the business owns.
 
 - **Booking.** A schedulable asset gets its own calendar of the Calendars **Equipment** type, which allows one booking at a time, so the calendar refuses a visit that overlaps another. `FleetCalendarHandler` creates it when the asset is saved, finds it again by source (`Asset`, the asset's id) and keeps its name.
 - **Van stock.** With Inventory on, an asset that carries stock gets its own Inventory `StockLocation`, owned by the asset (`OwnerKind` `Asset`). Parts used on a job come off it with `IInventoryService.ConsumeAsync`. A van's location never fulfills orders.
@@ -57,6 +61,9 @@ For a vehicle, equipment or tool the business owns, `AssetFleet` keeps `Schedula
 ## Extending
 
 - `DisplayDriver<Asset>`: adds a section to the asset editor (`assets/edit/{id?}`), which is built with `IDisplayManager<Asset>`. The built-in fields are one driver, `AssetFields_Edit` at `Content:1`. Register yours with `services.AddDisplayDriver<Asset, TDriver>()`, bind your own view model with the driver's `Prefix`, and report errors under it (`$"{Prefix}.Field"`). The asset's own rules (`AssetManager.ValidateAsync`) run after every section and are reported under the `Asset` prefix. When anything fails the asset isn't saved and the editor cancels the session, so records a section wrote are not kept either.
+- `DisplayDriver<Asset>` for the `DetailAdmin` display type: adds a card to the asset's page (`assets/view/{id}`), under its own cards. The page builds it with `IDisplayManager<Asset>.BuildDisplayAsync(asset, updater, "DetailAdmin")`; the built-in drivers show nothing there.
+- `DisplayDriver<AssetRow>`: adds to a row of the asset list (zones `Content`, `Tags` and `Actions`; grid columns `Name` and `Details`).
+- `IAssetUsage`: keeps an asset your records point to from being deleted (see above).
 
 ## Recipes and deployment
 

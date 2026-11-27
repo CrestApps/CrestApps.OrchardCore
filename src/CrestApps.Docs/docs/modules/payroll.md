@@ -17,6 +17,7 @@ The **Payroll** module (`CrestApps.OrchardCore.Payroll`) runs payroll. Its first
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Payroll.PaySetup` | Pay Setup | none (turned on by Workforce Time Clock or Payroll) |
 | `CrestApps.OrchardCore.Payroll` | Payroll | Pay Setup, Staff, Staff Compensation, Approvals, Addresses, Taxation's Income Tax (uses Teams, Banking, Recipes, Deployment and CrestApps Recipes when they are on; reads teams only while the Teams feature is on) |
+| `CrestApps.OrchardCore.Payroll.MultipleEmployers` | Multiple Employers | Payroll |
 | `CrestApps.OrchardCore.Payroll.UnitedStates` | United States Payroll Filings | Payroll, Taxation's United States Income Tax |
 | `CrestApps.OrchardCore.Payroll.Canada` | Canada Payroll Filings | Payroll, Taxation's Canada Income Tax |
 
@@ -81,7 +82,7 @@ The recipe **Payroll: export pay inputs to a CSV file** (`PayrollPayInputsExport
 
 ## Admin
 
-**Payroll** → **Setup** → **Pay Schedules** and **Pay Codes**, under `ManagePaySetup`. The schedule editor shows the next four periods and their pay dates, counted from today in the site's time zone.
+**Payroll** → **Management** → **Pay Schedules** and **Pay Codes**, under `ManagePaySetup`. The schedule editor shows the next four periods and their pay dates, counted from today in the site's time zone.
 
 | Permission | Allows |
 | --- | --- |
@@ -119,9 +120,25 @@ An `Employer` (catalog entry, `IEmployerManager`, name unique) is the legal enti
 
 The `PayrollEmployers` recipe step (`Employers`, matched by id then name) and the **Employers** deployment step carry them; Payroll's settings use Orchard's `Settings` step (`PayrollSettings`) and a site settings deployment step.
 
+### The company
+
+The Payroll feature is the company's own payroll. `IPayrollCompanyService.GetCompanyAsync()` returns the site's company: the employer `PayrollSettings.CompanyEmployerId` names, or the oldest employer. **Payroll** → **Management** → **Company** (`CompanyController`, `ManagePayrollSettings`) edits it with the employer editor; its first save adds the employer and sets `CompanyEmployerId`. `PayRunCompanyEmployerHandler` and `PayProfileCompanyEmployerHandler` give a new run or profile the company as its `EmployerId` when nothing chose one (on initialize, validate and create, before the handlers that check the employer), so the base feature's editors never show an employer and a recipe, workflow or import may leave it out.
+
+### Multiple Employers
+
+The **Multiple Employers** feature (`CrestApps.OrchardCore.Payroll.MultipleEmployers`) is for a site that pays the people of more than one employer. It adds nothing to the data, only the UI, through drivers and shapes the base feature leaves room for:
+
+- `PayrollEmployerOptions.MultipleEmployers` is set, so pages name the employer of what they show (rows of pay profiles and garnishments, the pay run page, a statement, the Payroll card of the staff profile, pay dates on the calendar) and the menu shows **Management** → **Employers** (`EmployersController`) instead of **Company**. The company carries a **Your company** badge.
+- `PayRunEmployerDisplayDriver` and `PayProfileEmployerDisplayDriver` add the employer picker (shape `PayrollEmployer_Edit`, at the top of the editor's card) and its row badge (`PayrollEmployerName_SummaryAdmin`). A person has one pay profile per employer (`PayProfileHandler`), so the staff profile offers **Add pay profile** until they have one with every active employer the user manages; without Multiple Employers, until they have one.
+- `PayrollEmployerFilterDisplayDriver` renders the employer picker of the payroll pages' filters. Pages build an `IDisplayManager<PayrollEmployerFilter>` display with the display type `Toolbar` (the pay run list's toolbar), `Field` (among a filter form's fields: liabilities, year end) or `Card` (a filter card of its own: filings); without the feature it renders nothing.
+- `PayrollNewEmployerSettingsDisplayDriver` adds **Settings** → **Payroll** → **New Employers** (`DefaultCountryPack`, `DefaultCurrency`).
+- `PayrollEmployerPermissionProvider` lists each employer's copy of the per-employer permissions.
+
+`PayrollMultipleEmployersMigrations` turns the feature on, after the request that ran the migration, for a site that already has more than one employer.
+
 ## Permissions per employer
 
-`PayrollPermissions` holds the Payroll feature's permissions. Every one in `PayrollPermissions.PerEmployer` also exists per employer through `PayrollPermissionTemplates.For(permission, employerId)` (named `{Permission}_{employerId}`, implied by the global permission; a per-employer "view" is also implied by the same employer's "do" permissions). `PayrollPermissionProvider` lists each employer's copies, so the role editor shows a group per employer, such as **Payroll: Contoso**.
+`PayrollPermissions` holds the Payroll feature's permissions. Every one in `PayrollPermissions.PerEmployer` also exists per employer through `PayrollPermissionTemplates.For(permission, employerId)` (named `{Permission}_{employerId}`, implied by the global permission; a per-employer "view" is also implied by the same employer's "do" permissions). With Multiple Employers on, `PayrollEmployerPermissionProvider` lists each employer's copies, so the role editor shows a group per employer, such as **Payroll: Contoso**.
 
 `IPayrollScopeService.GetScopeAsync(user, permission)` returns a `PayrollScope`: every employer with the global permission, otherwise the employers of the per-employer permissions the user holds. `AuthorizeAsync(user, permission, employerId)` checks one employer. Pages, data sets, reports and exports all use it. `IPayrollEmployeeDirectory` maps employers to the staff members they pay (pay profiles answer it; until then it knows none, so data limited to some employers is empty, never too wide).
 
@@ -247,7 +264,9 @@ Lines are `PayStatementLine`s (type, pay code or tax code and category, hours, r
 
 ## Pay runs
 
-A `PayRun` is one payroll of one employer (`IPayRunManager`): a number from the `Payroll:PayRuns` sequence, a pay schedule (or named people), a type (`Regular`, `Supplemental`, `OffCycle`, `Final`, `Correction`, `Contractor`, and `Reversal` and `Historical` for later slices), a period, a pay date, the supplemental method, the totals and issues of its last calculation, a version stamp, the approval request and a status on `PayRunStatuses.Transitions`: Draft, Calculating, Calculated, PendingApproval, Approved, Processing, Paid, PartiallyPaid, Failed, Canceled. A regular, final or correction run pays salaries, pay items and the pay input sources; the others pay only their own inputs, so unless they name their people they pay only the people with inputs (no empty statements).
+A `PayRun` is one payroll of one employer (`IPayRunManager`): a number from the `Payroll:PayRuns` sequence, a `Title`, a pay schedule (or named people, `StaffMemberIds`, paid whatever their schedule), a type (`Regular`, `Supplemental`, `OffCycle`, `Final`, `Correction`, `Contractor`, and `Reversal` and `Historical` for later slices), a period, a pay date, the supplemental method, the totals and issues of its last calculation, a version stamp, the approval request and a status on `PayRunStatuses.Transitions`: Draft, Calculating, Calculated, PendingApproval, Approved, Processing, Paid, PartiallyPaid, Failed, Canceled. A regular, final or correction run pays salaries, pay items and the pay input sources; the others pay only their own inputs, so unless they name their people they pay only the people with inputs (no empty statements).
+
+A run added without a title is named by `PayRunTitleHandler` from its type, period or pay date, schedule and people (`PayRunTitles.Build`): "Pay for Nov 16 – Nov 29, 2026 (Weekly)", "Pay for Nov 16 – Nov 29, 2026: Jane Doe", "Final pay for Jane Doe, paid Dec 5, 2026". A run added before titles is shown as `Pay run {number}` (`PayRunTitles.Name`). `PayRunPeopleHandler` refuses a run that names someone with no pay profile with its employer. The run's editor offers **All staff on the pay schedule** or **Only the staff members I choose** (Staff's `StaffPicker`).
 
 `IPayRunService`:
 
@@ -268,7 +287,7 @@ Payment methods light up with Banking's features (see [Banking](./banking.md)); 
 
 `PayRunInputImporter` saves rows (run number, employee number, pay code, hours or amount, rate, date, note) as run inputs and refuses a row with the reason; the **Save pay inputs** pipeline step (a destination: rows in, **Rejected** out with an `Error` field, like **Save content items**) uses it, so a file of bonuses read with **Read a media file** goes straight into a run. The run is named by a `PayRun` field or the `PayRun` run parameter; the user the pipeline runs for must prepare the employer's runs. Runs already calculated are calculated again for the people whose inputs changed.
 
-**Payroll** → **Pay Runs** lists the runs of the employers the user may see (`ViewPayRuns`), with an employer filter. A run's page shows its totals, issues, inputs (add or remove, `PreparePayRuns`; nobody enters their own pay), the register of statements and **Calculate**, **Submit for approval** and **Cancel the run** in the action bar; people who may approve see **Approve** and **Reject** there (decided through Approvals), and people who may process an approved run see **Process and pay** (`ProcessPayRuns`). A statement's page shows its number, lines and payments with their references and problems, **Download the stub** (`ViewPayRuns`), and **Reissue** and **Void** (`VoidPayStatements`).
+**Payroll** → **Pay Runs** lists the runs of the employers the user may see (`ViewPayRuns`) by title, with the number as a badge, and with an employer filter when Multiple Employers is on. A run's page shows its totals, issues, inputs (add or remove, `PreparePayRuns`; nobody enters their own pay), the register of statements and **Calculate**, **Submit for approval** and **Cancel the run** in the action bar; people who may approve see **Approve** and **Reject** there (decided through Approvals), and people who may process an approved run see **Process and pay** (`ProcessPayRuns`). A statement's page shows its number, lines and payments with their references and problems, **Download the stub** (`ViewPayRuns`), and **Reissue** and **Void** (`VoidPayStatements`).
 
 ## My Pay
 

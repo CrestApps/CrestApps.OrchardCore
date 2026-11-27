@@ -19,7 +19,7 @@
                         <input type="hidden" asp-for="OwnerId" />
                         <span class="badge text-bg-secondary fw-normal fs-6">
                             @T["Owned by {0}", Model.OwnerName]
-                            <a asp-action="Index" asp-route-q="@Model.Q" asp-route-typeId="@Model.TypeId" asp-route-status="@Model.Status" class="text-reset ms-1" title="@T["Every owner"]" aria-label="@T["Every owner"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
+                            <a asp-action="Index" asp-route-q="@Model.Q" asp-route-typeId="@Model.TypeId" asp-route-category="@Model.Category" asp-route-status="@Model.Status" class="text-reset ms-1" title="@T["Every owner"]" aria-label="@T["Every owner"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></a>
                         </span>
                     </div>
                 }

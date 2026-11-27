@@ -1,9 +1,14 @@
 @model ShapeViewModel<Employer>
+@inject CrestApps.OrchardCore.Payroll.Services.IPayrollCompanyService Company
 
 @{
     var employer = Model.Value;
 }
 
+@if ((await Company.GetCompanyAsync())?.ItemId == employer.ItemId)
+{
+    <span class="badge text-bg-primary fw-normal" data-bs-toggle="tooltip" title="@T["The site's own company: new pay runs and pay profiles belong to it unless you choose another employer."]">@T["Your company"]</span>
+}
 @if (!string.IsNullOrEmpty(employer.CountryPack))
 {
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Country pack"]"><i class="fa-solid fa-flag text-secondary me-1" aria-hidden="true"></i>@employer.CountryPack</span>

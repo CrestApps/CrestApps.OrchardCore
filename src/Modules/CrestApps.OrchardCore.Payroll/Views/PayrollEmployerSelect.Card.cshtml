@@ -1,0 +1,15 @@
+@model ShapeViewModel<PayrollEmployerFilter>
+
+<form method="get" class="card text-bg-theme mb-3 position-sticky action-bar">
+    <div class="card-body">
+        <div class="row gx-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label for="employerId" class="form-label">@T["Employer"]</label>
+                <select id="employerId" name="employerId" asp-items="Model.Value.Employers" class="form-select"><option value="">@T["Choose…"]</option></select>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-secondary">@T["Show"]</button>
+            </div>
+        </div>
+    </div>
+</form>

@@ -110,7 +110,7 @@ public sealed class WorkforceSetupController : Controller
             return (S["Rule sets: {0}", sets.Count()], sets.Any(), S["Labor Rules"], Url.Action("Index", "LaborRuleSets"));
         });
 
-        await AddAsync(model, features, WorkforceConstants.Features.TimeClock, S["Turn on the time clock"], S["A pay schedule (Payroll > Setup), a time clock policy, and the teams that use it. Workers then clock in from My Work or a kiosk."], async () =>
+        await AddAsync(model, features, WorkforceConstants.Features.TimeClock, S["Turn on the time clock"], S["A pay schedule (Payroll > Management), a time clock policy, and the teams that use it. Workers then clock in from My Work or a kiosk."], async () =>
         {
             var calendars = await services.GetRequiredService<IPayScheduleManager>().GetAllAsync(HttpContext.RequestAborted);
             var policies = await services.GetRequiredService<ITimeClockPolicyManager>().GetAllAsync(HttpContext.RequestAborted);
