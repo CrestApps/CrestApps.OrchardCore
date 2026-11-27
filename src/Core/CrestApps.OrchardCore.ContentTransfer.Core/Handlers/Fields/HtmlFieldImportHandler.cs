@@ -1,7 +1,9 @@
 using Microsoft.Extensions.Localization;
 using OrchardCore.ContentFields.Fields;
+using OrchardCore.ContentFields.Settings;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Metadata.Models;
+using OrchardCore.Infrastructure.Html;
 
 namespace CrestApps.OrchardCore.ContentTransfer.Handlers.Fields;
 
@@ -9,9 +11,14 @@ public sealed class HtmlFieldImportHandler : StandardFieldImportHandler
 {
     internal readonly IStringLocalizer S;
 
-    public HtmlFieldImportHandler(IStringLocalizer<HtmlFieldImportHandler> stringLocalizer)
+    private readonly IHtmlSanitizerService _htmlSanitizerService;
+
+    public HtmlFieldImportHandler(
+        IStringLocalizer<HtmlFieldImportHandler> stringLocalizer,
+        IHtmlSanitizerService htmlSanitizerService)
     {
         S = stringLocalizer;
+        _htmlSanitizerService = htmlSanitizerService;
     }
 
     protected override string BindingPropertyName
@@ -19,6 +26,13 @@ public sealed class HtmlFieldImportHandler : StandardFieldImportHandler
 
     protected override Task SetValueAsync(ContentFieldImportMapContext context, string text)
     {
+        // The HTML field editor sanitizes what it saves unless the field turns that off; an import must not be a way
+        // around it.
+        if (text != null && context.ContentPartFieldDefinition?.GetSettings<HtmlFieldSettings>()?.SanitizeHtml != false)
+        {
+            text = _htmlSanitizerService.Sanitize(text);
+        }
+
         context.ContentPart.Alter<HtmlField>(context.ContentPartFieldDefinition.Name, field =>
         {
             field.Html = text;

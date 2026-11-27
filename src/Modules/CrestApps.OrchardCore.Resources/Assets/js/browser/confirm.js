@@ -21,12 +21,13 @@ function dialogOptions(title, message, options, callback) {
         dialog.message = escapeHtml(message);
     }
 
+    // The theme writes the button texts into the page as markup too, so a text from data-confirm-ok shows as text.
     if (hasValue(options.okText)) {
-        dialog.okText = options.okText;
+        dialog.okText = escapeHtml(options.okText);
     }
 
     if (hasValue(options.cancelText)) {
-        dialog.cancelText = options.cancelText;
+        dialog.cancelText = escapeHtml(options.cancelText);
     }
 
     return dialog;
@@ -34,8 +35,8 @@ function dialogOptions(title, message, options, callback) {
 
 // Asks a question before something that cannot be taken back. In the admin the question is Orchard Core's own dialog
 // (the confirmDialog of TheAdmin); elsewhere it is the browser's confirm. Resolves with true when the person agrees.
-// The admin dialog writes its title and message into the page as markup, so they are escaped first: a question that
-// names a record (a subscription's title) shows that name as text.
+// The admin dialog writes its title, message and button texts into the page as markup, so they are escaped first: a
+// question that names a record (a subscription's title) shows that name as text.
 export function confirmAction(title, message, options = {}) {
     const host = hostWindow();
 

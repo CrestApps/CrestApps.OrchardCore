@@ -1152,7 +1152,10 @@ public sealed partial class ImportFilesBackgroundTask : IBackgroundTask
             return definition;
         }
 
-        // A row that names an item is checked against the type its own row names before the item is changed.
+        // A row that names an item is checked against the type its own row names before the item is changed, and
+        // against the uploader's own permissions when the site checks each item.
+        var mayChangeAsync = await ImportItemAuthorization.CreateAsync(serviceProvider, entry, serviceProvider.GetService<IOptions<ContentImportOptions>>()?.Value);
+
         await ImportExistingRowsAsync(
             entry,
             dataTable,
@@ -1164,7 +1167,8 @@ public sealed partial class ImportFilesBackgroundTask : IBackgroundTask
             monitor,
             localizer,
             runTelemetry,
-            RowDefinitionAsync);
+            RowDefinitionAsync,
+            mayChangeAsync);
 
         foreach (var record in newRecords)
         {
@@ -1367,90 +1371,6 @@ public sealed partial class ImportFilesBackgroundTask : IBackgroundTask
         => indexOfKeyColumn > -1
             ? dataRow[indexOfKeyColumn]?.ToString()?.Trim()
             : null;
-
-    internal static async Task ProcessRowAsync(
-        ContentTransferEntry entry,
-        ContentItem contentItem,
-        int rowIndex,
-        DataRow row,
-        DataColumnCollection columns,
-        ContentTypeDefinition contentTypeDefinition,
-        IContentManager contentManager,
-        IContentImportManager contentImportManager,
-        ImportFileProcessStatsPart progressPart,
-        IStringLocalizer localizer,
-        ImportRunTelemetry runTelemetry,
-        bool isNew)
-    {
-        try
-        {
-            var importOptions = entry.GetOrCreate<ImportContentOptionsPart>();
-            var mapContext = new ContentImportContext()
-            {
-                ContentItem = contentItem,
-                ContentTypeDefinition = contentTypeDefinition,
-                Entry = entry,
-                Columns = columns,
-                Row = row,
-            };
-
-            await contentImportManager.ImportAsync(mapContext);
-
-            // A handler that cannot import the row says why, and nothing is saved.
-            if (mapContext.Errors.Count > 0)
-            {
-                AddRowError(progressPart, rowIndex, string.Join(" ", mapContext.Errors), mapContext.ErrorCategory ?? localizer["Could not be imported"]);
-                runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
-
-                return;
-            }
-
-            var validationResult = await contentManager.ValidateAsync(mapContext.ContentItem);
-
-            if (!validationResult.Succeeded)
-            {
-                AddRowError(progressPart, rowIndex, FormatValidationErrors(validationResult), localizer["Did not pass validation"]);
-                runTelemetry.AddError(ContentTransferDiagnostics.ReasonValidation);
-
-                return;
-            }
-
-            ApplyOwnership(mapContext.ContentItem, entry, isNew);
-
-            if (isNew)
-            {
-                await contentManager.CreateAsync(mapContext.ContentItem, VersionOptions.DraftRequired);
-
-                if (importOptions.PublishImportedContent)
-                {
-                    await contentManager.PublishAsync(mapContext.ContentItem);
-                }
-            }
-            else
-            {
-                await contentManager.UpdateAsync(mapContext.ContentItem);
-
-                if (importOptions.PublishImportedContent)
-                {
-                    await contentManager.PublishAsync(mapContext.ContentItem);
-                }
-                else
-                {
-                    await contentManager.SaveDraftAsync(mapContext.ContentItem);
-                }
-            }
-
-            progressPart.ImportedCount++;
-            runTelemetry.AddRow(ContentTransferDiagnostics.ResultImported);
-
-            RemoveRowError(progressPart, rowIndex);
-        }
-        catch (Exception ex)
-        {
-            AddRowError(progressPart, rowIndex, ex.Message, localizer["Could not be imported"]);
-            runTelemetry.AddRowException(rowIndex, ex);
-        }
-    }
 
     /// <summary>
     /// Records a failed row. Every failed row keeps its <paramref name="category"/>, so the rows that failed for each

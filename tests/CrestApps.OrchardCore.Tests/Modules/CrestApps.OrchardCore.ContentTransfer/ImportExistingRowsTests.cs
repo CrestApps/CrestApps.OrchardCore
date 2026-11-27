@@ -127,13 +127,75 @@ public sealed class ImportExistingRowsTests
         Assert.Empty(site.Created);
     }
 
+    /// <summary>
+    /// Round 3: every published item a batch named was asked for with DraftRequired before its row was mapped, so a row
+    /// that then failed validation still left its item unpublished, or orphaned behind a draft that was never saved.
+    /// </summary>
+    [Fact]
+    public async Task ARowThatFailsValidation_LeavesThePublishedItemItNamesAsItWas()
+    {
+        // Arrange
+        var article = new ContentItem { ContentItemId = "4xarticle00000000000000000", ContentType = "Article", Published = true, Latest = true, Owner = "owner", Author = "owner" };
+        var site = new FakeContentSite(article) { FailValidation = true };
+        var progress = new ImportFileProcessStatsPart();
+
+        // Act
+        await ImportAsync(site, progress, article.ContentItemId);
+
+        // Assert
+        Assert.True(article.Published, "A row that failed validation must not unpublish the item it named.");
+        Assert.Equal(0, site.DraftRequests);
+        Assert.Empty(site.Saved);
+        Assert.Contains(0, progress.Errors);
+        Assert.Equal(0, progress.ImportedCount);
+    }
+
+    [Fact]
+    public async Task ARowThatPasses_GivesThePublishedItemItsDraft_AndSavesIt()
+    {
+        // Arrange
+        var article = new ContentItem { ContentItemId = "4xarticle00000000000000000", ContentType = "Article", Published = true, Latest = true, Owner = "owner", Author = "owner" };
+        var site = new FakeContentSite(article);
+        var progress = new ImportFileProcessStatsPart();
+
+        // Act
+        await ImportAsync(site, progress, article.ContentItemId);
+
+        // Assert
+        Assert.Equal(1, site.DraftRequests);
+        Assert.Equal([article.ContentItemId], site.Saved);
+        Assert.Equal(1, progress.ImportedCount);
+    }
+
+    /// <summary>
+    /// Round 3: with the per-item check on, a row that names an item the uploader may not change is refused and leaves
+    /// the item as it was.
+    /// </summary>
+    [Fact]
+    public async Task ARowNamingAnItemTheUploaderMayNotChange_IsRefused_WhenItemsAreChecked()
+    {
+        // Arrange
+        var article = new ContentItem { ContentItemId = "4xarticle00000000000000000", ContentType = "Article", Published = true, Latest = true, Owner = "someone-else", Author = "someone-else" };
+        var site = new FakeContentSite(article);
+        var progress = new ImportFileProcessStatsPart();
+
+        // Act
+        await ImportAsync(site, progress, article.ContentItemId, rowDefinitionAsync: null, mayChangeAsync: _ => Task.FromResult(false));
+
+        // Assert
+        Assert.True(article.Published);
+        Assert.Equal(0, site.DraftRequests);
+        Assert.Empty(site.Saved);
+        Assert.Contains(0, progress.Errors);
+    }
+
     private static Task ImportAsync(FakeContentSite site, ImportFileProcessStatsPart progress, string rowId)
         => ImportAsync(site, progress, rowId, rowDefinitionAsync: null);
 
     private static Task ImportAsync(FakeContentSite site, ImportFileProcessStatsPart progress, string rowId, string rowType)
         => ImportAsync(site, progress, rowId, (_, _) => Task.FromResult(rowType is null ? null : new ContentTypeDefinition(rowType, rowType)));
 
-    private static Task ImportAsync(FakeContentSite site, ImportFileProcessStatsPart progress, string rowId, Func<int, DataRow, Task<ContentTypeDefinition>> rowDefinitionAsync)
+    private static Task ImportAsync(FakeContentSite site, ImportFileProcessStatsPart progress, string rowId, Func<int, DataRow, Task<ContentTypeDefinition>> rowDefinitionAsync, Func<ContentItem, Task<bool>> mayChangeAsync = null)
     {
         var dataTable = new DataTable();
         dataTable.Columns.Add(nameof(ContentItem.ContentItemId));
@@ -160,7 +222,8 @@ public sealed class ImportExistingRowsTests
             new ImportRunMonitor(),
             new PassThroughStringLocalizer<ImportExistingRowsTests>(),
             new ImportRunTelemetry(NullLogger.Instance, "entry", firstRowOfRun: 0),
-            rowDefinitionAsync);
+            rowDefinitionAsync,
+            mayChangeAsync);
     }
 
     /// <summary>
@@ -183,7 +246,17 @@ public sealed class ImportExistingRowsTests
 
             manager.Setup(x => x.NewAsync(It.IsAny<string>()))
                 .ReturnsAsync((string contentType) => new ContentItem { ContentItemId = "4xnew0000000000000000000000", ContentType = contentType });
-            manager.Setup(x => x.ValidateAsync(It.IsAny<ContentItem>())).ReturnsAsync(new ContentValidateResult());
+            manager.Setup(x => x.ValidateAsync(It.IsAny<ContentItem>())).ReturnsAsync(() =>
+            {
+                var result = new ContentValidateResult();
+
+                if (FailValidation)
+                {
+                    result.Fail(new System.ComponentModel.DataAnnotations.ValidationResult("The title is required."));
+                }
+
+                return result;
+            });
             manager.Setup(x => x.CreateAsync(It.IsAny<ContentItem>(), It.IsAny<VersionOptions>()))
                 .Callback((ContentItem item, VersionOptions _) => Created.Add(item.ContentItemId))
                 .ReturnsAsync(true);
@@ -201,6 +274,10 @@ public sealed class ImportExistingRowsTests
         public List<string> Created { get; } = [];
 
         public List<string> Saved { get; } = [];
+
+        public bool FailValidation { get; init; }
+
+        public int DraftRequests { get; private set; }
 
         // DefaultContentManager.GetAsync(ids, options) of the pinned Orchard Core 4.0 preview: Latest and DraftRequired read
         // the latest versions, Published the published ones. DraftRequired then returns only the items that were
@@ -221,6 +298,8 @@ public sealed class ImportExistingRowsTests
             {
                 return options.IsDraft ? [.. latest.Where(item => !item.Published)] : latest;
             }
+
+            DraftRequests++;
 
             var drafts = new List<ContentItem>();
 

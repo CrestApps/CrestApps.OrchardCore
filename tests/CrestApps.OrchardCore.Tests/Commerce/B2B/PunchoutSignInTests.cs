@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using OrchardCore.DisplayManagement;
 using OrchardCore.Users;
+using OrchardCore.Users.Events;
 using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Tests.Commerce.B2B;
@@ -176,6 +177,56 @@ public sealed class PunchoutSignInTests
         AssertNotSignedIn();
     }
 
+    /// <summary>
+    /// Round 3: a punchout signed its buyer in without asking the site's login policies, which refuse the buyer's own
+    /// sign-in (a moderated account, held credentials, a linked user).
+    /// </summary>
+    [Fact]
+    public async Task Start_RefusedByALoginPolicy_IsUnauthorized()
+    {
+        // Arrange
+        var policy = new Mock<ILoginFormEvent>();
+        policy.Setup(handler => handler.ValidatingLoginAsync(It.IsAny<IUser>())).ReturnsAsync(new ForbidResult());
+        var controller = CreateController(HttpMethods.Post, policy.Object);
+
+        // Act
+        var result = await controller.Start(_account.AccountId);
+
+        // Assert
+        Assert.IsType<UnauthorizedResult>(result);
+        AssertNotSignedIn();
+    }
+
+    /// <summary>
+    /// Round 3: the punchout cookie was honored for whoever was signed in, so a browser that signed out of the punchout
+    /// and in as somebody else could still send that person's cart to the procurement system.
+    /// </summary>
+    [Theory]
+    [InlineData("buyer-1", true)]
+    [InlineData("someone-else", false)]
+    [InlineData(null, false)]
+    public void GetCurrent_IsThePunchout_OnlyForTheBuyerItSignedIn(string signedInUserId, bool expected)
+    {
+        // Arrange
+        var protection = new EphemeralDataProtectionProvider();
+        var httpContext = new DefaultHttpContext();
+        var cookie = protection.CreateProtector("CrestApps.B2BAccounts.Punchout").Protect(System.Text.Json.JsonSerializer.Serialize(new PunchoutSession(_account.AccountId, HookUrl, "_top", "buyer-1")));
+        httpContext.Request.Headers.Cookie = PunchoutService.CookieName + "=" + cookie;
+
+        if (signedInUserId is not null)
+        {
+            httpContext.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, signedInUserId)], "Identity.Application"));
+        }
+
+        var punchout = new PunchoutService(protection, new HttpContextAccessor { HttpContext = httpContext });
+
+        // Act
+        var session = punchout.GetCurrent();
+
+        // Assert
+        Assert.Equal(expected, session is not null);
+    }
+
     private void AssertNotSignedIn()
     {
         _signInManager.Verify(manager => manager.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
@@ -184,7 +235,7 @@ public sealed class PunchoutSignInTests
         _signInManager.Verify(manager => manager.SignInWithClaimsAsync(It.IsAny<IUser>(), It.IsAny<AuthenticationProperties>(), It.IsAny<IEnumerable<Claim>>()), Times.Never);
     }
 
-    private PunchoutController CreateController(string method)
+    private PunchoutController CreateController(string method, params ILoginFormEvent[] loginFormEvents)
     {
         var accounts = new Mock<IB2BAccountStore>();
 
@@ -218,6 +269,7 @@ public sealed class PunchoutSignInTests
             .AddSingleton(Mock.Of<ICartService>())
             .AddSingleton(Mock.Of<IShapeFactory>())
             .AddSingleton<ILogger<PunchoutController>>(NullLogger<PunchoutController>.Instance)
+            .AddSingleton<IEnumerable<ILoginFormEvent>>(loginFormEvents)
             .BuildServiceProvider();
 
         httpContext.RequestServices = services;

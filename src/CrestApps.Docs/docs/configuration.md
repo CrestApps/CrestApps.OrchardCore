@@ -1690,7 +1690,8 @@ for the full list.
 
 Keys: `ImportBatchSize` (default `100`), `ExportBatchSize` (`200`), `ExportQueueThreshold` (`500`),
 `MaxUploadFileSize` (`1073741824`), `MaxUploadChunkSize` (`26214400`), `TemporaryFileLifetime`
-(`01:00:00`). Which content types can be imported and exported is not set here: it is the **Allow bulk import** and **Allow bulk export** setting of each content type.
+(`01:00:00`), `RequireEditPermissionPerItem` (`false`; when `true`, a row that updates an existing item also needs
+the uploader's `EditContent` on it). Which content types can be imported and exported is not set here: it is the **Allow bulk import** and **Allow bulk export** setting of each content type.
 
 ```json
 {

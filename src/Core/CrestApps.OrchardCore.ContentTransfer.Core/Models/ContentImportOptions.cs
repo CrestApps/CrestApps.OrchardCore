@@ -25,6 +25,15 @@ public sealed class ContentImportOptions
 
     public string[] AllowedContentTypes { get; set; } = [];
 
+    /// <summary>
+    /// Whether a row that names an existing item also needs the uploader to hold <c>EditContent</c> on that item (and
+    /// <c>PublishContent</c> when the import publishes), checked against the uploader's own principal, so an import
+    /// can't change an item its uploader couldn't edit: someone else's item, or one restricted to roles the uploader
+    /// isn't in. Defaults to <see langword="false"/>: the import permission of a type lets its holder update every item
+    /// of that type, which imports that update items their uploader doesn't own rely on.
+    /// </summary>
+    public bool RequireEditPermissionPerItem { get; set; }
+
     public int ExportBatchSize { get; set; } = DefaultExportBatchSize;
 
     /// <summary>

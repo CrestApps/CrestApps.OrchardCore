@@ -47,6 +47,10 @@ The feature registers `RoleBasedContentItemAuthorizationHandler`, an `IAuthoriza
   handler never grants. If
   roles were collected and the user is in none of them, the handler fails every reading permission. If no roles were
   picked, the item is not restricted.
+- An older version (an audit trail snapshot, say) and a draft are also checked against the roles of the item's
+  current published and latest versions, so opening or restoring a version can't remove or widen the restriction.
+  Viewing the live (published) version meets only its own roles: a role change saved in a draft takes effect on the
+  live page when the draft is published.
 - **Authenticated** stands for anyone signed in and **Anonymous** for a visitor, though Orchard Core never puts
   either role in a user's claims: an item restricted to Authenticated opens for every signed-in user, one restricted
   to Anonymous only for visitors, and one restricted to both for everyone. `ContentAccessRoles` (in

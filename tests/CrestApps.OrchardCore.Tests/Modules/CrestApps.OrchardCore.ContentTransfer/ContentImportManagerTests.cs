@@ -1620,7 +1620,33 @@ public class HtmlFieldImportHandlerTests
 
     public HtmlFieldImportHandlerTests()
     {
-        _handler = new HtmlFieldImportHandler(Mock.Of<IStringLocalizer<HtmlFieldImportHandler>>());
+        _handler = new HtmlFieldImportHandler(
+            Mock.Of<IStringLocalizer<HtmlFieldImportHandler>>(),
+            new global::OrchardCore.Infrastructure.Html.HtmlSanitizerService(Microsoft.Extensions.Options.Options.Create(new global::OrchardCore.Infrastructure.Html.HtmlSanitizerOptions())));
+    }
+
+    // Round 3: the HTML body import was sanitized, but an HTML field was stored as it came, so a file could still put
+    // script into every item it created or updated.
+    [Fact]
+    public async Task ImportAsync_StripsScriptFromTheHtml()
+    {
+        // Arrange
+        var part = new ContentPart();
+        var dataTable = new DataTable();
+        dataTable.Columns.Add("MyPart_MyField_Html");
+        var row = dataTable.NewRow();
+        row["MyPart_MyField_Html"] = "<p>Hello</p><script>alert(document.cookie)</script><img src=x onerror=alert(1)>";
+        dataTable.Rows.Add(row);
+
+        // Act
+        await _handler.ImportAsync(CreateFieldImportContext("MyPart", "MyField", part, dataTable, row));
+
+        // Assert
+        var field = part.Get<HtmlField>("MyField");
+        Assert.NotNull(field);
+        Assert.Contains("<p>Hello</p>", field.Html);
+        Assert.DoesNotContain("script", field.Html, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("onerror", field.Html, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
