@@ -1,0 +1,49 @@
+name: Full - CI
+
+# The slow lane for pull requests: the Windows build and test jobs, the Telephony browser tests and the Contact Center
+# distributed tests. PR - CI runs the Linux jobs on every push; this workflow adds the rest once a pull request is
+# ready to merge, so the slow jobs do not run on every intermediate push:
+#
+# - Add the `full-ci` label to a pull request. Every later push runs this workflow again while the label is on.
+# - Approve the pull request.
+# - Run it by hand from the Actions tab for any branch (both operating systems).
+# - A merge queue, if one is enabled, runs it for every group (both operating systems).
+#
+# Main - CI runs all of it again after every merge, and Release - CI before every release.
+
+on:
+  pull_request:
+    branches: [ main, release/** ]
+    types: [ labeled, synchronize, reopened ]
+    paths-ignore:
+      - '**/*.md'
+      - 'mkdocs.yml'
+      - 'src/CrestApps.Docs/**'
+  pull_request_review:
+    types: [ submitted ]
+  merge_group:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build_test:
+    name: Build & Test
+    # A labelled event only counts when the label added is `full-ci`; any other push counts while the label is on.
+    if: >-
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'full-ci')
+        && (github.event.action != 'labeled' || github.event.label.name == 'full-ci'))
+      || (github.event_name == 'pull_request_review' && github.event.review.state == 'approved')
+      || github.event_name == 'merge_group'
+      || github.event_name == 'workflow_dispatch'
+    # On the job rather than the workflow, so an event that does not qualify (another label, a review that only
+    # comments) never cancels a run that is in progress: its run skips this job and never joins the group.
+    concurrency:
+      group: full-ci-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    uses: ./.github/workflows/build_and_test.yml
+    with:
+      # On a pull request PR - CI already runs the Linux jobs, so only Windows runs here.
+      os: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_review') && '["windows-latest"]' || '["ubuntu-latest", "windows-latest"]' }}
+      long-suites: true

@@ -161,7 +161,7 @@ public sealed partial class RecipeSchemaCoverageArchitectureTests
             var index = new SourceIndex();
             var sourceRoot = Path.Combine(FindRepositoryRoot(), "src");
 
-            foreach (var file in Directory.EnumerateFiles(sourceRoot, "*.cs", SearchOption.AllDirectories))
+            foreach (var file in SourceTreeFiles.Enumerate(sourceRoot, "*.cs", SourceTreeFiles.IsBuildOutputDirectory))
             {
                 var normalized = file.Replace('\\', '/');
 

@@ -114,9 +114,17 @@ dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyze
 
 #### Unit Tests (Requires Successful Build)
 ```bash
-# Run unit tests - TAKES 2-5 MINUTES, NEVER CANCEL
-dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj
+# Run the whole unit suite, one test process per core (what CI runs) - NEVER CANCEL
+pwsh ./tests/run-unit-tests.ps1
+
+# Iterate on one area: namespaces under CrestApps.OrchardCore.Tests, or parts of class names
+pwsh ./tests/run-unit-tests.ps1 -Namespace Checkout, Modules.Telephony
+pwsh ./tests/run-unit-tests.ps1 -Class CheckoutEngineTests
 ```
+
+The unit test assembly runs one test at a time (`TestParallelizationBehavior.cs`), so `dotnet test` on the project uses
+a single core. The script runs the test classes in several processes at once, each still one test at a time, checks
+that every test method ran, and prints the slowest classes. Pass `-Build` to build the test project first.
 
 ### Running the Application
 
@@ -699,10 +707,19 @@ The Docusaurus documentation site is located at `src/CrestApps.Docs`; its [`READ
 Before committing:
 1. Run `npm run rebuild` - asset build must complete cleanly
 2. Run `dotnet build -warnaserror` (if network allows) - the build must produce **zero warnings**; fix every warning across the entire project, not only in files you changed, before running with `-warnaserror`
-3. Run `dotnet test` (if build succeeds) - all tests must pass
+3. Run `pwsh ./tests/run-unit-tests.ps1` (if build succeeds) - all tests must pass
 4. Verify no uncommitted asset changes with `git status`
 
-The CI pipeline validates builds on both Ubuntu and Windows, so test locally on similar environments when possible.
+CI runs in two lanes so a push gets feedback fast without dropping any suite:
+
+| Workflow | When | What |
+| --- | --- | --- |
+| PR - CI | Every push to a pull request (not documentation-only changes) | Linux: build with warnings as errors, unit, feature activation, integration and JavaScript suites |
+| Full - CI | A pull request labelled `full-ci` (and every push while the label is on), an approved review, a manual run, a merge queue group | Windows: the same jobs. Both: the Telephony browser tests and the Contact Center distributed tests (Redis and PostgreSQL) |
+| Main - CI | Every push to `main` or `release/**` | Everything above, on both operating systems |
+
+Add the `full-ci` label before merging a pull request that touches platform-sensitive code (file paths, line endings,
+processes), the soft phone, or the Contact Center's distributed paths. Main - CI runs it all after the merge either way.
 
 ---
 

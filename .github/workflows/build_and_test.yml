@@ -1,17 +1,30 @@
 name: Build & Test
 
-# The build and test jobs shared by PR - CI and Main - CI, so both validate exactly the same things.
+# The build and test jobs shared by PR - CI, Full - CI and Main - CI, so every run validates the same things.
 #
 # The suites run side by side instead of one after another: each OS gets one job for the unit tests, one for the
-# integration suites and one for the JavaScript tests. Every .NET job builds the whole solution with the same flags, so
-# a warning fails the run whichever job reports it. The repository is public, so the extra runner minutes cost nothing,
-# and a run takes as long as its slowest job instead of the sum of all of them.
+# Contact Center feature activation suite, one for the other integration suites and one for the JavaScript tests.
+# Every .NET job builds the whole solution with the same flags, so a warning fails the run whichever job reports it.
+# The repository is public, so the extra runner minutes cost nothing, and a run takes as long as its slowest job
+# instead of the sum of all of them.
+#
+# Callers choose the operating systems and whether the long suites run (see the inputs). PR - CI runs the Linux jobs on
+# every push; Full - CI adds Windows and the long suites once a pull request is approved or labelled `full-ci`; Main -
+# CI runs everything after every merge.
 
 on:
   workflow_call:
     inputs:
       save-nuget-cache:
         description: Save the NuGet cache from the unit test job of each OS. Only Main - CI passes true.
+        type: boolean
+        default: false
+      os:
+        description: The runners to build and test on, as a JSON array.
+        type: string
+        default: '["ubuntu-latest", "windows-latest"]'
+      long-suites:
+        description: Also run the long suites that need a browser or service containers (Telephony browser tests, Contact Center distributed tests).
         type: boolean
         default: false
 
@@ -24,13 +37,15 @@ env:
 
 jobs:
   dotnet:
-    name: ${{ matrix.suite == 'unit' && 'Unit tests' || 'Integration tests' }} (${{ matrix.os }})
+    name: ${{ matrix.suite == 'unit' && 'Unit tests' || matrix.suite == 'activation' && 'Feature activation tests' || 'Integration tests' }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        suite: [unit, integration]
+        os: ${{ fromJSON(inputs.os) }}
+        # The Contact Center feature activation suite is the longest integration suite, so it has its own job and
+        # runs beside the others instead of before them.
+        suite: [unit, activation, integration]
     steps:
     - uses: actions/checkout@v7
       with:
@@ -56,12 +71,32 @@ jobs:
       # warnings and other better approaches don't work, see https://github.com/OrchardCMS/OrchardCore/pull/16317.
       run: |
         dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
+    # The unit test assembly runs one test at a time (see TestParallelizationBehavior.cs), so one process uses one core.
+    # The script runs the test classes in one process per core, each still one test at a time, and fails if any test
+    # method did not run. See tests/run-unit-tests.ps1.
+    # The class timings of the last run balance the unit test processes (see tests/run-unit-tests.ps1). The file is about
+    # 200 KB; every run saves a new copy and restores the newest one for its OS.
+    - name: Restore the unit test timings
+      if: matrix.suite == 'unit'
+      uses: actions/cache@v6
+      with:
+        path: TestResults/unit/timings.json
+        key: unit-test-timings-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: |
+          unit-test-timings-${{ runner.os }}-
     - name: Unit Tests
       if: matrix.suite == 'unit'
       shell: bash
       run: |
         set -o pipefail
-        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj 2>&1 | tee test-output.txt
+        pwsh ./tests/run-unit-tests.ps1 -Configuration Release 2>&1 | tee test-output.txt
+    - name: Upload the unit test results
+      if: failure() && matrix.suite == 'unit'
+      uses: actions/upload-artifact@v7
+      with:
+        name: unit-test-results-${{ matrix.os }}
+        path: TestResults/unit/
+        retention-days: 14
     - name: TEMP report failed tests as annotations
       if: failure() && matrix.suite == 'unit'
       shell: python
@@ -89,7 +124,7 @@ jobs:
     # longer constructs, a migration that does not run. Those break a tenant on enable, and finding them at
     # release time means finding them after the pull request that caused them has been forgotten.
     - name: Contact Center feature activation tests
-      if: matrix.suite == 'integration'
+      if: matrix.suite == 'activation'
       run: |
         dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj
     # The tenant hierarchy suite runs real tenants in one host: a parent, its children and an ordinary tenant. It
@@ -135,7 +170,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: ${{ fromJSON(inputs.os) }}
     steps:
     - uses: actions/checkout@v7
     - uses: actions/setup-node@v7
@@ -148,3 +183,72 @@ jobs:
       run: |
         npm ci --ignore-scripts
         npm test
+
+  # The browser suite drives the real soft phone widget in Chromium against an in-memory telephony provider. It is the
+  # slowest suite and only needs Linux, so it runs when the caller asks for the long suites rather than on every push.
+  # It builds only its own project: the dotnet jobs already build the whole solution with warnings as errors.
+  browser:
+    name: Telephony browser tests
+    if: inputs.long-suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: ".node-version"
+    - uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: |
+          11.0.x
+    - name: Cache NuGet packages
+      uses: ./.github/actions/cache-nuget-packages
+    - name: Telephony browser tests
+      run: |
+        dotnet test -c Release ./tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/CrestApps.OrchardCore.Telephony.PlaywrightTests.csproj
+
+  # The distributed suite runs several Contact Center nodes against one Redis, and the migration and query plan gates
+  # against PostgreSQL. GitHub Actions only offers service containers on Linux runners, so it runs on Ubuntu only, when
+  # the caller asks for the long suites. Release - CI runs it again before publishing.
+  distributed:
+    name: Contact Center distributed tests
+    if: inputs.long-suites
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      # The migration safety gate and the query plan budgets run against a real PostgreSQL, each in its own schema,
+      # and throw rather than skip without it.
+      postgres:
+        image: postgres:17-alpine
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      CONTACT_CENTER_REDIS_CONFIGURATION: localhost:6379,abortConnect=false
+      CONTACT_CENTER_POSTGRES_CONNECTION: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: |
+          11.0.x
+    - name: Cache NuGet packages
+      uses: ./.github/actions/cache-nuget-packages
+    - name: Contact Center distributed tests
+      run: |
+        dotnet test -c Release ./tests/CrestApps.OrchardCore.ContactCenter.DistributedTests/CrestApps.OrchardCore.ContactCenter.DistributedTests.csproj
