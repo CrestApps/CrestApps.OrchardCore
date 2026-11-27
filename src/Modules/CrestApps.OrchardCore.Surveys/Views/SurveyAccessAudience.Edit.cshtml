@@ -1,0 +1,50 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyAccessEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Audience" class="ocat-label">@T["Audience"]</label>
+    <div class="ocat-end">
+        <select asp-for="Audience" class="form-select">
+            <option value="@SurveyAudienceMode.Anyone">@T["Anyone with the link"]</option>
+            <option value="@SurveyAudienceMode.SignedIn">@T["Signed-in users"]</option>
+            <option value="@SurveyAudienceMode.Audiences">@T["Members of chosen audiences"]</option>
+            <option value="@SurveyAudienceMode.InvitationOnly">@T["Only invited people"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <span class="ocat-label" id="survey-audiences-label">@T["Audiences"]</span>
+    <div class="ocat-end" role="group" aria-labelledby="survey-audiences-label">
+        @if (Model.AudienceOptions.Count == 0)
+        {
+            <p class="form-text mb-1">@(Model.AudiencesAvailable ? T["No audience exists yet. Add one under Content > User Audiences."] : T["Turn on the User Audiences feature to choose audiences."])</p>
+        }
+        @for (var i = 0; i < Model.AudienceOptions.Count; i++)
+        {
+            var option = Model.AudienceOptions[i];
+            var inputId = Html.IdFor(m => m.AudienceIds) + "_" + i;
+
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="@inputId" name="@Html.NameFor(m => m.AudienceIds)" value="@option.Value" checked="@option.Selected" />
+                <label class="form-check-label" for="@inputId">@option.Text</label>
+            </div>
+        }
+        <span asp-validation-for="AudienceIds" class="text-danger"></span>
+        <span class="hint">@T["Used when the audience is Members of chosen audiences: a person may respond when they belong to any audience checked here."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="RequireCaptcha" class="ocat-label">@T["CAPTCHA"]</label>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="RequireCaptcha" type="checkbox" class="form-check-input" />
+            <label asp-for="RequireCaptcha" class="form-check-label">@T["Ask respondents who are not signed in to pass a CAPTCHA"]</label>
+            <span class="hint dashed">@T["Needs the reCAPTCHA feature."]</span>
+            @if (Model.RequireCaptcha && !Model.CaptchaAvailable)
+            {
+                <span class="text-danger d-block">@T["The reCAPTCHA feature is off, so respondents who are not signed in can't start this survey. Turn reCAPTCHA on, or stop requiring a CAPTCHA."]</span>
+            }
+            <span asp-validation-for="RequireCaptcha" class="text-danger"></span>
+        </div>
+    </div>
+</div>

@@ -6,85 +6,82 @@
     var rulesPrefix = Html.NameFor(m => m.ChoiceRules).ToString();
 }
 
-<div class="card mb-3" data-rule-sources="@Model.Sources">
-    <div class="card-header">@T["Choices"]</div>
-    <div class="card-body" data-repeater data-repeater-prefix="@prefix" data-repeater-also="@rulesPrefix">
-        <div data-repeater-items data-repeater-sortable>
-            @for (var i = 0; i < Model.Choices.Count; i++)
-            {
-                var choice = Model.Choices[i];
+<div data-rule-sources="@Model.Sources" data-repeater data-repeater-prefix="@prefix" data-repeater-also="@rulesPrefix">
+    <div data-repeater-items data-repeater-sortable>
+        @for (var i = 0; i < Model.Choices.Count; i++)
+        {
+            var choice = Model.Choices[i];
 
-                <div class="border rounded p-2 mb-2" data-repeater-item>
-                    <input type="hidden" name="@(prefix)[@i].Id" value="@choice.Id" />
-                    <div class="input-group mb-1">
-                        <span class="input-group-text" title="@T["Drag to reorder"]"><i class="fa-solid fa-grip-vertical" aria-hidden="true"></i></span>
-                        <input name="@(prefix)[@i].Text" value="@choice.Text" class="form-control" placeholder="@T["Choice"]" aria-label="@T["Choice"]" />
-                        <input name="@(prefix)[@i].Value" value="@choice.Value" class="form-control flex-grow-0 w-25" placeholder="@T["Value"]" aria-label="@T["Export value"]" />
-                        <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="d-flex flex-wrap gap-3 small">
-                        <input name="@(prefix)[@i].ImageUrl" value="@choice.ImageUrl" class="form-control form-control-sm w-auto flex-grow-1" placeholder="@T["Image path"]" aria-label="@T["Image path"]" />
-                        @if (Model.SupportsOther)
-                        {
-                            <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].IsOther" value="true" checked="@choice.IsOther" />@T["Other with text"]</label>
-                        }
-                        <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].IsExclusive" value="true" checked="@choice.IsExclusive" />@T["Clears the others"]</label>
-                        <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].Pinned" value="true" checked="@choice.Pinned" />@T["Pinned"]</label>
-                        <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].Retired" value="true" checked="@choice.Retired" />@T["Retired"]</label>
-                    </div>
-                    <details class="mt-1" data-rule-field>
-                        <summary class="small">@T["Show this choice only when"]</summary>
-                        <input type="hidden" name="@(rulesPrefix)[@i]" value="@(i < Model.ChoiceRules.Count ? Model.ChoiceRules[i] : string.Empty)" data-rule-value />
-                        <div data-rule-builder></div>
-                    </details>
-                </div>
-            }
-        </div>
-        <template data-repeater-template>
             <div class="border rounded p-2 mb-2" data-repeater-item>
-                <input type="hidden" name="@(prefix)[__index__].Id" value="" />
+                <input type="hidden" name="@(prefix)[@i].Id" value="@choice.Id" />
                 <div class="input-group mb-1">
-                    <span class="input-group-text"><i class="fa-solid fa-grip-vertical" aria-hidden="true"></i></span>
-                    <input name="@(prefix)[__index__].Text" class="form-control" placeholder="@T["Choice"]" aria-label="@T["Choice"]" />
-                    <input name="@(prefix)[__index__].Value" class="form-control flex-grow-0 w-25" placeholder="@T["Value"]" aria-label="@T["Export value"]" />
+                    <span class="input-group-text" title="@T["Drag to reorder"]"><i class="fa-solid fa-grip-vertical" aria-hidden="true"></i></span>
+                    <input name="@(prefix)[@i].Text" value="@choice.Text" class="form-control" placeholder="@T["Choice"]" aria-label="@T["Choice"]" />
+                    <input name="@(prefix)[@i].Value" value="@choice.Value" class="form-control flex-grow-0 w-25" placeholder="@T["Value"]" aria-label="@T["Export value"]" />
                     <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
                 </div>
-                <input type="hidden" name="@(rulesPrefix)[__index__]" value="" data-rule-value />
-            </div>
-        </template>
-        <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add choice"]</button>
-        <span asp-validation-for="Choices" class="text-danger"></span>
-
-        <div class="ocat-wrapper mt-3">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="ShuffleChoices" type="checkbox" class="form-check-input" />
-                    <label asp-for="ShuffleChoices" class="form-check-label">@T["Show the choices in a random order"]</label>
-                    <span class="hint dashed">@T["Pinned, other and clearing choices keep their place."]</span>
+                <div class="d-flex flex-wrap gap-3 small">
+                    <input name="@(prefix)[@i].ImageUrl" value="@choice.ImageUrl" class="form-control form-control-sm w-auto flex-grow-1" placeholder="@T["Image path"]" aria-label="@T["Image path"]" />
+                    @if (Model.SupportsOther)
+                    {
+                        <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].IsOther" value="true" checked="@choice.IsOther" />@T["Other with text"]</label>
+                    }
+                    <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].IsExclusive" value="true" checked="@choice.IsExclusive" />@T["Clears the others"]</label>
+                    <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].Pinned" value="true" checked="@choice.Pinned" />@T["Pinned"]</label>
+                    <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].Retired" value="true" checked="@choice.Retired" />@T["Retired"]</label>
                 </div>
-            </div>
-        </div>
-        @if (Model.CarryForwardSources.Count > 0)
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="ChoicesFrom" class="ocat-label">@T["Carry forward from"]</label>
-                <div class="ocat-end">
-                    <div class="input-group">
-                        <select asp-for="ChoicesFrom" class="form-select">
-                            <option value="">@T["Nothing: use the choices above"]</option>
-                            @foreach (var source in Model.CarryForwardSources)
-                            {
-                                <option value="@source.Value" selected="@source.Selected">@source.Text</option>
-                            }
-                        </select>
-                        <select asp-for="ChoicesFromMode" class="form-select" aria-label="@T["Which choices"]">
-                            <option value="@ChoicesFromMode.All">@T["All its choices"]</option>
-                            <option value="@ChoicesFromMode.Selected">@T["The choices picked"]</option>
-                            <option value="@ChoicesFromMode.Unselected">@T["The choices not picked"]</option>
-                        </select>
-                    </div>
-                </div>
+                <details class="mt-1" data-rule-field>
+                    <summary class="small">@T["Show this choice only when"]</summary>
+                    <input type="hidden" name="@(rulesPrefix)[@i]" value="@(i < Model.ChoiceRules.Count ? Model.ChoiceRules[i] : string.Empty)" data-rule-value />
+                    <div data-rule-builder></div>
+                </details>
             </div>
         }
     </div>
+    <template data-repeater-template>
+        <div class="border rounded p-2 mb-2" data-repeater-item>
+            <input type="hidden" name="@(prefix)[__index__].Id" value="" />
+            <div class="input-group mb-1">
+                <span class="input-group-text"><i class="fa-solid fa-grip-vertical" aria-hidden="true"></i></span>
+                <input name="@(prefix)[__index__].Text" class="form-control" placeholder="@T["Choice"]" aria-label="@T["Choice"]" />
+                <input name="@(prefix)[__index__].Value" class="form-control flex-grow-0 w-25" placeholder="@T["Value"]" aria-label="@T["Export value"]" />
+                <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+            <input type="hidden" name="@(rulesPrefix)[__index__]" value="" data-rule-value />
+        </div>
+    </template>
+    <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add choice"]</button>
+    <span asp-validation-for="Choices" class="text-danger"></span>
+
+    <div class="ocat-wrapper mt-3">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="ShuffleChoices" type="checkbox" class="form-check-input" />
+                <label asp-for="ShuffleChoices" class="form-check-label">@T["Show the choices in a random order"]</label>
+                <span class="hint dashed">@T["Pinned, other and clearing choices keep their place."]</span>
+            </div>
+        </div>
+    </div>
+    @if (Model.CarryForwardSources.Count > 0)
+    {
+        <div class="ocat-wrapper">
+            <label asp-for="ChoicesFrom" class="ocat-label">@T["Carry forward from"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <select asp-for="ChoicesFrom" class="form-select">
+                        <option value="">@T["Nothing: use the choices above"]</option>
+                        @foreach (var source in Model.CarryForwardSources)
+                        {
+                            <option value="@source.Value" selected="@source.Selected">@source.Text</option>
+                        }
+                    </select>
+                    <select asp-for="ChoicesFromMode" class="form-select" aria-label="@T["Which choices"]">
+                        <option value="@ChoicesFromMode.All">@T["All its choices"]</option>
+                        <option value="@ChoicesFromMode.Selected">@T["The choices picked"]</option>
+                        <option value="@ChoicesFromMode.Unselected">@T["The choices not picked"]</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    }
 </div>

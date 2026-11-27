@@ -16,41 +16,38 @@
     };
 }
 
-<div class="card mb-3">
-    <div class="card-header">@T["Validation"]</div>
-    <div class="card-body" data-repeater data-repeater-prefix="@prefix">
-        <div data-repeater-items>
-            @for (var i = 0; i < Model.ValidationRules.Count; i++)
-            {
-                var rule = Model.ValidationRules[i];
+<div data-repeater data-repeater-prefix="@prefix">
+    <div data-repeater-items>
+        @for (var i = 0; i < Model.ValidationRules.Count; i++)
+        {
+            var rule = Model.ValidationRules[i];
 
-                <div class="input-group mb-2" data-repeater-item>
-                    <select name="@(prefix)[@i].Kind" class="form-select" aria-label="@T["Check"]">
-                        @foreach (var (kind, text) in kinds)
-                        {
-                            <option value="@kind" selected="@(kind == rule.Kind)">@text</option>
-                        }
-                    </select>
-                    <input name="@(prefix)[@i].Value" value="@rule.Value" class="form-control" placeholder="@T["Value"]" aria-label="@T["Value"]" />
-                    <input name="@(prefix)[@i].Message" value="@rule.Message" class="form-control" placeholder="@T["Message (optional)"]" aria-label="@T["Message"]" />
-                    <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-                </div>
-            }
-        </div>
-        <template data-repeater-template>
             <div class="input-group mb-2" data-repeater-item>
-                <select name="@(prefix)[__index__].Kind" class="form-select" aria-label="@T["Check"]">
+                <select name="@(prefix)[@i].Kind" class="form-select" aria-label="@T["Check"]">
                     @foreach (var (kind, text) in kinds)
                     {
-                        <option value="@kind">@text</option>
+                        <option value="@kind" selected="@(kind == rule.Kind)">@text</option>
                     }
                 </select>
-                <input name="@(prefix)[__index__].Value" class="form-control" placeholder="@T["Value"]" aria-label="@T["Value"]" />
-                <input name="@(prefix)[__index__].Message" class="form-control" placeholder="@T["Message (optional)"]" aria-label="@T["Message"]" />
+                <input name="@(prefix)[@i].Value" value="@rule.Value" class="form-control" placeholder="@T["Value"]" aria-label="@T["Value"]" />
+                <input name="@(prefix)[@i].Message" value="@rule.Message" class="form-control" placeholder="@T["Message (optional)"]" aria-label="@T["Message"]" />
                 <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
             </div>
-        </template>
-        <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add check"]</button>
-        <span class="hint d-block mt-1">@T["Patterns are checked with a time limit, so a slow pattern fails instead of hanging."]</span>
+        }
     </div>
+    <template data-repeater-template>
+        <div class="input-group mb-2" data-repeater-item>
+            <select name="@(prefix)[__index__].Kind" class="form-select" aria-label="@T["Check"]">
+                @foreach (var (kind, text) in kinds)
+                {
+                    <option value="@kind">@text</option>
+                }
+            </select>
+            <input name="@(prefix)[__index__].Value" class="form-control" placeholder="@T["Value"]" aria-label="@T["Value"]" />
+            <input name="@(prefix)[__index__].Message" class="form-control" placeholder="@T["Message (optional)"]" aria-label="@T["Message"]" />
+            <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+        </div>
+    </template>
+    <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add check"]</button>
+    <span class="hint d-block mt-1">@T["Patterns are checked with a time limit, so a slow pattern fails instead of hanging."]</span>
 </div>

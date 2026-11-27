@@ -1,116 +1,63 @@
 @using CrestApps.OrchardCore.Surveys.ViewModels
 @model SurveyQuestionCommonEditViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Question"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Title" class="ocat-label">@T["Text"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="Title" class="form-control" rows="2"></textarea>
-                <span class="hint">@T["Use {{code}} to show the answer to an earlier question."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Name" class="ocat-label">@T["Code"]</label>
-            <div class="ocat-end">
-                <input asp-for="Name" class="form-control" required />
-                <span asp-validation-for="Name" class="text-danger"></span>
-                <span class="hint">@T["Names the answer in exports, formulas and piping."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Description" class="ocat-label">@T["Description"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
-                <span class="hint">@T["Shown under the question. HTML is allowed and cleaned."]</span>
-            </div>
-        </div>
-        @if (Model.Answerable)
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="Placeholder" class="ocat-label">@T["Placeholder"]</label>
-                <div class="ocat-end"><input asp-for="Placeholder" class="form-control" /></div>
-            </div>
-            <div class="ocat-wrapper">
-                <div class="ocat-end-offset">
-                    <div class="form-check">
-                        <input asp-for="Required" type="checkbox" class="form-check-input" />
-                        <label asp-for="Required" class="form-check-label">@T["An answer is required"]</label>
-                    </div>
-                </div>
-            </div>
-        }
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="Pinned" type="checkbox" class="form-check-input" />
-                    <label asp-for="Pinned" class="form-check-label">@T["Keep its place when the page shuffles"]</label>
-                </div>
-            </div>
-        </div>
-        @if (Model.Pools.Count > 0)
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="PoolId" class="ocat-label">@T["Question pool"]</label>
-                <div class="ocat-end">
-                    <select asp-for="PoolId" class="form-select">
-                        <option value="">@T["Not in a pool"]</option>
-                        @foreach (var pool in Model.Pools)
-                        {
-                            <option value="@pool.Value" selected="@pool.Selected">@pool.Text</option>
-                        }
-                    </select>
-                </div>
-            </div>
-        }
+<div class="ocat-wrapper">
+    <label asp-for="Title" class="ocat-label">@T["Text"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Title" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["Use {{code}} to show the answer to an earlier question."]</span>
     </div>
 </div>
-
-<div class="card mb-3" data-rule-sources="@Model.Sources">
-    <div class="card-header">@T["Logic"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="VisibilityMode" class="ocat-label">@T["Shows"]</label>
-            <div class="ocat-end">
-                <select asp-for="VisibilityMode" class="form-select">
-                    <option value="@VisibilityMode.Always">@T["Always"]</option>
-                    <option value="@VisibilityMode.ShowWhen">@T["Only when"]</option>
-                    <option value="@VisibilityMode.HideWhen">@T["Unless"]</option>
-                </select>
-            </div>
-        </div>
-        <div class="ocat-wrapper" data-rule-field>
-            <div class="ocat-end-offset">
-                <input type="hidden" asp-for="VisibilityRule" data-rule-value />
-                <div data-rule-builder></div>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="VisibilityFormula" class="ocat-label">@T["And this formula holds"]</label>
-            <div class="ocat-end">
-                <input asp-for="VisibilityFormula" class="form-control font-monospace" />
-                <span class="hint">@T["Optional, such as [age] >= 18. Checked on the server."]</span>
-            </div>
-        </div>
-        @if (Model.Answerable)
-        {
-            <div class="ocat-wrapper" data-rule-field>
-                <label class="ocat-label">@T["Required when"]</label>
-                <div class="ocat-end">
-                    <input type="hidden" asp-for="RequiredWhen" data-rule-value />
-                    <div data-rule-builder></div>
-                    <span class="hint">@T["When set, this rule decides whether an answer is required."]</span>
-                </div>
-            </div>
-            <div class="ocat-wrapper" data-rule-field>
-                <label class="ocat-label">@T["Can be answered when"]</label>
-                <div class="ocat-end">
-                    <input type="hidden" asp-for="EnabledWhen" data-rule-value />
-                    <div data-rule-builder></div>
-                    <span class="hint">@T["Otherwise the question shows read-only."]</span>
-                </div>
-            </div>
-        }
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Code"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" required />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["Names the answer in exports, formulas and piping."]</span>
     </div>
 </div>
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["Shown under the question. HTML is allowed and cleaned."]</span>
+    </div>
+</div>
+@if (Model.Answerable)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="Placeholder" class="ocat-label">@T["Placeholder"]</label>
+        <div class="ocat-end"><input asp-for="Placeholder" class="form-control" /></div>
+    </div>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="Required" type="checkbox" class="form-check-input" />
+                <label asp-for="Required" class="form-check-label">@T["An answer is required"]</label>
+            </div>
+        </div>
+    </div>
+}
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Pinned" type="checkbox" class="form-check-input" />
+            <label asp-for="Pinned" class="form-check-label">@T["Keep its place when the page shuffles"]</label>
+        </div>
+    </div>
+</div>
+@if (Model.Pools.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="PoolId" class="ocat-label">@T["Question pool"]</label>
+        <div class="ocat-end">
+            <select asp-for="PoolId" class="form-select">
+                <option value="">@T["Not in a pool"]</option>
+                @foreach (var pool in Model.Pools)
+                {
+                    <option value="@pool.Value" selected="@pool.Selected">@pool.Text</option>
+                }
+            </select>
+        </div>
+    </div>
+}

@@ -38,7 +38,7 @@ internal sealed class SurveyDetailsDisplayDriver : DisplayDriver<Survey>
             model.Name = survey.Name;
             model.Description = survey.Description;
             model.Tags = string.Join(", ", survey.Tags ?? []);
-        }).Location("Content:1").OnGroup(GroupId);
+        }).Location(l => l.Zone("Content", "1").Card(S["Survey"], "10")).OnGroup(GroupId);
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(Survey survey, UpdateEditorContext context)

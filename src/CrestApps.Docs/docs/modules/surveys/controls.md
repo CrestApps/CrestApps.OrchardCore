@@ -151,11 +151,18 @@ Read and write settings with `question.GetSettings<T>()` and `question.SetSettin
 ```csharp
 public sealed class ThumbsSettingsDisplayDriver : SurveyControlSettingsDisplayDriver<ThumbsSettings>
 {
+    public ThumbsSettingsDisplayDriver(IStringLocalizer<ThumbsSettingsDisplayDriver> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
     protected override string ControlType => "Acme.Thumbs";
+
+    protected override LocalizedString CardName => S["Thumbs Settings"];
 }
 ```
 
-The driver renders the shape `SurveyControlSettings_Edit__Acme_Thumbs`, so the view is `Views/SurveyControlSettings-Acme.Thumbs.Edit.cshtml`, with the model `SurveyControlSettingsViewModel<ThumbsSettings>`. Put the fields in an `ocat` card, like the built-in editors.
+The driver renders the shape `SurveyControlSettings_Edit__Acme_Thumbs`, so the view is `Views/SurveyControlSettings-Acme.Thumbs.Edit.cshtml`, with the model `SurveyControlSettingsViewModel<ThumbsSettings>`. The question editor shows it in a card named by `CardName`, after the cards every question has, so the view holds only its `ocat` rows: no card, fieldset or heading markup.
 
 ### 5. Add the views
 

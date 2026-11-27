@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -16,12 +17,16 @@ internal sealed class SurveyScoringDisplayDriver : DisplayDriver<SurveyQuestion>
     private readonly SurveyDesignerContext _designer;
     private readonly ISurveyControlRegistry _registry;
 
+    internal readonly IStringLocalizer S;
+
     public SurveyScoringDisplayDriver(
         SurveyDesignerContext designer,
-        ISurveyControlRegistry registry)
+        ISurveyControlRegistry registry,
+        IStringLocalizer<SurveyScoringDisplayDriver> stringLocalizer)
     {
         _designer = designer;
         _registry = registry;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
@@ -31,46 +36,11 @@ internal sealed class SurveyScoringDisplayDriver : DisplayDriver<SurveyQuestion>
 
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyQuestion question, BuildEditorContext context)
-        => Initialize<SurveyScoringEditViewModel>("SurveyScoring_Edit", model =>
-        {
-            var scoring = question.Scoring ?? new SurveyQuestionScoring();
-            var descriptor = _registry.GetControl(question.ControlType);
-
-            model.Points = scoring.Points;
-            model.PartialCredit = scoring.PartialCredit;
-            model.PenaltyPerWrong = scoring.PenaltyPerWrong;
-            model.CategoryId = scoring.CategoryId;
-            model.KeyChoices = question.Choices.Select(choice => new SurveyChoiceKeyEditViewModel
-            {
-                Id = choice.Id,
-                Text = choice.Text ?? choice.Value,
-                Correct = scoring.CorrectChoiceIds.Contains(choice.Id),
-                Points = scoring.ChoicePoints.TryGetValue(choice.Id, out var points) ? points : null,
-                Feedback = scoring.ChoiceFeedback.GetValueOrDefault(choice.Id),
-            }).ToList();
-            model.AcceptedAnswers = string.Join(Environment.NewLine, scoring.AcceptedAnswers);
-            model.CaseSensitive = scoring.CaseSensitive;
-            model.NumberAnswer = scoring.NumberAnswer;
-            model.Tolerance = scoring.Tolerance;
-            model.HasChoices = question.Choices.Count > 0;
-            model.HasPairs = question.Rows.Count > 0 && question.Choices.Count > 0;
-            model.Pairs = question.Rows.Select(row => new SurveyPairEditViewModel
-            {
-                RowId = row.Id,
-                RowText = row.Text,
-                ChoiceId = scoring.Pairs.GetValueOrDefault(row.Id),
-            }).ToList();
-            model.PairChoices = question.Choices.Select(choice => new SelectListItem(choice.Text ?? choice.Value, choice.Id)).ToList();
-            model.GeneralFeedback = scoring.GeneralFeedback;
-            model.CorrectFeedback = scoring.CorrectFeedback;
-            model.IncorrectFeedback = scoring.IncorrectFeedback;
-            model.GraderGuidance = scoring.GraderGuidance;
-            model.ManuallyGraded = descriptor?.Has(SurveyControlCapabilities.ManuallyGraded) == true;
-            model.DefaultPoints = _designer.Definition?.Scoring?.DefaultPoints ?? 1;
-            model.Categories = (_designer.Definition?.ScoreCategories ?? [])
-                .Select(category => new SelectListItem(category.Title ?? category.Name, category.Id, category.Id == scoring.CategoryId))
-                .ToList();
-        }).Location("Content:8");
+        => Combine(
+            Initialize<SurveyScoringEditViewModel>("SurveyScoring_Edit", model => Populate(question, model))
+                .Location(l => l.Zone("Content", "8").Card(S["Scoring"], "80")),
+            Initialize<SurveyScoringEditViewModel>("SurveyScoringFeedback_Edit", model => Populate(question, model))
+                .Location(l => l.Zone("Content", "9").Card(S["Feedback"], "85")));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyQuestion question, UpdateEditorContext context)
@@ -105,4 +75,45 @@ internal sealed class SurveyScoringDisplayDriver : DisplayDriver<SurveyQuestion>
 
     private static string Trim(string value)
         => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    private void Populate(SurveyQuestion question, SurveyScoringEditViewModel model)
+    {
+        var scoring = question.Scoring ?? new SurveyQuestionScoring();
+        var descriptor = _registry.GetControl(question.ControlType);
+
+        model.Points = scoring.Points;
+        model.PartialCredit = scoring.PartialCredit;
+        model.PenaltyPerWrong = scoring.PenaltyPerWrong;
+        model.CategoryId = scoring.CategoryId;
+        model.KeyChoices = question.Choices.Select(choice => new SurveyChoiceKeyEditViewModel
+        {
+            Id = choice.Id,
+            Text = choice.Text ?? choice.Value,
+            Correct = scoring.CorrectChoiceIds.Contains(choice.Id),
+            Points = scoring.ChoicePoints.TryGetValue(choice.Id, out var points) ? points : null,
+            Feedback = scoring.ChoiceFeedback.GetValueOrDefault(choice.Id),
+        }).ToList();
+        model.AcceptedAnswers = string.Join(Environment.NewLine, scoring.AcceptedAnswers);
+        model.CaseSensitive = scoring.CaseSensitive;
+        model.NumberAnswer = scoring.NumberAnswer;
+        model.Tolerance = scoring.Tolerance;
+        model.HasChoices = question.Choices.Count > 0;
+        model.HasPairs = question.Rows.Count > 0 && question.Choices.Count > 0;
+        model.Pairs = question.Rows.Select(row => new SurveyPairEditViewModel
+        {
+            RowId = row.Id,
+            RowText = row.Text,
+            ChoiceId = scoring.Pairs.GetValueOrDefault(row.Id),
+        }).ToList();
+        model.PairChoices = question.Choices.Select(choice => new SelectListItem(choice.Text ?? choice.Value, choice.Id)).ToList();
+        model.GeneralFeedback = scoring.GeneralFeedback;
+        model.CorrectFeedback = scoring.CorrectFeedback;
+        model.IncorrectFeedback = scoring.IncorrectFeedback;
+        model.GraderGuidance = scoring.GraderGuidance;
+        model.ManuallyGraded = descriptor?.Has(SurveyControlCapabilities.ManuallyGraded) == true;
+        model.DefaultPoints = _designer.Definition?.Scoring?.DefaultPoints ?? 1;
+        model.Categories = (_designer.Definition?.ScoreCategories ?? [])
+            .Select(category => new SelectListItem(category.Title ?? category.Name, category.Id, category.Id == scoring.CategoryId))
+            .ToList();
+    }
 }

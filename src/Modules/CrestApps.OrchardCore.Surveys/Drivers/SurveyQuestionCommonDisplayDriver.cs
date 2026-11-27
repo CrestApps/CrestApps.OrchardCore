@@ -37,30 +37,11 @@ internal sealed class SurveyQuestionCommonDisplayDriver : DisplayDriver<SurveyQu
 
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyQuestion question, BuildEditorContext context)
-        => Initialize<SurveyQuestionCommonEditViewModel>("SurveyQuestionCommon_Edit", model =>
-        {
-            var definition = _designer.Definition;
-            var (page, pageIndex) = FindPage(definition, question.Id);
-            var descriptor = _registry.GetControl(question.ControlType);
-
-            model.Title = question.Title;
-            model.Name = question.Name;
-            model.Description = question.Description;
-            model.Placeholder = question.Placeholder;
-            model.Required = question.Required;
-            model.Pinned = question.Pinned;
-            model.VisibilityMode = question.Visibility?.Mode ?? VisibilityMode.Always;
-            model.VisibilityRule = SurveyRuleJson.Write(question.Visibility?.Rule);
-            model.VisibilityFormula = question.Visibility?.Formula;
-            model.RequiredWhen = SurveyRuleJson.Write(question.RequiredWhen);
-            model.EnabledWhen = SurveyRuleJson.Write(question.EnabledWhen);
-            model.PoolId = question.PoolId;
-            model.Answerable = descriptor?.Has(SurveyControlCapabilities.Answerable) ?? true;
-            model.Sources = SurveyRuleSources.Build(definition, _registry, pageIndex < 0 ? int.MaxValue : pageIndex, question.Id);
-            model.Pools = (page?.Pools ?? [])
-                .Select(pool => new SelectListItem(pool.Title ?? pool.Name, pool.Id, pool.Id == question.PoolId))
-                .ToList();
-        }).Location("Content:1");
+        => Combine(
+            Initialize<SurveyQuestionCommonEditViewModel>("SurveyQuestionCommon_Edit", model => Populate(question, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Question"], "10")),
+            Initialize<SurveyQuestionCommonEditViewModel>("SurveyQuestionLogic_Edit", model => Populate(question, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Logic"], "15")));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyQuestion question, UpdateEditorContext context)
@@ -112,5 +93,30 @@ internal sealed class SurveyQuestionCommonDisplayDriver : DisplayDriver<SurveyQu
         }
 
         return (null, -1);
+    }
+
+    private void Populate(SurveyQuestion question, SurveyQuestionCommonEditViewModel model)
+    {
+        var definition = _designer.Definition;
+        var (page, pageIndex) = FindPage(definition, question.Id);
+        var descriptor = _registry.GetControl(question.ControlType);
+
+        model.Title = question.Title;
+        model.Name = question.Name;
+        model.Description = question.Description;
+        model.Placeholder = question.Placeholder;
+        model.Required = question.Required;
+        model.Pinned = question.Pinned;
+        model.VisibilityMode = question.Visibility?.Mode ?? VisibilityMode.Always;
+        model.VisibilityRule = SurveyRuleJson.Write(question.Visibility?.Rule);
+        model.VisibilityFormula = question.Visibility?.Formula;
+        model.RequiredWhen = SurveyRuleJson.Write(question.RequiredWhen);
+        model.EnabledWhen = SurveyRuleJson.Write(question.EnabledWhen);
+        model.PoolId = question.PoolId;
+        model.Answerable = descriptor?.Has(SurveyControlCapabilities.Answerable) ?? true;
+        model.Sources = SurveyRuleSources.Build(definition, _registry, pageIndex < 0 ? int.MaxValue : pageIndex, question.Id);
+        model.Pools = (page?.Pools ?? [])
+            .Select(pool => new SelectListItem(pool.Title ?? pool.Name, pool.Id, pool.Id == question.PoolId))
+            .ToList();
     }
 }

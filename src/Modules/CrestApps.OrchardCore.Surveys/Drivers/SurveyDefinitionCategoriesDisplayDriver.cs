@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -12,13 +13,20 @@ namespace CrestApps.OrchardCore.Surveys.Drivers;
 /// </summary>
 internal sealed class SurveyDefinitionCategoriesDisplayDriver : DisplayDriver<SurveyDefinition>
 {
+    internal readonly IStringLocalizer S;
+
+    public SurveyDefinitionCategoriesDisplayDriver(IStringLocalizer<SurveyDefinitionCategoriesDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyDefinition definition, BuildEditorContext context)
-        => Initialize<SurveyCategoriesEditViewModel>("SurveyDefinitionCategories_Edit", model =>
-        {
-            model.Categories = definition.ScoreCategories.ToList();
-            model.Bands = definition.ScoreBands.OrderByDescending(band => band.MinPercent).ToList();
-        }).Location("Content:1#Scoring;2");
+        => Combine(
+            Initialize<SurveyCategoriesEditViewModel>("SurveyDefinitionCategories_Edit", model => Populate(definition, model))
+                .Location(l => l.Zone("Content", "4").Tab(S["Scoring"], "2").Card(S["Score Categories"], "40")),
+            Initialize<SurveyCategoriesEditViewModel>("SurveyDefinitionBands_Edit", model => Populate(definition, model))
+                .Location(l => l.Zone("Content", "5").Tab(S["Scoring"], "2").Card(S["Score Bands"], "50")));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)
@@ -50,5 +58,11 @@ internal sealed class SurveyDefinitionCategoriesDisplayDriver : DisplayDriver<Su
             .ToList();
 
         return Edit(definition, context);
+    }
+
+    private static void Populate(SurveyDefinition definition, SurveyCategoriesEditViewModel model)
+    {
+        model.Categories = definition.ScoreCategories.ToList();
+        model.Bands = definition.ScoreBands.OrderByDescending(band => band.MinPercent).ToList();
     }
 }

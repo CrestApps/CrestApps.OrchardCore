@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.ViewModels;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -18,9 +19,14 @@ internal sealed class SurveyCourseGradeDisplayDriver : DisplayDriver<Survey>
 {
     private readonly ILearningSurveyService _learningSurveys;
 
-    public SurveyCourseGradeDisplayDriver(ILearningSurveyService learningSurveys)
+    internal readonly IStringLocalizer S;
+
+    public SurveyCourseGradeDisplayDriver(
+        ILearningSurveyService learningSurveys,
+        IStringLocalizer<SurveyCourseGradeDisplayDriver> stringLocalizer)
     {
         _learningSurveys = learningSurveys;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
@@ -32,12 +38,13 @@ internal sealed class SurveyCourseGradeDisplayDriver : DisplayDriver<Survey>
             return null;
         }
 
+        // The warning sits at the top of the Anonymity card of the Surveys module, beside the choice it is about.
         return Initialize<SurveyCourseGradeViewModel>("SurveyCourseGrade_Edit", async model =>
         {
             var item = await _learningSurveys.FindLatestOwnerItemAsync(survey);
 
             model.Gradable = item?.TryGet<CourseItemPart>(out var part) == true && part.Gradable;
             model.Anonymous = survey.Access?.Anonymity == AnonymityMode.Anonymous;
-        }).Location("Content:4").OnGroup(SurveysConstants.AccessEditorGroupId);
+        }).Location(l => l.Zone("Content", "4").Card(S["Anonymity"], "30")).OnGroup(SurveysConstants.AccessEditorGroupId);
     }
 }

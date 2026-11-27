@@ -2,151 +2,125 @@
 @using CrestApps.OrchardCore.Surveys.ViewModels
 @model SurveyScoringEditViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Scoring"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Points" class="ocat-label">@T["Points"]</label>
-            <div class="ocat-end">
-                <input asp-for="Points" type="number" step="any" min="0" class="form-control" placeholder="@Model.DefaultPoints.ToString(CultureInfo.InvariantCulture)" />
-                <span class="hint">@T["Leave it empty for the survey's default; 0 leaves the question unscored."]</span>
-            </div>
-        </div>
-        @if (Model.Categories.Count > 0)
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="CategoryId" class="ocat-label">@T["Score category"]</label>
-                <div class="ocat-end">
-                    <select asp-for="CategoryId" class="form-select">
-                        <option value="">@T["None"]</option>
-                        @foreach (var category in Model.Categories)
-                        {
-                            <option value="@category.Value" selected="@category.Selected">@category.Text</option>
-                        }
-                    </select>
-                </div>
-            </div>
-        }
-        @if (Model.ManuallyGraded)
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="GraderGuidance" class="ocat-label">@T["Guidance for graders"]</label>
-                <div class="ocat-end">
-                    <textarea asp-for="GraderGuidance" class="form-control" rows="3"></textarea>
-                    <span class="hint">@T["A grader scores this question. Respondents never see this guidance."]</span>
-                </div>
-            </div>
-        }
-        else
-        {
-            <div class="ocat-wrapper">
-                <div class="ocat-end-offset">
-                    <div class="form-check">
-                        <input asp-for="PartialCredit" type="checkbox" class="form-check-input" />
-                        <label asp-for="PartialCredit" class="form-check-label">@T["Give part of the points for partly right answers"]</label>
-                    </div>
-                </div>
-            </div>
-            <div class="ocat-wrapper">
-                <label asp-for="PenaltyPerWrong" class="ocat-label">@T["Penalty for each wrong choice"]</label>
-                <div class="ocat-end">
-                    <input asp-for="PenaltyPerWrong" type="number" step="any" min="0" class="form-control" />
-                    <span class="hint">@T["Used when the survey takes points away for wrong answers."]</span>
-                </div>
-            </div>
-            @if (Model.HasChoices && !Model.HasPairs)
-            {
-                <div class="ocat-wrapper">
-                    <label class="ocat-label">@T["Right answers"]</label>
-                    <div class="ocat-end">
-                        @for (var i = 0; i < Model.KeyChoices.Count; i++)
-                        {
-                            <div class="input-group input-group-sm mb-1">
-                                <input type="hidden" asp-for="KeyChoices[i].Id" />
-                                <span class="input-group-text">
-                                    <input asp-for="KeyChoices[i].Correct" type="checkbox" class="form-check-input mt-0" aria-label="@T["Right answer"]" />
-                                </span>
-                                <span class="input-group-text flex-grow-1 text-start text-truncate">@Model.KeyChoices[i].Text</span>
-                                <input asp-for="KeyChoices[i].Points" type="number" step="any" class="form-control flex-grow-0 w-25" placeholder="@T["Points"]" aria-label="@T["Points of this choice"]" />
-                                <input asp-for="KeyChoices[i].Feedback" class="form-control" placeholder="@T["Feedback"]" aria-label="@T["Feedback of this choice"]" />
-                            </div>
-                        }
-                        <span class="hint">@T["Tick the right choices, or give each choice its own points (points may be negative)."]</span>
-                    </div>
-                </div>
-            }
-            @if (Model.HasPairs)
-            {
-                <div class="ocat-wrapper">
-                    <label class="ocat-label">@T["Right pairs"]</label>
-                    <div class="ocat-end">
-                        @for (var i = 0; i < Model.Pairs.Count; i++)
-                        {
-                            <div class="input-group input-group-sm mb-1">
-                                <input type="hidden" asp-for="Pairs[i].RowId" />
-                                <span class="input-group-text flex-grow-1 text-start text-truncate">@Model.Pairs[i].RowText</span>
-                                <select asp-for="Pairs[i].ChoiceId" class="form-select" aria-label="@T["Right answer"]">
-                                    <option value="">@T["Pick the answer"]</option>
-                                    @foreach (var choice in Model.PairChoices)
-                                    {
-                                        <option value="@choice.Value" selected="@(choice.Value == Model.Pairs[i].ChoiceId)">@choice.Text</option>
-                                    }
-                                </select>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-            @if (!Model.HasChoices)
-            {
-                <div class="ocat-wrapper">
-                    <label asp-for="AcceptedAnswers" class="ocat-label">@T["Accepted answers"]</label>
-                    <div class="ocat-end">
-                        <textarea asp-for="AcceptedAnswers" class="form-control" rows="2"></textarea>
-                        <span class="hint">@T["One per line, for text answers."]</span>
-                    </div>
-                </div>
-                <div class="ocat-wrapper">
-                    <div class="ocat-end-offset">
-                        <div class="form-check">
-                            <input asp-for="CaseSensitive" type="checkbox" class="form-check-input" />
-                            <label asp-for="CaseSensitive" class="form-check-label">@T["Compare with case"]</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="ocat-wrapper">
-                    <label asp-for="NumberAnswer" class="ocat-label">@T["Right number"]</label>
-                    <div class="ocat-end">
-                        <div class="input-group">
-                            <input asp-for="NumberAnswer" type="number" step="any" class="form-control" />
-                            <span class="input-group-text">±</span>
-                            <input asp-for="Tolerance" type="number" step="any" min="0" class="form-control" aria-label="@T["Tolerance"]" />
-                        </div>
-                        <span class="hint">@T["For number answers, with how far an answer may be."]</span>
-                    </div>
-                </div>
-            }
-        }
+<div class="ocat-wrapper">
+    <label asp-for="Points" class="ocat-label">@T["Points"]</label>
+    <div class="ocat-end">
+        <input asp-for="Points" type="number" step="any" min="0" class="form-control" placeholder="@Model.DefaultPoints.ToString(CultureInfo.InvariantCulture)" />
+        <span class="hint">@T["Leave it empty for the survey's default; 0 leaves the question unscored."]</span>
     </div>
 </div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Feedback"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="CorrectFeedback" class="ocat-label">@T["When right"]</label>
-            <div class="ocat-end"><textarea asp-for="CorrectFeedback" class="form-control" rows="1"></textarea></div>
+@if (Model.Categories.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="CategoryId" class="ocat-label">@T["Score category"]</label>
+        <div class="ocat-end">
+            <select asp-for="CategoryId" class="form-select">
+                <option value="">@T["None"]</option>
+                @foreach (var category in Model.Categories)
+                {
+                    <option value="@category.Value" selected="@category.Selected">@category.Text</option>
+                }
+            </select>
         </div>
-        <div class="ocat-wrapper">
-            <label asp-for="IncorrectFeedback" class="ocat-label">@T["When wrong"]</label>
-            <div class="ocat-end"><textarea asp-for="IncorrectFeedback" class="form-control" rows="1"></textarea></div>
+    </div>
+}
+@if (Model.ManuallyGraded)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="GraderGuidance" class="ocat-label">@T["Guidance for graders"]</label>
+        <div class="ocat-end">
+            <textarea asp-for="GraderGuidance" class="form-control" rows="3"></textarea>
+            <span class="hint">@T["A grader scores this question. Respondents never see this guidance."]</span>
         </div>
-        <div class="ocat-wrapper">
-            <label asp-for="GeneralFeedback" class="ocat-label">@T["For any answer"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="GeneralFeedback" class="form-control" rows="1"></textarea>
-                <span class="hint">@T["Respondents see feedback only when the review settings allow it."]</span>
+    </div>
+}
+else
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <div class="form-check">
+                <input asp-for="PartialCredit" type="checkbox" class="form-check-input" />
+                <label asp-for="PartialCredit" class="form-check-label">@T["Give part of the points for partly right answers"]</label>
             </div>
         </div>
     </div>
-</div>
+    <div class="ocat-wrapper">
+        <label asp-for="PenaltyPerWrong" class="ocat-label">@T["Penalty for each wrong choice"]</label>
+        <div class="ocat-end">
+            <input asp-for="PenaltyPerWrong" type="number" step="any" min="0" class="form-control" />
+            <span class="hint">@T["Used when the survey takes points away for wrong answers."]</span>
+        </div>
+    </div>
+    @if (Model.HasChoices && !Model.HasPairs)
+    {
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Right answers"]</label>
+            <div class="ocat-end">
+                @for (var i = 0; i < Model.KeyChoices.Count; i++)
+                {
+                    <div class="input-group input-group-sm mb-1">
+                        <input type="hidden" asp-for="KeyChoices[i].Id" />
+                        <span class="input-group-text">
+                            <input asp-for="KeyChoices[i].Correct" type="checkbox" class="form-check-input mt-0" aria-label="@T["Right answer"]" />
+                        </span>
+                        <span class="input-group-text flex-grow-1 text-start text-truncate">@Model.KeyChoices[i].Text</span>
+                        <input asp-for="KeyChoices[i].Points" type="number" step="any" class="form-control flex-grow-0 w-25" placeholder="@T["Points"]" aria-label="@T["Points of this choice"]" />
+                        <input asp-for="KeyChoices[i].Feedback" class="form-control" placeholder="@T["Feedback"]" aria-label="@T["Feedback of this choice"]" />
+                    </div>
+                }
+                <span class="hint">@T["Tick the right choices, or give each choice its own points (points may be negative)."]</span>
+            </div>
+        </div>
+    }
+    @if (Model.HasPairs)
+    {
+        <div class="ocat-wrapper">
+            <label class="ocat-label">@T["Right pairs"]</label>
+            <div class="ocat-end">
+                @for (var i = 0; i < Model.Pairs.Count; i++)
+                {
+                    <div class="input-group input-group-sm mb-1">
+                        <input type="hidden" asp-for="Pairs[i].RowId" />
+                        <span class="input-group-text flex-grow-1 text-start text-truncate">@Model.Pairs[i].RowText</span>
+                        <select asp-for="Pairs[i].ChoiceId" class="form-select" aria-label="@T["Right answer"]">
+                            <option value="">@T["Pick the answer"]</option>
+                            @foreach (var choice in Model.PairChoices)
+                            {
+                                <option value="@choice.Value" selected="@(choice.Value == Model.Pairs[i].ChoiceId)">@choice.Text</option>
+                            }
+                        </select>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    @if (!Model.HasChoices)
+    {
+        <div class="ocat-wrapper">
+            <label asp-for="AcceptedAnswers" class="ocat-label">@T["Accepted answers"]</label>
+            <div class="ocat-end">
+                <textarea asp-for="AcceptedAnswers" class="form-control" rows="2"></textarea>
+                <span class="hint">@T["One per line, for text answers."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <div class="form-check">
+                    <input asp-for="CaseSensitive" type="checkbox" class="form-check-input" />
+                    <label asp-for="CaseSensitive" class="form-check-label">@T["Compare with case"]</label>
+                </div>
+            </div>
+        </div>
+        <div class="ocat-wrapper">
+            <label asp-for="NumberAnswer" class="ocat-label">@T["Right number"]</label>
+            <div class="ocat-end">
+                <div class="input-group">
+                    <input asp-for="NumberAnswer" type="number" step="any" class="form-control" />
+                    <span class="input-group-text">±</span>
+                    <input asp-for="Tolerance" type="number" step="any" min="0" class="form-control" aria-label="@T["Tolerance"]" />
+                </div>
+                <span class="hint">@T["For number answers, with how far an answer may be."]</span>
+            </div>
+        </div>
+    }
+}

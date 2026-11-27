@@ -1,24 +1,19 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Ranking.RankingSettings>
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Ranking settings"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Settings.MaxRanked" class="ocat-label">@T["Items to rank"]</label>
-            <div class="ocat-end">
-                <input asp-for="Settings.MaxRanked" class="form-control" type="number" min="1" />
-                <span class="hint">@T["Empty to rank them all."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Settings.MaxRanked" class="ocat-label">@T["Items to rank"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.MaxRanked" class="form-control" type="number" min="1" />
+        <span class="hint">@T["Empty to rank them all."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="Settings.Display" class="ocat-label">@T["Answer with"]</label>
-            <div class="ocat-end">
-                <select asp-for="Settings.Display" class="form-select">
-                    <option value="DragList">@T["A list with move buttons"]</option>
-                    <option value="Selects">@T["A rank for each item"]</option>
-                </select>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Display" class="ocat-label">@T["Answer with"]</label>
+    <div class="ocat-end">
+        <select asp-for="Settings.Display" class="form-select">
+            <option value="DragList">@T["A list with move buttons"]</option>
+            <option value="Selects">@T["A rank for each item"]</option>
+        </select>
     </div>
 </div>

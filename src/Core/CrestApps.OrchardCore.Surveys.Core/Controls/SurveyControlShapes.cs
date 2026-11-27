@@ -16,6 +16,12 @@ public static class SurveyControlShapes
     public const string Settings = "SurveyControlSettings";
 
     /// <summary>
+    /// The position of the card that holds a question type's settings in the question editor: after the cards every
+    /// question has (question, logic, choices, rows, validation and scoring).
+    /// </summary>
+    public const string SettingsCardPosition = "90";
+
+    /// <summary>
     /// The display type respondents answer in.
     /// </summary>
     public const string Respond = "Respond";

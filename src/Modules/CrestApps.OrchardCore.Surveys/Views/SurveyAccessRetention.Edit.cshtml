@@ -1,0 +1,22 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyAccessEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="RetentionDays" class="ocat-label">@T["Keep responses for"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="RetentionDays" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["days"]</span>
+        </div>
+        <span class="hint">@T["Leave it empty to keep responses."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="RetentionAction" class="ocat-label">@T["Then"]</label>
+    <div class="ocat-end">
+        <select asp-for="RetentionAction" class="form-select">
+            <option value="@RetentionAction.Delete">@T["Delete them"]</option>
+            <option value="@RetentionAction.Anonymize">@T["Remove who responded and keep the answers"]</option>
+        </select>
+    </div>
+</div>

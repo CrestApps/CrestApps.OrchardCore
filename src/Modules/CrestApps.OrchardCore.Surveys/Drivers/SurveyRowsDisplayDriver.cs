@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -16,9 +17,14 @@ internal sealed class SurveyRowsDisplayDriver : DisplayDriver<SurveyQuestion>
 {
     private readonly ISurveyControlRegistry _registry;
 
-    public SurveyRowsDisplayDriver(ISurveyControlRegistry registry)
+    internal readonly IStringLocalizer S;
+
+    public SurveyRowsDisplayDriver(
+        ISurveyControlRegistry registry,
+        IStringLocalizer<SurveyRowsDisplayDriver> stringLocalizer)
     {
         _registry = registry;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
@@ -27,7 +33,8 @@ internal sealed class SurveyRowsDisplayDriver : DisplayDriver<SurveyQuestion>
 
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyQuestion question, BuildEditorContext context)
-        => Initialize<SurveyRowsEditViewModel>("SurveyRows_Edit", model => model.Rows = question.Rows.ToList()).Location("Content:3");
+        => Initialize<SurveyRowsEditViewModel>("SurveyRows_Edit", model => model.Rows = question.Rows.ToList())
+            .Location(l => l.Zone("Content", "3").Card(S["Rows"], "30"));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyQuestion question, UpdateEditorContext context)

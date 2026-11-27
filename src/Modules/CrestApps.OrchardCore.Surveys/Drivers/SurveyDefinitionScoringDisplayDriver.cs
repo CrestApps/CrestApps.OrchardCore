@@ -22,18 +22,13 @@ internal sealed class SurveyDefinitionScoringDisplayDriver : DisplayDriver<Surve
 
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyDefinition definition, BuildEditorContext context)
-        => Initialize<SurveyDefinitionScoringEditViewModel>("SurveyDefinitionScoring_Edit", model =>
-        {
-            var review = definition.Review ?? new SurveyReviewSettings();
-
-            model.Scoring = definition.Scoring ?? new SurveyScoringSettings();
-            model.Timing = definition.Timing ?? new SurveyTimingSettings();
-            model.ResultsVisibility = review.ResultsVisibility;
-            model.ReviewDuring = Flags(review.During);
-            model.ReviewImmediatelyAfter = Flags(review.ImmediatelyAfter);
-            model.ReviewLaterWhileOpen = Flags(review.LaterWhileOpen);
-            model.ReviewAfterClose = Flags(review.AfterClose);
-        }).Location("Content:1#Scoring;2");
+        => Combine(
+            Initialize<SurveyDefinitionScoringEditViewModel>("SurveyDefinitionScoring_Edit", model => Populate(definition, model))
+                .Location(l => l.Zone("Content", "1").Tab(S["Scoring"], "2").Card(S["Scoring"], "10")),
+            Initialize<SurveyDefinitionScoringEditViewModel>("SurveyDefinitionReview_Edit", model => Populate(definition, model))
+                .Location(l => l.Zone("Content", "2").Tab(S["Scoring"], "2").Card(S["What Respondents See"], "20")),
+            Initialize<SurveyDefinitionScoringEditViewModel>("SurveyDefinitionTimeLimit_Edit", model => Populate(definition, model))
+                .Location(l => l.Zone("Content", "3").Tab(S["Scoring"], "2").Card(S["Time Limit"], "30")));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)
@@ -55,10 +50,10 @@ internal sealed class SurveyDefinitionScoringDisplayDriver : DisplayDriver<Surve
         definition.Review = new SurveyReviewSettings
         {
             ResultsVisibility = model.ResultsVisibility,
-            During = Combine(model.ReviewDuring),
-            ImmediatelyAfter = Combine(model.ReviewImmediatelyAfter),
-            LaterWhileOpen = Combine(model.ReviewLaterWhileOpen),
-            AfterClose = Combine(model.ReviewAfterClose),
+            During = CombineFlags(model.ReviewDuring),
+            ImmediatelyAfter = CombineFlags(model.ReviewImmediatelyAfter),
+            LaterWhileOpen = CombineFlags(model.ReviewLaterWhileOpen),
+            AfterClose = CombineFlags(model.ReviewAfterClose),
         };
 
         return Edit(definition, context);
@@ -71,6 +66,19 @@ internal sealed class SurveyDefinitionScoringDisplayDriver : DisplayDriver<Surve
                 .Where(flag => value.HasFlag(flag)),
         ];
 
-    private static ReviewShows Combine(IEnumerable<ReviewShows> flags)
+    private static ReviewShows CombineFlags(IEnumerable<ReviewShows> flags)
         => (flags ?? []).Aggregate(ReviewShows.None, (total, flag) => total | flag);
+
+    private static void Populate(SurveyDefinition definition, SurveyDefinitionScoringEditViewModel model)
+    {
+        var review = definition.Review ?? new SurveyReviewSettings();
+
+        model.Scoring = definition.Scoring ?? new SurveyScoringSettings();
+        model.Timing = definition.Timing ?? new SurveyTimingSettings();
+        model.ResultsVisibility = review.ResultsVisibility;
+        model.ReviewDuring = Flags(review.During);
+        model.ReviewImmediatelyAfter = Flags(review.ImmediatelyAfter);
+        model.ReviewLaterWhileOpen = Flags(review.LaterWhileOpen);
+        model.ReviewAfterClose = Flags(review.AfterClose);
+    }
 }

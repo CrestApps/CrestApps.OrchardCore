@@ -1,22 +1,17 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.TextBlock.TextBlockSettings>
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Text block settings"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Settings.Html" class="ocat-label">@T["Text"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="Settings.Html" class="form-control" rows="5"></textarea>
-                <span class="hint">@T["HTML is cleaned when it is saved."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Html" class="ocat-label">@T["Text"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Settings.Html" class="form-control" rows="5"></textarea>
+        <span class="hint">@T["HTML is cleaned when it is saved."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="Settings.ImageUrl" class="ocat-label">@T["Image"]</label>
-            <div class="ocat-end">
-                <input asp-for="Settings.ImageUrl" class="form-control" type="text" />
-                <span class="hint">@T["The address of an image shown above the text, such as a media library path."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Settings.ImageUrl" class="ocat-label">@T["Image"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.ImageUrl" class="form-control" type="text" />
+        <span class="hint">@T["The address of an image shown above the text, such as a media library path."]</span>
     </div>
 </div>

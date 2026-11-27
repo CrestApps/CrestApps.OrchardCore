@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyAccessEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Anonymity" class="ocat-label">@T["Responses"]</label>
+    <div class="ocat-end">
+        <select asp-for="Anonymity" class="form-select">
+            <option value="@AnonymityMode.Identified">@T["Identified: record who responded"]</option>
+            <option value="@AnonymityMode.Anonymous">@T["Anonymous: record nobody"]</option>
+        </select>
+        <span class="hint">@(Model.AnonymityLocked ? T["This survey has responses, so its anonymity can't change any more."] : T["Choose before the first response: anonymity can't change once the survey has responses."])</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="CollectIpAddress" class="ocat-label">@T["IP address"]</label>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="CollectIpAddress" type="checkbox" class="form-check-input" />
+            <label asp-for="CollectIpAddress" class="form-check-label">@T["Record the IP address of identified responses"]</label>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="MinimumGroupSize" class="ocat-label">@T["Minimum group size"]</label>
+    <div class="ocat-end">
+        <input asp-for="MinimumGroupSize" type="number" min="@Model.MinimumGroupSizeFloor" class="form-control" />
+        <span class="hint">@T["Reports, lists and exports of an anonymous survey hide any group with fewer responses. The site allows no less than {0}.", Model.MinimumGroupSizeFloor]</span>
+    </div>
+</div>
+@if (Model.SecretUnreadable)
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Anonymity secret"]</span>
+        <div class="ocat-end">
+            <div class="alert alert-danger mb-2" role="alert">
+                @T["This server can't read the survey's anonymity secret, because the Data Protection keys that protected it are missing (keys that aren't kept, servers that don't share keys, or a database restored on another server). Respondents can't start the survey and invitations can't be sent until the keys come back."]
+            </div>
+            <a href="@Url.Action("ResetAnonymitySecret", "Surveys", new { area = SurveysConstants.Features.Surveys, id = Model.SurveyId })"
+               class="btn btn-sm btn-danger"
+               data-url-af="RemoveUrl UnsafeUrl"
+               data-title="@T["Reset the anonymity secret"]"
+               data-message="@T["Restore the Data Protection keys instead if you can. A new secret starts every per-person limit over, and every invitation link already sent stops working, so the invitations must be sent again. This can't be undone."]"
+               data-ok-text="@T["Reset"]">@T["Reset the anonymity secret"]</a>
+            <span class="hint">@T["On a web farm whose servers don't share their Data Protection keys, a reset only moves the failure: the new secret is protected with this server's keys, so the other servers can't read it. Share the keys across servers (Azure Blob Storage or Redis, for example) before you reset."]</span>
+        </div>
+    </div>
+}

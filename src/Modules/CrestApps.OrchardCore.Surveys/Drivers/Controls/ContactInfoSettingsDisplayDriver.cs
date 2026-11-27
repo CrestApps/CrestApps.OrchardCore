@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Controls.ContactInfo;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -27,6 +28,17 @@ public sealed class ContactInfoSettingsDisplayDriver : DisplayDriver<SurveyQuest
     /// </summary>
     public const string ModeRequired = "required";
 
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ContactInfoSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The localizer.</param>
+    public ContactInfoSettingsDisplayDriver(IStringLocalizer<ContactInfoSettingsDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc />
     public override bool CanHandleModel(SurveyQuestion model)
         => model is not null && string.Equals(model.ControlType, SurveyControlNames.ContactInfo, StringComparison.OrdinalIgnoreCase);
@@ -50,7 +62,7 @@ public sealed class ContactInfoSettingsDisplayDriver : DisplayDriver<SurveyQuest
                     };
                 })
                 .ToList();
-        }).Location("Content:20");
+        }).Location(l => l.Zone("Content", "20").Card(S["Contact Information Settings"], SurveyControlShapes.SettingsCardPosition));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyQuestion model, UpdateEditorContext context)

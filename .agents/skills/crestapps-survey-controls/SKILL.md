@@ -124,8 +124,9 @@ A Respond template:
 - names inputs `q.{id}`, `q.{id}.{rowId}`, `q.{id}.other`;
 - works without JavaScript (plain form post; the form is multipart for files).
 
-The settings editor model is `SurveyControlSettingsViewModel<TSettings>`; put the fields in an `ocat` card like the
-built-in editors.
+The settings editor model is `SurveyControlSettingsViewModel<TSettings>`. The driver passes its localizer to the base
+constructor and names its card with `CardName` (`S["Thumbs Settings"]`); the base places the shape in that card, so the
+view holds only its `ocat` rows, with no card or fieldset markup.
 
 ## Client scripts
 

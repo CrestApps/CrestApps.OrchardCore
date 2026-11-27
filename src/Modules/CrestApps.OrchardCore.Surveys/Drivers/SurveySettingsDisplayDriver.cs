@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -17,17 +18,22 @@ public sealed class SurveySettingsDisplayDriver : SiteDisplayDriver<SurveySettin
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveySettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="stringLocalizer">The localizer.</param>
     public SurveySettingsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer<SurveySettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
@@ -36,18 +42,15 @@ public sealed class SurveySettingsDisplayDriver : SiteDisplayDriver<SurveySettin
 
     /// <inheritdoc />
     public override IDisplayResult Edit(ISite site, SurveySettings settings, BuildEditorContext context)
-        => Initialize<SurveySettingsViewModel>("SurveySettings_Edit", model =>
-        {
-            model.DefaultRetentionDays = settings.DefaultRetentionDays;
-            model.DefaultIncompleteExpiryHours = settings.DefaultIncompleteExpiryHours;
-            model.MaxUploadMegabytes = settings.MaxUploadMegabytes;
-            model.AllowedRedirectHosts = string.Join(Environment.NewLine, settings.AllowedRedirectHosts ?? []);
-            model.DefaultMinimumGroupSize = settings.DefaultMinimumGroupSize;
-            model.MinimumGroupSizeFloor = settings.MinimumGroupSizeFloor;
-            model.InvitationEmailsPerDay = settings.InvitationEmailsPerDay;
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, SurveysPermissions.ManageSurveySettings))
-        .OnGroup(SettingsGroupId);
+        => Combine(
+            Initialize<SurveySettingsViewModel>("SurveySettings_Edit", model => Populate(settings, model))
+                .Location(l => l.Zone("Content", "1").Card(S["New Surveys"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, SurveysPermissions.ManageSurveySettings))
+                .OnGroup(SettingsGroupId),
+            Initialize<SurveySettingsViewModel>("SurveySettingsResponding_Edit", model => Populate(settings, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Responding"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, SurveysPermissions.ManageSurveySettings))
+                .OnGroup(SettingsGroupId));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(ISite site, SurveySettings settings, UpdateEditorContext context)
@@ -74,5 +77,16 @@ public sealed class SurveySettingsDisplayDriver : SiteDisplayDriver<SurveySettin
             .ToList();
 
         return Edit(site, settings, context);
+    }
+
+    private static void Populate(SurveySettings settings, SurveySettingsViewModel model)
+    {
+        model.DefaultRetentionDays = settings.DefaultRetentionDays;
+        model.DefaultIncompleteExpiryHours = settings.DefaultIncompleteExpiryHours;
+        model.MaxUploadMegabytes = settings.MaxUploadMegabytes;
+        model.AllowedRedirectHosts = string.Join(Environment.NewLine, settings.AllowedRedirectHosts ?? []);
+        model.DefaultMinimumGroupSize = settings.DefaultMinimumGroupSize;
+        model.MinimumGroupSizeFloor = settings.MinimumGroupSizeFloor;
+        model.InvitationEmailsPerDay = settings.InvitationEmailsPerDay;
     }
 }

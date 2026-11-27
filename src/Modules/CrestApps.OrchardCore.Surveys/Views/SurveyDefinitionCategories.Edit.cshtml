@@ -1,68 +1,30 @@
-@using System.Globalization
 @using CrestApps.OrchardCore.Surveys.ViewModels
 @model SurveyCategoriesEditViewModel
 
 @{
     var categories = Html.NameFor(m => m.Categories).ToString();
-    var bands = Html.NameFor(m => m.Bands).ToString();
 }
 
-<div class="card mb-3">
-    <div class="card-header">@T["Score categories"]</div>
-    <div class="card-body" data-repeater data-repeater-prefix="@categories">
-        <p class="hint">@T["Questions can add their points to a category, such as a skill, to score each part apart."]</p>
-        <div data-repeater-items>
-            @for (var i = 0; i < Model.Categories.Count; i++)
-            {
-                <div class="input-group mb-2" data-repeater-item>
-                    <input type="hidden" name="@(categories)[@i].Id" value="@Model.Categories[i].Id" />
-                    <input name="@(categories)[@i].Title" value="@Model.Categories[i].Title" class="form-control" placeholder="@T["Name"]" aria-label="@T["Name"]" />
-                    <input name="@(categories)[@i].Name" value="@Model.Categories[i].Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
-                    <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-                </div>
-            }
-        </div>
-        <template data-repeater-template>
+<div data-repeater data-repeater-prefix="@categories">
+    <p class="hint">@T["Questions can add their points to a category, such as a skill, to score each part apart."]</p>
+    <div data-repeater-items>
+        @for (var i = 0; i < Model.Categories.Count; i++)
+        {
             <div class="input-group mb-2" data-repeater-item>
-                <input type="hidden" name="@(categories)[__index__].Id" value="" />
-                <input name="@(categories)[__index__].Title" class="form-control" placeholder="@T["Name"]" aria-label="@T["Name"]" />
-                <input name="@(categories)[__index__].Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+                <input type="hidden" name="@(categories)[@i].Id" value="@Model.Categories[i].Id" />
+                <input name="@(categories)[@i].Title" value="@Model.Categories[i].Title" class="form-control" placeholder="@T["Name"]" aria-label="@T["Name"]" />
+                <input name="@(categories)[@i].Name" value="@Model.Categories[i].Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
                 <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
             </div>
-        </template>
-        <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add category"]</button>
+        }
     </div>
-</div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Score bands"]</div>
-    <div class="card-body" data-repeater data-repeater-prefix="@bands">
-        <p class="hint">@T["A band gives a result message to responses from a percent up, such as Excellent from 90%."]</p>
-        <div data-repeater-items>
-            @for (var i = 0; i < Model.Bands.Count; i++)
-            {
-                var band = Model.Bands[i];
-
-                <div class="input-group mb-2" data-repeater-item>
-                    <input type="hidden" name="@(bands)[@i].Id" value="@band.Id" />
-                    <input name="@(bands)[@i].MinPercent" value="@band.MinPercent.ToString(CultureInfo.InvariantCulture)" type="number" step="any" min="0" max="100" class="form-control flex-grow-0 w-25" aria-label="@T["From percent"]" />
-                    <span class="input-group-text">%</span>
-                    <input name="@(bands)[@i].Label" value="@band.Label" class="form-control" placeholder="@T["Label"]" aria-label="@T["Label"]" />
-                    <input name="@(bands)[@i].Message" value="@band.Message" class="form-control" placeholder="@T["Message"]" aria-label="@T["Message"]" />
-                    <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-                </div>
-            }
+    <template data-repeater-template>
+        <div class="input-group mb-2" data-repeater-item>
+            <input type="hidden" name="@(categories)[__index__].Id" value="" />
+            <input name="@(categories)[__index__].Title" class="form-control" placeholder="@T["Name"]" aria-label="@T["Name"]" />
+            <input name="@(categories)[__index__].Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+            <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
         </div>
-        <template data-repeater-template>
-            <div class="input-group mb-2" data-repeater-item>
-                <input type="hidden" name="@(bands)[__index__].Id" value="" />
-                <input name="@(bands)[__index__].MinPercent" value="0" type="number" step="any" min="0" max="100" class="form-control flex-grow-0 w-25" aria-label="@T["From percent"]" />
-                <span class="input-group-text">%</span>
-                <input name="@(bands)[__index__].Label" class="form-control" placeholder="@T["Label"]" aria-label="@T["Label"]" />
-                <input name="@(bands)[__index__].Message" class="form-control" placeholder="@T["Message"]" aria-label="@T["Message"]" />
-                <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-            </div>
-        </template>
-        <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add band"]</button>
-    </div>
+    </template>
+    <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add category"]</button>
 </div>

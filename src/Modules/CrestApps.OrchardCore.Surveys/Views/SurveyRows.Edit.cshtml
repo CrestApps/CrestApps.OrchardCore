@@ -5,33 +5,30 @@
     var prefix = Html.NameFor(m => m.Rows).ToString();
 }
 
-<div class="card mb-3">
-    <div class="card-header">@T["Rows"]</div>
-    <div class="card-body" data-repeater data-repeater-prefix="@prefix">
-        <div data-repeater-items data-repeater-sortable>
-            @for (var i = 0; i < Model.Rows.Count; i++)
-            {
-                var row = Model.Rows[i];
+<div data-repeater data-repeater-prefix="@prefix">
+    <div data-repeater-items data-repeater-sortable>
+        @for (var i = 0; i < Model.Rows.Count; i++)
+        {
+            var row = Model.Rows[i];
 
-                <div class="input-group mb-2" data-repeater-item>
-                    <input type="hidden" name="@(prefix)[@i].Id" value="@row.Id" />
-                    <span class="input-group-text"><i class="fa-solid fa-grip-vertical" aria-hidden="true"></i></span>
-                    <input name="@(prefix)[@i].Text" value="@row.Text" class="form-control" placeholder="@T["Row"]" aria-label="@T["Row"]" />
-                    <input name="@(prefix)[@i].Name" value="@row.Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
-                    <span class="input-group-text"><label class="form-check-label small"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].Retired" value="true" checked="@row.Retired" />@T["Retired"]</label></span>
-                    <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-                </div>
-            }
-        </div>
-        <template data-repeater-template>
             <div class="input-group mb-2" data-repeater-item>
-                <input type="hidden" name="@(prefix)[__index__].Id" value="" />
+                <input type="hidden" name="@(prefix)[@i].Id" value="@row.Id" />
                 <span class="input-group-text"><i class="fa-solid fa-grip-vertical" aria-hidden="true"></i></span>
-                <input name="@(prefix)[__index__].Text" class="form-control" placeholder="@T["Row"]" aria-label="@T["Row"]" />
-                <input name="@(prefix)[__index__].Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+                <input name="@(prefix)[@i].Text" value="@row.Text" class="form-control" placeholder="@T["Row"]" aria-label="@T["Row"]" />
+                <input name="@(prefix)[@i].Name" value="@row.Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+                <span class="input-group-text"><label class="form-check-label small"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].Retired" value="true" checked="@row.Retired" />@T["Retired"]</label></span>
                 <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
             </div>
-        </template>
-        <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add row"]</button>
+        }
     </div>
+    <template data-repeater-template>
+        <div class="input-group mb-2" data-repeater-item>
+            <input type="hidden" name="@(prefix)[__index__].Id" value="" />
+            <span class="input-group-text"><i class="fa-solid fa-grip-vertical" aria-hidden="true"></i></span>
+            <input name="@(prefix)[__index__].Text" class="form-control" placeholder="@T["Row"]" aria-label="@T["Row"]" />
+            <input name="@(prefix)[__index__].Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+            <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+        </div>
+    </template>
+    <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add row"]</button>
 </div>

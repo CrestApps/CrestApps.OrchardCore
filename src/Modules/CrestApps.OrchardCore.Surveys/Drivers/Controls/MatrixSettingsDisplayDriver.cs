@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Surveys.Core.Controls.Matrix;
 using CrestApps.OrchardCore.Surveys.Core.Drivers;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Surveys.Drivers.Controls;
 
@@ -8,6 +9,18 @@ namespace CrestApps.OrchardCore.Surveys.Drivers.Controls;
 /// </summary>
 public sealed class MatrixSettingsDisplayDriver : SurveyControlSettingsDisplayDriver<MatrixSettings>
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MatrixSettingsDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The localizer.</param>
+    public MatrixSettingsDisplayDriver(IStringLocalizer<MatrixSettingsDisplayDriver> stringLocalizer)
+        : base(stringLocalizer)
+    {
+    }
+
     /// <inheritdoc />
     protected override string ControlType => SurveyControlNames.Matrix;
+
+    /// <inheritdoc />
+    protected override LocalizedString CardName => S["Matrix Settings"];
 }

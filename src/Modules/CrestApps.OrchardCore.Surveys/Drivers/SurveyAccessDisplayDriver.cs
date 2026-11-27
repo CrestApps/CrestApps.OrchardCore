@@ -40,53 +40,27 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
 
     /// <inheritdoc />
     public override IDisplayResult Edit(Survey survey, BuildEditorContext context)
-        => Initialize<SurveyAccessEditViewModel>("SurveyAccess_Edit", async model =>
-        {
-            var access = survey.Access ?? new SurveyAccessSettings();
-            var limits = access.Limits ?? new RespondentLimits();
+    {
+        // The cards share one view model, so the response count behind it runs once for all of them.
+        var hasResponses = new Lazy<Task<bool>>(() => HasResponsesAsync(survey));
 
-            model.Audience = access.Audience;
-            model.AudienceIds = [.. access.AudienceIds ?? []];
-            await BuildAudienceOptionsAsync(model);
-            model.Anonymity = access.Anonymity;
-            model.WasIdentified = access.Anonymity == AnonymityMode.Identified;
-            model.CollectIpAddress = access.CollectIpAddress;
-            model.Opens = await LocalAsync(access.OpensUtc);
-            model.Closes = await LocalAsync(access.ClosesUtc);
-            model.UseSchedule = access.Schedule is not null;
-            model.Days = Enum.GetValues<DayOfWeek>().Select(day =>
-            {
-                var rule = access.Schedule?.Days.GetValueOrDefault(day);
-
-                return new SurveyDayScheduleEditViewModel
-                {
-                    Day = day,
-                    Mode = rule?.Mode ?? DayScheduleMode.AllowAll,
-                    From = rule?.From,
-                    To = rule?.To,
-                };
-            }).ToList();
-            model.LimitCounts = limits.Counts;
-            model.LimitTotal = limits.Total;
-            model.LimitPerDay = limits.PerDay;
-            model.LimitPerWeek = limits.PerWeek;
-            model.LimitPerMonth = limits.PerMonth;
-            model.CooldownMinutes = limits.CooldownMinutes;
-            model.Uniqueness = limits.Uniqueness;
-            model.MaxResponses = access.MaxResponses;
-            model.RequireCaptcha = access.RequireCaptcha;
-            model.IncompleteExpiryHours = access.IncompleteExpiryHours;
-            model.MinimumGroupSizeFloor = await FloorAsync();
-            model.MinimumGroupSize = Math.Max(access.MinimumGroupSize, model.MinimumGroupSizeFloor);
-            model.AnonymityLocked = await HasResponsesAsync(survey);
-            model.CaptchaAvailable = CaptchaRule.IsAvailable(_serviceProvider);
-            model.SurveyId = survey.ItemId;
-            model.SecretUnreadable = !string.IsNullOrEmpty(survey.ItemId)
-                && _serviceProvider.GetService<SurveyAnonymitySecrets>() is { } secrets
-                && !secrets.CanReveal(survey);
-            model.RetentionDays = survey.Retention?.Days;
-            model.RetentionAction = survey.Retention?.Action ?? RetentionAction.Delete;
-        }).Location("Content:5").OnGroup(SurveyDetailsDisplayDriver.GroupId);
+        return Combine(
+            Initialize<SurveyAccessEditViewModel>("SurveyAccessAudience_Edit", async model => await PopulateAsync(survey, model, hasResponses))
+                .Location(l => l.Zone("Content", "5").Card(S["Who May Respond"], "20"))
+                .OnGroup(SurveyDetailsDisplayDriver.GroupId),
+            Initialize<SurveyAccessEditViewModel>("SurveyAccessAnonymity_Edit", async model => await PopulateAsync(survey, model, hasResponses))
+                .Location(l => l.Zone("Content", "6").Card(S["Anonymity"], "30"))
+                .OnGroup(SurveyDetailsDisplayDriver.GroupId),
+            Initialize<SurveyAccessEditViewModel>("SurveyAccessSchedule_Edit", async model => await PopulateAsync(survey, model, hasResponses))
+                .Location(l => l.Zone("Content", "7").Card(S["When"], "40"))
+                .OnGroup(SurveyDetailsDisplayDriver.GroupId),
+            Initialize<SurveyAccessEditViewModel>("SurveyAccessLimits_Edit", async model => await PopulateAsync(survey, model, hasResponses))
+                .Location(l => l.Zone("Content", "8").Card(S["Limits"], "50"))
+                .OnGroup(SurveyDetailsDisplayDriver.GroupId),
+            Initialize<SurveyAccessEditViewModel>("SurveyAccessRetention_Edit", async model => await PopulateAsync(survey, model, hasResponses))
+                .Location(l => l.Zone("Content", "9").Card(S["Retention"], "60"))
+                .OnGroup(SurveyDetailsDisplayDriver.GroupId));
+    }
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(Survey survey, UpdateEditorContext context)
@@ -188,6 +162,54 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
         };
 
         return Edit(survey, context);
+    }
+
+    private async Task PopulateAsync(Survey survey, SurveyAccessEditViewModel model, Lazy<Task<bool>> hasResponses)
+    {
+        var access = survey.Access ?? new SurveyAccessSettings();
+        var limits = access.Limits ?? new RespondentLimits();
+
+        model.Audience = access.Audience;
+        model.AudienceIds = [.. access.AudienceIds ?? []];
+        await BuildAudienceOptionsAsync(model);
+        model.Anonymity = access.Anonymity;
+        model.WasIdentified = access.Anonymity == AnonymityMode.Identified;
+        model.CollectIpAddress = access.CollectIpAddress;
+        model.Opens = await LocalAsync(access.OpensUtc);
+        model.Closes = await LocalAsync(access.ClosesUtc);
+        model.UseSchedule = access.Schedule is not null;
+        model.Days = Enum.GetValues<DayOfWeek>().Select(day =>
+        {
+            var rule = access.Schedule?.Days.GetValueOrDefault(day);
+
+            return new SurveyDayScheduleEditViewModel
+            {
+                Day = day,
+                Mode = rule?.Mode ?? DayScheduleMode.AllowAll,
+                From = rule?.From,
+                To = rule?.To,
+            };
+        }).ToList();
+        model.LimitCounts = limits.Counts;
+        model.LimitTotal = limits.Total;
+        model.LimitPerDay = limits.PerDay;
+        model.LimitPerWeek = limits.PerWeek;
+        model.LimitPerMonth = limits.PerMonth;
+        model.CooldownMinutes = limits.CooldownMinutes;
+        model.Uniqueness = limits.Uniqueness;
+        model.MaxResponses = access.MaxResponses;
+        model.RequireCaptcha = access.RequireCaptcha;
+        model.IncompleteExpiryHours = access.IncompleteExpiryHours;
+        model.MinimumGroupSizeFloor = await FloorAsync();
+        model.MinimumGroupSize = Math.Max(access.MinimumGroupSize, model.MinimumGroupSizeFloor);
+        model.AnonymityLocked = await hasResponses.Value;
+        model.CaptchaAvailable = CaptchaRule.IsAvailable(_serviceProvider);
+        model.SurveyId = survey.ItemId;
+        model.SecretUnreadable = !string.IsNullOrEmpty(survey.ItemId)
+            && _serviceProvider.GetService<SurveyAnonymitySecrets>() is { } secrets
+            && !secrets.CanReveal(survey);
+        model.RetentionDays = survey.Retention?.Days;
+        model.RetentionAction = survey.Retention?.Action ?? RetentionAction.Delete;
     }
 
     // The audiences come from the Users module's User Audiences feature; without it there is nothing to pick.

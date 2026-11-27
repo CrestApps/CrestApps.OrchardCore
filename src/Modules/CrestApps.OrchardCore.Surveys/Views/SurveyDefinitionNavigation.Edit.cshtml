@@ -1,0 +1,13 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyDefinitionGeneralEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check"><input asp-for="Navigation.AllowBack" type="checkbox" class="form-check-input" /><label asp-for="Navigation.AllowBack" class="form-check-label">@T["Respondents may go back"]</label></div>
+        <div class="form-check"><input asp-for="Navigation.Sequential" type="checkbox" class="form-check-input" /><label asp-for="Navigation.Sequential" class="form-check-label">@T["Forward only, page by page"]</label></div>
+        <div class="form-check"><input asp-for="Navigation.AutoAdvance" type="checkbox" class="form-check-input" /><label asp-for="Navigation.AutoAdvance" class="form-check-label">@T["Move on when a single-choice page is answered"]</label></div>
+        <div class="form-check"><input asp-for="Navigation.AllowResume" type="checkbox" class="form-check-input" /><label asp-for="Navigation.AllowResume" class="form-check-label">@T["Respondents may leave and come back"]</label></div>
+        <div class="form-check"><input asp-for="Navigation.AllowEditAfterSubmit" type="checkbox" class="form-check-input" /><label asp-for="Navigation.AllowEditAfterSubmit" class="form-check-label">@T["Respondents may change a finished response"]</label></div>
+        <div class="form-check"><input asp-for="Navigation.ConfirmBeforeSubmit" type="checkbox" class="form-check-input" /><label asp-for="Navigation.ConfirmBeforeSubmit" class="form-check-label">@T["Ask respondents to confirm before they finish"]</label></div>
+    </div>
+</div>

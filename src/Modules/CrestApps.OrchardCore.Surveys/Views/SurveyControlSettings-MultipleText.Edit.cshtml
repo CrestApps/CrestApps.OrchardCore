@@ -1,24 +1,19 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.MultipleText.MultipleTextSettings>
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Multiple text settings"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Settings.MaxLength" class="ocat-label">@T["Most characters of each item"]</label>
-            <div class="ocat-end">
-                <input asp-for="Settings.MaxLength" class="form-control" type="number" min="1" max="4000" />
-                <span class="hint">@T["Empty for 500."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Settings.MaxLength" class="ocat-label">@T["Most characters of each item"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.MaxLength" class="form-control" type="number" min="1" max="4000" />
+        <span class="hint">@T["Empty for 500."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="Settings.AllItemsRequired" class="form-check-input" />
-                    <label asp-for="Settings.AllItemsRequired" class="form-check-label">@T["Every item must be filled"]</label>
-                    <span class="hint dashed">@T["Applies when the question is required."]</span>
-                </div>
-            </div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Settings.AllItemsRequired" class="form-check-input" />
+            <label asp-for="Settings.AllItemsRequired" class="form-check-label">@T["Every item must be filled"]</label>
+            <span class="hint dashed">@T["Applies when the question is required."]</span>
         </div>
     </div>
 </div>

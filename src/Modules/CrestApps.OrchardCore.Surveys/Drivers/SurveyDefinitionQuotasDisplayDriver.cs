@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -15,13 +16,19 @@ internal sealed class SurveyDefinitionQuotasDisplayDriver : DisplayDriver<Survey
 {
     private readonly ISurveyControlRegistry _registry;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyDefinitionQuotasDisplayDriver"/> class.
     /// </summary>
     /// <param name="registry">The control registry.</param>
-    public SurveyDefinitionQuotasDisplayDriver(ISurveyControlRegistry registry)
+    /// <param name="stringLocalizer">The localizer.</param>
+    public SurveyDefinitionQuotasDisplayDriver(
+        ISurveyControlRegistry registry,
+        IStringLocalizer<SurveyDefinitionQuotasDisplayDriver> stringLocalizer)
     {
         _registry = registry;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
@@ -32,7 +39,7 @@ internal sealed class SurveyDefinitionQuotasDisplayDriver : DisplayDriver<Survey
             model.QuotaRules = model.Quotas.Select(quota => SurveyRuleJson.Write(quota.Rule)).ToList();
             model.Endings = (definition.Endings ?? []).ToList();
             model.Sources = SurveyRuleSources.Build(definition, _registry, int.MaxValue);
-        }).Location("Content:1#Quotas;5");
+        }).Location(l => l.Zone("Content", "1").Tab(S["Quotas"], "5").Card(S["Quotas"], "10"));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)

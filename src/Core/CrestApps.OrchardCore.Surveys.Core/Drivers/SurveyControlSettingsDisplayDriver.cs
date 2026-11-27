@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Core.ViewModels;
 using CrestApps.OrchardCore.Surveys.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -9,21 +10,36 @@ namespace CrestApps.OrchardCore.Surveys.Core.Drivers;
 /// <summary>
 /// The base of a question type's settings editor in the designer. It edits <c>SurveyQuestion.Settings</c> as
 /// <typeparamref name="TSettings"/> with the shape <c>SurveyControlSettings_Edit__{ControlType}</c> (view
-/// <c>SurveyControlSettings-{ControlType}.Edit.cshtml</c>), only for questions of its type.
+/// <c>SurveyControlSettings-{ControlType}.Edit.cshtml</c>), only for questions of its type, in a card of its own
+/// named by <see cref="CardName"/>.
 /// </summary>
 /// <typeparam name="TSettings">The settings type.</typeparam>
 public abstract class SurveyControlSettingsDisplayDriver<TSettings> : DisplayDriver<SurveyQuestion>
     where TSettings : class, new()
 {
     /// <summary>
+    /// Initializes a new instance of the <see cref="SurveyControlSettingsDisplayDriver{TSettings}"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The localizer of the derived driver, which names its card.</param>
+    protected SurveyControlSettingsDisplayDriver(IStringLocalizer stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <summary>
+    /// Gets the localizer of the driver.
+    /// </summary>
+    protected IStringLocalizer S { get; }
+
+    /// <summary>
     /// Gets the name of the question type the driver edits.
     /// </summary>
     protected abstract string ControlType { get; }
 
     /// <summary>
-    /// Gets the zone and position of the editor.
+    /// Gets the title of the card that holds the editor, such as "Slider Settings".
     /// </summary>
-    protected virtual string Location => "Content:20";
+    protected abstract LocalizedString CardName { get; }
 
     /// <inheritdoc />
     public override bool CanHandleModel(SurveyQuestion model)
@@ -35,7 +51,7 @@ public abstract class SurveyControlSettingsDisplayDriver<TSettings> : DisplayDri
         {
             viewModel.Settings = model.GetSettings<TSettings>();
             viewModel.Question = model;
-        }).Location(Location);
+        }).Location(l => l.Zone("Content", "20").Card(CardName, SurveyControlShapes.SettingsCardPosition));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyQuestion model, UpdateEditorContext context)

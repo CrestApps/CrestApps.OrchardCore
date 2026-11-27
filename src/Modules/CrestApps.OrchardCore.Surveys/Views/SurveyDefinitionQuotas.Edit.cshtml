@@ -6,73 +6,70 @@
     var rules = Html.NameFor(m => m.QuotaRules).ToString();
 }
 
-<div class="card mb-3" data-rule-sources="@Model.Sources">
-    <div class="card-header">@T["Quotas"]</div>
-    <div class="card-body" data-repeater data-repeater-prefix="@prefix" data-repeater-also="@rules">
-        <p class="hint">@T["A quota counts the completed responses that match its rule. Once it reaches its limit, new matching respondents are screened out with its ending, or the survey closes."]</p>
-        <div data-repeater-items>
-            @for (var i = 0; i < Model.Quotas.Count; i++)
-            {
-                var quota = Model.Quotas[i];
+<div data-rule-sources="@Model.Sources" data-repeater data-repeater-prefix="@prefix" data-repeater-also="@rules">
+    <p class="hint">@T["A quota counts the completed responses that match its rule. Once it reaches its limit, new matching respondents are screened out with its ending, or the survey closes."]</p>
+    <div data-repeater-items>
+        @for (var i = 0; i < Model.Quotas.Count; i++)
+        {
+            var quota = Model.Quotas[i];
 
-                <div class="border rounded p-2 mb-2" data-repeater-item>
-                    <input type="hidden" name="@(prefix)[@i].Id" value="@quota.Id" />
-                    <div class="input-group mb-1">
-                        <input name="@(prefix)[@i].Title" value="@quota.Title" class="form-control" placeholder="@T["Title"]" aria-label="@T["Title"]" />
-                        <input name="@(prefix)[@i].Name" value="@quota.Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
-                        <input name="@(prefix)[@i].Limit" value="@quota.Limit" type="number" min="1" class="form-control flex-grow-0 w-auto" placeholder="@T["Limit"]" aria-label="@T["Limit"]" />
-                        <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
-                    </div>
-                    <div class="input-group input-group-sm mb-1">
-                        <span class="input-group-text">@T["When full"]</span>
-                        <select name="@(prefix)[@i].Action" class="form-select" aria-label="@T["When full"]">
-                            <option value="@QuotaAction.ScreenOut" selected="@(quota.Action == QuotaAction.ScreenOut)">@T["Screen out new respondents"]</option>
-                            <option value="@QuotaAction.CloseSurvey" selected="@(quota.Action == QuotaAction.CloseSurvey)">@T["Close the survey"]</option>
-                            <option value="@QuotaAction.None" selected="@(quota.Action == QuotaAction.None)">@T["Only count"]</option>
-                        </select>
-                        <select name="@(prefix)[@i].EndingId" class="form-select" aria-label="@T["Ending"]">
-                            <option value="">@T["Ending for screened-out respondents"]</option>
-                            @foreach (var ending in Model.Endings)
-                            {
-                                <option value="@ending.Id" selected="@(ending.Id == quota.EndingId)">@(string.IsNullOrWhiteSpace(ending.Title) ? ending.Name : ending.Title)</option>
-                            }
-                        </select>
-                    </div>
-                    <details data-rule-field>
-                        <summary class="small">@T["Count responses when"]</summary>
-                        <input type="hidden" name="@(rules)[@i]" value="@(i < Model.QuotaRules.Count ? Model.QuotaRules[i] : string.Empty)" data-rule-value />
-                        <div data-rule-builder></div>
-                    </details>
-                </div>
-            }
-        </div>
-        <template data-repeater-template>
             <div class="border rounded p-2 mb-2" data-repeater-item>
-                <input type="hidden" name="@(prefix)[__index__].Id" value="" />
+                <input type="hidden" name="@(prefix)[@i].Id" value="@quota.Id" />
                 <div class="input-group mb-1">
-                    <input name="@(prefix)[__index__].Title" class="form-control" placeholder="@T["Title"]" aria-label="@T["Title"]" />
-                    <input name="@(prefix)[__index__].Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
-                    <input name="@(prefix)[__index__].Limit" type="number" min="1" class="form-control flex-grow-0 w-auto" placeholder="@T["Limit"]" aria-label="@T["Limit"]" />
+                    <input name="@(prefix)[@i].Title" value="@quota.Title" class="form-control" placeholder="@T["Title"]" aria-label="@T["Title"]" />
+                    <input name="@(prefix)[@i].Name" value="@quota.Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+                    <input name="@(prefix)[@i].Limit" value="@quota.Limit" type="number" min="1" class="form-control flex-grow-0 w-auto" placeholder="@T["Limit"]" aria-label="@T["Limit"]" />
                     <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
                 </div>
                 <div class="input-group input-group-sm mb-1">
                     <span class="input-group-text">@T["When full"]</span>
-                    <select name="@(prefix)[__index__].Action" class="form-select" aria-label="@T["When full"]">
-                        <option value="@QuotaAction.ScreenOut">@T["Screen out new respondents"]</option>
-                        <option value="@QuotaAction.CloseSurvey">@T["Close the survey"]</option>
-                        <option value="@QuotaAction.None">@T["Only count"]</option>
+                    <select name="@(prefix)[@i].Action" class="form-select" aria-label="@T["When full"]">
+                        <option value="@QuotaAction.ScreenOut" selected="@(quota.Action == QuotaAction.ScreenOut)">@T["Screen out new respondents"]</option>
+                        <option value="@QuotaAction.CloseSurvey" selected="@(quota.Action == QuotaAction.CloseSurvey)">@T["Close the survey"]</option>
+                        <option value="@QuotaAction.None" selected="@(quota.Action == QuotaAction.None)">@T["Only count"]</option>
                     </select>
-                    <select name="@(prefix)[__index__].EndingId" class="form-select" aria-label="@T["Ending"]">
+                    <select name="@(prefix)[@i].EndingId" class="form-select" aria-label="@T["Ending"]">
                         <option value="">@T["Ending for screened-out respondents"]</option>
                         @foreach (var ending in Model.Endings)
                         {
-                            <option value="@ending.Id">@(string.IsNullOrWhiteSpace(ending.Title) ? ending.Name : ending.Title)</option>
+                            <option value="@ending.Id" selected="@(ending.Id == quota.EndingId)">@(string.IsNullOrWhiteSpace(ending.Title) ? ending.Name : ending.Title)</option>
                         }
                     </select>
                 </div>
-                <input type="hidden" name="@(rules)[__index__]" value="" data-rule-value />
+                <details data-rule-field>
+                    <summary class="small">@T["Count responses when"]</summary>
+                    <input type="hidden" name="@(rules)[@i]" value="@(i < Model.QuotaRules.Count ? Model.QuotaRules[i] : string.Empty)" data-rule-value />
+                    <div data-rule-builder></div>
+                </details>
             </div>
-        </template>
-        <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add quota"]</button>
+        }
     </div>
+    <template data-repeater-template>
+        <div class="border rounded p-2 mb-2" data-repeater-item>
+            <input type="hidden" name="@(prefix)[__index__].Id" value="" />
+            <div class="input-group mb-1">
+                <input name="@(prefix)[__index__].Title" class="form-control" placeholder="@T["Title"]" aria-label="@T["Title"]" />
+                <input name="@(prefix)[__index__].Name" class="form-control flex-grow-0 w-25" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+                <input name="@(prefix)[__index__].Limit" type="number" min="1" class="form-control flex-grow-0 w-auto" placeholder="@T["Limit"]" aria-label="@T["Limit"]" />
+                <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+            <div class="input-group input-group-sm mb-1">
+                <span class="input-group-text">@T["When full"]</span>
+                <select name="@(prefix)[__index__].Action" class="form-select" aria-label="@T["When full"]">
+                    <option value="@QuotaAction.ScreenOut">@T["Screen out new respondents"]</option>
+                    <option value="@QuotaAction.CloseSurvey">@T["Close the survey"]</option>
+                    <option value="@QuotaAction.None">@T["Only count"]</option>
+                </select>
+                <select name="@(prefix)[__index__].EndingId" class="form-select" aria-label="@T["Ending"]">
+                    <option value="">@T["Ending for screened-out respondents"]</option>
+                    @foreach (var ending in Model.Endings)
+                    {
+                        <option value="@ending.Id">@(string.IsNullOrWhiteSpace(ending.Title) ? ending.Name : ending.Title)</option>
+                    }
+                </select>
+            </div>
+            <input type="hidden" name="@(rules)[__index__]" value="" data-rule-value />
+        </div>
+    </template>
+    <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add quota"]</button>
 </div>
