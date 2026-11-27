@@ -4,7 +4,10 @@ import { beforeAll, describe, expect, it } from 'vitest';
 const listeners = [];
 
 globalThis.window = globalThis.window ?? globalThis;
-globalThis.document = globalThis.document ?? { addEventListener: (type, listener, capture) => listeners.push({ type, listener, capture }) };
+globalThis.document = globalThis.document ?? {
+    addEventListener: (type, listener, capture) => listeners.push({ type, listener, capture }),
+    querySelectorAll: () => [],
+};
 
 let numbers;
 
@@ -48,6 +51,21 @@ describe('namesToAdd', () => {
         const fields = [input('number', 'Amount'), input('number', 'Amount'), input('number', 'Rows[0].Rate')];
 
         expect(numbers.namesToAdd(fields, ['Rows[0].Rate'])).toEqual(['Amount']);
+    });
+});
+
+// Bootstrap rounds an input group's last child: the asp-for field after a number box would take that place.
+describe('moveFieldsOutOfInputGroups', () => {
+    it('moves each __Invariant field in an input group to just after the group', () => {
+        const moved = [];
+        const group = { after: (node) => moved.push(node) };
+        const fields = [{ parentElement: group, id: 'amount' }, { parentElement: group, id: 'fee' }];
+        let selector;
+
+        numbers.moveFieldsOutOfInputGroups({ querySelectorAll: (query) => { selector = query; return fields; } });
+
+        expect(selector).toBe('.input-group > input[type="hidden"][name="__Invariant"]');
+        expect(moved.map((node) => node.id)).toEqual(['amount', 'fee']);
     });
 });
 

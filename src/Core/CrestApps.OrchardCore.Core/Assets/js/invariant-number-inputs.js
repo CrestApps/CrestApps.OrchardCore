@@ -41,9 +41,20 @@ window.invariantNumberInputs = (function () {
         }
     };
 
+    // An asp-for input is followed by its own hidden __Invariant field. In a Bootstrap input group that field becomes the
+    // group's last child, so the input loses its rounded end. Moving the field just after the group keeps it in the form.
+    const moveFieldsOutOfInputGroups = (root) => {
+        for (const field of root.querySelectorAll('.input-group > input[type="hidden"][name="' + fieldName + '"]')) {
+            field.parentElement.after(field);
+        }
+    };
+
+    // The script is written at the foot of the page, after the content it reads.
+    moveFieldsOutOfInputGroups(document);
+
     // The formdata event fires on every submit, form.submit() included, and on new FormData(form). It doesn't bubble, so
     // it is caught on its way down to the form.
     document.addEventListener('formdata', onFormData, true);
 
-    return { fieldName, namesToAdd, onFormData };
+    return { fieldName, namesToAdd, onFormData, moveFieldsOutOfInputGroups };
 })();
