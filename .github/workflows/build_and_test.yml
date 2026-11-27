@@ -2,9 +2,9 @@ name: Build & Test
 
 # The build and test jobs shared by PR - CI, Full - CI and Main - CI, so every run validates the same things.
 #
-# The suites run side by side instead of one after another: each OS gets one job for the unit tests, one for the
-# Contact Center feature activation suite, one for the other integration suites and one for the JavaScript tests.
-# Every .NET job builds the whole solution with the same flags, so a warning fails the run whichever job reports it.
+# The suites run side by side instead of one after another: each OS gets one job that builds the whole solution with
+# warnings as errors, one for the unit tests (three on Windows), one for the Contact Center feature activation suite,
+# one for the other integration suites and one for the JavaScript tests. The test jobs build only their own projects.
 # The repository is public, so the extra runner minutes cost nothing, and a run takes as long as its slowest job
 # instead of the sum of all of them.
 #
@@ -37,15 +37,18 @@ env:
 
 jobs:
   dotnet:
-    name: ${{ matrix.suite == 'unit' && 'Unit tests' || matrix.suite == 'activation' && 'Feature activation tests' || 'Integration tests' }} (${{ matrix.os }}${{ matrix.os == 'windows-latest' && matrix.suite == 'unit' && format(', {0}/3', matrix.shard) || '' }})
+    name: ${{ matrix.suite == 'build' && 'Build' || matrix.suite == 'unit' && 'Unit tests' || matrix.suite == 'activation' && 'Feature activation tests' || 'Integration tests' }} (${{ matrix.os }}${{ matrix.os == 'windows-latest' && matrix.suite == 'unit' && format(', {0}/3', matrix.shard) || '' }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: ${{ fromJSON(inputs.os) }}
+        # `build` builds the whole solution with the analyzers on and warnings as errors, and runs no tests: it is the
+        # job that fails the run on any warning, on each OS. The test jobs build only their own test projects with the
+        # analyzers off (source generators still run), which takes minutes off every one of them.
         # The Contact Center feature activation suite is the longest integration suite, so it has its own job and
         # runs beside the others instead of before them.
-        suite: [unit, activation, integration]
+        suite: [build, unit, activation, integration]
         # The unit tests take about four times as long on a Windows runner as on a Linux one, and the Windows runner
         # was already busy on all four cores. They are split over three jobs there (tests/run-unit-tests.ps1 -Shard);
         # every other job runs once. The split depends only on the test assembly, so the three jobs cover every
@@ -55,6 +58,10 @@ jobs:
           - os: ubuntu-latest
             shard: 2
           - os: ubuntu-latest
+            shard: 3
+          - suite: build
+            shard: 2
+          - suite: build
             shard: 3
           - suite: activation
             shard: 2
@@ -67,8 +74,10 @@ jobs:
     steps:
     - uses: actions/checkout@v7
       with:
-        # The migration additive-only gate checks never-released justifications against stable release tags.
-        fetch-depth: 0
+        # The migration additive-only gate (a unit test) checks never-released justifications against stable release
+        # tags, so the unit jobs need the whole history. The other jobs only need the commit.
+        # Written this way round because 0 is falsy in expressions: "unit && 0 || 1" would always give 1.
+        fetch-depth: ${{ matrix.suite != 'unit' && 1 || 0 }}
     - uses: actions/setup-node@v7
       with:
         node-version-file: ".node-version"
@@ -79,21 +88,54 @@ jobs:
     - name: Cache NuGet packages
       uses: ./.github/actions/cache-nuget-packages
       with:
-        save: ${{ inputs.save-nuget-cache && matrix.suite == 'unit' && matrix.shard == 1 }}
+        # The build job restores the whole solution, so the cache it saves is complete.
+        save: ${{ inputs.save-nuget-cache && matrix.suite == 'build' }}
+    # Only the Aspire AppHost needs the bundle, and only the build job builds it.
     - name: Prepare the Aspire CLI bundle
+      if: matrix.suite == 'build'
       uses: ./.github/actions/prepare-aspire-cli-bundle
+    # The build job builds the whole solution with the analyzers on and warnings as errors. A test job builds only the
+    # test projects it runs, and they build every project they reference (the unit test project also builds the modules
+    # its guards load without referencing them); warnings are the build job's concern, so the analyzers are skipped
+    # there, and the compiler still runs the source generators.
+    #
+    # On Windows runners the Razor source generator now and then emits garbled code for a view the change never touched
+    # ("Newline in constant", an asp-for attribute read as C#), and the same commit builds cleanly in the next job. A
+    # failed build therefore stops the build servers and builds once more; the second build is incremental, and a real
+    # compile error fails it again.
     - name: Build
-      # We disable NuGet audit warnings, see https://learn.microsoft.com/en-us/nuget/reference/errors-and-warnings/nu1901-nu1904.
-      # Security issues being discovered in NuGet packages we use can happen at any time, and thus all our CI builds that
-      # treat warnings as errors could break anytime, without us changing the code. This prevents that. Treating them as
-      # warnings and other better approaches don't work, see https://github.com/OrchardCMS/OrchardCore/pull/16317.
+      shell: pwsh
       run: |
-        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
+        # One line of build arguments per build (no path here contains a space).
+        $builds = switch ('${{ matrix.suite }}') {
+            'build' { '-c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true' }
+            'unit' { 'tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj -c Release /p:RunAnalyzers=false' }
+            'activation' { 'tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj -c Release /p:RunAnalyzers=false' }
+            'integration' {
+                'tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
+                'tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
+                'tests/CrestApps.OrchardCore.Learning.IntegrationTests/CrestApps.OrchardCore.Learning.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
+            }
+        }
+
+        foreach ($line in $builds) {
+            $arguments = $line -split ' '
+            dotnet build @arguments
+
+            if ($LASTEXITCODE -ne 0) {
+                Write-Host "::warning title=Build retried::The build failed; stopping the build servers and building once more, in case it is the intermittent Razor generator fault."
+                dotnet build-server shutdown
+                dotnet build @arguments
+
+                if ($LASTEXITCODE -ne 0) {
+                    exit $LASTEXITCODE
+                }
+            }
+        }
     # The unit test assembly runs one test at a time (see TestParallelizationBehavior.cs), so one process uses one core.
     # The script runs the test classes in one process per core, each still one test at a time, and fails if any test
-    # method did not run. See tests/run-unit-tests.ps1.
-    # The class timings of the last run balance the unit test processes (see tests/run-unit-tests.ps1). The file is about
-    # 200 KB; every run saves a new copy and restores the newest one for its OS.
+    # method did not run. See tests/run-unit-tests.ps1. The class timings of the last run balance the processes; the
+    # file is about 200 KB, and every run saves a new copy and restores the newest one for its OS.
     - name: Restore the unit test timings
       if: matrix.suite == 'unit'
       uses: actions/cache@v6
@@ -149,10 +191,15 @@ jobs:
     # proves that a tenant cannot reach another one outside the broker, that delegated access works end to end
     # over HTTP, and that the guards hold. The SQL Server and PostgreSQL provisioning tests skip unless their
     # connection-string variables are set.
-    # It runs under dotnet-coverage (pinned in dotnet-tools.json), limited to the tenant hierarchy assemblies by
-    # tests/tenant-hierarchy.coverage.xml, and the Cobertura report is kept as an artifact of the run.
+    # On Linux it runs under dotnet-coverage (pinned in dotnet-tools.json), limited to the tenant hierarchy assemblies
+    # by tests/tenant-hierarchy.coverage.xml, and the Cobertura report is kept as an artifact of the run. Windows runs
+    # the same tests without collecting coverage, which only the Linux report keeps.
+    - name: Tenant hierarchy integration tests (without coverage)
+      if: matrix.suite == 'integration' && matrix.os != 'ubuntu-latest'
+      run: |
+        dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj
     - name: Tenant hierarchy integration tests
-      if: matrix.suite == 'integration'
+      if: matrix.suite == 'integration' && matrix.os == 'ubuntu-latest'
       run: |
         dotnet tool restore
         dotnet dotnet-coverage collect --settings tests/tenant-hierarchy.coverage.xml -f cobertura -o tenant-hierarchy.cobertura.xml "dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj"
