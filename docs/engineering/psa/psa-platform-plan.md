@@ -1,6 +1,6 @@
 # PSA Platform Blueprint — Orchard Core + CrestApps
 
-Status: proposal, 27 November 2026. Planning document only; no implementation is included.
+Status: proposal, 27 November 2026. Planning document only; no implementation is included. The step-by-step task list for implementing this plan is in [`psa-implementation-guide.md`](psa-implementation-guide.md).
 
 ## How to read this document
 
@@ -1587,6 +1587,8 @@ flowchart TB
 - [ ] RPO/RTO and availability targets (section 24). \[Asm\]
 
 ## 26. Final Implementation Checklist
+
+The detailed, task-by-task version of this checklist (with files to read, steps, tests to write first and completion criteria for every task) is in [`psa-implementation-guide.md`](psa-implementation-guide.md).
 
 **An implementing agent can work top to bottom; each item is done only when its acceptance criterion passes.** \[Rec\]
 
