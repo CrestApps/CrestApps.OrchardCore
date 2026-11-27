@@ -1,15 +1,10 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Matching.MatchingSettings>
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Matching settings"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="Settings.ShuffleAnswers" class="form-check-input" />
-                    <label asp-for="Settings.ShuffleAnswers" class="form-check-label">@T["Show the answers in a random order"]</label>
-                </div>
-            </div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="Settings.ShuffleAnswers" class="form-check-input" />
+            <label asp-for="Settings.ShuffleAnswers" class="form-check-label">@T["Show the answers in a random order"]</label>
         </div>
     </div>
 </div>

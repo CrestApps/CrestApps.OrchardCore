@@ -39,7 +39,7 @@ internal sealed class SurveyDefinitionEndingsDisplayDriver : DisplayDriver<Surve
             model.EndingRules = definition.Endings.Select(ending => SurveyRuleJson.Write(ending.Condition?.Rule)).ToList();
             model.DefaultEndingId = definition.Endings.FirstOrDefault(ending => ending.IsDefault)?.Id;
             model.Sources = SurveyRuleSources.Build(definition, _registry, int.MaxValue);
-        }).Location("Content:1#Endings;3");
+        }).Location(l => l.Zone("Content", "1").Tab(S["Endings"], "3").Card(S["Endings"], "10"));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)

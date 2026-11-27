@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Infrastructure.Html;
@@ -13,20 +14,25 @@ internal sealed class SurveyDefinitionGeneralDisplayDriver : DisplayDriver<Surve
 {
     private readonly IHtmlSanitizerService _htmlSanitizer;
 
-    public SurveyDefinitionGeneralDisplayDriver(IHtmlSanitizerService htmlSanitizer)
+    internal readonly IStringLocalizer S;
+
+    public SurveyDefinitionGeneralDisplayDriver(
+        IHtmlSanitizerService htmlSanitizer,
+        IStringLocalizer<SurveyDefinitionGeneralDisplayDriver> stringLocalizer)
     {
         _htmlSanitizer = htmlSanitizer;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyDefinition definition, BuildEditorContext context)
-        => Initialize<SurveyDefinitionGeneralEditViewModel>("SurveyDefinitionGeneral_Edit", model =>
-        {
-            model.DefinitionTitle = definition.Title;
-            model.Introduction = definition.Introduction;
-            model.Presentation = definition.Presentation ?? new SurveyPresentationSettings();
-            model.Navigation = definition.Navigation ?? new SurveyNavigationSettings();
-        }).Location("Content:1#General;1");
+        => Combine(
+            Initialize<SurveyDefinitionGeneralEditViewModel>("SurveyDefinitionGeneral_Edit", model => Populate(definition, model))
+                .Location(l => l.Zone("Content", "1").Tab(S["General"], "1").Card(S["General"], "10")),
+            Initialize<SurveyDefinitionGeneralEditViewModel>("SurveyDefinitionPresentation_Edit", model => Populate(definition, model))
+                .Location(l => l.Zone("Content", "2").Tab(S["General"], "1").Card(S["Presentation"], "20")),
+            Initialize<SurveyDefinitionGeneralEditViewModel>("SurveyDefinitionNavigation_Edit", model => Populate(definition, model))
+                .Location(l => l.Zone("Content", "3").Tab(S["General"], "1").Card(S["Navigation"], "30")));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)
@@ -47,5 +53,13 @@ internal sealed class SurveyDefinitionGeneralDisplayDriver : DisplayDriver<Surve
         }
 
         return Edit(definition, context);
+    }
+
+    private static void Populate(SurveyDefinition definition, SurveyDefinitionGeneralEditViewModel model)
+    {
+        model.DefinitionTitle = definition.Title;
+        model.Introduction = definition.Introduction;
+        model.Presentation = definition.Presentation ?? new SurveyPresentationSettings();
+        model.Navigation = definition.Navigation ?? new SurveyNavigationSettings();
     }
 }

@@ -1,0 +1,18 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyScoringEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="CorrectFeedback" class="ocat-label">@T["When right"]</label>
+    <div class="ocat-end"><textarea asp-for="CorrectFeedback" class="form-control" rows="1"></textarea></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="IncorrectFeedback" class="ocat-label">@T["When wrong"]</label>
+    <div class="ocat-end"><textarea asp-for="IncorrectFeedback" class="form-control" rows="1"></textarea></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="GeneralFeedback" class="ocat-label">@T["For any answer"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="GeneralFeedback" class="form-control" rows="1"></textarea>
+        <span class="hint">@T["Respondents see feedback only when the review settings allow it."]</span>
+    </div>
+</div>

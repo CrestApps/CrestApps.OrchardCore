@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Drivers;
 using CrestApps.OrchardCore.Records;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using Moq;
 using OrchardCore.DisplayManagement.Handlers;
 
@@ -14,7 +15,7 @@ public sealed class SurveyCourseGradeDisplayDriverTests
     {
         // Arrange
         var learningSurveys = new Mock<ILearningSurveyService>(MockBehavior.Strict);
-        var driver = new SurveyCourseGradeDisplayDriver(learningSurveys.Object);
+        var driver = new SurveyCourseGradeDisplayDriver(learningSurveys.Object, new PassThroughStringLocalizer<SurveyCourseGradeDisplayDriver>());
 
         // Act
         var result = driver.Edit(new Survey { ItemId = "survey1" }, (BuildEditorContext)null);
@@ -30,7 +31,7 @@ public sealed class SurveyCourseGradeDisplayDriverTests
     public void R8Mi32_ASurveyACourseItemOwns_ShowsTheWarningShape()
     {
         // Arrange
-        var driver = new SurveyCourseGradeDisplayDriver(Mock.Of<ILearningSurveyService>());
+        var driver = new SurveyCourseGradeDisplayDriver(Mock.Of<ILearningSurveyService>(), new PassThroughStringLocalizer<SurveyCourseGradeDisplayDriver>());
 
         // Act
         var result = driver.Edit(new Survey { ItemId = "survey1", Owner = LearningSurveyContexts.Owner("quiz1") }, (BuildEditorContext)null);

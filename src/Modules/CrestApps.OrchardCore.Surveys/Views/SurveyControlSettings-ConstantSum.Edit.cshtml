@@ -1,22 +1,17 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.ConstantSum.ConstantSumSettings>
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Constant sum settings"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Settings.Total" class="ocat-label">@T["Total"]</label>
-            <div class="ocat-end">
-                <input asp-for="Settings.Total" class="form-control" type="number" step="any" min="0" />
-                <span class="hint">@T["The numbers of the items must add up to it."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Total" class="ocat-label">@T["Total"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Total" class="form-control" type="number" step="any" min="0" />
+        <span class="hint">@T["The numbers of the items must add up to it."]</span>
+    </div>
+</div>
 
-        <div class="ocat-wrapper">
-            <label asp-for="Settings.Unit" class="ocat-label">@T["Unit"]</label>
-            <div class="ocat-end">
-                <input asp-for="Settings.Unit" class="form-control" type="text" />
-                <span class="hint">@T["Shown after each box, such as % or points."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Unit" class="ocat-label">@T["Unit"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Unit" class="form-control" type="text" />
+        <span class="hint">@T["Shown after each box, such as % or points."]</span>
     </div>
 </div>

@@ -1,0 +1,26 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveySettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="MaxUploadMegabytes" class="ocat-label">@T["Largest upload"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="MaxUploadMegabytes" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["MB"]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="AllowedRedirectHosts" class="ocat-label">@T["Allowed redirect hosts"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="AllowedRedirectHosts" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["Endings may send respondents to this site or to these hosts, one per line, such as www.example.com."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="InvitationEmailsPerDay" class="ocat-label">@T["Invitation e-mails a day"]</label>
+    <div class="ocat-end">
+        <input asp-for="InvitationEmailsPerDay" type="number" min="1" class="form-control" />
+        <span class="hint">@T["The most survey invitation and reminder e-mails the site sends in a day, counted from midnight in the site's time zone, across all surveys. Invitations over the limit are sent automatically on a later day. Invitations to users of the site go to their notifications and don't count."]</span>
+    </div>
+</div>

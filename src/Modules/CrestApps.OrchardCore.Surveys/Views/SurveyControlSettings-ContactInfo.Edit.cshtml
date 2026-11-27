@@ -1,31 +1,26 @@
 @model CrestApps.OrchardCore.Surveys.ViewModels.ContactInfoSettingsViewModel
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Contact information settings"]</div>
-    <div class="card-body">
-        @for (var i = 0; i < Model.Fields.Count; i++)
-        {
-            var field = Model.Fields[i];
-            var label = field.Kind switch
-            {
-                "Email" => T["E-mail"],
-                "Phone" => T["Phone"],
-                "Company" => T["Company"],
-                "Address" => T["Address"],
-                _ => T["Name"],
-            };
-            <div class="ocat-wrapper">
-                <label asp-for="Fields[i].Mode" class="ocat-label">@label</label>
-                <div class="ocat-end">
-                    <input type="hidden" asp-for="Fields[i].Kind" />
-                    <select asp-for="Fields[i].Mode" class="form-select mb-1">
-                        <option value="none">@T["Not asked"]</option>
-                        <option value="optional">@T["Optional"]</option>
-                        <option value="required">@T["Required"]</option>
-                    </select>
-                    <input asp-for="Fields[i].Label" class="form-control" placeholder="@label" aria-label="@T["Label of {0}", label]" />
-                </div>
-            </div>
-        }
+@for (var i = 0; i < Model.Fields.Count; i++)
+{
+    var field = Model.Fields[i];
+    var label = field.Kind switch
+    {
+        "Email" => T["E-mail"],
+        "Phone" => T["Phone"],
+        "Company" => T["Company"],
+        "Address" => T["Address"],
+        _ => T["Name"],
+    };
+    <div class="ocat-wrapper">
+        <label asp-for="Fields[i].Mode" class="ocat-label">@label</label>
+        <div class="ocat-end">
+            <input type="hidden" asp-for="Fields[i].Kind" />
+            <select asp-for="Fields[i].Mode" class="form-select mb-1">
+                <option value="none">@T["Not asked"]</option>
+                <option value="optional">@T["Optional"]</option>
+                <option value="required">@T["Required"]</option>
+            </select>
+            <input asp-for="Fields[i].Label" class="form-control" placeholder="@label" aria-label="@T["Label of {0}", label]" />
+        </div>
     </div>
-</div>
+}

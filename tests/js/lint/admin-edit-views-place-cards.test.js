@@ -44,7 +44,6 @@ const reviewedExceptions = new Map([
     ['CrestApps.OrchardCore.ContactCenter/Views/AgentEntitlementSkills.Edit.cshtml', 'one card per repeated skill row'],
     ['CrestApps.OrchardCore.Customers/Views/CustomerContactStep.Edit.cshtml', 'storefront checkout step; disabled-state fieldset'],
     ['CrestApps.OrchardCore.Inventory/Views/InventorySettingsLocations.Edit.cshtml', 'one fieldset per repeated stock location'],
-    ['CrestApps.OrchardCore.Learning.Assessments/Views/RowsQuestion.Edit.cshtml', 'question content editor'],
     ['CrestApps.OrchardCore.Learning.Coursework/Views/SubmissionGrade.Edit.cshtml', 'radio group fieldset per rubric criterion'],
     ['CrestApps.OrchardCore.Omnichannel.Managements/Views/BulkManageActivityFilterFields.Edit.cshtml', 'filter form'],
     ['CrestApps.OrchardCore.Omnichannel.Managements/Views/CadenceSteps.Edit.cshtml', 'one card per repeated cadence step'],

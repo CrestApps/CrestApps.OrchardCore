@@ -1,0 +1,28 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyDefinitionScoringEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Timing.TimeLimitMinutes" class="ocat-label">@T["Time to finish"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="Timing.TimeLimitMinutes" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["minutes"]</span>
+        </div>
+        <span class="hint">@T["Leave it empty for no limit."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Timing.GraceSeconds" class="ocat-label">@T["Grace"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="Timing.GraceSeconds" type="number" min="0" max="300" class="form-control" />
+            <span class="input-group-text">@T["seconds"]</span>
+        </div>
+        <span class="hint">@T["How long a last page sent just before the time runs out, or just before any closing date (the survey's, a link's or a respondent's), still counts. It applies to surveys without a time limit too. Up to 300 seconds."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check"><input asp-for="Timing.AutoSubmitAtDeadline" type="checkbox" class="form-check-input" /><label asp-for="Timing.AutoSubmitAtDeadline" class="form-check-label">@T["Submit unfinished responses when time runs out"]</label></div>
+    </div>
+</div>

@@ -1,87 +1,14 @@
 @using CrestApps.OrchardCore.Surveys.ViewModels
 @model SurveyDefinitionGeneralEditViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["General"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="DefinitionTitle" class="ocat-label">@T["Title respondents see"]</label>
-            <div class="ocat-end"><input asp-for="DefinitionTitle" class="form-control" /></div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Introduction" class="ocat-label">@T["Introduction"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="Introduction" class="form-control" rows="3"></textarea>
-                <span class="hint">@T["Shown on the start page. HTML is allowed and cleaned."]</span>
-            </div>
-        </div>
-    </div>
+<div class="ocat-wrapper">
+    <label asp-for="DefinitionTitle" class="ocat-label">@T["Title respondents see"]</label>
+    <div class="ocat-end"><input asp-for="DefinitionTitle" class="form-control" /></div>
 </div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Presentation"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check"><input asp-for="Presentation.ShowTitle" type="checkbox" class="form-check-input" /><label asp-for="Presentation.ShowTitle" class="form-check-label">@T["Show the title"]</label></div>
-                <div class="form-check"><input asp-for="Presentation.ShowQuestionNumbers" type="checkbox" class="form-check-input" /><label asp-for="Presentation.ShowQuestionNumbers" class="form-check-label">@T["Number the questions"]</label></div>
-                <div class="form-check"><input asp-for="Presentation.ShowPageTitles" type="checkbox" class="form-check-input" /><label asp-for="Presentation.ShowPageTitles" class="form-check-label">@T["Show page titles"]</label></div>
-                <div class="form-check"><input asp-for="Presentation.ShowProgressBar" type="checkbox" class="form-check-input" /><label asp-for="Presentation.ShowProgressBar" class="form-check-label">@T["Show a progress bar"]</label></div>
-                <div class="form-check"><input asp-for="Presentation.SkipLanding" type="checkbox" class="form-check-input" /><label asp-for="Presentation.SkipLanding" class="form-check-label">@T["Go straight to the first page"]</label></div>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Presentation.ProgressBasis" class="ocat-label">@T["Progress counts"]</label>
-            <div class="ocat-end">
-                <select asp-for="Presentation.ProgressBasis" class="form-select">
-                    <option value="@ProgressBasis.Pages">@T["Pages"]</option>
-                    <option value="@ProgressBasis.Questions">@T["Questions"]</option>
-                </select>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Presentation.QuestionsPerPage" class="ocat-label">@T["Questions per screen"]</label>
-            <div class="ocat-end">
-                <input asp-for="Presentation.QuestionsPerPage" type="number" min="0" class="form-control" />
-                <span class="hint">@T["0 keeps the pages as designed; 1 shows one question at a time."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Presentation.PageOrder" class="ocat-label">@T["Page order"]</label>
-            <div class="ocat-end">
-                <select asp-for="Presentation.PageOrder" class="form-select">
-                    <option value="@QuestionOrder.AsDefined">@T["As designed"]</option>
-                    <option value="@QuestionOrder.Shuffle">@T["Shuffled (first and last pages keep their place)"]</option>
-                </select>
-                <span class="hint">@T["Pages shuffle only when the survey has more than three pages and no page branches to another page."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Presentation.CssClass" class="ocat-label">@T["CSS class"]</label>
-            <div class="ocat-end"><input asp-for="Presentation.CssClass" class="form-control" /></div>
-        </div>
-        <div class="ocat-wrapper">
-            <label asp-for="Presentation.CompletedRedirectUrl" class="ocat-label">@T["After the ending, go to"]</label>
-            <div class="ocat-end">
-                <input asp-for="Presentation.CompletedRedirectUrl" class="form-control" />
-                <span class="hint">@T["A page of this site or of an allowed host. Endings may set their own."]</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Navigation"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <div class="ocat-end-offset">
-                <div class="form-check"><input asp-for="Navigation.AllowBack" type="checkbox" class="form-check-input" /><label asp-for="Navigation.AllowBack" class="form-check-label">@T["Respondents may go back"]</label></div>
-                <div class="form-check"><input asp-for="Navigation.Sequential" type="checkbox" class="form-check-input" /><label asp-for="Navigation.Sequential" class="form-check-label">@T["Forward only, page by page"]</label></div>
-                <div class="form-check"><input asp-for="Navigation.AutoAdvance" type="checkbox" class="form-check-input" /><label asp-for="Navigation.AutoAdvance" class="form-check-label">@T["Move on when a single-choice page is answered"]</label></div>
-                <div class="form-check"><input asp-for="Navigation.AllowResume" type="checkbox" class="form-check-input" /><label asp-for="Navigation.AllowResume" class="form-check-label">@T["Respondents may leave and come back"]</label></div>
-                <div class="form-check"><input asp-for="Navigation.AllowEditAfterSubmit" type="checkbox" class="form-check-input" /><label asp-for="Navigation.AllowEditAfterSubmit" class="form-check-label">@T["Respondents may change a finished response"]</label></div>
-                <div class="form-check"><input asp-for="Navigation.ConfirmBeforeSubmit" type="checkbox" class="form-check-input" /><label asp-for="Navigation.ConfirmBeforeSubmit" class="form-check-label">@T["Ask respondents to confirm before they finish"]</label></div>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Introduction" class="ocat-label">@T["Introduction"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Introduction" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["Shown on the start page. HTML is allowed and cleaned."]</span>
     </div>
 </div>

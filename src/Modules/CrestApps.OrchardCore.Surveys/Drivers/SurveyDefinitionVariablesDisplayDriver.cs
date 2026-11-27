@@ -23,7 +23,7 @@ internal sealed class SurveyDefinitionVariablesDisplayDriver : DisplayDriver<Sur
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyDefinition definition, BuildEditorContext context)
         => Initialize<SurveyVariablesEditViewModel>("SurveyDefinitionVariables_Edit", model => model.Variables = definition.Variables.ToList())
-            .Location("Content:1#Variables;4");
+            .Location(l => l.Zone("Content", "1").Tab(S["Variables"], "4").Card(S["Variables"], "10"));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyDefinition definition, UpdateEditorContext context)

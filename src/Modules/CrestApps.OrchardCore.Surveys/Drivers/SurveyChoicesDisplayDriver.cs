@@ -55,7 +55,7 @@ internal sealed class SurveyChoicesDisplayDriver : DisplayDriver<SurveyQuestion>
                 .Where(item => item.PageIndex < pageIndex && item.Question.Choices.Count > 0 && item.Question.Id != question.Id)
                 .Select(item => new SelectListItem($"{item.Question.Name}: {item.Question.Title}", item.Question.Id, item.Question.Id == question.ChoicesFrom))
                 .ToList();
-        }).Location("Content:2");
+        }).Location(l => l.Zone("Content", "2").Card(S["Choices"], "20"));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyQuestion question, UpdateEditorContext context)

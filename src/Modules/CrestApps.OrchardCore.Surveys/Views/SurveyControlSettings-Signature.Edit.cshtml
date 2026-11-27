@@ -1,13 +1,8 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Signature.SignatureSettings>
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Signature settings"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Settings.Height" class="ocat-label">@T["Height of the drawing area (pixels)"]</label>
-            <div class="ocat-end">
-                <input asp-for="Settings.Height" class="form-control" type="number" min="80" max="400" />
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Height" class="ocat-label">@T["Height of the drawing area (pixels)"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Height" class="form-control" type="number" min="80" max="400" />
     </div>
 </div>

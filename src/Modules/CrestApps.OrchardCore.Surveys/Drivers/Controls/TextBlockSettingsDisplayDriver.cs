@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Surveys.Core.Controls.TextBlock;
 using CrestApps.OrchardCore.Surveys.Core.Drivers;
 using CrestApps.OrchardCore.Surveys.Models;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.Infrastructure.Html;
 
@@ -17,13 +18,20 @@ public sealed class TextBlockSettingsDisplayDriver : SurveyControlSettingsDispla
     /// Initializes a new instance of the <see cref="TextBlockSettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="htmlSanitizer">The HTML sanitizer.</param>
-    public TextBlockSettingsDisplayDriver(IHtmlSanitizerService htmlSanitizer)
+    /// <param name="stringLocalizer">The localizer.</param>
+    public TextBlockSettingsDisplayDriver(
+        IHtmlSanitizerService htmlSanitizer,
+        IStringLocalizer<TextBlockSettingsDisplayDriver> stringLocalizer)
+        : base(stringLocalizer)
     {
         _htmlSanitizer = htmlSanitizer;
     }
 
     /// <inheritdoc />
     protected override string ControlType => SurveyControlNames.TextBlock;
+
+    /// <inheritdoc />
+    protected override LocalizedString CardName => S["Text Block Settings"];
 
     /// <inheritdoc />
     protected override Task UpdateSettingsAsync(SurveyQuestion question, TextBlockSettings settings, UpdateEditorContext context)

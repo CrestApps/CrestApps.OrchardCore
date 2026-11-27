@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -14,9 +15,14 @@ internal sealed class SurveyValidationDisplayDriver : DisplayDriver<SurveyQuesti
 {
     private readonly ISurveyControlRegistry _registry;
 
-    public SurveyValidationDisplayDriver(ISurveyControlRegistry registry)
+    internal readonly IStringLocalizer S;
+
+    public SurveyValidationDisplayDriver(
+        ISurveyControlRegistry registry,
+        IStringLocalizer<SurveyValidationDisplayDriver> stringLocalizer)
     {
         _registry = registry;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc />
@@ -25,7 +31,8 @@ internal sealed class SurveyValidationDisplayDriver : DisplayDriver<SurveyQuesti
 
     /// <inheritdoc />
     public override IDisplayResult Edit(SurveyQuestion question, BuildEditorContext context)
-        => Initialize<SurveyValidationEditViewModel>("SurveyValidation_Edit", model => model.ValidationRules = question.Validation.ToList()).Location("Content:6");
+        => Initialize<SurveyValidationEditViewModel>("SurveyValidation_Edit", model => model.ValidationRules = question.Validation.ToList())
+            .Location(l => l.Zone("Content", "6").Card(S["Validation"], "60"));
 
     /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(SurveyQuestion question, UpdateEditorContext context)

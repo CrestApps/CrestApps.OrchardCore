@@ -1,14 +1,9 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Hidden.HiddenSettings>
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header">@T["Hidden value settings"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper">
-            <label asp-for="Settings.VariableName" class="ocat-label">@T["Variable"]</label>
-            <div class="ocat-end">
-                <input asp-for="Settings.VariableName" class="form-control" type="text" />
-                <span class="hint">@T["The hidden variable this question records; empty uses the question's variable code."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper">
+    <label asp-for="Settings.VariableName" class="ocat-label">@T["Variable"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.VariableName" class="form-control" type="text" />
+        <span class="hint">@T["The hidden variable this question records; empty uses the question's variable code."]</span>
     </div>
 </div>
