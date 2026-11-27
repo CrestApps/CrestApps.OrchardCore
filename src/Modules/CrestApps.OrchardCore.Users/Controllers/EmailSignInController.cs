@@ -113,9 +113,9 @@ public sealed class EmailSignInController : Controller
         // account's daily count and the code's cache entry are the same work either way, so the time taken never tells
         // a known address from an unknown one.
         var account = await FindUserAsync(email);
-        var code = await _codes.IssueAsync(account?.UserId ?? _codes.GetStandInId(email), account?.Email ?? email, HttpContext.RequestAborted);
+        var code = await _codes.IssueAsync(account?.UserId ?? _codes.GetStandInId(email), account?.Email ?? email, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted);
 
-        if (account is not null && code is not null)
+        if (account is { MaySignIn: true } && code is not null)
         {
             // Sent after the response, so the time the mail server takes never tells a known address from an unknown one.
             // The code is for the account, and goes to the account's own address, never to what was typed.
@@ -157,7 +157,7 @@ public sealed class EmailSignInController : Controller
 
         // An address without an account is checked against its stand-in's code, the same work in the same time. Its
         // check is never a sign-in, whatever it answers.
-        var check = await _codes.CheckAsync(found?.UserId ?? _codes.GetStandInId(email), found?.Email ?? email, model.Code, HttpContext.RequestAborted);
+        var check = await _codes.CheckAsync(found?.UserId ?? _codes.GetStandInId(email), found?.Email ?? email, model.Code, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted);
 
         if (check == EmailSignInCodeCheck.Blocked)
         {
@@ -166,8 +166,10 @@ public sealed class EmailSignInController : Controller
             return View(model);
         }
 
-        // A wrong code and no account read the same.
-        if (found is null)
+        // A wrong code and no account read the same. An account a code can't sign in to (see EmailSignInEligibility) is
+        // counted under its own id like any other, so the answers never tell it from an address without an account; it
+        // is simply never signed in to.
+        if (found is not { MaySignIn: true })
         {
             await _loginFormEvents.InvokeAsync((handler, userName) => handler.LoggingInFailedAsync(userName), email, _logger);
 
@@ -178,19 +180,9 @@ public sealed class EmailSignInController : Controller
 
         if (check != EmailSignInCodeCheck.Right)
         {
-            // A wrong code counts toward the account's lockout, as a wrong password does, so guessing stops for good once
-            // the lockout threshold is reached instead of resuming with every new code. Only a live code that was
-            // compared counts: digits posted for an address no code was sent to would otherwise lock anyone out.
-            if (check == EmailSignInCodeCheck.Wrong)
-            {
-                await _userManager.AccessFailedAsync(user);
-
-                if (await _userManager.IsLockedOutAsync(user))
-                {
-                    await _loginFormEvents.InvokeAsync((handler, lockedOut) => handler.IsLockedOutAsync(lockedOut), user, _logger);
-                }
-            }
-
+            // A wrong code doesn't count toward the account's password lockout: the code's five tries and the account's
+            // daily limits stop guessing, and counting it would let anyone lock the owner out of their password, and make
+            // a locked-out account answer differently from an address without one.
             await _loginFormEvents.InvokeAsync((handler, failed) => handler.LoggingInFailedAsync(failed), user, _logger);
 
             return CodeRefused(model);
@@ -333,6 +325,9 @@ public sealed class EmailSignInController : Controller
     // validated: the login policies were already asked, before the proof was recorded.
     private async Task<IActionResult> CompleteSignInAsync(IUser user, bool credentialsInDoubt, string returnUrl, bool validated = false)
     {
+        // Held credentials (C10) don't stop a sign-in with the code itself.
+        EmailOwnershipLoginFormEvent.MarkEmailedCodeSignIn(HttpContext);
+
         foreach (var loginFormEvent in validated ? Enumerable.Empty<ILoginFormEvent>() : _loginFormEvents)
         {
             if (await loginFormEvent.ValidatingLoginAsync(user) is { } refusal)
@@ -422,8 +417,8 @@ public sealed class EmailSignInController : Controller
         return string.IsNullOrEmpty(providers) ? passkeys : S["{0} and {1}", providers, passkeys].Value;
     }
 
-    // An account a code can sign in to, with its id and its own address.
-    private sealed record CodeAccount(IUser User, string UserId, string Email);
+    // The account the typed address is the address of, with its id, its own address and whether a code may sign in to it.
+    private sealed record CodeAccount(IUser User, string UserId, string Email, bool MaySignIn);
 
     private ViewResult CodeRefused(EmailSignInViewModel model)
     {
@@ -432,21 +427,24 @@ public sealed class EmailSignInController : Controller
         return View(model);
     }
 
-    // An account that can sign in with a code (see EmailSignInEligibility). The typed address must be the account's own: a database that compares text loosely (SQL Server's default
-    // collation treats AE as Æ, TH as Þ and SS as ß) answers a look-alike address with another account.
+    // The account whose own address was typed, and whether a code may sign in to it (see EmailSignInEligibility). It is
+    // counted under its own id whatever its eligibility, which only refuses the sign-in: an account that stops being
+    // eligible, such as one locked out, would otherwise move to a fresh count under a stand-in id and answer differently
+    // from an address without an account. The typed address must be the account's own: a database that compares text
+    // loosely (SQL Server's default collation treats AE as Æ, TH as Þ and SS as ß) answers a look-alike address with
+    // another account.
     private async Task<CodeAccount> FindUserAsync(string email)
     {
         var user = await _userManager.FindByEmailAsync(email);
 
         if (user is null ||
             await _userManager.GetEmailAsync(user) is not { } accountEmail ||
-            !IsSameAddress(email, accountEmail) ||
-            !await _eligibility.AllowsAsync(user))
+            !IsSameAddress(email, accountEmail))
         {
             return null;
         }
 
-        return new CodeAccount(user, await _userManager.GetUserIdAsync(user), accountEmail);
+        return new CodeAccount(user, await _userManager.GetUserIdAsync(user), accountEmail, await _eligibility.AllowsAsync(user));
     }
 
     // Compared as Orchard Core normalizes an address for its lookup, but exactly.

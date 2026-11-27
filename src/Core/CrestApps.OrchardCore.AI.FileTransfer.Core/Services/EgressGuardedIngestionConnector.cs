@@ -15,12 +15,21 @@ internal sealed class EgressGuardedIngestionConnector : IIngestionConnector
     private readonly IIngestionConnector _inner;
     private readonly FileTransferEgressPolicy _policy;
     private readonly Func<IngestionSource, IEnumerable<(string Field, string Host)>> _hosts;
+    private readonly Func<IngestionSource, FileTransferEgressPolicy, string> _refusal;
+    private readonly Action<IngestionSource, FileTransferEgressPolicy> _prepare;
 
-    public EgressGuardedIngestionConnector(IIngestionConnector inner, FileTransferEgressPolicy policy, Func<IngestionSource, IEnumerable<(string Field, string Host)>> hosts)
+    public EgressGuardedIngestionConnector(
+        IIngestionConnector inner,
+        FileTransferEgressPolicy policy,
+        Func<IngestionSource, IEnumerable<(string Field, string Host)>> hosts,
+        Func<IngestionSource, FileTransferEgressPolicy, string> refusal = null,
+        Action<IngestionSource, FileTransferEgressPolicy> prepare = null)
     {
         _inner = inner;
         _policy = policy;
         _hosts = hosts;
+        _refusal = refusal;
+        _prepare = prepare;
     }
 
     public string Name => _inner.Name;
@@ -35,6 +44,11 @@ internal sealed class EgressGuardedIngestionConnector : IIngestionConnector
             {
                 result.Fail(new ValidationResult(FileTransferEgress.RefusedMessage, [field]));
             }
+        }
+
+        if (_refusal?.Invoke(source, _policy) is { } refusedField)
+        {
+            result.Fail(new ValidationResult(FileTransferEgress.DataConnectionRefusedMessage, [refusedField]));
         }
     }
 
@@ -58,5 +72,7 @@ internal sealed class EgressGuardedIngestionConnector : IIngestionConnector
         {
             _policy.EnsureAllowed(host);
         }
+
+        _prepare?.Invoke(source, _policy);
     }
 }

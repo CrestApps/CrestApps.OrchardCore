@@ -1,6 +1,9 @@
+using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Orders.Services;
 using CrestApps.OrchardCore.Orders.ViewModels;
+using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -46,12 +49,21 @@ public sealed class QuotesController : Controller
     [HttpPost("cart/quote")]
     [ValidateAntiForgeryToken]
     [ActionName("Request")]
-    public async Task<IActionResult> RequestQuotePost(QuoteRequestViewModel model)
+    public async Task<IActionResult> RequestQuotePost(QuoteRequestViewModel model, [FromServices] IAttemptLimiter limiter)
     {
         if (!await _quotes.CanRequestAsync(User))
         {
             return NotFound();
         }
+
+        // Every request makes a record, so it is held to the store's limit on checkouts started per client.
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, ClientNetworkKey.From(HttpContext), HttpContext.RequestAborted) is { Allowed: false } refused)
+        {
+            await ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync(HttpContext, refused.RetryAfter, HttpContext.RequestAborted);
+
+            return new EmptyResult();
+        }
+
 
         var (quote, problems) = await _quotes.RequestAsync(User, model?.Message, model?.PurchaseOrderNumber, HttpContext.RequestAborted);
 

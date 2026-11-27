@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -95,6 +96,18 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
                     PaymentIssueKinds.SuspectedCardTesting,
                     "Card payments from one network were declined until the store stopped taking card payments from it for a while. Someone may be testing stolen cards.",
                     cancellationToken));
+
+                if (ClientNetworkKey.GetAgentPlatform(client.NetworkKey) is { } platform)
+                {
+                    alreadyBlocked |= WasBlocked(await CountAsync(
+                        CheckoutConstants.AttemptPolicies.PaymentDeclineAgentPlatform,
+                        platform,
+                        session,
+                        attempt,
+                        PaymentIssueKinds.SuspectedCardTesting,
+                        "Card payments from one agent platform's buyers were declined so often that the store stopped taking card payments from that platform for a while. Someone may be testing stolen cards through it.",
+                        cancellationToken));
+                }
             }
 
             if (!string.IsNullOrEmpty(session.OwnerId))
@@ -178,6 +191,11 @@ public sealed class PaymentDeclineRecorder : IPaymentDeclineRecorder
         if (string.Equals(policy, CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork, StringComparison.Ordinal))
         {
             return "network " + MaskNetwork(key);
+        }
+
+        if (string.Equals(policy, CheckoutConstants.AttemptPolicies.PaymentDeclineAgentPlatform, StringComparison.Ordinal))
+        {
+            return "agent platform " + key;
         }
 
         return string.Equals(policy, CheckoutConstants.AttemptPolicies.PaymentDeclineCustomer, StringComparison.Ordinal)

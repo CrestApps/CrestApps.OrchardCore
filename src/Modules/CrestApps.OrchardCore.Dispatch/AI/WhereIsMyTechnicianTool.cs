@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Core;
 using CrestApps.OrchardCore.Dispatch.Models;
@@ -30,7 +31,6 @@ public sealed class WhereIsMyTechnicianTool : AIFunction
         {
           "type": "object",
           "properties": {
-            "phone": { "type": "string", "description": "The caller's phone number, as the system has it (for a call or text, the number it came from)." },
             "trackingToken": { "type": "string", "description": "The token from the tracking link the customer was sent, instead of a phone number." },
             "workOrderNumber": { "type": "string", "description": "Optional. The work order's number, when the customer has more than one visit." }
           },
@@ -42,7 +42,7 @@ public sealed class WhereIsMyTechnicianTool : AIFunction
     public override string Name => ToolName;
 
     /// <inheritdoc />
-    public override string Description => "Tells a customer the status of their visit: when the technician is expected (ETA or arrival window) and the technician's first name. Use the caller's own phone number, never one they say; or the token of their tracking link.";
+    public override string Description => "Tells a customer the status of their visit: when the technician is expected (ETA or arrival window) and the technician's first name. On a call or text the visit is found from the number the conversation is with; otherwise pass the token of the customer's tracking link.";
 
     /// <inheritdoc />
     public override JsonElement JsonSchema => _schema;
@@ -62,7 +62,7 @@ public sealed class WhereIsMyTechnicianTool : AIFunction
         var token = Read(arguments, "trackingToken");
         List<ServiceVisit> visits = token is not null
             ? [await services.GetRequiredService<IVisitTrackingLinks>().ReadAsync(token, cancellationToken)]
-            : await ForPhoneAsync(services, Read(arguments, "phone"), Read(arguments, "workOrderNumber"), cancellationToken);
+            : await ForPhoneAsync(services, CallerPhone(), Read(arguments, "workOrderNumber"), cancellationToken);
 
         visits = [.. visits.Where(visit => visit is not null)];
 
@@ -122,6 +122,18 @@ public sealed class WhereIsMyTechnicianTool : AIFunction
         }
 
         return found;
+    }
+
+    // The number the call or text is with, as the channel recorded it. A number the model passes is never used: anyone
+    // could say someone else's number and hear their visit, address window and technician.
+    private static string CallerPhone()
+    {
+        var conversation = AIConversationScope.Current;
+
+        return conversation is not null &&
+            (conversation.Channel == AIConversationChannels.Phone || conversation.Channel == AIConversationChannels.Sms)
+            ? conversation.CustomerAddress
+            : null;
     }
 
     private static string Read(AIFunctionArguments arguments, string name)

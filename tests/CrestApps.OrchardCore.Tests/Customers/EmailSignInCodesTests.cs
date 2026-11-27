@@ -196,6 +196,7 @@ public sealed class EmailSignInCodesTests
             .AddPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.SendAccountPolicy, 10, TimeSpan.FromDays(1))
+            .AddPolicy(EmailSignInCodes.SendAccountTotalPolicy, 50, TimeSpan.FromDays(1))
             .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.VerifyAccountPolicy, 10, TimeSpan.FromDays(1), TimeSpan.FromDays(1));
 
@@ -215,6 +216,28 @@ public sealed class EmailSignInCodesTests
         Assert.Equal(EmailSignInCodeCheck.Wrong, await codes.CheckAsync("user-1", "jordan@example.test", wrong, TestContext.Current.CancellationToken));
         Assert.Equal(EmailSignInCodeCheck.Right, await codes.CheckAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
         Assert.Equal(EmailSignInCodeCheck.NoCode, await codes.CheckAsync("user-1", "jordan@example.test", code, TestContext.Current.CancellationToken));
+    }
+
+    [Fact]
+    public async Task TheRightCode_IsAccepted_WhileItsNetworkIsBlocked_ButThatNetworkGetsNoNewCode()
+    {
+        // Round 2, #4: once an account's wrong codes reached the limit, even the right code was refused, so anyone could
+        // turn off an account's code sign-in. The limit now counts per account and network, and only stops new codes.
+        var clock = new Mock<IClock>();
+        clock.Setup(c => c.UtcNow).Returns(() => _now);
+        var limiter = CreateLimiter(clock.Object);
+        var codes = new EmailSignInCodes(_cache, limiter, new ShellSettings { Name = "Default" }, clock.Object, _lock);
+
+        var code = await codes.IssueAsync("user-1", "jordan@example.test", "198.51.100.1", TestContext.Current.CancellationToken);
+
+        for (var i = 0; i < 10; i++)
+        {
+            await limiter.RecordFailureAsync(EmailSignInCodes.VerifyAccountPolicy, "user-1|198.51.100.1", TestContext.Current.CancellationToken);
+        }
+
+        Assert.Equal(EmailSignInCodeCheck.Right, await codes.CheckAsync("user-1", "jordan@example.test", code, "198.51.100.1", TestContext.Current.CancellationToken));
+        Assert.Null(await codes.IssueAsync("user-1", "jordan@example.test", "198.51.100.1", TestContext.Current.CancellationToken));
+        Assert.NotNull(await codes.IssueAsync("user-1", "jordan@example.test", "203.0.113.7", TestContext.Current.CancellationToken));
     }
 
     [Fact]

@@ -1,5 +1,6 @@
 using CrestApps.Core;
 using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Transactions.Core.Services;
@@ -33,12 +34,21 @@ public sealed class TransactionSettlementPaymentGate : ICheckoutPaymentGate
     /// </summary>
     public static readonly TimeSpan BeginWindow = TimeSpan.FromMinutes(2);
 
+    /// <summary>
+    /// How long a payment that was begun but not finished, such as a card waiting on 3-D Secure or an intent the payer
+    /// never confirmed, keeps other checkouts of the transaction out. After it, the next checkout cancels that payment at
+    /// the provider and goes ahead, so an abandoned payment can't block the transaction for good. It is counted from the
+    /// first time the holding checkout began, so beginning again from the same checkout doesn't extend it.
+    /// </summary>
+    public static readonly TimeSpan PendingHoldLimit = TimeSpan.FromMinutes(30);
+
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(1);
 
     private readonly ITransactionManager _transactions;
     private readonly IPaymentAttemptStore _attempts;
     private readonly ICheckoutSessionStore _sessions;
+    private readonly ICheckoutPaymentReleaseService _release;
     private readonly IDistributedLock _distributedLock;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -59,6 +69,7 @@ public sealed class TransactionSettlementPaymentGate : ICheckoutPaymentGate
         ITransactionManager transactions,
         IPaymentAttemptStore attempts,
         ICheckoutSessionStore sessions,
+        ICheckoutPaymentReleaseService release,
         IDistributedLock distributedLock,
         ISession session,
         IClock clock,
@@ -67,6 +78,7 @@ public sealed class TransactionSettlementPaymentGate : ICheckoutPaymentGate
         _transactions = transactions;
         _attempts = attempts;
         _sessions = sessions;
+        _release = release;
         _distributedLock = distributedLock;
         _session = session;
         _clock = clock;
@@ -170,10 +182,17 @@ public sealed class TransactionSettlementPaymentGate : ICheckoutPaymentGate
 
         foreach (var transaction in transactions)
         {
+            // A checkout that already holds the transaction keeps the time it first took it: beginning again from the same
+            // checkout, every couple of minutes, must not keep the real payer out for good.
+            var heldUtc = transaction.TryGet<TransactionSettlementHold>(out var current) &&
+                string.Equals(current?.SessionId, session.SessionId, StringComparison.Ordinal)
+                ? current.HeldUtc
+                : _clock.UtcNow;
+
             transaction.Put(new TransactionSettlementHold
             {
                 SessionId = session.SessionId,
-                HeldUtc = _clock.UtcNow,
+                HeldUtc = heldUtc,
             });
 
             await _transactions.UpdateAsync(transaction, cancellationToken: cancellationToken);
@@ -201,10 +220,12 @@ public sealed class TransactionSettlementPaymentGate : ICheckoutPaymentGate
 
         var attempts = (await _attempts.GetBySessionAsync(hold.SessionId, cancellationToken)).ToList();
 
-        // Let through the gate, its payment hasn't reached the provider yet, or didn't and never will.
+        // Let through the gate, its payment hasn't reached the provider yet, or didn't and never will. A begin still
+        // talking to the provider holds its checkout's lock, so one slower than the window still holds the transaction.
         if (attempts.Count == 0)
         {
-            return _clock.UtcNow - hold.HeldUtc < BeginWindow;
+            return _clock.UtcNow - hold.HeldUtc < BeginWindow ||
+                await _distributedLock.IsLockAcquiredAsync(DefaultCheckoutEngine.SessionLockPrefix + hold.SessionId);
         }
 
         var applied = transaction.Events
@@ -212,8 +233,19 @@ public sealed class TransactionSettlementPaymentGate : ICheckoutPaymentGate
             .Select(evt => evt.PaymentAttemptId)
             .ToHashSet(StringComparer.Ordinal);
 
-        return attempts.Any(attempt =>
-            attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending ||
-            (attempt.State == PaymentAttemptState.Succeeded && !applied.Contains(attempt.ItemId)));
+        if (attempts.Any(attempt => attempt.State == PaymentAttemptState.Succeeded && !applied.Contains(attempt.ItemId)))
+        {
+            return true;
+        }
+
+        if (!attempts.Any(attempt => attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending))
+        {
+            return false;
+        }
+
+        // A payment begun and not finished holds the transaction for a while; after that it is canceled at the provider,
+        // which refuses when the money was taken or is being taken, and the transaction is free again.
+        return _clock.UtcNow - hold.HeldUtc < PendingHoldLimit ||
+            await _release.ReleaseAsync(hold.SessionId, cancellationToken) != CheckoutPaymentReleaseResult.Released;
     }
 }

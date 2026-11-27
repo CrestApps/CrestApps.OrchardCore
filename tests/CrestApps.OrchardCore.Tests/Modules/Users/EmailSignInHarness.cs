@@ -67,6 +67,11 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
 
     public DateTime Now { get; set; } = DateTime.UtcNow;
 
+    /// <summary>
+    /// Gets or sets the address the next requests come from.
+    /// </summary>
+    public string RemoteAddress { get; set; } = "203.0.113.7";
+
     public RecordingCodeSender Sender { get; } = new();
 
     /// <summary>
@@ -222,6 +227,7 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
             .AddPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.SendAccountPolicy, 10, TimeSpan.FromDays(1))
+            .AddPolicy(EmailSignInCodes.SendAccountTotalPolicy, 50, TimeSpan.FromDays(1))
             .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.VerifyAccountPolicy, 10, TimeSpan.FromDays(1), TimeSpan.FromDays(1));
         var limiter = new DistributedAttemptLimiter(Cache, _lock, new ShellSettings { Name = "Default" }, clock, Options.Create(options), NullLogger<DistributedAttemptLimiter>.Instance);
@@ -323,11 +329,11 @@ internal sealed class EmailSignInHarness : IAsyncDisposable
         return siteService.Object;
     }
 
-    private static T Prepare<T>(T controller, IServiceProvider requestServices, string signedInUserId, params Claim[] signInClaims)
+    private T Prepare<T>(T controller, IServiceProvider requestServices, string signedInUserId, params Claim[] signInClaims)
         where T : Controller
     {
         var httpContext = new DefaultHttpContext { RequestServices = requestServices };
-        httpContext.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.7");
+        httpContext.Connection.RemoteIpAddress = IPAddress.Parse(RemoteAddress);
 
         if (signedInUserId is not null)
         {

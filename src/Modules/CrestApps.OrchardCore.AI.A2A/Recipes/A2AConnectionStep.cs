@@ -49,6 +49,18 @@ internal sealed class A2AConnectionStep : CatalogRecipeStepBase<A2AConnection>
         return RecipeSecretDestinations.UpdateAsync(entry, token, data => _manager.UpdateAsync(entry, data));
     }
 
+    protected override ValueTask<A2AConnection> PrepareUpdateAsync(A2AConnection entry, JsonObject token)
+    {
+        // The catalog saves an update as it applies it, before the step validates the result, so an endpoint on the site's
+        // own network is refused here, from what the recipe sends, before anything is saved (C13).
+        if (AIRecipeEndpoints.FindRefusedInRecipe(token, _endpointPolicy) is { } refused)
+        {
+            throw new InvalidOperationException($"The recipe can't point the A2A connection '{entry.ItemId}' at '{refused}': it is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.");
+        }
+
+        return base.PrepareUpdateAsync(entry, token);
+    }
+
     protected override ValueTask<A2AConnection> NewAsync(JsonObject token, RecipeExecutionContext context)
         => _manager.NewAsync(token);
 

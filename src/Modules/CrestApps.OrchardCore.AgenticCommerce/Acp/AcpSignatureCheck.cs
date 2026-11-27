@@ -23,6 +23,12 @@ public static class AcpSignatureCheck
     public const string McpMethod = "MCP";
 
     /// <summary>
+    /// How long after its first use the same idempotent request may be sent again with the same signature: ten minutes,
+    /// or the signature's own window when that is shorter.
+    /// </summary>
+    public static readonly TimeSpan RetryWindow = TimeSpan.FromMinutes(10);
+
+    /// <summary>
     /// Returns why a request's signature isn't accepted, or <see langword="null"/> when it is (or isn't needed). Without
     /// a method and a path, a platform on signature version 2 is refused.
     /// </summary>
@@ -128,8 +134,12 @@ public static class AcpSignatureCheck
             return Task.FromResult(AgentSignatureUse.Accepted);
         }
 
-        // A timestamp is accepted for the skew either way, so a signature could be valid for twice that.
-        return guard.UseAsync(platform.ItemId, verified, idempotencyKey, GetClockSkew(platform) * 2, httpContext.RequestAborted);
+        // A timestamp is accepted for the skew either way, so a signature could be valid for twice that, and it is remembered
+        // that long. The same idempotent request may come again with it only for a retry soon after, as for UCP: the
+        // idempotency layer keeps no failed answer, so a copy sent an hour later would run the request again.
+        var window = GetClockSkew(platform) * 2;
+
+        return guard.UseAsync(platform.ItemId, verified, idempotencyKey, window, window < RetryWindow ? window : RetryWindow, httpContext.RequestAborted);
     }
 
     /// <summary>

@@ -100,11 +100,12 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
             context.Updater.ModelState.AddModelError(Prefix, nameof(model.Host), S["This server is on the site's own network, or its name could not be found. Use a public server, or ask the host to allow a private network for file transfers."]);
         }
 
-        // FluentFTP's PassiveAllowUnroutable (PASVUSE) connects the data channel to whatever address the server's PASV
-        // answer names, even one on the site's own network, so a server could point it inside.
-        if (IsUnroutablePassive(model.DataConnectionType) && !_egressPolicy.AllowPrivateNetwork)
+        // Every passive mode but EPSV and PASVEX connects the data channel to whatever address the server's answer names,
+        // even one on the site's own network, so a server could point it inside (FtpDataConnections). An empty value is
+        // saved as PASVEX.
+        if (!string.IsNullOrWhiteSpace(model.DataConnectionType) && !FtpDataConnections.IsSafe(model.DataConnectionType) && !_egressPolicy.AllowPrivateNetwork)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DataConnectionType), S["This data connection type lets the server send the connection to the site's own network. Choose another one."]);
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DataConnectionType), S["This data connection type lets the server send the connection to the site's own network. Choose EPSV or PASVEX."]);
         }
 
         // Accepting any certificate lets anyone on the network path read the credentials and the files, so only the
@@ -143,18 +144,13 @@ public abstract class FtpConnectionDisplayDriverBase<TModel> : DisplayDriver<TMo
             Username = username,
             Password = _dataProtectionProvider.ApplySecret(FtpResourceConstants.DataProtectionPurpose, storedPassword, model.Password),
             EncryptionMode = FileTransferFields.Trimmed(model.EncryptionMode),
-            DataConnectionType = FileTransferFields.Trimmed(model.DataConnectionType),
+            DataConnectionType = FtpDataConnections.Effective(FileTransferFields.Trimmed(model.DataConnectionType), _egressPolicy.AllowPrivateNetwork),
             ValidateAnyCertificate = model.ValidateAnyCertificate,
             ConnectTimeout = model.ConnectTimeout,
             ReadTimeout = model.ReadTimeout,
             RetryAttempts = model.RetryAttempts,
         };
     }
-
-    private static bool IsUnroutablePassive(string dataConnectionType)
-        => string.Equals(dataConnectionType?.Trim(), "PassiveAllowUnroutable", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(dataConnectionType?.Trim(), "PASVUSE", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(dataConnectionType?.Trim(), "7", StringComparison.Ordinal);
 
     // The FTP client's own rule: only Explicit and Implicit send the credentials over TLS.
     private static bool IsEncrypted(string encryptionMode)

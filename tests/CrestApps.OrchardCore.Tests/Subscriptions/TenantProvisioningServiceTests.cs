@@ -148,6 +148,33 @@ public sealed class TenantProvisioningServiceTests
     }
 
     /// <summary>
+    /// Round 2 (Mild): a job blocked by a leftover tenant counted each check as an attempt, was abandoned and dropped its
+    /// password, so "remove it and retry" could no longer work.
+    /// </summary>
+    [Fact]
+    public async Task ProvisionAsync_BlockedByALeftoverTenant_IsNeverAbandoned_AndKeepsItsPassword()
+    {
+        var leftOver = new ShellSettings { Name = "qasite1" };
+        leftOver.AsUninitialized();
+        leftOver[SubscriptionConstants.ProvisioningJobSetting] = null;
+
+        var (service, _, store) = CreateService(new SubscriptionOnboardingSettings(), existing: leftOver);
+
+        for (var i = 0; i < 10; i++)
+        {
+            store.Jobs.First().NextAttemptUtc = null;
+            await service.ProvisionAsync("job-1", TestContext.Current.CancellationToken);
+        }
+
+        var job = store.Jobs.First();
+
+        Assert.Equal(TenantProvisioningStatus.Failed, job.Status);
+        Assert.NotNull(job.ProtectedAdminPassword);
+        Assert.True(job.AttemptCount < 5);
+        Assert.NotNull(job.NextAttemptUtc);
+    }
+
+    /// <summary>
     /// Review 11 C4: a site bought with a promise to pay is built once the payment arrives, never because a job was run.
     /// </summary>
     [Fact]

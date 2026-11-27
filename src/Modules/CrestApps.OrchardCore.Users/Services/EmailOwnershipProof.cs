@@ -227,6 +227,10 @@ public sealed class EmailOwnershipProof
         var emailConfirmed = account.EmailConfirmed;
         account.EmailConfirmed = true;
 
+        // The proof also ends the hold on the account's unproved credentials, so the policies see it ended.
+        var held = account.Properties?[UserCredentialsProof.UnprovedCredentialsHeldPropertyName]?.DeepClone();
+        UserCredentialsProof.ReleaseUnprovedCredentials(account);
+
         try
         {
             foreach (var loginFormEvent in loginFormEvents)
@@ -242,6 +246,11 @@ public sealed class EmailOwnershipProof
         finally
         {
             account.EmailConfirmed = emailConfirmed;
+
+            if (held is not null)
+            {
+                account.Properties[UserCredentialsProof.UnprovedCredentialsHeldPropertyName] = held;
+            }
         }
     }
 
@@ -277,6 +286,7 @@ public sealed class EmailOwnershipProof
         {
             removed = RemoveWhatWasNotShown(account, passwordShown, shownLogin);
             UserCredentialsProof.ClearChangedInCodeSession(account);
+            UserCredentialsProof.ReleaseUnprovedCredentials(account);
             UserCredentialsResets.Record(account.Properties, now);
             UserEmailOwnership.MarkVerified(account.Properties, account.Email, now);
         }
@@ -311,7 +321,8 @@ public sealed class EmailOwnershipProof
     /// account whose password or logins nobody proved are theirs, and those may be whoever registered with the address.
     /// The security stamp is rotated, sessions issued before now are refused from the next request
     /// (<see cref="UserCredentialsResets"/>), and what an OpenID server issued is revoked. Nothing is removed, proved or
-    /// recorded as a reset: the credentials stay until the owner confirms the address is theirs.
+    /// recorded as a reset: the credentials stay until the owner confirms the address is theirs, held so they sign nobody in
+    /// until then (<see cref="UserCredentialsProof.HoldUnprovedCredentials"/>).
     /// </summary>
     /// <param name="account">The account a code just signed in to.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
@@ -321,6 +332,10 @@ public sealed class EmailOwnershipProof
         ArgumentNullException.ThrowIfNull(account);
 
         var now = _clock.UtcNow;
+
+        // The credentials stay, but sign nobody in until the owner confirms the address (EmailOwnershipLoginFormEvent):
+        // otherwise whoever registered with it signs straight back in, and could keep the owner from ever confirming.
+        UserCredentialsProof.HoldUnprovedCredentials(account, now);
 
         if (!(await _userManager.UpdateSecurityStampAsync(account)).Succeeded)
         {

@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using System.Globalization;
 using CrestApps.OrchardCore.Bookings.Models;
 using CrestApps.OrchardCore.Bookings.Services;
@@ -122,12 +125,21 @@ public sealed class BookingsController : Controller
     [HttpPost("bookings/request")]
     [ValidateAntiForgeryToken]
     [ActionName(nameof(RequestBooking))]
-    public async Task<IActionResult> RequestBookingPost(BookingRequestViewModel model, [FromServices] IOrderRequestService requests)
+    public async Task<IActionResult> RequestBookingPost(BookingRequestViewModel model, [FromServices] IOrderRequestService requests, [FromServices] IAttemptLimiter limiter)
     {
         if (User.Identity?.IsAuthenticated != true)
         {
             return Challenge();
         }
+
+        // Every request makes a record, so it is held to the store's limit on checkouts started per client.
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, ClientNetworkKey.From(HttpContext), HttpContext.RequestAborted) is { Allowed: false } refused)
+        {
+            await ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync(HttpContext, refused.RetryAfter, HttpContext.RequestAborted);
+
+            return new EmptyResult();
+        }
+
 
         var (order, problems) = await requests.RequestAsync(User, model?.Message, HttpContext.RequestAborted);
 

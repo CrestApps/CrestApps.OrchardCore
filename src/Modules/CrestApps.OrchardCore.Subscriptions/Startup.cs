@@ -275,6 +275,7 @@ public sealed class TenantProvisioningStartup : StartupBase
         services.AddScoped<ICheckoutPaymentGate, TenantProvisioningPaymentGate>();
 
         // A site bought with a promise to pay is created once its transaction is paid.
+        services.AddScoped<TenantProvisioningPaymentRelease>();
         services.AddScoped<ITransactionEventHandler, TenantProvisioningPaymentReceivedHandler>();
         services.AddDisplayDriver<CheckoutFlow, TenantProvisioningStepDisplayDriver>();
 

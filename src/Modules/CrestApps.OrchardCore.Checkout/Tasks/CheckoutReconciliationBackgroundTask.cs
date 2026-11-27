@@ -155,7 +155,10 @@ public sealed class CheckoutReconciliationBackgroundTask : IBackgroundTask
         var before = _clock.UtcNow - lifetime;
         var expired = 0;
 
-        foreach (var status in new[] { CheckoutSessionStatus.Pending, CheckoutSessionStatus.AwaitingProvider })
+        // A checkout left waiting on its payment, such as a card whose 3-D Secure was abandoned, is expired too: its open
+        // payment would otherwise hold what it pays for, a pay link's transaction included, for good. The engine leaves
+        // one alone while any payment succeeded or the provider won't cancel it.
+        foreach (var status in new[] { CheckoutSessionStatus.Pending, CheckoutSessionStatus.AwaitingProvider, CheckoutSessionStatus.PaymentPending })
         {
             var abandoned = await sessionStore.GetStaleAsync(status, before, MaxSessionsPerRun, cancellationToken);
 

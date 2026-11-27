@@ -334,7 +334,8 @@ The tools of the **AI Agent** feature act on the site, so each one has a permiss
 | `applyContentTypeDefinitionFromRecipe`, `removeContentTypeDefinition`, `removeContentPartDefinition` | `EditContentTypes` |
 | The feature tools | `ManageFeatures` |
 | `sendEmail`, `sendSmsMessage`, `sendNotification` | `AccessAITool_sendEmail`, `AccessAITool_sendSmsMessage` or `AccessAITool_sendNotification` (or `AccessAnyAITool`) |
-| `getUserInfo`, `searchForUsers` | `ViewUsers` |
+| `getUserInfo` | `ViewUsers` |
+| `searchForUsers` | `ListUsers`, and only the users the caller may list are returned, with their id, user name, email, roles and whether they are enabled |
 | `getRoleInfo` | `ViewRoles` |
 | The workflow tools | `ManageWorkflows` |
 

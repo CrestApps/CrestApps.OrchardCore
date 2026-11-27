@@ -75,6 +75,13 @@ public static class UserCredentialsProof
     public const string ChangedInCodeSessionPropertyName = "EmailOwnershipCredentialsChangedInCodeSessionUtc";
 
     /// <summary>
+    /// The property, on the account, that says when the owner of its address signed in with an e-mailed code while its
+    /// password or logins weren't proved theirs. Until the owner confirms the address, those credentials sign nobody in:
+    /// they may be whoever registered with the address, who could otherwise sign straight back in.
+    /// </summary>
+    public const string UnprovedCredentialsHeldPropertyName = "EmailOwnershipUnprovedCredentialsHeldUtc";
+
+    /// <summary>
     /// The <see cref="AuthenticationMethodReferenceClaim"/> value of a session a code e-mailed to the account began, when
     /// the account had a password or an external login nobody proved was the code holder's (RFC 8176's one-time code).
     /// </summary>
@@ -180,6 +187,38 @@ public static class UserCredentialsProof
 
         account.Properties[ChangedInCodeSessionPropertyName] = changedUtc.ToString("O", CultureInfo.InvariantCulture);
     }
+
+    /// <summary>
+    /// Whether the account's password, external logins and passkeys are held: the owner of its address signed in with a
+    /// code while they weren't proved, and hasn't confirmed the address since (see
+    /// <see cref="UnprovedCredentialsHeldPropertyName"/>).
+    /// </summary>
+    /// <param name="account">The account.</param>
+    public static bool AreUnprovedCredentialsHeld(User account)
+        => account?.Properties?[UnprovedCredentialsHeldPropertyName] is JsonValue value &&
+            value.TryGetValue<string>(out var text) &&
+            !string.IsNullOrEmpty(text) &&
+            !UserEmailOwnership.IsVerified(account.Properties, account.Email);
+
+    /// <summary>
+    /// Holds the account's unproved credentials until the address is confirmed (see
+    /// <see cref="UnprovedCredentialsHeldPropertyName"/>).
+    /// </summary>
+    /// <param name="account">The account.</param>
+    /// <param name="heldUtc">When.</param>
+    public static void HoldUnprovedCredentials(User account, DateTime heldUtc)
+    {
+        ArgumentNullException.ThrowIfNull(account);
+
+        account.Properties[UnprovedCredentialsHeldPropertyName] = heldUtc.ToString("O", CultureInfo.InvariantCulture);
+    }
+
+    /// <summary>
+    /// Clears <see cref="UnprovedCredentialsHeldPropertyName"/>, once the address is proved.
+    /// </summary>
+    /// <param name="account">The account.</param>
+    public static void ReleaseUnprovedCredentials(User account)
+        => account?.Properties?.Remove(UnprovedCredentialsHeldPropertyName);
 
     /// <summary>
     /// Clears <see cref="ChangedInCodeSessionPropertyName"/>, once the address is proved.

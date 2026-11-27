@@ -29,6 +29,21 @@ public static class AIRecipeEndpoints
         return Endpoints(JsonSerializer.SerializeToNode(entry, entry.GetType()), includeUrls).FirstOrDefault(url => !policy.IsAllowed(url));
     }
 
+    /// <summary>
+    /// Returns the first endpoint in a recipe entry's JSON that the policy refuses, or <see langword="null"/>. An update
+    /// is checked on what the recipe sends, before it is applied: the catalog saves an update as it applies it, so a check
+    /// of the updated entry would come after the save.
+    /// </summary>
+    /// <param name="token">The recipe's JSON for the entry.</param>
+    /// <param name="policy">The endpoint policy.</param>
+    /// <param name="includeUrls">Whether properties whose name ends with <c>Url</c> are addresses too.</param>
+    public static string FindRefusedInRecipe(JsonObject token, IAIEndpointPolicy policy, bool includeUrls = false)
+    {
+        ArgumentNullException.ThrowIfNull(policy);
+
+        return token is null ? null : Endpoints(token, includeUrls).FirstOrDefault(url => !policy.IsAllowed(url));
+    }
+
     private static bool IsAddressName(string name, bool includeUrls)
         => name.EndsWith("Endpoint", StringComparison.OrdinalIgnoreCase) ||
             (includeUrls && name.EndsWith("Url", StringComparison.OrdinalIgnoreCase));

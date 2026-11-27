@@ -181,22 +181,15 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
             {
                 // No entry here: none was started, or it is in another node's cache, was lost, evicted or could not be
                 // read. The window on the activity tells them apart, and while it is there the keys are dropped.
-                return await OfferToWindowAsync(activityId, key, cancellationToken);
+                return await OfferToWindowAsync(activityId, key, digits, cancellationToken);
             }
 
-            if (capture.TimedOutUntilUtc is { } quietUntilUtc)
+            if (capture.TimedOutUntilUtc is not null)
             {
-                // The entry timed out: the keys are dropped until the caller has stopped typing for the grace period.
-                if (_clock.UtcNow <= quietUntilUtc)
-                {
-                    return await TimeOutAsync(activityId, key, capture.Field, alreadyTold: true, cancellationToken);
-                }
-
-                // Quiet here, but keys may have landed on a node that doesn't share this cache since: the window, which
-                // every node moves on, decides.
-                await _cache.RemoveAsync(key, cancellationToken);
-
-                return await OfferToWindowAsync(activityId, key, cancellationToken);
+                // The entry timed out: the keys are dropped, however long the caller waited, until they press the star key,
+                // the AI asks for a new entry or the call ends. Time alone never gives the keypad back: a caller who finds
+                // their card after a minute and types it would otherwise hand it to the AI.
+                return await DropAfterTimeOutAsync(activityId, key, capture.Field, digits, cancellationToken);
             }
 
             if (_clock.UtcNow - capture.StartedUtc > SecureKeypadCaptures.Expiry)
@@ -264,7 +257,7 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
 
     // Keys that found no entry this node can use. While a window is on the activity they are dropped: before the entry's
     // time is up as part of the entry, and after it as the entry timing out, which the AI is told about once.
-    private async Task<SecureKeypadEntry> OfferToWindowAsync(string activityId, string key, CancellationToken cancellationToken)
+    private async Task<SecureKeypadEntry> OfferToWindowAsync(string activityId, string key, string digits, CancellationToken cancellationToken)
     {
         var window = await FindWindowAsync(activityId, cancellationToken);
 
@@ -280,18 +273,32 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
             return new SecureKeypadEntry(SecureKeypadEntryState.Collecting, window.Field, null);
         }
 
-        if (window.TimedOut && window.UntilUtc < _clock.UtcNow)
+        if (window.TimedOut)
         {
-            return await CloseAsync(activityId, key, cancellationToken);
+            return await DropAfterTimeOutAsync(activityId, key, window.Field, digits, cancellationToken);
         }
 
-        return await TimeOutAsync(activityId, key, window.Field, alreadyTold: window.TimedOut, cancellationToken);
+        return await TimeOutAsync(activityId, key, window.Field, alreadyTold: false, cancellationToken);
     }
 
-    // Ends an entry that was not finished in time without keeping a digit. The keypad stays private for the grace
-    // period from this key, both in the cache, which the next key on a node that shares it finds at once, and in the
-    // window on the activity for the nodes that don't; each key typed in that time starts the grace period again. The
-    // first keys after the entry's time is up are the ones the AI is told about.
+    // A key after an entry timed out. The star key gives the keypad back, and is dropped itself, like every key of this
+    // event; any other key is dropped and keeps the keypad private.
+    private async Task<SecureKeypadEntry> DropAfterTimeOutAsync(string activityId, string key, SecureCaptureField field, string digits, CancellationToken cancellationToken)
+    {
+        if (digits?.Contains('*') == true)
+        {
+            await CloseAsync(activityId, key, cancellationToken);
+
+            return new SecureKeypadEntry(SecureKeypadEntryState.Collecting, field, null);
+        }
+
+        return await TimeOutAsync(activityId, key, field, alreadyTold: true, cancellationToken);
+    }
+
+    // Ends an entry that was not finished in time without keeping a digit. The keypad stays private, both in the cache,
+    // which the next key on a node that shares it finds at once, and in the window on the activity for the nodes that
+    // don't, until the caller presses the star key, the AI asks for a new entry or the call ends. The first keys after the
+    // entry's time is up are the ones the AI is told about.
     private async Task<SecureKeypadEntry> TimeOutAsync(string activityId, string key, SecureCaptureField field, bool alreadyTold, CancellationToken cancellationToken)
     {
         var quietUntilUtc = _clock.UtcNow + SecureKeypadCaptures.Grace;
@@ -308,7 +315,7 @@ internal sealed class DistributedSecureKeypadCaptureStore : ISecureKeypadCapture
         return new SecureKeypadEntry(alreadyTold ? SecureKeypadEntryState.Collecting : SecureKeypadEntryState.TimedOut, field, null);
     }
 
-    // The caller stopped typing for the whole grace period after a timed-out entry: the keypad is theirs again.
+    // The caller pressed the star key after a timed-out entry: the keypad is theirs again.
     private async Task<SecureKeypadEntry> CloseAsync(string activityId, string key, CancellationToken cancellationToken)
     {
         await _cache.RemoveAsync(key, cancellationToken);

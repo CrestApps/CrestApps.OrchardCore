@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
@@ -52,7 +53,7 @@ public abstract class SchedulingAIToolBase : AIFunction
     /// <returns><see langword="true"/> when they may.</returns>
     protected static async Task<bool> CanManageAsync(IServiceProvider services)
     {
-        var user = services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var user = services.GetService<IUserAccessor>()?.User ?? services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
         return user?.Identity?.IsAuthenticated == true && await services.GetRequiredService<IAuthorizationService>().AuthorizeAsync(user, SchedulingPermissions.ManageAppointments);
     }

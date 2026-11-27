@@ -1,4 +1,6 @@
+using System.Security.Claims;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.Staff.Services;
 using CrestApps.OrchardCore.Teams.Services;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Models;
 using CrestApps.OrchardCore.Workforce.ContactCenter.Services;
@@ -12,6 +14,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
+using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using QueryContext = CrestApps.Core.Models.QueryContext;
 
@@ -25,6 +28,9 @@ public sealed class AdherenceRuleSetsController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly AdherenceRuleSetManager _manager;
     private readonly ITeamManager _teamManager;
+    private readonly IWorkforceScopeService _scopeService;
+    private readonly IStaffMemberManager _workerManager;
+    private readonly IClock _clock;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -41,12 +47,18 @@ public sealed class AdherenceRuleSetsController : Controller
         IAuthorizationService authorizationService,
         AdherenceRuleSetManager manager,
         ITeamManager teamManager,
+        IWorkforceScopeService scopeService,
+        IStaffMemberManager workerManager,
+        IClock clock,
         INotifier notifier,
         IHtmlLocalizer<AdherenceRuleSetsController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
         _manager = manager;
         _teamManager = teamManager;
+        _scopeService = scopeService;
+        _workerManager = workerManager;
+        _clock = clock;
         _notifier = notifier;
         H = htmlLocalizer;
     }
@@ -101,6 +113,11 @@ public sealed class AdherenceRuleSetsController : Controller
             return NotFound();
         }
 
+        if (!string.IsNullOrEmpty(id) && await RefusalAsync(item.TeamIds) is not null)
+        {
+            return Forbid();
+        }
+
         var model = new AdherenceRuleSetEditViewModel
         {
             Id = id,
@@ -123,7 +140,7 @@ public sealed class AdherenceRuleSetsController : Controller
             })],
         };
 
-        model.TeamOptions = await WorkforceTeamOptions.ListAsync(_teamManager, WorkforceScope.Everything, model.TeamIds, HttpContext.RequestAborted);
+        model.TeamOptions = await WorkforceTeamOptions.ListAsync(_teamManager, await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted), model.TeamIds, HttpContext.RequestAborted);
 
         return View(model);
     }
@@ -151,8 +168,20 @@ public sealed class AdherenceRuleSetsController : Controller
             return NotFound();
         }
 
+        if (!isNew && await RefusalAsync(item.TeamIds) is not null)
+        {
+            return Forbid();
+        }
+
+        var postedTeams = (model.TeamIds ?? []).Where(teamId => !string.IsNullOrEmpty(teamId)).Distinct(StringComparer.Ordinal).ToArray();
+
+        if (await RefusalAsync(postedTeams) is { } refusal)
+        {
+            ModelState.AddModelError(nameof(model.TeamIds), refusal);
+        }
+
         item.Name = model.Name?.Trim();
-        item.TeamIds = [.. (model.TeamIds ?? []).Where(teamId => !string.IsNullOrEmpty(teamId)).Distinct(StringComparer.Ordinal)];
+        item.TeamIds = [.. postedTeams];
         item.Rules = [.. (model.Rules ?? []).Select(rule => new AdherenceRule
         {
             Kind = rule.Kind,
@@ -173,7 +202,7 @@ public sealed class AdherenceRuleSetsController : Controller
 
         if (!ModelState.IsValid)
         {
-            model.TeamOptions = await WorkforceTeamOptions.ListAsync(_teamManager, WorkforceScope.Everything, model.TeamIds, HttpContext.RequestAborted);
+            model.TeamOptions = await WorkforceTeamOptions.ListAsync(_teamManager, await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted), model.TeamIds, HttpContext.RequestAborted);
 
             return View(model);
         }
@@ -213,9 +242,60 @@ public sealed class AdherenceRuleSetsController : Controller
             return NotFound();
         }
 
+        if (await RefusalAsync(item.TeamIds) is not null)
+        {
+            return Forbid();
+        }
+
         await _manager.DeleteAsync(item);
         await _notifier.SuccessAsync(H["The rule set was deleted."]);
 
         return RedirectToAction(nameof(Index));
+    }
+
+    // Why the caller may not set the rules of these teams, or null. A rule set decides how a day's adherence is computed
+    // for its teams and every team under them, so only someone who manages the whole workforce sets rules for no team in
+    // particular, and a manager sets them only for the teams they manage, never for a team they are on themselves (or one
+    // above it) unless they may decide on their own records.
+    private async Task<string> RefusalAsync(IEnumerable<string> teamIds)
+    {
+        var scope = await _scopeService.GetManagedScopeAsync(User, HttpContext.RequestAborted);
+
+        if (scope.All)
+        {
+            return null;
+        }
+
+        var teams = teamIds?.ToArray() ?? [];
+
+        if (teams.Length == 0 || teams.Any(teamId => !scope.Covers(teamId)))
+        {
+            return H["Choose only teams you manage."].Value;
+        }
+
+        if (await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ApproveOwnRecords))
+        {
+            return null;
+        }
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var own = string.IsNullOrEmpty(userId) ? null : await _workerManager.FindByUserIdAsync(userId, HttpContext.RequestAborted);
+
+        if (own is null)
+        {
+            return null;
+        }
+
+        var ownTeams = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var membership in own.MembershipsOn(DateOnly.FromDateTime(_clock.UtcNow)))
+        {
+            ownTeams.Add(membership.TeamId);
+            ownTeams.UnionWith((await _teamManager.GetAncestorsAsync(membership.TeamId, HttpContext.RequestAborted)).Select(team => team.ItemId));
+        }
+
+        return teams.Any(ownTeams.Contains)
+            ? H["You can't set the rules of a team you are on yourself."].Value
+            : null;
     }
 }

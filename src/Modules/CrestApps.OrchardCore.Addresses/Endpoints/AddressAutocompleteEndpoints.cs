@@ -169,7 +169,9 @@ internal static class AddressAutocompleteEndpoints
             return new TooManyRequestsResult(TimeSpan.FromHours(1));
         }
 
-        var networkDay = await limiter.AcquireAsync(NetworkDailyAttemptPolicy, networkKey, httpContext.RequestAborted);
+        // A day's share is counted per site, an IPv6 /48 rather than each /64, so one holder can't multiply it by their
+        // networks and spend the whole site's day.
+        var networkDay = await limiter.AcquireAsync(NetworkDailyAttemptPolicy, ClientNetworkKey.Site(httpContext), httpContext.RequestAborted);
 
         if (!networkDay.Allowed)
         {

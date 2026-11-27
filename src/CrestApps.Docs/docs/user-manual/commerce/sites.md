@@ -110,6 +110,15 @@ The page then says *The site was created.* or *The site was not created. The job
 For safety, the administrator password the customer entered is discarded once a job is **Abandoned**, so the site can no longer create it and **Retry now** isn't offered. Create the site by hand, give the customer its administrator account, then close the job as described below, or refund the purchase.
 :::
 
+### Check a job waiting for its payment
+
+A site bought with Pay Later or a bank transfer waits for its payment and is created on its own once the site's transaction is paid, or once the installment plan the customer turned that balance into has received every payment. If the payment was recorded and the site still waits:
+
+1. Click **Check for the payment** on the job's row.
+2. In the confirmation, click **Check**.
+
+The site is created when its transaction is paid or its installment plan is fully paid. Otherwise the page says no payment was found: record the payment on the site's transaction first. You can't release an unpaid site from here.
+
 ### Close an abandoned job
 
 Once you have created an abandoned job's site by hand:

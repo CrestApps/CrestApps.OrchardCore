@@ -109,6 +109,34 @@ public sealed class AIConnectionRecipeEndpointTests
     }
 
     [Fact]
+    public async Task A2AConnectionStep_AnUpdateToTheSiteOwnNetwork_IsRefused_BeforeItIsSaved()
+    {
+        // Round 2 (Mild): an update was saved by the catalog before the step checked the endpoint.
+        var existing = new A2AConnection { ItemId = "a2a-1", Endpoint = "https://agent.example.com/" };
+        var manager = new Mock<ICatalogManager<A2AConnection>>();
+        manager.Setup(x => x.FindByIdAsync("a2a-1", It.IsAny<CancellationToken>())).Returns(() => ValueTask.FromResult(existing));
+        manager.Setup(x => x.ValidateAsync(It.IsAny<A2AConnection>(), It.IsAny<CancellationToken>())).Returns(() => ValueTask.FromResult(new ValidationResultDetails()));
+
+        var step = CreateStep<A2AConnectionStep>(services => services.AddSingleton(manager.Object));
+        var context = Context(A2AConnectionStep.StepKey, "Connections", new JsonObject { [nameof(A2AConnection.ItemId)] = "a2a-1", [nameof(A2AConnection.Endpoint)] = "http://10.0.0.5/a2a" });
+
+        var refused = false;
+
+        try
+        {
+            await step.ExecuteAsync(context);
+            refused = context.Errors.Count > 0;
+        }
+        catch (InvalidOperationException exception) when (exception.Message.Contains("site's own network", StringComparison.Ordinal))
+        {
+            refused = true;
+        }
+
+        Assert.True(refused);
+        manager.Verify(x => x.UpdateAsync(It.IsAny<A2AConnection>(), It.IsAny<JsonNode>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task A2AConnectionStep_ImportsAPublicConnection()
     {
         var manager = new Mock<ICatalogManager<A2AConnection>>();

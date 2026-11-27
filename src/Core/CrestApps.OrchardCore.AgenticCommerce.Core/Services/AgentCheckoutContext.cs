@@ -59,13 +59,16 @@ public sealed class AgentCheckoutContext
         => Properties is not null && Properties.TryGetValue(name, out var value) ? value : null;
 
     /// <summary>
-    /// Returns who the limits on discount codes and declined cards count for this request: the agent platform, whose
-    /// servers every request of its buyers comes from (and over MCP or A2A with no address at all), so one platform can't
-    /// use up another's tries; or the request's address when no platform is known.
+    /// Returns who the limits on discount codes and declined cards count for this request. Every request of an agent
+    /// platform's buyers comes from the platform's servers (over MCP or A2A with no address at all), so they count per
+    /// buyer of that platform: one platform can't use up another's tries, and one buyer's declines or wrong codes don't
+    /// stop every buyer of the platform. The platform as a whole has its own, much higher limits. With no platform known,
+    /// the request's address.
     /// </summary>
-    public string GetClientKey()
+    /// <param name="buyerKey">What names the buyer, such as the agent checkout's id.</param>
+    public string GetClientKey(string buyerKey)
         => !string.IsNullOrEmpty(PlatformId)
-            ? global::CrestApps.OrchardCore.Core.Throttling.ClientNetworkKey.ForAgentPlatform(PlatformId)
+            ? global::CrestApps.OrchardCore.Core.Throttling.ClientNetworkKey.ForAgentBuyer(PlatformId, buyerKey)
             : ClientAddress;
 
     /// <summary>

@@ -396,10 +396,11 @@ public sealed class SchedulesController : Controller
     /// <param name="workerId">Who takes it, for <c>reassign</c>.</param>
     /// <param name="reason">Why, for the change log and the worker.</param>
     /// <param name="workerAsked">Whether the worker asked for it, so no predictability pay is owed.</param>
+    /// <param name="clock">The clock.</param>
     /// <returns>The shift page, or the planner board once removed.</returns>
     [HttpPost]
     [Admin("workforce/schedules/published-shift/{periodId}/{id}", "WorkforceSchedulesPublishedShift")]
-    public async Task<IActionResult> PublishedShift(string periodId, string id, string operation, string start, string end, string workerId, string reason, bool workerAsked)
+    public async Task<IActionResult> PublishedShift(string periodId, string id, string operation, string start, string end, string workerId, string reason, bool workerAsked, [FromServices] IClock clock)
     {
         var (period, team, denied) = await AuthorizePeriodAsync(periodId);
 
@@ -411,6 +412,23 @@ public sealed class SchedulesController : Controller
         if (await FindPublishedAsync(period, id) is not { } published)
         {
             return NotFound();
+        }
+
+        // A manager never changes their own shift, nor gives one to themselves, on the strength of managing their own
+        // team; and a shift that started or ended is changed only with its own permission, so a day's adherence can't be
+        // rewritten before it is saved.
+        if ((!string.IsNullOrEmpty(published.Data.WorkerId) && !await _scopeService.CanDecideForWorkerAsync(User, published.Data.WorkerId, HttpContext.RequestAborted)) ||
+            (operation == "reassign" && !string.IsNullOrEmpty(workerId) && !await _scopeService.CanDecideForWorkerAsync(User, workerId, HttpContext.RequestAborted)))
+        {
+            return Forbid();
+        }
+
+        if (published.Event.StartUtc <= clock.UtcNow &&
+            !await _authorizationService.AuthorizeAsync(User, WorkforcePermissions.ChangeStartedShifts))
+        {
+            await _notifier.ErrorAsync(H["This shift has started or ended. Changing it needs the permission to change shifts that have started or ended."]);
+
+            return RedirectToAction(nameof(Shift), new { periodId, id });
         }
 
         var shifts = HttpContext.RequestServices.GetRequiredService<IShiftService>();

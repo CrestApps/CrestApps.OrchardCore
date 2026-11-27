@@ -27,7 +27,8 @@ card online (Stripe, and the Test payments provider); a card reader, cash, a che
   - *Record a payment issue only* (the default);
   - *Ask guests to sign in to pay by card*;
   - *Pause card payments for guests*.
-  Signed-in customers who have completed a checkout before pay as usual. With either of the last two choices, an
+  Signed-in customers whose earlier checkout captured a card payment pay as usual; a checkout completed with Bank Transfer,
+  Cash on Delivery, Pay Later or for nothing doesn't count, since a card tester completes those for free. With either of the last two choices, an
   account that has never completed a checkout can't pay by card meanwhile, since card testers open accounts for free.
 
 A stopped buyer reads *We can't take another payment attempt right now. Please try again later or use another way to pay.*
@@ -60,6 +61,7 @@ policy off.
 | `payment-begin-checkout` | 8 per 24 hours | Card payments begun on one checkout |
 | `payment-decline-network` | 5 per 30 minutes, then blocked 30 minutes | Declined card payments from one network |
 | `payment-decline-customer` | 5 per hour, then blocked an hour | Declined card payments of one signed-in customer |
+| `payment-decline-agent-platform` | 50 per 30 minutes, then blocked 30 minutes | Declined card payments of all the buyers of one agent platform |
 | `payment-decline-store` | 30 per 10 minutes, then 30 minutes | Declined card payments across the store |
 | `payment-decline-attempt` | 3 per payment, then the payment is canceled | Failed card confirmations of one payment (Stripe) |
 | `payment-decline-event` | 1 per event within 3 days | Stripe failure events counted, so a redelivery counts nothing |
@@ -67,11 +69,14 @@ policy off.
 | `payment-status-network` | 600 per 5 minutes | Status polls per network, whatever checkout they name, counted before the checkout is looked up |
 | `checkout-start-network` | 60 per hour | Checkouts started from one network by an order's pay link, the subscribe page or a cart checkout (page or API) |
 | `coupon-code` | 10 wrong codes per 10 minutes, then blocked 10 minutes | Wrong discount codes from one network |
+| `coupon-code-agent-platform` | 100 wrong codes per 10 minutes, then blocked 10 minutes | Wrong discount codes of all the buyers of one agent platform |
 
 The Orders and Customers modules add their own for gift card codes, order lookups, guest accounts and referral links.
 
 An agent checkout (ACP or UCP) has no buyer address of its own, so its declined cards and wrong discount codes count against
-the agent platform as the network: one platform's misuse never stops another. An installment plan's down payment counts
+the agent platform and the agent checkout together as the network: one platform's misuse never stops another, and one buyer's
+declines or wrong codes don't stop the platform's other buyers. The platform as a whole also counts against the much higher
+`payment-decline-agent-platform` and `coupon-code-agent-platform` limits. An installment plan's down payment counts
 against the network of the person who types the card.
 
 ```json

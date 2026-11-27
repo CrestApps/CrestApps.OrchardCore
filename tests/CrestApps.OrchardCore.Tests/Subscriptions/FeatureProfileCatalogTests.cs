@@ -29,6 +29,27 @@ public sealed class FeatureProfileCatalogTests
         Assert.Equal(["basic"], names);
     }
 
+    [Fact]
+    public async Task TwoProfilesThatDifferOnlyInCase_AreBothReturned_SoTheExactOneIsChosen()
+    {
+        // Round 2 (Mild): the names came back in a case-insensitive set, so a plan naming "basic" could be provisioned
+        // with "Basic", and the exact match and ambiguity checks never ran.
+        var catalog = new FeatureProfilesTenantFeatureProfileCatalog(new FixedFeatureProfilesService(new Dictionary<string, FeatureProfile>(StringComparer.Ordinal)
+        {
+            ["Basic"] = new FeatureProfile { Name = "Basic" },
+            ["basic"] = new FeatureProfile { Name = "basic" },
+        }));
+
+        // Act
+        var names = await catalog.GetProfileIdsAsync(TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(2, names.Count);
+        Assert.Equal("basic", TenantPurchaseValidator.ResolveFeatureProfile("basic", names));
+        Assert.Equal("Basic", TenantPurchaseValidator.ResolveFeatureProfile("Basic", names));
+        Assert.Null(TenantPurchaseValidator.ResolveFeatureProfile("BASIC", names));
+    }
+
     // The dictionary Orchard Core's FeatureProfilesService returns: the profiles document as stored.
     private sealed class FixedFeatureProfilesService : IFeatureProfilesService
     {

@@ -8,6 +8,11 @@ var builder = WebApplication.CreateBuilder(args);
 
 AsteriskWebSecurity.EnsureDevelopmentOnly(builder.Environment.EnvironmentName);
 
+// SignalR's browser client sends the page's key as the access_token query string on its WebSocket, and the hosting log
+// writes every request's full URL at Information: it is kept to warnings, so the key never reaches the log.
+builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+builder.Logging.AddFilter("Microsoft.AspNetCore.Http.Connections", LogLevel.Warning);
+
 builder.Services.AddRazorPages();
 builder.Services.AddSignalR();
 builder.Services.AddHttpClient();

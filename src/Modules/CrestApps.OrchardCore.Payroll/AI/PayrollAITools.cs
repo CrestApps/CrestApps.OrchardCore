@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
@@ -34,7 +35,7 @@ public abstract class PayrollAIToolBase : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var user = arguments.Services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var user = arguments.Services?.GetService<IUserAccessor>()?.User ?? arguments.Services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
         if (user?.Identity?.IsAuthenticated != true)
         {

@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Users.Core.Services;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.DisplayManagement.Notify;
@@ -21,6 +22,8 @@ namespace CrestApps.OrchardCore.Users.Services;
 public sealed class EmailOwnershipLoginFormEvent : LoginFormEventBase
 {
     private const string CodeSignInItem = "CrestApps.EmailOwnership.CodeSignIn";
+
+    private const string EmailedCodeSignInItem = "CrestApps.EmailOwnership.EmailedCodeSignIn";
 
     private readonly IEmailOwnershipConfirmationPage _confirmationPage;
     private readonly INotifier _notifier;
@@ -48,6 +51,40 @@ public sealed class EmailOwnershipLoginFormEvent : LoginFormEventBase
     /// credentials in place: its pages warn from now on, so the sign-in notice is not said too.
     /// </summary>
     /// <param name="httpContext">The request.</param>
+    /// <summary>
+    /// Refuses a sign-in with a password, an external login or a passkey while the account's unproved credentials are
+    /// held (<see cref="UserCredentialsProof.AreUnprovedCredentialsHeld"/>): the owner of the address signed in with a code
+    /// and hasn't confirmed the address yet, so those credentials may be whoever registered with it. A sign-in with an
+    /// e-mailed code goes ahead; confirming the address, with the password typed on that page if it is the owner's, ends
+    /// the hold.
+    /// </summary>
+    /// <param name="user">The user signing in.</param>
+    public override async Task<IActionResult> ValidatingLoginAsync(IUser user)
+    {
+        if (user is not User account ||
+            !UserCredentialsProof.AreUnprovedCredentialsHeld(account) ||
+            _httpContextAccessor.HttpContext?.Items.ContainsKey(EmailedCodeSignInItem) == true)
+        {
+            return null;
+        }
+
+        await _notifier.WarningAsync(H["This account's password and other sign-ins are paused until its owner confirms the email address. Sign in with a code e-mailed to the account, then confirm it's you; type the password there to keep it."]);
+
+        return new RedirectToRouteResult("EmailSignIn", null);
+    }
+
+    /// <summary>
+    /// Marks the request as a sign-in with an e-mailed code, which held credentials don't stop.
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    public static void MarkEmailedCodeSignIn(HttpContext httpContext)
+    {
+        if (httpContext is not null)
+        {
+            httpContext.Items[EmailedCodeSignInItem] = true;
+        }
+    }
+
     public static void MarkCodeSignIn(HttpContext httpContext)
     {
         if (httpContext is not null)

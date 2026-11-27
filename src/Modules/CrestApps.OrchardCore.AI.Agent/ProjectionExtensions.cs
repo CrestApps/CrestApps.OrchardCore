@@ -72,6 +72,23 @@ internal static class ProjectionExtensions
     }
 
     /// <summary>
+    /// Projects a user to the few fields a user search result shows the model, leaving out every credential the stored
+    /// user document carries.
+    /// </summary>
+    /// <param name="user">The user.</param>
+    public static object AsSearchResultAIObject(this User user)
+    {
+        return new
+        {
+            user.UserId,
+            user.UserName,
+            user.Email,
+            user.RoleNames,
+            user.IsEnabled,
+        };
+    }
+
+    /// <summary>
     /// Performs the as AI object operation.
     /// </summary>
     /// <param name="recipe">The recipe.</param>

@@ -5,11 +5,13 @@ using CrestApps.OrchardCore.Orders.Core.Handlers;
 using CrestApps.OrchardCore.Orders.Core.Models;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Payments.Models;
+using CrestApps.OrchardCore.Subscriptions.Core;
 using CrestApps.OrchardCore.Subscriptions.Core.Handlers;
 using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using CrestApps.OrchardCore.Subscriptions.Models;
 using CrestApps.OrchardCore.Tests.Subscriptions.Fakes;
 using CrestApps.OrchardCore.Tests.Taxation.Fakes;
+using CrestApps.OrchardCore.Tests.Transactions;
 using CrestApps.OrchardCore.Transactions.Models;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -111,10 +113,117 @@ public sealed class DeferredPaymentReleaseTests
         Assert.Equal(TenantProvisioningStatus.Succeeded, Assert.Single(store.Jobs).Status);
     }
 
-    private static TenantProvisioningPaymentReceivedHandler CreateTenantHandler(InMemoryTenantProvisioningJobStore jobs, InMemorySubscriptionStore subscriptions = null)
+    /// <summary>
+    /// Round 2, #7: a Pay Later balance turned into installments cancels the site's transaction, and the installment
+    /// payments carry no checkout of the site, so a buyer who paid every installment never got the site.
+    /// </summary>
+    [Fact]
+    public async Task ASiteWhoseBalanceBecameAnInstallmentPlan_IsReleased_WhenTheLastInstallmentIsPaid()
+    {
+        // Arrange
+        var jobs = new InMemoryTenantProvisioningJobStore(new TenantProvisioningJob
+        {
+            ItemId = "job-1",
+            CheckoutSessionId = "session-1",
+            TenantName = "shop1",
+            Status = TenantProvisioningStatus.AwaitingPayment,
+        });
+        var transactions = new FakeTransactionStore(new Transaction
+        {
+            ItemId = "source",
+            CheckoutSessionId = "session-1",
+            ObligationId = CheckoutObligations.OneTime,
+            Status = TransactionStatus.Canceled,
+        });
+        var plans = new InMemoryInstallmentPlanStore();
+
+        await plans.CreateAsync(new InstallmentPlan
+        {
+            ItemId = "plan-1",
+            SourceTransactionId = "source",
+            Status = InstallmentPlanStatus.Active,
+            Payments =
+            [
+                new InstallmentPlanPayment { Number = 1, TransactionId = "installment-1", Status = InstallmentPaymentStatus.Paid },
+                new InstallmentPlanPayment { Number = 2, TransactionId = "installment-2", Status = InstallmentPaymentStatus.Due },
+            ],
+        }, TestContext.Current.CancellationToken);
+
+        var handler = CreateTenantHandler(jobs, transactions: transactions, plans: plans);
+
+        Transaction Installment(string id) => new()
+        {
+            ItemId = id,
+            ReferenceType = SubscriptionConstants.InstallmentPlans.ReferenceType,
+            ReferenceId = "plan-1",
+            Status = TransactionStatus.Paid,
+        };
+
+        // Act: an installment that isn't the last changes nothing.
+        await handler.StatusChangedAsync(Installment("installment-1"), TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        Assert.Equal(TenantProvisioningStatus.AwaitingPayment, Assert.Single(jobs.Jobs).Status);
+
+        await handler.StatusChangedAsync(Installment("installment-2"), TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(TenantProvisioningStatus.Pending, Assert.Single(jobs.Jobs).Status);
+    }
+
+    /// <summary>
+    /// Round 2, #7: staff can ask for a waiting job to be checked again, but that releases only a site that is paid for.
+    /// </summary>
+    [Fact]
+    public async Task CheckingAWaitingJobAgain_ReleasesOnlyAPaidSite()
+    {
+        // Arrange
+        var job = new TenantProvisioningJob
+        {
+            ItemId = "job-1",
+            CheckoutSessionId = "session-1",
+            TenantName = "shop1",
+            Status = TenantProvisioningStatus.AwaitingPayment,
+        };
+        var jobs = new InMemoryTenantProvisioningJobStore(job);
+        var transaction = new Transaction
+        {
+            ItemId = "site",
+            CheckoutSessionId = "session-1",
+            ObligationId = CheckoutObligations.OneTime,
+            Status = TransactionStatus.Outstanding,
+        };
+        var release = CreateRelease(jobs, new FakeTransactionStore(transaction));
+
+        // Act
+        var whileUnpaid = await release.TryReleaseAsync(job, TestContext.Current.CancellationToken);
+
+        transaction.Status = TransactionStatus.Paid;
+
+        var oncePaid = await release.TryReleaseAsync(job, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(whileUnpaid);
+        Assert.True(oncePaid);
+        Assert.Equal(TenantProvisioningStatus.Pending, job.Status);
+    }
+
+    private static TenantProvisioningPaymentReceivedHandler CreateTenantHandler(
+        InMemoryTenantProvisioningJobStore jobs,
+        InMemorySubscriptionStore subscriptions = null,
+        FakeTransactionStore transactions = null,
+        InMemoryInstallmentPlanStore plans = null)
+        => new(CreateRelease(jobs, transactions, subscriptions, plans));
+
+    private static TenantProvisioningPaymentRelease CreateRelease(
+        InMemoryTenantProvisioningJobStore jobs,
+        FakeTransactionStore transactions = null,
+        InMemorySubscriptionStore subscriptions = null,
+        InMemoryInstallmentPlanStore plans = null)
         => new(
             jobs,
+            transactions ?? new FakeTransactionStore(),
             new SubscriptionManager(subscriptions ?? new InMemorySubscriptionStore(), [], NullLogger<CatalogManager<Subscription>>.Instance),
+            plans is null ? [] : [plans],
             new TestClock(_now));
 
     [Fact]

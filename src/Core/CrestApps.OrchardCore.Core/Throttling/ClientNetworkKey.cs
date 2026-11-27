@@ -19,6 +19,8 @@ public static class ClientNetworkKey
 
     private const string AgentPlatformPrefix = "agent-platform:";
 
+    private const string AgentBuyerSeparator = "#buyer:";
+
     /// <summary>
     /// The key of an agent platform's requests, for limits where the request names no client of its own: every buyer an
     /// agent platform brings comes from the platform's servers, or (over MCP or A2A) from no known address at all. Keyed
@@ -27,6 +29,36 @@ public static class ClientNetworkKey
     /// <param name="platformId">The agent platform's id.</param>
     public static string ForAgentPlatform(string platformId)
         => string.IsNullOrWhiteSpace(platformId) ? Unknown : AgentPlatformPrefix + platformId;
+
+    /// <summary>
+    /// The key of one buyer an agent platform brings: the platform plus something that names the buyer, such as the agent
+    /// checkout. Limits tuned for one client network (wrong discount codes, declined cards) count per buyer with it, so
+    /// one buyer's declines don't stop every buyer of a busy platform; <see cref="GetAgentPlatform(string)"/> gives the
+    /// platform's own key back for the much higher limits the platform as a whole has.
+    /// </summary>
+    /// <param name="platformId">The agent platform's id.</param>
+    /// <param name="buyerKey">What names the buyer, or <see langword="null"/> for the platform's key.</param>
+    public static string ForAgentBuyer(string platformId, string buyerKey)
+        => string.IsNullOrWhiteSpace(buyerKey) || string.IsNullOrWhiteSpace(platformId)
+            ? ForAgentPlatform(platformId)
+            : AgentPlatformPrefix + platformId + AgentBuyerSeparator + buyerKey;
+
+    /// <summary>
+    /// The platform's key of an agent buyer's key (<see cref="ForAgentBuyer(string, string)"/>), or <see langword="null"/>
+    /// for any other key.
+    /// </summary>
+    /// <param name="key">A throttling key.</param>
+    public static string GetAgentPlatform(string key)
+    {
+        if (string.IsNullOrEmpty(key) || !key.StartsWith(AgentPlatformPrefix, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var separator = key.LastIndexOf(AgentBuyerSeparator, StringComparison.Ordinal);
+
+        return separator > AgentPlatformPrefix.Length ? key[..separator] : null;
+    }
 
     /// <summary>
     /// The network of the request: the IPv4 address, or the IPv6 address masked to /64. Payment limits use this even for
@@ -43,6 +75,30 @@ public static class ClientNetworkKey
         var raw = RateLimitPartitionHelpers.GetRemoteIpAddress(httpContext);
 
         return FromAddress(raw);
+    }
+
+    /// <summary>
+    /// The site the request comes from, for a daily allowance one holder must not multiply: the IPv4 address, or the IPv6
+    /// address masked to /48, the block one site is usually given, since a holder of a /48 has 65,536 /64 networks.
+    /// </summary>
+    /// <param name="httpContext">The request.</param>
+    public static string Site(HttpContext httpContext)
+    {
+        var network = NetworkOnly(httpContext);
+
+        if (!network.EndsWith("/64", StringComparison.Ordinal) || !IPAddress.TryParse(network[..^3], out var ip))
+        {
+            return network;
+        }
+
+        var bytes = ip.GetAddressBytes();
+
+        for (var i = 6; i < bytes.Length; i++)
+        {
+            bytes[i] = 0;
+        }
+
+        return new IPAddress(bytes) + "/48";
     }
 
     /// <summary>

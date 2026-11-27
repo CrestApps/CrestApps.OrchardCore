@@ -7,6 +7,7 @@ using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Services;
 using CrestApps.OrchardCore.Core.Services;
+using CrestApps.OrchardCore.Throttling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +25,7 @@ public sealed class AgentHandoffController : Controller
     private readonly ICheckoutSessionStore _sessions;
     private readonly GuestSessionTokenManager _guestTokens;
     private readonly ICheckoutEngine _engine;
+    private readonly IAttemptLimiter _limiter;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AgentHandoffController"/> class.
@@ -33,13 +35,16 @@ public sealed class AgentHandoffController : Controller
     /// <param name="sessions">The store checkout store.</param>
     /// <param name="guestTokens">The guest session tokens.</param>
     /// <param name="engine">The checkout engine.</param>
+    /// <param name="limiter">The attempt limiter, which limits how often an anonymous link asks the provider.</param>
     public AgentHandoffController(
         AgentSiteUrls urls,
         IAgentCheckoutStore checkouts,
         ICheckoutSessionStore sessions,
         GuestSessionTokenManager guestTokens,
-        ICheckoutEngine engine)
+        ICheckoutEngine engine,
+        IAttemptLimiter limiter)
     {
+        _limiter = limiter;
         _urls = urls;
         _checkouts = checkouts;
         _sessions = sessions;
@@ -99,7 +104,7 @@ public sealed class AgentHandoffController : Controller
             // order was placed rather than that it is still open.
             var placed = session.Status == CheckoutSessionStatus.Completed ||
                 (session.Status is CheckoutSessionStatus.AwaitingProvider or CheckoutSessionStatus.PaymentPending &&
-                (await _engine.TryCompleteAsync(session.SessionId, HttpContext.RequestAborted)).IsCompleted);
+                await TryCompleteAsync(session.SessionId));
 
             return View("Elsewhere", new AgentHandoffElsewhereViewModel { Placed = placed });
         }
@@ -113,7 +118,7 @@ public sealed class AgentHandoffController : Controller
         // on its way: the checkout is completed now, from the provider's answer, so they see their confirmation rather
         // than the checkout's first step. Completing is idempotent, so a webhook arriving at the same time pays nothing twice.
         if (session.Status is CheckoutSessionStatus.AwaitingProvider or CheckoutSessionStatus.PaymentPending &&
-            (await _engine.TryCompleteAsync(session.SessionId, HttpContext.RequestAborted)).IsCompleted)
+            await TryCompleteAsync(session.SessionId))
         {
             return RedirectToRoute(CheckoutConstants.RouteNames.Confirmation, new { sessionId = session.SessionId });
         }
@@ -123,4 +128,10 @@ public sealed class AgentHandoffController : Controller
             ? RedirectToRoute(CheckoutConstants.RouteNames.Confirmation, new { sessionId = session.SessionId })
             : RedirectToRoute(CheckoutConstants.RouteNames.Step, new { sessionId = session.SessionId });
     }
+
+    // Completing asks the payment provider, and the link is anonymous: whoever holds it is held to the limit a checkout's
+    // status polls have, counted per checkout, and past it the page shows the checkout as it stands.
+    private async Task<bool> TryCompleteAsync(string sessionId)
+        => (await _limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentStatus, "agent-handoff:" + sessionId, HttpContext.RequestAborted)).Allowed &&
+            (await _engine.TryCompleteAsync(sessionId, HttpContext.RequestAborted)).IsCompleted;
 }

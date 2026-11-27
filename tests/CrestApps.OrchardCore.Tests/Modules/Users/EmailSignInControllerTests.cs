@@ -131,7 +131,7 @@ public sealed class EmailSignInControllerTests
     }
 
     [Fact]
-    public async Task AWrongGuess_AgainstALiveCode_CountsTowardTheLockout_AndRaisesTheEvents()
+    public async Task AWrongGuess_AgainstALiveCode_DoesNotCountTowardTheLockout_AndRaisesTheEvents()
     {
         // Arrange
         var code = await CreateCodes().IssueAsync(_user.UserId, Email, TestContext.Current.CancellationToken);
@@ -145,8 +145,10 @@ public sealed class EmailSignInControllerTests
 
         // Assert
         Assert.IsType<ViewResult>(result);
-        _userManager.Verify(manager => manager.AccessFailedAsync(_user), Times.Once);
-        Assert.Contains("IsLockedOut", _recorder.Raised);
+        // Round 2, #11: counting it locked the account out of its password, and made a locked-out account answer
+        // differently from an address without one.
+        _userManager.Verify(manager => manager.AccessFailedAsync(_user), Times.Never);
+        Assert.DoesNotContain("IsLockedOut", _recorder.Raised);
         Assert.Contains("LoggingInFailed", _recorder.Raised);
         _signInManager.Verify(manager => manager.SignInAsync(It.IsAny<IUser>(), It.IsAny<bool>(), It.IsAny<string>()), Times.Never);
     }
@@ -345,6 +347,7 @@ public sealed class EmailSignInControllerTests
             .AddPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.SendAccountPolicy, 10, TimeSpan.FromDays(1))
+            .AddPolicy(EmailSignInCodes.SendAccountTotalPolicy, 50, TimeSpan.FromDays(1))
             .AddPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
             .AddPolicy(EmailSignInCodes.VerifyAccountPolicy, 10, TimeSpan.FromDays(1), TimeSpan.FromDays(1));
         var limiter = new DistributedAttemptLimiter(_cache, _lock, new ShellSettings { Name = "Default" }, clock.Object, Options.Create(options), NullLogger<DistributedAttemptLimiter>.Instance);

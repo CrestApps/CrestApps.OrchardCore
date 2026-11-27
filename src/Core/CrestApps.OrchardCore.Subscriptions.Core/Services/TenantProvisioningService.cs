@@ -42,6 +42,9 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
     // that a genuinely broken recipe is retried for days while the customer waits.
     private const int MaxAttempts = 5;
 
+    // How long a job blocked by a leftover tenant waits between checks, without counting them as attempts.
+    private static readonly TimeSpan _leftoverRecheck = TimeSpan.FromHours(1);
+
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(5);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(15);
 
@@ -211,7 +214,16 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
 
             job.LastError = failure;
 
-            if (job.AttemptCount >= MaxAttempts)
+            if (IsBlockedByLeftover(job))
+            {
+                // A tenant of the same name that this job didn't create is a person's to remove, and nothing a retry can
+                // fix. The check isn't counted as an attempt, so the job is never abandoned for it and keeps the password,
+                // and "remove it under Tenants, then retry" still works; it is checked again every hour meanwhile.
+                job.AttemptCount = Math.Max(0, job.AttemptCount - 1);
+                job.NextAttemptUtc = now + _leftoverRecheck;
+                job.Status = TenantProvisioningStatus.Failed;
+            }
+            else if (job.AttemptCount >= MaxAttempts)
             {
                 // The customer has paid, so this is not a failure the site can shrug off. It is escalated to
                 // a state a person has to resolve, and the secret is dropped rather than retained.
@@ -244,6 +256,13 @@ public sealed class TenantProvisioningService : ITenantProvisioningService
 
         return job.Status;
     }
+
+    // Whether the job's site name is held by an uninitialized tenant this job didn't create: the leftover of another
+    // purchase, or of one made before jobs were recorded on the tenant.
+    private bool IsBlockedByLeftover(TenantProvisioningJob job)
+        => _shellHost.TryGetSettings(job.TenantName, out var existing) &&
+            existing.IsUninitialized() &&
+            !string.Equals(existing[SubscriptionConstants.ProvisioningJobSetting], job.ItemId, StringComparison.Ordinal);
 
     private async Task<string> SetupAsync(TenantProvisioningJob job)
     {

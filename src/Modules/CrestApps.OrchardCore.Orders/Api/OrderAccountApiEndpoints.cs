@@ -1,3 +1,6 @@
+using CrestApps.OrchardCore.Checkout;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Api;
 using CrestApps.OrchardCore.Commerce.Api;
@@ -132,11 +135,20 @@ internal static class OrderAccountApiEndpoints
     private static async Task<Results<Created<ApiOrder>, ValidationProblem, ProblemHttpResult>> RequestQuoteAsync(
         ApiQuoteRequest request,
         HttpContext httpContext,
-        QuoteService quotes)
+        QuoteService quotes,
+        IAttemptLimiter limiter)
     {
         if (!await quotes.CanRequestAsync(httpContext.User))
         {
             return ApiProblems.NotFound("The store doesn't take quote requests.");
+        }
+
+        // Every request makes a record, so it is held to the store's limit on checkouts started per client.
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, ClientNetworkKey.From(httpContext), httpContext.RequestAborted) is { Allowed: false } refused)
+        {
+            httpContext.Response.Headers.RetryAfter = ((int)Math.Ceiling(refused.RetryAfter.TotalSeconds)).ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+            return TypedResults.Problem(title: "Too many requests.", statusCode: StatusCodes.Status429TooManyRequests);
         }
 
         var (quote, problems) = await quotes.RequestAsync(httpContext.User, request?.Message, request?.PurchaseOrderNumber, httpContext.RequestAborted);

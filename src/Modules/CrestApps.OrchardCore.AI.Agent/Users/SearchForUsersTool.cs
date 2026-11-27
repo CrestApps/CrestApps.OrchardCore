@@ -6,8 +6,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using OrchardCore.DisplayManagement.ModelBinding;
-using OrchardCore.Json;
 using OrchardCore.Navigation;
+using OrchardCore.Users;
 using OrchardCore.Users.Models;
 using OrchardCore.Users.Services;
 using OrchardCore.Users.ViewModels;
@@ -77,7 +77,6 @@ public sealed class SearchForUsersTool : AIFunction
         var usersAdminListQueryService = arguments.Services.GetRequiredService<IUsersAdminListQueryService>();
         var updateModelAccessor = arguments.Services.GetRequiredService<IUpdateModelAccessor>();
 
-        var options = arguments.Services.GetRequiredService<IOptions<DocumentJsonSerializerOptions>>().Value;
         var pagerOptions = arguments.Services.GetRequiredService<IOptions<PagerOptions>>().Value;
 
         if (!arguments.TryGetFirstString("term", out var term))
@@ -110,6 +109,18 @@ public sealed class SearchForUsersTool : AIFunction
             .Take(pagerOptions.PageSize)
             .ListAsync(cancellationToken);
 
+        // Only the fields an admin list shows go to the model; the stored user document also holds the password hash,
+        // the security stamp, reset tokens, authenticator keys, recovery codes, passkeys and external logins.
+        var users = new List<object>();
+
+        foreach (var user in contentItems)
+        {
+            if (await AIToolCallerAuthorization.IsAuthorizedAsync(arguments.Services, UsersPermissions.ListUsers, user))
+            {
+                users.Add(user.AsSearchResultAIObject());
+            }
+        }
+
         if (logger.IsEnabled(LogLevel.Debug))
         {
             logger.LogDebug("AI tool '{ToolName}' completed.", Name);
@@ -118,7 +129,7 @@ public sealed class SearchForUsersTool : AIFunction
         return
         $$"""
 {
-"users": {{JsonSerializer.Serialize(contentItems, options.SerializerOptions)}},
+"users": {{JsonSerializer.Serialize(users)}},
 "usersCount": {{contentItemsCount}},
 "totalPages": {{Math.Ceiling((double)contentItemsCount / pagerOptions.PageSize)}},
 "pageSize": {{pagerOptions.PageSize}}

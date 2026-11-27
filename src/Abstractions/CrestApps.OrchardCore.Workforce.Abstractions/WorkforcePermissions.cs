@@ -123,6 +123,13 @@ public static class WorkforcePermissions
     public static readonly Permission ApproveOwnRecords = new("ApproveOwnWorkforceRecords", LocalizationSource.Create("Approve own timesheets, punches, time off, trades and claims", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
 
     /// <summary>
+    /// Change, reassign or take off a published shift that has already started or ended, for the teams the user
+    /// manages. Without it a manager changes only shifts still to come, so a day's adherence can't be rewritten after the
+    /// fact.
+    /// </summary>
+    public static readonly Permission ChangeStartedShifts = new("ChangeStartedWorkforceShifts", LocalizationSource.Create("Change shifts that have started or ended", typeof(WorkforcePermissions)), [ManageAllWorkforce]);
+
+    /// <summary>
     /// Add, change and remove the punches of the workers of the teams the user manages.
     /// </summary>
     public static readonly Permission EditPunches = new("EditPunches", LocalizationSource.Create("Edit punches", typeof(WorkforcePermissions)), [ManageAllWorkforce]);

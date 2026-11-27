@@ -175,6 +175,35 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
         Assert.False(member.HasSucceeded);
     }
 
+    /// <summary>
+    /// Round 2, #12: an audit trail snapshot of an item from before it was restricted was checked against its own roles,
+    /// so a user outside the item's current roles could open it, or restore it and remove the restriction.
+    /// </summary>
+    [Theory]
+    [InlineData("ViewContent")]
+    [InlineData("EditContent")]
+    [InlineData("PublishContent")]
+    public async Task AnOlderVersion_IsCheckedAgainstTheItemsCurrentRestrictionToo(string permission)
+    {
+        // Arrange: the snapshot isn't restricted; the item now is, to Member.
+        var snapshot = Item();
+        snapshot.ContentItemVersionId = "version-1";
+
+        var current = Item("Member");
+        current.ContentItemVersionId = "version-2";
+
+        var contentManager = new Mock<IContentManager>();
+        contentManager.Setup(manager => manager.GetAsync("handbook", It.IsAny<VersionOptions>())).ReturnsAsync(current);
+
+        // Act
+        var outsider = await AuthorizeAsync(SignedIn(), snapshot, permission: Permission(permission), contentManager: contentManager.Object);
+        var member = await AuthorizeAsync(SignedIn("Member"), snapshot, permission: Permission(permission), contentManager: contentManager.Object);
+
+        // Assert
+        Assert.True(outsider.HasFailed);
+        Assert.False(member.HasFailed);
+    }
+
     [Fact]
     public async Task ARestriction_LeavesPermissionsThatAreNotAboutTheItemAlone()
     {
@@ -219,7 +248,7 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
         return item;
     }
 
-    internal static IServiceProvider Services(bool restricted = true)
+    internal static IServiceProvider Services(bool restricted = true, IContentManager contentManager = null)
     {
         var settings = new JsonObject
         {
@@ -230,10 +259,17 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
 
         definitions.Setup(manager => manager.GetTypeDefinitionAsync(ContentType)).ReturnsAsync(type);
 
-        return new ServiceCollection().AddSingleton(definitions.Object).BuildServiceProvider();
+        var services = new ServiceCollection().AddSingleton(definitions.Object);
+
+        if (contentManager is not null)
+        {
+            services.AddSingleton(contentManager);
+        }
+
+        return services.BuildServiceProvider();
     }
 
-    internal static async Task<AuthorizationHandlerContext> AuthorizeAsync(ClaimsPrincipal user, ContentItem item, bool succeededBefore = false, global::OrchardCore.Security.Permissions.Permission permission = null)
+    internal static async Task<AuthorizationHandlerContext> AuthorizeAsync(ClaimsPrincipal user, ContentItem item, bool succeededBefore = false, global::OrchardCore.Security.Permissions.Permission permission = null, IContentManager contentManager = null)
     {
         var requirement = new PermissionRequirement(permission ?? CommonPermissions.ViewContent);
         var context = new AuthorizationHandlerContext([requirement], user, item);
@@ -243,7 +279,7 @@ public sealed class RoleBasedContentItemAuthorizationHandlerTests
             context.Succeed(requirement);
         }
 
-        await new RoleBasedContentItemAuthorizationHandler(Services()).HandleAsync(context);
+        await new RoleBasedContentItemAuthorizationHandler(Services(contentManager: contentManager)).HandleAsync(context);
 
         return context;
     }

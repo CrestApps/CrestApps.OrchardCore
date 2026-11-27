@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
@@ -38,7 +39,7 @@ public abstract class LearningAIToolBase : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
 
         var services = arguments.Services;
-        var user = services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var user = services?.GetService<IUserAccessor>()?.User ?? services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
         if (user?.Identity?.IsAuthenticated != true || string.IsNullOrEmpty(user.FindFirstValue(ClaimTypes.NameIdentifier)))
         {

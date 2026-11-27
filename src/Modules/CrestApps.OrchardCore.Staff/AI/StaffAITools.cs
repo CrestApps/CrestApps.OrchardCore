@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.Staff.Core.Services;
 using System.Security.Claims;
 using System.Text.Json;
@@ -32,7 +33,7 @@ public abstract class StaffAIToolBase : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var user = arguments.Services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var user = arguments.Services?.GetService<IUserAccessor>()?.User ?? arguments.Services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
         if (user?.Identity?.IsAuthenticated != true)
         {

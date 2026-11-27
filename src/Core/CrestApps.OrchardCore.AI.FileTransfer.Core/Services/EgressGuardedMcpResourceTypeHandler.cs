@@ -13,12 +13,18 @@ internal sealed class EgressGuardedMcpResourceTypeHandler : IMcpResourceTypeHand
     private readonly IMcpResourceTypeHandler _inner;
     private readonly FileTransferEgressPolicy _policy;
     private readonly Func<McpResource, IEnumerable<(string Field, string Host)>> _hosts;
+    private readonly Action<McpResource, FileTransferEgressPolicy> _prepare;
 
-    public EgressGuardedMcpResourceTypeHandler(IMcpResourceTypeHandler inner, FileTransferEgressPolicy policy, Func<McpResource, IEnumerable<(string Field, string Host)>> hosts)
+    public EgressGuardedMcpResourceTypeHandler(
+        IMcpResourceTypeHandler inner,
+        FileTransferEgressPolicy policy,
+        Func<McpResource, IEnumerable<(string Field, string Host)>> hosts,
+        Action<McpResource, FileTransferEgressPolicy> prepare = null)
     {
         _inner = inner;
         _policy = policy;
         _hosts = hosts;
+        _prepare = prepare;
     }
 
     public string Type => _inner.Type;
@@ -29,6 +35,8 @@ internal sealed class EgressGuardedMcpResourceTypeHandler : IMcpResourceTypeHand
         {
             _policy.EnsureAllowed(host);
         }
+
+        _prepare?.Invoke(resource, _policy);
 
         return _inner.ReadAsync(resource, variables, cancellationToken);
     }

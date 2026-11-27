@@ -1,7 +1,10 @@
 using System.Globalization;
 using System.Security.Claims;
+using System.Text.Json;
 using CrestApps.Core.AI.Tooling;
+using CrestApps.OrchardCore.AI.Agent;
 using CrestApps.OrchardCore.AI.Agent.Contents;
+using CrestApps.OrchardCore.AI.Agent.Users;
 using CrestApps.OrchardCore.AI.Core;
 using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.Tests.Agent;
@@ -18,6 +21,8 @@ using OrchardCore.ContentManagement;
 using OrchardCore.Contents;
 using OrchardCore.Modules;
 using OrchardCore.Security;
+using OrchardCore.Users;
+using OrchardCore.Users.Models;
 
 namespace CrestApps.OrchardCore.Tests.Modules.AI.Agent;
 
@@ -58,6 +63,49 @@ public sealed class AgentToolCallerPermissionTests
         Assert.Equal(AgentToolTypes().Count(), agentTools.Length);
         Assert.Empty(unguarded);
         Assert.True(anonymous.IsSafe("listTimeZones"));
+    }
+
+    [Fact]
+    public void SearchForUsers_NeedsListUsers_NotViewUsers()
+    {
+        // Arrange
+        using var provider = BuildAgentServices().BuildServiceProvider();
+        var permissions = provider.GetRequiredService<IOptions<AIToolPermissionOptions>>().Value;
+
+        // Act
+        var permission = permissions.GetPermission(SearchForUsersTool.TheName);
+
+        // Assert
+        Assert.Equal(UsersPermissions.ListUsers.Name, permission?.Name);
+    }
+
+    [Fact]
+    public void SearchForUsers_ResultCarriesNoCredential()
+    {
+        // Arrange (round 2, #1: the tool serialized the stored User document, credentials included)
+        var user = new User
+        {
+            UserId = "u1",
+            UserName = "admin",
+            Email = "admin@example.com",
+            PasswordHash = "PASSWORD-HASH",
+            SecurityStamp = "SECURITY-STAMP",
+            ResetToken = "RESET-TOKEN",
+            RoleNames = ["Administrator"],
+            IsEnabled = true,
+        };
+        user.UserTokens.Add(new UserToken { LoginProvider = "[AspNetUserStore]", Name = "AuthenticatorKey", Value = "TOTP-SECRET" });
+
+        // Act
+        var json = JsonSerializer.Serialize(user.AsSearchResultAIObject());
+
+        // Assert
+        Assert.Contains("admin@example.com", json);
+        Assert.Contains("Administrator", json);
+        Assert.DoesNotContain("PASSWORD-HASH", json);
+        Assert.DoesNotContain("SECURITY-STAMP", json);
+        Assert.DoesNotContain("RESET-TOKEN", json);
+        Assert.DoesNotContain("TOTP-SECRET", json);
     }
 
     [Theory]

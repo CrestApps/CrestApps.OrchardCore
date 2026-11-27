@@ -115,7 +115,9 @@ public sealed class EmailOwnershipController : Controller
             return View(view);
         }
 
-        if (await _codes.IssueAsync(account.UserId, account.Email, HttpContext.RequestAborted) is not { } code)
+        // Counted for this network, so codes asked for elsewhere, by whoever else signs in to the account, never use up
+        // the owner's.
+        if (await _codes.IssueAsync(account.UserId, account.Email, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted) is not { } code)
         {
             ModelState.AddModelError(nameof(model.Email), S["Too many codes were asked for today. Try again tomorrow."]);
 
@@ -190,19 +192,13 @@ public sealed class EmailOwnershipController : Controller
             return refusal;
         }
 
-        var check = await _codes.CheckAsync(account.UserId, account.Email, model.Code, HttpContext.RequestAborted);
+        var check = await _codes.CheckAsync(account.UserId, account.Email, model.Code, ClientNetworkKey.NetworkOnly(HttpContext), HttpContext.RequestAborted);
 
         if (check == EmailSignInCodeCheck.Blocked)
         {
-            ModelState.AddModelError(nameof(model.Code), S["Too many wrong codes were tried. Try again tomorrow."]);
+            ModelState.AddModelError(nameof(model.Code), S["Too many wrong codes were tried from here. Try again tomorrow."]);
 
             return View(view);
-        }
-
-        if (check == EmailSignInCodeCheck.Wrong)
-        {
-            // Counts toward the account's lockout, as a wrong password does.
-            await _userManager.AccessFailedAsync(account);
         }
 
         // A first proof removes every passkey: none can be shown here (see EmailOwnershipProof).

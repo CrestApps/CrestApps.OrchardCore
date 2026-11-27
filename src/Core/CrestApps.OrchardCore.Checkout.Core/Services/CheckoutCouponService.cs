@@ -151,7 +151,11 @@ public sealed class CheckoutCouponService
 
         await using (locker)
         {
-            if (!(await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.CouponCode, network)).Allowed)
+            // A buyer an agent platform brings counts on its own, and the platform as a whole against a much higher limit.
+            var platform = ClientNetworkKey.GetAgentPlatform(network);
+
+            if (!(await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.CouponCode, network)).Allowed ||
+                (platform is not null && !(await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.CouponCodeAgentPlatform, platform)).Allowed))
             {
                 return (null, true);
             }
@@ -168,6 +172,11 @@ public sealed class CheckoutCouponService
             if (coupon is null)
             {
                 await _limiter.RecordFailureAsync(CheckoutConstants.AttemptPolicies.CouponCode, network);
+
+                if (platform is not null)
+                {
+                    await _limiter.RecordFailureAsync(CheckoutConstants.AttemptPolicies.CouponCodeAgentPlatform, platform);
+                }
             }
 
             return (coupon, false);

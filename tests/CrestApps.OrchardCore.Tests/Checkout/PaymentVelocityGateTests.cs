@@ -138,9 +138,16 @@ public sealed class PaymentVelocityGateTests
             await using var session = store.CreateSession();
 
             await session.SaveAsync(new CheckoutSession { SessionId = "bought-before", OwnerId = "customer-3", Status = CheckoutSessionStatus.Completed, CreatedUtc = DateTime.UtcNow, ModifiedUtc = DateTime.UtcNow }, cancellationToken: TestContext.Current.CancellationToken);
+            await session.SaveAsync(new CheckoutSession { SessionId = "paid-in-cash", OwnerId = "customer-4", Status = CheckoutSessionStatus.Completed, CreatedUtc = DateTime.UtcNow, ModifiedUtc = DateTime.UtcNow }, cancellationToken: TestContext.Current.CancellationToken);
             await session.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-            await AssertTheStoresActionAsync(Create(action, session: session), guestRefused, newAccountRefused);
+            // Round 2 (Mild): only a checkout whose card payment was captured proves the buyer; one paid in cash, or for
+            // nothing, completes for free.
+            var attempts = new InMemoryPaymentAttemptStore(
+                new PaymentAttempt { ItemId = "card", SessionId = "bought-before", ProviderKey = CardProvider, State = PaymentAttemptState.Succeeded, ConfirmedAmount = 25m },
+                new PaymentAttempt { ItemId = "cash", SessionId = "paid-in-cash", ProviderKey = CashProvider, State = PaymentAttemptState.Succeeded, ConfirmedAmount = 25m });
+
+            await AssertTheStoresActionAsync(Create(action, session: session, attempts: attempts), guestRefused, newAccountRefused);
         }
         finally
         {
@@ -163,14 +170,17 @@ public sealed class PaymentVelocityGateTests
         var guest = Context(Session("guest", network: "198.51.100.1"), CardProvider);
         var newAccount = Context(Session("customer", network: "198.51.100.2", ownerId: "customer-2"), CardProvider);
         var returning = Context(Session("returning", network: "198.51.100.3", ownerId: "customer-3"), CardProvider);
+        var boughtForFree = Context(Session("free", network: "198.51.100.4", ownerId: "customer-4"), CardProvider);
 
         await gate.BeginningAsync(guest, TestContext.Current.CancellationToken);
         await gate.BeginningAsync(newAccount, TestContext.Current.CancellationToken);
         await gate.BeginningAsync(returning, TestContext.Current.CancellationToken);
+        await gate.BeginningAsync(boughtForFree, TestContext.Current.CancellationToken);
 
         Assert.Equal(guestRefused, guest.IsRefused);
         Assert.Equal(newAccountRefused, newAccount.IsRefused);
         Assert.False(returning.IsRefused);
+        Assert.Equal(newAccountRefused, boughtForFree.IsRefused);
     }
 
     private static async Task<IStore> CreateStoreAsync(string databasePath)
@@ -314,7 +324,7 @@ public sealed class PaymentVelocityGateTests
         Assert.False(PaymentDeclineRecorder.IsNewDecline(PaymentAttemptState.Pending, PaymentAttemptState.Succeeded));
     }
 
-    private (PaymentVelocityGate Gate, PaymentDeclineRecorder Recorder) Create(DeclineSpikeAction action = DeclineSpikeAction.Notify, IDistributedCache cache = null, IDistributedLock distributedLock = null, global::YesSql.ISession session = null)
+    private (PaymentVelocityGate Gate, PaymentDeclineRecorder Recorder) Create(DeclineSpikeAction action = DeclineSpikeAction.Notify, IDistributedCache cache = null, IDistributedLock distributedLock = null, global::YesSql.ISession session = null, InMemoryPaymentAttemptStore attempts = null)
     {
         var options = new AttemptLimitOptions();
         options.AddPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, 30, TimeSpan.FromMinutes(10));
@@ -351,7 +361,7 @@ public sealed class PaymentVelocityGateTests
         var localizer = new Mock<IStringLocalizer<PaymentVelocityGate>>();
         localizer.Setup(l => l[It.IsAny<string>()]).Returns((string name) => new LocalizedString(name, name));
 
-        var gate = new PaymentVelocityGate(limiter, resolver.Object, siteService.Object, session ?? Mock.Of<global::YesSql.ISession>(), localizer.Object);
+        var gate = new PaymentVelocityGate(limiter, resolver.Object, attempts ?? new InMemoryPaymentAttemptStore(), siteService.Object, session ?? Mock.Of<global::YesSql.ISession>(), localizer.Object);
         var services = new ServiceCollection()
             .AddSingleton<IAttemptLimiter>(limiter)
             .AddSingleton(resolver.Object)
@@ -368,7 +378,7 @@ public sealed class PaymentVelocityGateTests
     {
         var provider = new Mock<ICheckoutPaymentProvider>();
         provider.SetupGet(p => p.Key).Returns(key);
-        provider.SetupGet(p => p.Capabilities).Returns(new PaymentProviderCapabilities { SupportsOneTimePayments = true, IsCardNotPresent = cardNotPresent });
+        provider.SetupGet(p => p.Capabilities).Returns(new PaymentProviderCapabilities { SupportsOneTimePayments = true, IsCardNotPresent = cardNotPresent, DefersPayment = !cardNotPresent });
 
         return provider.Object;
     }

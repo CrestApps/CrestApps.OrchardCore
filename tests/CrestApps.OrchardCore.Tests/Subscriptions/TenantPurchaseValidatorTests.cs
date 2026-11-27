@@ -33,6 +33,9 @@ public sealed class TenantPurchaseValidatorTests
     [InlineData("Admin")]
     [InlineData("login")]
     [InlineData("stripe")]
+    [InlineData("autodiscover")]
+    [InlineData("owa")]
+    [InlineData("ews")]
     public void Validate_AReservedPrefix_IsRefused(string prefix)
     {
         var errors = TenantPurchaseValidator.Validate(Request(prefix: prefix), Rules(allowCustomPrefix: true), _tenants);

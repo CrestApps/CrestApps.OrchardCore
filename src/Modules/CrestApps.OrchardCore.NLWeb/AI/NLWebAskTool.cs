@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.NLWeb.Models;
@@ -99,7 +100,7 @@ public sealed class NLWebAskTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var user = arguments.Services.GetRequiredService<IHttpContextAccessor>().HttpContext?.User;
+        var user = arguments.Services.GetService<IUserAccessor>()?.User ?? arguments.Services.GetRequiredService<IHttpContextAccessor>().HttpContext?.User;
         var authorizationService = arguments.Services.GetRequiredService<IAuthorizationService>();
         var builder = new NLWebResponseBuilder();
 

@@ -125,9 +125,9 @@ public sealed partial class VoiceAgentConversationLoopTests
     }
 
     [Fact]
-    public async Task C1_OnceTheCallerHasStoppedForTheGracePeriod_KeysAreTheCallersTurnAgain()
+    public async Task C1_AfterATimeOut_KeysAreTheCallersTurnAgain_OnlyOnceTheyPressStar()
     {
-        // Arrange
+        // Arrange (round 2, #6): quiet time alone no longer gives the keypad back.
         var harness = new LoopHarness(storesCopies: true);
         await harness.HandleAsync(VoiceAgentEventKind.Answered, cancellationToken: TestContext.Current.CancellationToken);
         await harness.CreateSecureKeypadNode().StartAsync(harness.Activity.ItemId, SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
@@ -136,9 +136,13 @@ public sealed partial class VoiceAgentConversationLoopTests
         harness.Clock.Advance(SecureKeypadCaptures.Grace + TimeSpan.FromSeconds(1));
 
         // Act
+        await harness.Loop.HandleAsync(KeyPressed(harness, "4111"), TestContext.Current.CancellationToken);
+        var collectedBeforeStar = harness.CallerKeys.Collected.Count;
+        await harness.Loop.HandleAsync(KeyPressed(harness, "*"), TestContext.Current.CancellationToken);
         await harness.Loop.HandleAsync(KeyPressed(harness, "8"), TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.Equal(0, collectedBeforeStar);
         Assert.Equal("8", Assert.Single(harness.CallerKeys.Collected).Digits);
     }
 

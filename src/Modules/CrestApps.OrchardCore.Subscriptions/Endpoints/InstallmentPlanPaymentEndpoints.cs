@@ -87,8 +87,9 @@ internal static class InstallmentPlanPaymentEndpoints
                 CancelUrl = request.CancelUrl,
                 ProviderData = InstallmentPlanPaymentMethods.BuildProviderData(request.ProviderData, plan.CollectionMethod == InstallmentCollectionMethod.AutoCharge),
 
-                // The card-testing limits on a network apply to a card typed in here too.
-                ClientNetworkKey = ClientNetworkKey.NetworkOnly(httpContext),
+                // The card-testing limits apply to a card typed in here too, counted for the staff member who types it: staff
+                // taking customers' cards from one office would otherwise share one network's declines.
+                ClientNetworkKey = ClientNetworkKey.From(httpContext),
             },
             httpContext.RequestAborted);
 

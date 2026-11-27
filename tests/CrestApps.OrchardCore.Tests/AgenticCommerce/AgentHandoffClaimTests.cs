@@ -139,7 +139,8 @@ public sealed class AgentHandoffClaimTests
             checkouts,
             sessions,
             new GuestSessionTokenManager(accessor, _protection, _clock),
-            Mock.Of<ICheckoutEngine>());
+            Mock.Of<ICheckoutEngine>(),
+            Mock.Of<CrestApps.OrchardCore.Throttling.IAttemptLimiter>(limiter => limiter.AcquireAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult(new CrestApps.OrchardCore.Throttling.AttemptLimitResult(true, 1, TimeSpan.Zero))));
 
         controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
         controller.Url = Mock.Of<IUrlHelper>();

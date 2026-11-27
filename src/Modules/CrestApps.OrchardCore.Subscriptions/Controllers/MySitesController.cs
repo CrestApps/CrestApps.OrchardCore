@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Subscriptions.Core.Services;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Commerce;
 using CrestApps.OrchardCore.Subscriptions.Core;
@@ -275,6 +276,56 @@ public sealed class TenantProvisioningAdminController : Controller
         else
         {
             await _notifier.WarningAsync(H["The site was not created. The job is queued for another attempt."]);
+        }
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    /// <summary>
+    /// Checks again whether a job waiting for its payment is paid for, such as after a Pay Later balance was turned into
+    /// an installment plan, and queues it when it is. Only a paid transaction of the site's obligation, or a fully paid
+    /// installment plan that replaced it, releases the site; staff can't release an unpaid one from here.
+    /// </summary>
+    /// <param name="itemId">The provisioning job identifier.</param>
+    /// <param name="release">The service that releases a site once it is paid for.</param>
+    [HttpPost]
+    public async Task<IActionResult> ReleasePaid(string itemId, [FromServices] TenantProvisioningPaymentRelease release)
+    {
+        if (!await _authorizationService.AuthorizeAsync(User, SubscriptionPermissions.ManageSubscriptions))
+        {
+            return Forbid();
+        }
+
+        var job = string.IsNullOrEmpty(itemId) ? null : await _jobStore.FindByIdAsync(itemId);
+
+        if (job is null)
+        {
+            return NotFound();
+        }
+
+        if (!TenantProvisioningJobActions.CanReleasePaid(job))
+        {
+            await _notifier.WarningAsync(H["Only a job waiting for its payment can be checked for it."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        if (!await release.TryReleaseAsync(job))
+        {
+            await _notifier.WarningAsync(H["No payment for this site was found. Record the payment on the site's transaction, or wait until its installment plan is paid, and the site is created then."]);
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        var status = await _provisioningService.ProvisionAsync(job.ItemId);
+
+        if (status == TenantProvisioningStatus.Succeeded)
+        {
+            await _notifier.SuccessAsync(H["The payment was found and the site was created."]);
+        }
+        else
+        {
+            await _notifier.WarningAsync(H["The payment was found, but the site was not created yet. The job is queued for another attempt."]);
         }
 
         return RedirectToAction(nameof(Index));

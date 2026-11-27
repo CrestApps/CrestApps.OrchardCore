@@ -15,9 +15,9 @@ internal sealed class SecureCaptureWindow
     public SecureCaptureField Field { get; set; }
 
     /// <summary>
-    /// Gets or sets when the entry times out, if it is never finished; once it has, until when keys are still dropped.
-    /// The window stays on the activity until the entry is finished or cancelled, the call ends, or the caller has
-    /// stopped typing for <c>SecureKeypadCaptures.Grace</c> after the timeout.
+    /// Gets or sets when the entry times out, if it is never finished; once it has, when the caller last typed. The window
+    /// stays on the activity until the entry is finished or cancelled, a new entry starts, the call ends, or the caller
+    /// presses the star key after the timeout; time alone never ends it.
     /// </summary>
     public DateTime UntilUtc { get; set; }
 

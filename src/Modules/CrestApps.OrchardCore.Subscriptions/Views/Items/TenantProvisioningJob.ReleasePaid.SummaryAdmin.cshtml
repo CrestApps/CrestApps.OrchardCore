@@ -1,0 +1,16 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+
+@model ShapeViewModel<TenantProvisioningJob>
+
+@* The list is rendered outside the page's filter form, so this form is not nested in another. *@
+<form asp-action="ReleasePaid" asp-route-itemId="@Model.Value.ItemId" method="post" class="d-inline">
+    <button type="submit" class="btn btn-secondary btn-sm"
+            data-url-af="RemoveUrl"
+            data-title="@T["Check for the payment"]"
+            data-confirm="@T["Check whether the site {0} is paid for, and create it if it is?", Model.Value.TenantName]"
+            data-ok-text="@T["Check"]"
+            data-cancel-text="@T["Cancel"]">
+        @T["Check for the payment"]
+    </button>
+</form>
+<script asp-name="crestapps-browser" at="Foot"></script>

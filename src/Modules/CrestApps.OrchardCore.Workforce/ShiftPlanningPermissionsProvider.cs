@@ -9,6 +9,7 @@ internal sealed class ShiftPlanningPermissionsProvider : IPermissionProvider
     [
         WorkforcePermissions.ManageShiftTemplates,
         WorkforcePermissions.ManageSchedules,
+        WorkforcePermissions.ChangeStartedShifts,
         WorkforcePermissions.PublishSchedules,
         WorkforcePermissions.ManageOpenShifts,
         WorkforcePermissions.ApproveShiftTrades,

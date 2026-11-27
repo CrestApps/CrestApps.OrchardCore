@@ -82,6 +82,13 @@ internal sealed class McpConnectionStep : CatalogRecipeStepBase<McpConnection>
             throw new InvalidOperationException($"The recipe can't change the transport of the MCP connection '{entry.ItemId}' from '{entry.Source}' to '{source}'. Remove the connection and import it again.");
         }
 
+        // The catalog saves an update as it applies it, before the step validates the result, so an endpoint on the site's
+        // own network is refused here, from what the recipe sends, before anything is saved (C13).
+        if (AIRecipeEndpoints.FindRefusedInRecipe(token, _endpointPolicy) is { } refused)
+        {
+            throw new InvalidOperationException($"The recipe can't point the MCP connection '{entry.ItemId}' at '{refused}': it is on the site's own network. Use a public address, or ask the host to allow a private network for AI connections.");
+        }
+
         // Changing an existing local connection changes the process it starts, so it needs the same right as creating one.
         if ((IsStdio(entry.Source) || IsStdio(source)) && !await CanManageStdioAsync())
         {

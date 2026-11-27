@@ -760,7 +760,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
             ProviderData = providerData,
             ReturnUrl = handoffUrl,
             CancelUrl = handoffUrl,
-            ClientNetworkKey = context?.GetClientKey(),
+            ClientNetworkKey = context?.GetClientKey(checkout.ItemId),
         }, cancellationToken);
 
         checkout.PaymentDisplay = string.Join(' ', new[] { payment.Brand, payment.LastDigits }.Where(value => !string.IsNullOrWhiteSpace(value)));
@@ -1253,7 +1253,7 @@ public sealed class AgentCheckoutService : IAgentCheckoutService
                 continue;
             }
 
-            if (await coupons.ApplyAsync(flow, desired[i], context?.GetClientKey()) is { } error)
+            if (await coupons.ApplyAsync(flow, desired[i], context?.GetClientKey(checkout.ItemId)) is { } error)
             {
                 messages.Add(AgentCheckoutMessage.Warning(AgentMessageCodes.DiscountCodeInvalid, AgentCheckoutFields.DiscountCode(i), error));
             }

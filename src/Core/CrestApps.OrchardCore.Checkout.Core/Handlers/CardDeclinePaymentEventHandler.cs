@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Payments;
 using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Transactions.Models;
@@ -154,6 +155,12 @@ public sealed class CardDeclinePaymentEventHandler : PaymentEventBase
 
         if (session.TryGet<CheckoutClientInfo>(out var client) && !string.IsNullOrEmpty(client.NetworkKey) &&
             !(await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork, client.NetworkKey, cancellationToken)).Allowed)
+        {
+            return false;
+        }
+
+        if (ClientNetworkKey.GetAgentPlatform(client?.NetworkKey) is { } platform &&
+            !(await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.PaymentDeclineAgentPlatform, platform, cancellationToken)).Allowed)
         {
             return false;
         }

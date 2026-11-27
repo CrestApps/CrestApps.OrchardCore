@@ -195,7 +195,7 @@ With CrestApps AI on, these tools can be chosen for an AI profile, under **Field
 | Find a technician | `dispatchFindTechnician` | View visits and the dispatch board | Who can do a visit on a day, best first, and who is ruled out and why. |
 | Optimize and explain a day | `dispatchOptimizeAndExplain` | Dispatch visits | The proposal for a day (each move, the travel before and after, the visits that fit nobody); called again with `apply` and the approved visit numbers, it applies only those. |
 | Reschedule a visit | `dispatchRescheduleVisit` | Dispatch visits | Moves a visit to another time or technician, with the board's checks. |
-| Where is my technician | `dispatchWhereIsMyTechnician` | None | For an AI agent or voice line that talks to customers: the caller's visits from today, found by their own phone number (the last ten digits of the work order's contact phone) or their tracking link's token, with only the status, the arrival window, the ETA when on the way and the technician's first name. |
+| Where is my technician | `dispatchWhereIsMyTechnician` | None | For an AI agent or voice line that talks to customers: the caller's visits from today, found by the number the call or text is with (the last ten digits of the work order's contact phone) or their tracking link's token. A number the model passes is never used, so a web chat can find a visit only by its tracking link, with only the status, the arrival window, the ETA when on the way and the technician's first name. |
 
 Times are given and read in the dispatch time zone.
 

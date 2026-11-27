@@ -26,12 +26,14 @@ public sealed class EmailSignInEligibility
     private readonly UserManager<IUser> _userManager;
     private readonly ISystemRoleProvider _systemRoleProvider;
     private readonly EmailSignInOptions _options;
+    private readonly IRoleGrantPolicy _roleGrantPolicy;
 
-    public EmailSignInEligibility(UserManager<IUser> userManager, ISystemRoleProvider systemRoleProvider, IOptions<EmailSignInOptions> options)
+    public EmailSignInEligibility(UserManager<IUser> userManager, ISystemRoleProvider systemRoleProvider, IOptions<EmailSignInOptions> options, IRoleGrantPolicy roleGrantPolicy = null)
     {
         _userManager = userManager;
         _systemRoleProvider = systemRoleProvider;
         _options = options.Value;
+        _roleGrantPolicy = roleGrantPolicy;
     }
 
     /// <summary>
@@ -54,7 +56,28 @@ public sealed class EmailSignInEligibility
             (user is not User account || account.IsEnabled) &&
             !await _userManager.IsLockedOutAsync(user) &&
             !await _userManager.GetTwoFactorEnabledAsync(user) &&
-            !await IsInExcludedRoleAsync(user);
+            !await IsInExcludedRoleAsync(user) &&
+            !await HoldsASecurityCriticalRoleAsync(user);
+
+    // A role that manages users, roles or role assignments, reaches the admin panel, or holds any other permission that
+    // leads to the whole site (IRoleGrantPolicy.IsSecurityCriticalAsync): its holder never signs in with a mailbox alone.
+    private async Task<bool> HoldsASecurityCriticalRoleAsync(IUser user)
+    {
+        if (_roleGrantPolicy is null)
+        {
+            return false;
+        }
+
+        foreach (var role in await _userManager.GetRolesAsync(user) ?? [])
+        {
+            if (await _roleGrantPolicy.IsSecurityCriticalAsync(role))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     // "Administrator", the default, stands for the tenant's administrator role whatever the tenant named it.
     private async Task<bool> IsInExcludedRoleAsync(IUser user)

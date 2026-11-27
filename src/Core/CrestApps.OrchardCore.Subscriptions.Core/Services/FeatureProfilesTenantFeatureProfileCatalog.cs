@@ -25,9 +25,12 @@ public sealed class FeatureProfilesTenantFeatureProfileCatalog : ITenantFeatureP
 
         // Orchard Core resolves a tenant's profile by the document's key alone (FeatureProfilesValidationProvider), and a
         // name it can't find allows every feature. A profile's own Id is not always its key: the FeatureProfiles recipe step
-        // keys a profile by its property name, whatever Id its body carries. So only the keys are names a plan may use.
+        // keys a profile by its property name, whatever Id its body carries. So only the keys are names a plan may use. They
+        // are returned as they are, two keys that differ only in case included, so a name is matched exactly first and an
+        // ambiguous one is refused (TenantPurchaseValidator.ResolveFeatureProfile).
         return profiles.Keys
             .Where(key => !string.IsNullOrEmpty(key))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
     }
 }

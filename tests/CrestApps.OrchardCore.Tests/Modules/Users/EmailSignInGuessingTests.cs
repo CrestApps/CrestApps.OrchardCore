@@ -2,9 +2,14 @@ using CrestApps.OrchardCore.Users;
 using CrestApps.OrchardCore.Users.Controllers;
 using CrestApps.OrchardCore.Users.Core.Services;
 using CrestApps.OrchardCore.Users.Services;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
+using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Users;
 using OrchardCore.Users.Events;
 using OrchardCore.Users.Models;
@@ -13,10 +18,11 @@ namespace CrestApps.OrchardCore.Tests.Modules.Users;
 
 /// <summary>
 /// Review 11 (C9, C10 and the timing note): e-mail code sign-in over the real code store, attempt limiter, user manager
-/// and Orchard Core's user store on SQLite. A code has eight digits; an account's wrong codes block its code checks for a
-/// day; an account gets at most ten codes a day, and every form of its address shares one send count; the pages do the
-/// same work for an address without an account; and signing in by code to an account whose credentials nobody proved
-/// ends every other session and token at once.
+/// and Orchard Core's user store on SQLite. A code has eight digits; a network's wrong codes for an account stop its new
+/// codes for a day, never the owner's elsewhere; an account gets at most ten codes a day from one network and fifty in
+/// all, and every form of its address shares one send count; the pages do the same work for an address without an
+/// account; and signing in by code to an account whose credentials nobody proved ends every other session and token at
+/// once, and holds those credentials until the owner confirms.
 /// </summary>
 public sealed class EmailSignInGuessingTests : IAsyncLifetime
 {
@@ -45,10 +51,11 @@ public sealed class EmailSignInGuessingTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task TenWrongCodes_BlockTheAccountsCodesForADay_TheRightOneIncluded()
+    public async Task TenWrongCodesFromOneNetwork_StopNewCodesForThatNetworkForADay_NotTheOwnersElsewhere()
     {
-        // Arrange: two codes, each guessed wrong as often as a code allows, from one network or several.
+        // Arrange: two codes, each guessed wrong as often as a code allows, from one network.
         await CreateUserAsync();
+        _harness.RemoteAddress = "198.51.100.9";
 
         for (var round = 0; round < 2; round++)
         {
@@ -62,19 +69,45 @@ public sealed class EmailSignInGuessingTests : IAsyncLifetime
             _harness.Now = _harness.Now.AddMinutes(16);
         }
 
-        // Act
-        var blocked = await PostCodeAsync(await RequestCodeAsync());
-        _harness.Now = _harness.Now.AddDays(1).AddMinutes(1);
-        var later = await PostCodeAsync(await RequestCodeAsync());
+        var sent = _harness.Sender.Sent.Count;
+
+        // Act: round 2, #4 - the guesser's network gets no new code, but the owner on another network signs in.
+        await AskForCodeAsync(Email);
+        var sentToTheGuesser = _harness.Sender.Sent.Count - sent;
+
+        _harness.RemoteAddress = "203.0.113.7";
+        var owner = await PostCodeAsync(await RequestCodeAsync());
 
         // Assert
-        Assert.IsType<ViewResult>(blocked);
-        Assert.IsType<LocalRedirectResult>(later);
+        Assert.Equal(0, sentToTheGuesser);
+        Assert.IsType<LocalRedirectResult>(owner);
         Assert.Single(_harness.SignIns);
     }
 
     [Fact]
-    public async Task AnAccount_IsSentAtMostTenCodesADay()
+    public async Task AnAccount_IsSentAtMostFiftyCodesADay_FromEveryNetworkTogether()
+    {
+        // Arrange
+        await CreateUserAsync();
+
+        // Act: ten networks, each asking within its own limits.
+        for (var network = 0; network < 10; network++)
+        {
+            _harness.RemoteAddress = "198.51.100." + (network + 1);
+
+            for (var i = 0; i < 6; i++)
+            {
+                await AskForCodeAsync(Email);
+                _harness.Now = _harness.Now.AddMinutes(16);
+            }
+        }
+
+        // Assert
+        Assert.Equal(50, _harness.Sender.Sent.Count);
+    }
+
+    [Fact]
+    public async Task AnAccount_IsSentAtMostTenCodesADay_FromOneNetwork()
     {
         // Arrange
         await CreateUserAsync();
@@ -174,9 +207,37 @@ public sealed class EmailSignInGuessingTests : IAsyncLifetime
 
         // ...but every other sign-in ends now: a new stamp, a cookie issued before refused at once, OpenID tokens revoked.
         Assert.NotEqual(stampBefore, account.SecurityStamp);
+        Assert.True(UserCredentialsProof.AreUnprovedCredentialsHeld(account));
         Assert.True(await _harness.CredentialsResets.IsBeforeResetAsync("user-1", squatterSignedIn, stampBefore, TestContext.Current.CancellationToken));
         Assert.False(await _harness.CredentialsResets.IsBeforeResetAsync("user-1", _harness.Now, account.SecurityStamp, TestContext.Current.CancellationToken));
         Assert.Equal(["user-1"], _harness.Revoked);
+    }
+
+    [Fact]
+    public async Task AfterTheOwnersCodeSignIn_TheUnprovedPassword_SignsNobodyIn_UntilTheOwnerConfirms()
+    {
+        // Round 2, #4: whoever registered with the owner's address signed straight back in with their password after
+        // the owner's code sign-in, and could then keep the owner from ever confirming.
+        await CreateUserAsync();
+        await PostCodeAsync(await RequestCodeAsync());
+
+        var account = await FindAsync();
+        var loginEvent = CreateOwnershipLoginEvent(new DefaultHttpContext());
+
+        // Act
+        var passwordWhileHeld = await loginEvent.ValidatingLoginAsync(account);
+
+        var codeContext = new DefaultHttpContext();
+        EmailOwnershipLoginFormEvent.MarkEmailedCodeSignIn(codeContext);
+        var codeWhileHeld = await CreateOwnershipLoginEvent(codeContext).ValidatingLoginAsync(account);
+
+        UserCredentialsProof.ReleaseUnprovedCredentials(account);
+        var passwordOnceReleased = await loginEvent.ValidatingLoginAsync(account);
+
+        // Assert
+        Assert.IsType<RedirectToRouteResult>(passwordWhileHeld);
+        Assert.Null(codeWhileHeld);
+        Assert.Null(passwordOnceReleased);
     }
 
     [Fact]
@@ -195,6 +256,14 @@ public sealed class EmailSignInGuessingTests : IAsyncLifetime
         Assert.Empty(_harness.Revoked);
         Assert.Empty(_harness.SignIns);
     }
+
+    private static EmailOwnershipLoginFormEvent CreateOwnershipLoginEvent(HttpContext httpContext)
+        => new(
+            Mock.Of<IEmailOwnershipConfirmationPage>(),
+            Mock.Of<INotifier>(),
+            new HttpContextAccessor { HttpContext = httpContext },
+            Mock.Of<IHtmlLocalizer<EmailOwnershipLoginFormEvent>>(localizer => localizer[It.IsAny<string>()] == new LocalizedHtmlString("x", "x")),
+            NullLogger<EmailOwnershipLoginFormEvent>.Instance);
 
     private Task<string> CreateUserAsync()
         => _harness.CreateUserAsync(new User { UserId = "user-1", UserName = "kate", Email = Email, EmailConfirmed = true, IsEnabled = true });

@@ -104,7 +104,8 @@ public sealed class AgentCheckoutCompletionGateTests
 
         // Assert
         Assert.NotNull(begun);
-        Assert.Equal(CrestApps.OrchardCore.Core.Throttling.ClientNetworkKey.ForAgentPlatform("platform-1"), begun.ClientNetworkKey);
+        // Round 2, #3: counted for this buyer of the platform, which the platform's own key is read from.
+        Assert.Equal(CrestApps.OrchardCore.Core.Throttling.ClientNetworkKey.ForAgentPlatform("platform-1"), CrestApps.OrchardCore.Core.Throttling.ClientNetworkKey.GetAgentPlatform(begun.ClientNetworkKey));
     }
 
     [Fact]

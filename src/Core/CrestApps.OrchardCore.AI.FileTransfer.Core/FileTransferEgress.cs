@@ -29,6 +29,11 @@ public static class FileTransferEgress
     public const string RefusedMessage = "This server is on the site's own network, or its name could not be found. Use a public server, or ask the host to allow a private network for file transfers.";
 
     /// <summary>
+    /// The message shown when an FTP data connection type could send the data channel to the site's own network.
+    /// </summary>
+    public const string DataConnectionRefusedMessage = "This data connection type lets the server send the connection to the site's own network. Choose EPSV or PASVEX.";
+
+    /// <summary>
     /// Guards the FTP ingestion connector. Call it after <c>AddCoreFtpIngestionConnector</c>.
     /// </summary>
     /// <param name="services">The services.</param>
@@ -36,7 +41,18 @@ public static class FileTransferEgress
         => services.AddFileTransferHostOptions()
             .DecorateKeyed<IIngestionConnector>(FtpIngestionConnector.ConnectorName, (serviceProvider, inner) => inner is EgressGuardedIngestionConnector
                 ? inner
-                : new EgressGuardedIngestionConnector(inner, serviceProvider.GetRequiredService<FileTransferEgressPolicy>(), source => FtpHosts(source.GetOrCreate<FtpConnectionMetadata>())));
+                : new EgressGuardedIngestionConnector(
+                    inner,
+                    serviceProvider.GetRequiredService<FileTransferEgressPolicy>(),
+                    source => FtpHosts(source.GetOrCreate<FtpConnectionMetadata>()),
+                    (source, policy) => FtpDataConnectionRefusal(source.GetOrCreate<FtpConnectionMetadata>(), policy),
+                    (source, policy) =>
+                    {
+                        if (HoldFtpDataConnection(source.GetOrCreate<FtpConnectionMetadata>(), policy) is { } held)
+                        {
+                            source.Put(held);
+                        }
+                    }));
 
     /// <summary>
     /// Guards the SFTP ingestion connector. Call it after <c>AddCoreSftpIngestionConnector</c>.
@@ -56,7 +72,17 @@ public static class FileTransferEgress
         => services.AddFileTransferResourceValidation()
             .DecorateKeyed<IMcpResourceTypeHandler>(FtpResourceConstants.Type, (serviceProvider, inner) => inner is EgressGuardedMcpResourceTypeHandler
                 ? inner
-                : new EgressGuardedMcpResourceTypeHandler(inner, serviceProvider.GetRequiredService<FileTransferEgressPolicy>(), resource => FtpHosts(resource.TryGet<FtpConnectionMetadata>(out var metadata) ? metadata : null)));
+                : new EgressGuardedMcpResourceTypeHandler(
+                    inner,
+                    serviceProvider.GetRequiredService<FileTransferEgressPolicy>(),
+                    resource => FtpHosts(resource.TryGet<FtpConnectionMetadata>(out var metadata) ? metadata : null),
+                    (resource, policy) =>
+                    {
+                        if (resource.TryGet<FtpConnectionMetadata>(out var metadata) && HoldFtpDataConnection(metadata, policy) is { } held)
+                        {
+                            resource.Put(held);
+                        }
+                    }));
 
     /// <summary>
     /// Guards the SFTP MCP resource type. Call it after <c>AddCoreAISftpMcpResources</c>.
@@ -67,6 +93,35 @@ public static class FileTransferEgress
             .DecorateKeyed<IMcpResourceTypeHandler>(SftpResourceConstants.Type, (serviceProvider, inner) => inner is EgressGuardedMcpResourceTypeHandler
                 ? inner
                 : new EgressGuardedMcpResourceTypeHandler(inner, serviceProvider.GetRequiredService<FileTransferEgressPolicy>(), resource => SftpHosts(resource.TryGet<SftpConnectionMetadata>(out var metadata) ? metadata : null)));
+
+    /// <summary>
+    /// The field of an FTP connection whose data connection type could send the data channel to the site's own network,
+    /// or <see langword="null"/>. An empty type is allowed: it is held to PASVEX before connecting.
+    /// </summary>
+    /// <param name="metadata">The connection.</param>
+    /// <param name="policy">The host's file transfer policy.</param>
+    public static string FtpDataConnectionRefusal(FtpConnectionMetadata metadata, FileTransferEgressPolicy policy)
+        => !string.IsNullOrWhiteSpace(metadata?.DataConnectionType) && !policy.AllowPrivateNetwork && !FtpDataConnections.IsSafe(metadata.DataConnectionType)
+            ? nameof(FtpConnectionMetadata.DataConnectionType)
+            : null;
+
+    /// <summary>
+    /// The connection held to a safe data connection type before it connects (<see cref="FtpDataConnections"/>), or
+    /// <see langword="null"/> when its own is safe or the host allows the site's own network.
+    /// </summary>
+    /// <param name="metadata">The connection.</param>
+    /// <param name="policy">The host's file transfer policy.</param>
+    public static FtpConnectionMetadata HoldFtpDataConnection(FtpConnectionMetadata metadata, FileTransferEgressPolicy policy)
+    {
+        if (metadata is null || policy.AllowPrivateNetwork || FtpDataConnections.IsSafe(metadata.DataConnectionType))
+        {
+            return null;
+        }
+
+        metadata.DataConnectionType = FtpDataConnections.Safe;
+
+        return metadata;
+    }
 
     /// <summary>
     /// The servers an FTP connection reaches.

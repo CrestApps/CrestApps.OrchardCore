@@ -40,6 +40,9 @@ public sealed class EmailOwnershipStartup : StartupBase
         services.AddScoped<EmailSignInCodes>();
         services.AddScoped<IEmailSignInCodeSender, EmailSignInCodeSender>();
         services.AddScoped<EmailSignInEligibility>();
+
+        // Who may sign in with a code is held to the same rule as who a purchase may make: no role that leads to the site.
+        services.AddRoleGrants();
         services.AddSignedLinks();
         services.AddScoped<EmailOwnershipProof>();
         services.AddScoped<IEmailOwnershipConfirmationPage, EmailOwnershipConfirmationPage>();
@@ -71,6 +74,7 @@ public sealed class EmailOwnershipStartup : StartupBase
             .AddAttemptPolicy(EmailSignInCodes.SendNetworkPolicy, 10, TimeSpan.FromMinutes(15))
             .AddAttemptPolicy(EmailSignInCodes.SendEmailPolicy, 3, TimeSpan.FromMinutes(15))
             .AddAttemptPolicy(EmailSignInCodes.SendAccountPolicy, 10, TimeSpan.FromDays(1))
+            .AddAttemptPolicy(EmailSignInCodes.SendAccountTotalPolicy, 50, TimeSpan.FromDays(1))
             .AddAttemptPolicy(EmailSignInCodes.VerifyNetworkPolicy, 30, TimeSpan.FromMinutes(15))
             .AddAttemptPolicy(EmailSignInCodes.VerifyAccountPolicy, 10, TimeSpan.FromDays(1), blockDuration: TimeSpan.FromDays(1))
             .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(AttemptLimitOptions.SectionName));

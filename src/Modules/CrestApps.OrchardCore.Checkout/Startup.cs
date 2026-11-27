@@ -149,6 +149,7 @@ public sealed class Startup : StartupBase
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentBeginCheckout, 8, TimeSpan.FromHours(24))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork, 5, TimeSpan.FromMinutes(30), blockDuration: TimeSpan.FromMinutes(30))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineCustomer, 5, TimeSpan.FromHours(1), blockDuration: TimeSpan.FromHours(1))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineAgentPlatform, 50, TimeSpan.FromMinutes(30), blockDuration: TimeSpan.FromMinutes(30))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineStore, 30, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(30))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentDeclineAttempt, 3, TimeSpan.FromHours(24), blockDuration: TimeSpan.FromHours(24))
             // Stripe redelivers an event for up to three days.
@@ -157,6 +158,7 @@ public sealed class Startup : StartupBase
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.PaymentStatusNetwork, 600, TimeSpan.FromMinutes(5))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, 60, TimeSpan.FromHours(1))
             .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CouponCode, 10, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(10))
+            .AddAttemptPolicy(CheckoutConstants.AttemptPolicies.CouponCodeAgentPlatform, 100, TimeSpan.FromMinutes(10), blockDuration: TimeSpan.FromMinutes(10))
             .AddAttemptPolicyOverrides(_shellConfiguration.GetSection(AttemptLimitOptions.SectionName));
 
 #pragma warning disable CS0618 // The obsolete limiter stays registered for one release for code outside this repository.

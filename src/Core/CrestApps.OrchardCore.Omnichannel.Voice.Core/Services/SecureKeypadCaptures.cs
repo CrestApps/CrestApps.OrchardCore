@@ -16,8 +16,9 @@ internal static class SecureKeypadCaptures
     public static readonly TimeSpan Expiry = TimeSpan.FromMinutes(3);
 
     /// <summary>
-    /// How long the keypad stays private after an entry timed out, counted from the last key the caller typed, so the
-    /// rest of a number typed too late is dropped rather than handed on as the caller's turn.
+    /// How long a node keeps its own record of a timed-out entry in the cache, counted from the last key the caller typed.
+    /// The keypad stays private after that too, from the window on the activity, until the caller presses the star key,
+    /// the AI asks for a new entry or the call ends.
     /// </summary>
     public static readonly TimeSpan Grace = TimeSpan.FromMinutes(1);
 

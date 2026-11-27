@@ -30,6 +30,7 @@ public sealed class AgentClientKeyTests
         // Arrange
         var options = new AttemptLimitOptions();
         options.AddPolicy(CheckoutConstants.AttemptPolicies.CouponCode, 10, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
+        options.AddPolicy(CheckoutConstants.AttemptPolicies.CouponCodeAgentPlatform, 100, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
 
         var limiter = new DistributedAttemptLimiter(
             new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())),
@@ -50,8 +51,10 @@ public sealed class AgentClientKeyTests
             new PassThroughStringLocalizer<CheckoutCouponService>());
 
         // Over MCP and A2A the request names no client address.
-        var guesser = new AgentCheckoutContext { PlatformId = "platform-guesser" }.GetClientKey();
-        var other = new AgentCheckoutContext { PlatformId = "platform-other" }.GetClientKey();
+        var guesser = new AgentCheckoutContext { PlatformId = "platform-guesser" }.GetClientKey("checkout-1");
+        var other = new AgentCheckoutContext { PlatformId = "platform-other" }.GetClientKey("checkout-2");
+        var sameBuyer = new AgentCheckoutContext { PlatformId = "platform-guesser" }.GetClientKey("checkout-1");
+        var anotherBuyerOfThePlatform = new AgentCheckoutContext { PlatformId = "platform-guesser" }.GetClientKey("checkout-3");
 
         for (var i = 0; i < 10; i++)
         {
@@ -59,16 +62,79 @@ public sealed class AgentClientKeyTests
         }
 
         // Act
-        var (_, guesserRefused) = await coupons.FindCodeAsync("WRONG-AGAIN", guesser);
+        var (_, guesserRefused) = await coupons.FindCodeAsync("WRONG-AGAIN", sameBuyer);
         var (_, otherRefused) = await coupons.FindCodeAsync("SAVE10", other);
+        var (_, anotherBuyerRefused) = await coupons.FindCodeAsync("SAVE10", anotherBuyerOfThePlatform);
 
-        // Assert
+        // Assert: round 2, #3 keeps one buyer's wrong codes from locking every buyer of the same platform out of codes.
         Assert.True(guesserRefused);
         Assert.False(otherRefused);
+        Assert.False(anotherBuyerRefused);
         Assert.NotEqual(ClientNetworkKey.Unknown, ClientNetworkKey.FromAddress(guesser));
     }
 
     [Fact]
+    public async Task WrongCodesAcrossAPlatformsBuyers_StillStopThePlatform_AtItsOwnLimit()
+    {
+        // Arrange
+        var options = new AttemptLimitOptions();
+        options.AddPolicy(CheckoutConstants.AttemptPolicies.CouponCode, 10, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
+        options.AddPolicy(CheckoutConstants.AttemptPolicies.CouponCodeAgentPlatform, 30, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(10));
+
+        var limiter = new DistributedAttemptLimiter(
+            new MemoryDistributedCache(Options.Create(new MemoryDistributedCacheOptions())),
+            new LocalLock(NullLogger<LocalLock>.Instance),
+            new ShellSettings { Name = "Default" },
+            Mock.Of<IClock>(clock => clock.UtcNow == DateTime.UtcNow),
+            Options.Create(options),
+            NullLogger<DistributedAttemptLimiter>.Instance);
+
+        var coupons = new CheckoutCouponService(
+            Mock.Of<ICouponStore>(),
+            null,
+            Mock.Of<ICouponRedemptionService>(),
+            limiter,
+            null,
+            Mock.Of<IClock>(clock => clock.UtcNow == DateTime.UtcNow),
+            new LocalLock(NullLogger<LocalLock>.Instance),
+            new PassThroughStringLocalizer<CheckoutCouponService>());
+
+        // A guesser that opens a new checkout for every few tries.
+        for (var i = 0; i < 30; i++)
+        {
+            await coupons.FindCodeAsync("WRONG" + i, new AgentCheckoutContext { PlatformId = "platform" }.GetClientKey("checkout-" + (i / 5)));
+        }
+
+        // Act
+        var (_, refused) = await coupons.FindCodeAsync("SAVE10", new AgentCheckoutContext { PlatformId = "platform" }.GetClientKey("checkout-new"));
+
+        // Assert
+        Assert.True(refused);
+    }
+
+    [Fact]
+    public void TwoIpv6NetworksOfOneSite_ShareTheSitesKey()
+    {
+        // Round 2 (Mild): an IPv6 /48 holder multiplied the address suggestions' daily share by its 65,536 /64 networks.
+        static string SiteOf(string address)
+            => ClientNetworkKey.Site(new Microsoft.AspNetCore.Http.DefaultHttpContext { Connection = { RemoteIpAddress = System.Net.IPAddress.Parse(address) } });
+
+        Assert.Equal(SiteOf("2001:db8:1:1::5"), SiteOf("2001:db8:1:ffff::9"));
+        Assert.NotEqual(SiteOf("2001:db8:1:1::5"), SiteOf("2001:db8:2:1::5"));
+        Assert.Equal("203.0.113.7", SiteOf("203.0.113.7"));
+    }
+
+    [Fact]
+    public void AnAgentBuyersKey_NamesItsPlatform()
+    {
+        var key = ClientNetworkKey.ForAgentBuyer("platform:x", "checkout-1");
+
+        Assert.Equal(ClientNetworkKey.ForAgentPlatform("platform:x"), ClientNetworkKey.GetAgentPlatform(key));
+        Assert.Null(ClientNetworkKey.GetAgentPlatform(ClientNetworkKey.ForAgentPlatform("platform:x")));
+        Assert.Null(ClientNetworkKey.GetAgentPlatform("203.0.113.7"));
+    }
+
+    [Fact]
     public void AnAgentRequestWithoutAPlatform_IsKeyedByItsAddress()
-        => Assert.Equal("203.0.113.7", new AgentCheckoutContext { ClientAddress = "203.0.113.7" }.GetClientKey());
+        => Assert.Equal("203.0.113.7", new AgentCheckoutContext { ClientAddress = "203.0.113.7" }.GetClientKey("checkout-1"));
 }

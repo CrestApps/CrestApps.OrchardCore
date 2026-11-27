@@ -19,6 +19,9 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
 {
     private readonly IServiceProvider _serviceProvider;
 
+    // The roles of each item's current latest and published versions, read once a request (the handler is scoped).
+    private readonly Dictionary<string, IReadOnlyList<HashSet<string>>> _currentRoles = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Initializes a new instance of the <see cref="RoleBasedContentItemAuthorizationHandler"/> class.
     /// </summary>
@@ -67,15 +70,26 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
             return;
         }
 
-        var roleNames = ContentAccessRestriction.GetRoleNames(definition, contentItem);
+        if (!ContentAccessRestriction.IsRestricted(definition))
+        {
+            return;
+        }
 
-        if (roleNames.Count == 0)
+        // The version passed in may be an old one, such as an audit trail snapshot opened or restored: the restriction of
+        // the item as it is now applies too, or a user outside its current roles could open or restore an older version
+        // and remove or widen it.
+        var roleSets = new List<HashSet<string>> { ContentAccessRestriction.GetRoleNames(definition, contentItem) };
+
+        roleSets.AddRange(await GetCurrentRoleSetsAsync(contentItem, definition));
+        roleSets.RemoveAll(roles => roles.Count == 0);
+
+        if (roleSets.Count == 0)
         {
             return;
         }
 
         // Authenticated stands for anyone signed in and Anonymous for a visitor; neither is ever a role claim.
-        if (ContentAccessRoles.IsInAnyRole(user, roleNames))
+        if (roleSets.All(roles => ContentAccessRoles.IsInAnyRole(user, roles)))
         {
             // A picked role lets its people view the item; listing and previewing still need their own permission.
             if (IsViewing(requirement.Permission.Name))
@@ -97,6 +111,39 @@ public sealed class RoleBasedContentItemAuthorizationHandler : AuthorizationHand
     /// </summary>
     /// <param name="name">The permission's name.</param>
     /// <returns>Whether a restricted item refuses it to whoever isn't in its roles.</returns>
+    // The roles of the item's current latest and published versions other than the one passed in, or none for a new item.
+    private async Task<IReadOnlyList<HashSet<string>>> GetCurrentRoleSetsAsync(ContentItem contentItem, global::OrchardCore.ContentManagement.Metadata.Models.ContentTypeDefinition definition)
+    {
+        if (string.IsNullOrEmpty(contentItem.ContentItemId) || _serviceProvider.GetService<IContentManager>() is not { } contentManager)
+        {
+            return [];
+        }
+
+        if (_currentRoles.TryGetValue(contentItem.ContentItemId, out var cached))
+        {
+            return cached;
+        }
+
+        // Kept empty while the versions load, so a content handler that checks a permission meanwhile can't loop back here.
+        _currentRoles[contentItem.ContentItemId] = [];
+
+        var sets = new List<HashSet<string>>();
+
+        foreach (var options in new[] { VersionOptions.Latest, VersionOptions.Published })
+        {
+            var current = await contentManager.GetAsync(contentItem.ContentItemId, options);
+
+            if (current is not null && !string.Equals(current.ContentItemVersionId, contentItem.ContentItemVersionId, StringComparison.Ordinal))
+            {
+                sets.Add(ContentAccessRestriction.GetRoleNames(definition, current));
+            }
+        }
+
+        _currentRoles[contentItem.ContentItemId] = sets;
+
+        return sets;
+    }
+
     internal static bool IsRestricted(string name)
         => !string.IsNullOrEmpty(name) && _restricted.Contains(RootName(name));
 

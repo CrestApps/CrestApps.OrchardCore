@@ -27,8 +27,12 @@ internal sealed class FileTransferResourceEgressHandler : CatalogEntryHandlerBas
     {
         var resource = context.Model;
 
+        var ftp = string.Equals(resource?.Source, FtpResourceConstants.Type, StringComparison.OrdinalIgnoreCase) && resource.TryGet<FtpConnectionMetadata>(out var metadata)
+            ? metadata
+            : null;
+
         var hosts = string.Equals(resource?.Source, FtpResourceConstants.Type, StringComparison.OrdinalIgnoreCase)
-            ? FileTransferEgress.FtpHosts(resource.TryGet<FtpConnectionMetadata>(out var ftp) ? ftp : null)
+            ? FileTransferEgress.FtpHosts(ftp)
             : string.Equals(resource?.Source, SftpResourceConstants.Type, StringComparison.OrdinalIgnoreCase)
                 ? FileTransferEgress.SftpHosts(resource.TryGet<SftpConnectionMetadata>(out var sftp) ? sftp : null)
                 : [];
@@ -39,6 +43,11 @@ internal sealed class FileTransferResourceEgressHandler : CatalogEntryHandlerBas
             {
                 context.Result.Fail(new ValidationResult(FileTransferEgress.RefusedMessage, [field]));
             }
+        }
+
+        if (ftp is not null && FileTransferEgress.FtpDataConnectionRefusal(ftp, _policy) is { } dataConnectionField)
+        {
+            context.Result.Fail(new ValidationResult(FileTransferEgress.DataConnectionRefusedMessage, [dataConnectionField]));
         }
 
         return Task.CompletedTask;

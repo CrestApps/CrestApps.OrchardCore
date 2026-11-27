@@ -119,9 +119,11 @@ the fingerprint existed fails to connect until one is added.
 
 An FTP or SFTP server, and an SFTP proxy, can't be on the site's own network: a private, loopback, link-local or
 shared address, `localhost`, or a name that resolves to one is refused when the source is saved (in the editor, through
-the API or a recipe) and again before every connection. A name that doesn't resolve is refused too. The FTP
-*PassiveAllowUnroutable* data connection type, which connects wherever the server's passive answer says, is refused
-for the same reason. A host whose file servers are internal on purpose sets
+the API or a recipe) and again before every connection. A name that doesn't resolve is refused too. An FTP data
+connection takes only *EPSV* or *PASVEX*, the passive modes that keep the data channel on the server the connection
+names: every other mode, the default *AutoPassive* included, can connect wherever the server's passive answer says. The
+value is read the way the FTP client reads it, so `07` or `EPSV,PORT` is refused like *PassiveAllowUnroutable*. An empty
+value is saved as *PASVEX*, and a connection saved before this rule is held to *PASVEX* when it connects. A host whose file servers are internal on purpose sets
 `CrestApps_AI:FileTransfer:AllowPrivateNetwork` to `true` in the tenant's configuration; link-local addresses and the
 cloud metadata services are refused even then. The same rules apply to the FTP and SFTP MCP resources.
 

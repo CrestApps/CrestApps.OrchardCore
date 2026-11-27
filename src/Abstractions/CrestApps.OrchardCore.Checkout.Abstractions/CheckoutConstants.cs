@@ -32,6 +32,12 @@ public static class CheckoutConstants
         public const string PaymentDeclineCustomer = "payment-decline-customer";
 
         /// <summary>
+        /// Declined or failed card payments per agent platform, across all its buyers (each buyer also counts under
+        /// <see cref="PaymentDeclineNetwork"/>): 50 per 30 minutes, then blocked 30 minutes.
+        /// </summary>
+        public const string PaymentDeclineAgentPlatform = "payment-decline-agent-platform";
+
+        /// <summary>
         /// Declined or failed card payments store-wide: 30 per 10 minutes, then the store's decline-spike action applies
         /// for 30 minutes.
         /// </summary>
@@ -65,6 +71,12 @@ public static class CheckoutConstants
         /// Checkouts started per network: 60 per hour.
         /// </summary>
         public const string CheckoutStartNetwork = "checkout-start-network";
+
+        /// <summary>
+        /// Wrong discount codes per agent platform, across all its buyers (each buyer also counts under the code limit per
+        /// network): 100 per 10 minutes, then blocked 10 minutes.
+        /// </summary>
+        public const string CouponCodeAgentPlatform = "coupon-code-agent-platform";
 
         /// <summary>
         /// Wrong discount codes per network: 10 per 10 minutes, then blocked 10 minutes.

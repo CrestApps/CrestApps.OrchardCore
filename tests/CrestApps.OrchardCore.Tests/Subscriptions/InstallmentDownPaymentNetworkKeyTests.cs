@@ -23,8 +23,10 @@ namespace CrestApps.OrchardCore.Tests.Subscriptions;
 /// </summary>
 public sealed class InstallmentDownPaymentNetworkKeyTests
 {
-    [Fact]
-    public async Task BeginningADownPayment_PassesTheRequestsNetwork_ToTheCheckout()
+    [Theory]
+    [InlineData(null)]
+    [InlineData("staff-1")]
+    public async Task BeginningADownPayment_PassesTheRequestsClient_ToTheCheckout(string staffUserId)
     {
         // Arrange
         var plan = new InstallmentPlan
@@ -60,6 +62,11 @@ public sealed class InstallmentDownPaymentNetworkKeyTests
         var httpContext = new DefaultHttpContext { RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider() };
         httpContext.Connection.RemoteIpAddress = IPAddress.Parse("203.0.113.7");
 
+        if (staffUserId is not null)
+        {
+            httpContext.User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity([new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, staffUserId), new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, staffUserId)], "Test"));
+        }
+
         // Act
         await InstallmentPlanPaymentEndpoints.BeginPaymentAsync(
             "plan-1",
@@ -74,7 +81,10 @@ public sealed class InstallmentDownPaymentNetworkKeyTests
             new PassThroughStringLocalizer<InstallmentPlansController>());
 
         // Assert
+        // Round 2 (Mild): a card typed in by staff counts for that staff member, so colleagues in one office don't share
+        // one network's declines.
         Assert.NotNull(begun);
-        Assert.Equal(ClientNetworkKey.FromAddress("203.0.113.7"), begun.ClientNetworkKey);
+        Assert.Equal(ClientNetworkKey.From(httpContext), begun.ClientNetworkKey);
+        Assert.Equal(staffUserId is null, string.Equals(ClientNetworkKey.FromAddress("203.0.113.7"), begun.ClientNetworkKey, StringComparison.Ordinal));
     }
 }

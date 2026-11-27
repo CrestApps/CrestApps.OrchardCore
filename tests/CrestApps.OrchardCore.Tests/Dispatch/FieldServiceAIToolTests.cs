@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using CrestApps.OrchardCore.AI.Core.Conversations;
 using CrestApps.OrchardCore.Dispatch;
 using CrestApps.OrchardCore.Dispatch.AI;
 using CrestApps.OrchardCore.Dispatch.Models;
@@ -98,14 +99,47 @@ public sealed class FieldServiceAIToolTests
 
         Assert.True((await kit.AssignAsync(visit, DispatchKit.Monday(10), ana)).Succeeded);
 
-        var caller = await InvokeAsync<WhereIsMyTechnicianTool>(kit, new ClaimsPrincipal(), new() { ["phone"] = "5550100123" });
-        var stranger = await InvokeAsync<WhereIsMyTechnicianTool>(kit, new ClaimsPrincipal(), new() { ["phone"] = "5550199999" });
+        var caller = await OnACallFromAsync("+15550100123", () => InvokeAsync<WhereIsMyTechnicianTool>(kit, new ClaimsPrincipal(), []));
+        var stranger = await OnACallFromAsync("+15550199999", () => InvokeAsync<WhereIsMyTechnicianTool>(kit, new ClaimsPrincipal(), []));
         var found = JsonElement.Parse(caller).GetProperty("visits")[0];
 
         Assert.Equal("Ana", found.GetProperty("technician").GetString());
         Assert.Equal("Scheduled", found.GetProperty("status").GetString());
         Assert.False(found.TryGetProperty("address", out _));
         Assert.StartsWith("No upcoming visit", stranger, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task WhereIsMyTechnician_IgnoresANumberTheModelPasses()
+    {
+        // Round 2 (Mild): the tool trusted a phone number the model supplied, so anyone could say a customer's number
+        // and hear their visit and technician. It now reads only the number the call or text is with.
+        await using var kit = await DispatchKit.CreateAsync();
+        var ana = await kit.AddTechnicianAsync("Ana Field");
+
+        await kit.PublishShiftsAsync(ana);
+
+        var (_, visit) = await kit.AddJobAsync("No heat", DispatchKit.Depot, order => order.Contact = new WorkOrderContact { Name = "Pat", Phone = "+1 (555) 010-0123" });
+
+        Assert.True((await kit.AssignAsync(visit, DispatchKit.Monday(10), ana)).Succeeded);
+
+        var inAWebChat = await InvokeAsync<WhereIsMyTechnicianTool>(kit, new ClaimsPrincipal(), new() { ["phone"] = "5550100123" });
+        var onAnotherCall = await OnACallFromAsync("+15550199999", () => InvokeAsync<WhereIsMyTechnicianTool>(kit, new ClaimsPrincipal(), new() { ["phone"] = "5550100123" }));
+
+        Assert.StartsWith("No upcoming visit", inAWebChat, StringComparison.Ordinal);
+        Assert.StartsWith("No upcoming visit", onAnotherCall, StringComparison.Ordinal);
+    }
+
+    private static async Task<string> OnACallFromAsync(string number, Func<Task<string>> invoke)
+    {
+        using var scope = AIConversationScope.Begin(new AIConversationContext
+        {
+            Channel = AIConversationChannels.Phone,
+            Direction = AIConversationDirections.Inbound,
+            CustomerAddress = number,
+        });
+
+        return await invoke();
     }
 
     private static Task<string> InvokeAsync<TTool>(DispatchKit kit, ClaimsPrincipal user, Dictionary<string, object> arguments)

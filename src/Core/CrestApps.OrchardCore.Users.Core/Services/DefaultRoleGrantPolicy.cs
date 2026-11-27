@@ -11,6 +11,36 @@ namespace CrestApps.OrchardCore.Users.Core.Services;
 /// </summary>
 internal sealed class DefaultRoleGrantPolicy : IRoleGrantPolicy
 {
+    // Permissions Orchard Core doesn't flag security critical that still lead to the whole site: an OpenID application or
+    // a remote deployment client can be given the Administrator role or import any recipe, tenants, features, settings,
+    // recipes, workflows, SQL queries, secrets and admin templates reach code, credentials or every user's data, and the
+    // admin panel is where every other permission is used. A subscription plan never grants a role holding one, and a
+    // membership only when the store lists the role by name (MembershipSettings.GrantableRoles).
+    private static readonly HashSet<string> _leadsToAdministration = new(StringComparer.Ordinal)
+    {
+        "AccessAdminPanel",
+        "ManageApplications",
+        "ManageScopes",
+        "ManageClientSettings",
+        "ManageServerSettings",
+        "ManageValidationSettings",
+        "ManageRemoteClients",
+        "ManageRemoteInstances",
+        "ManageDeploymentPlan",
+        "Export",
+        "Import",
+        "ManageTenants",
+        "ManageFeatures",
+        "ManageSettings",
+        "ManageSecrets",
+        "ManageRecipes",
+        "ManageWorkflows",
+        "ManageSqlQueries",
+        "ManageEmailSettings",
+        "ManageTemplates",
+        "ManageAdminTemplates",
+    };
+
     private readonly ISystemRoleProvider _systemRoleProvider;
     private readonly IRoleService _roleService;
     private readonly IPermissionService _permissionService;
@@ -62,12 +92,17 @@ internal sealed class DefaultRoleGrantPolicy : IRoleGrantPolicy
             return false;
         }
 
+        var separator = name.IndexOf('_');
+
+        if (_leadsToAdministration.Contains(name) || (separator > 0 && _leadsToAdministration.Contains(name[..separator])))
+        {
+            return true;
+        }
+
         if (await _permissionService.FindByNameAsync(name) is { } permission)
         {
             return permission.IsSecurityCritical;
         }
-
-        var separator = name.IndexOf('_');
 
         return separator > 0 && await _permissionService.FindByNameAsync(name[..separator]) is { IsSecurityCritical: true };
     }

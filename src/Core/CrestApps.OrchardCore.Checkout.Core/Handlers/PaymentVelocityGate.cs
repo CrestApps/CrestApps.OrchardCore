@@ -2,7 +2,10 @@ using CrestApps.OrchardCore.Checkout.Core.Indexes;
 using CrestApps.OrchardCore.Checkout.Core.Services;
 using CrestApps.OrchardCore.Checkout.Models;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core.Throttling;
 using CrestApps.OrchardCore.Throttling;
+using CrestApps.OrchardCore.Transactions.Models;
+using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Entities;
 using OrchardCore.Settings;
@@ -22,8 +25,11 @@ namespace CrestApps.OrchardCore.Checkout.Core.Handlers;
 /// </remarks>
 public sealed class PaymentVelocityGate : ICheckoutPaymentGate
 {
+    private const int MaxCheckoutsRead = 20;
+
     private readonly IAttemptLimiter _limiter;
     private readonly ICheckoutPaymentProviderResolver _providerResolver;
+    private readonly IPaymentAttemptStore _attemptStore;
     private readonly ISiteService _siteService;
     private readonly ISession _session;
 
@@ -35,12 +41,14 @@ public sealed class PaymentVelocityGate : ICheckoutPaymentGate
     public PaymentVelocityGate(
         IAttemptLimiter limiter,
         ICheckoutPaymentProviderResolver providerResolver,
+        IPaymentAttemptStore attemptStore,
         ISiteService siteService,
         ISession session,
         IStringLocalizer<PaymentVelocityGate> stringLocalizer)
     {
         _limiter = limiter;
         _providerResolver = providerResolver;
+        _attemptStore = attemptStore;
         _siteService = siteService;
         _session = session;
         S = stringLocalizer;
@@ -62,6 +70,15 @@ public sealed class PaymentVelocityGate : ICheckoutPaymentGate
 
         if (!string.IsNullOrEmpty(networkKey) &&
             !(await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.PaymentDeclineNetwork, networkKey, cancellationToken)).Allowed)
+        {
+            context.Refuse(S["We can't take another payment attempt right now. Please try again later or use another way to pay."]);
+
+            return;
+        }
+
+        // A buyer an agent platform brings counts on its own, and the platform as a whole against a much higher limit.
+        if (ClientNetworkKey.GetAgentPlatform(networkKey) is { } platform &&
+            !(await _limiter.PeekAsync(CheckoutConstants.AttemptPolicies.PaymentDeclineAgentPlatform, platform, cancellationToken)).Allowed)
         {
             context.Refuse(S["We can't take another payment attempt right now. Please try again later or use another way to pay."]);
 
@@ -119,7 +136,28 @@ public sealed class PaymentVelocityGate : ICheckoutPaymentGate
         }
     }
 
+    // A completed checkout proves a buyer only when money moved: a payment the provider captured, for more than nothing,
+    // from a provider that doesn't defer payment. Bank Transfer, Cash on Delivery, Pay Later and a free order complete a
+    // checkout for free, so a card tester could otherwise buy their way past the pause. The most recent checkouts are read.
     private async Task<bool> HasCompletedCheckoutAsync(string ownerId, CancellationToken cancellationToken)
-        => await _session.QueryIndex<CheckoutSessionIndex>(index => index.OwnerId == ownerId && index.Status == CheckoutSessionStatus.Completed)
-            .FirstOrDefaultAsync(cancellationToken) is not null;
+    {
+        var completed = await _session.QueryIndex<CheckoutSessionIndex>(index => index.OwnerId == ownerId && index.Status == CheckoutSessionStatus.Completed)
+            .OrderByDescending(index => index.CompletedUtc)
+            .Take(MaxCheckoutsRead)
+            .ListAsync(cancellationToken);
+
+        foreach (var checkout in completed)
+        {
+            var attempts = await _attemptStore.GetBySessionAsync(checkout.SessionId, cancellationToken);
+
+            if (attempts.Any(attempt => attempt.State == PaymentAttemptState.Succeeded &&
+                attempt.ConfirmedAmount > 0 &&
+                _providerResolver.GetProvider(attempt.ProviderKey)?.Capabilities is { DefersPayment: false }))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

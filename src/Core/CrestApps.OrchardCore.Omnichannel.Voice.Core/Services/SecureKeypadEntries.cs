@@ -36,7 +36,7 @@ internal static class SecureKeypadEntries
 
         if (entry.State == SecureKeypadEntryState.TimedOut)
         {
-            return $"[The time to type the {label} on the keypad ran out, so nothing was saved and the keys typed since were dropped. Ask the caller whether to try again; if they want to, ask for a secure keypad entry again. Do not ask them to read it aloud.]";
+            return $"[The time to type the {label} on the keypad ran out, so nothing was saved and the keys typed since were dropped. The keypad stays private: ask the caller whether to try again, and if they want to, ask for a secure keypad entry again. If they need the keypad for anything else, ask them to press the star key first. Do not ask them to read it aloud.]";
         }
 
         var sink = services?.GetService<ISecureCaptureTokenSink>();

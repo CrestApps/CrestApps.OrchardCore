@@ -19,7 +19,9 @@ namespace CrestApps.OrchardCore.Users.Core.Handlers;
 public abstract class GrantedRolesPartHandler<TPart> : ContentPartHandler<TPart>
     where TPart : ContentPart, new()
 {
-    // The roles each item's stored versions granted when this request loaded them, before anything changed them.
+    // The roles every version of each item this request loaded granted, before anything changed them: a role counts as
+    // already granted only when each loaded version grants it. An audit trail Restore loads the old version and the
+    // current one, so a role removed since counts as added and needs the right to assign roles again.
     private readonly Dictionary<string, HashSet<string>> _storedRoles = new(StringComparer.Ordinal);
 
     private readonly IHttpContextAccessor _httpContextAccessor;
@@ -57,12 +59,16 @@ public abstract class GrantedRolesPartHandler<TPart> : ContentPartHandler<TPart>
     {
         if (!string.IsNullOrEmpty(context.ContentItem?.ContentItemId))
         {
+            var roles = Normalize(GetRoleNames(part));
+
             if (!_storedRoles.TryGetValue(context.ContentItem.ContentItemId, out var stored))
             {
-                _storedRoles[context.ContentItem.ContentItemId] = stored = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                _storedRoles[context.ContentItem.ContentItemId] = new HashSet<string>(roles, StringComparer.OrdinalIgnoreCase);
             }
-
-            stored.UnionWith(Normalize(GetRoleNames(part)));
+            else
+            {
+                stored.IntersectWith(roles);
+            }
         }
 
         return Task.CompletedTask;

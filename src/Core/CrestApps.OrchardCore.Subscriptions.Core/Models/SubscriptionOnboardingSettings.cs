@@ -99,10 +99,11 @@ public sealed class SubscriptionOnboardingSettings
 
     /// <summary>
     /// Whether a sold site whose buyer names no domain of their own has somewhere to answer: a host under
-    /// <see cref="BaseDomain"/>, or a prefix of this store's address. Without either, such a purchase is refused.
+    /// <see cref="BaseDomain"/>, which is derived only while custom domains are off, or a prefix of this store's address.
+    /// Without either, such a purchase is refused.
     /// </summary>
     public bool GivesSoldSitesAnAddress()
-        => !string.IsNullOrWhiteSpace(BaseDomain) || AllowPrefixOnStoreHost;
+        => (!string.IsNullOrWhiteSpace(BaseDomain) && !(AllowCustomDomains && HasReservedHosts())) || AllowPrefixOnStoreHost;
 
     /// <summary>
     /// Builds the rules a purchase of a plan is held to.

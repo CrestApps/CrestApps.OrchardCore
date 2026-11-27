@@ -155,7 +155,8 @@ public static partial class TenantPurchaseValidator
     {
         "www", "mail", "email", "webmail", "smtp", "imap", "pop", "pop3", "mx", "ns", "ns1", "ns2", "ns3", "ns4", "dns",
         "autodiscover", "autoconfig", "sso", "auth", "oauth", "identity", "cpanel", "whm", "webdisk", "plesk", "ftp", "sftp",
-        "vpn", "remote", "owa", "exchange", "lyncdiscover", "sip",
+        "vpn", "remote", "owa", "ews", "exchange", "lyncdiscover", "sip", "activesync", "rpc", "mapi", "oab", "ecp",
+        "well-known", "_well-known",
     };
 
     /// <summary>
@@ -349,7 +350,9 @@ public static partial class TenantPurchaseValidator
             return;
         }
 
-        if (IsReservedPrefix(prefix, rules))
+        // The labels mail, sign-in and hosting panel services answer on are refused as prefixes too: a client that looks for
+        // /autodiscover or /.well-known paths under the store's own host would find a buyer's site there.
+        if (IsReservedPrefix(prefix, rules) || _reservedHostLabels.Contains(prefix))
         {
             errors.Add(new TenantPurchaseError(field, TenantPurchaseErrorCode.ReservedPrefix, prefix));
 

@@ -1,5 +1,7 @@
 using CrestApps.OrchardCore.Checkout;
 using CrestApps.OrchardCore.Checkout.Services;
+using CrestApps.OrchardCore.Core.Throttling;
+using CrestApps.OrchardCore.Throttling;
 using CrestApps.OrchardCore.Transactions.Core.Services;
 using CrestApps.OrchardCore.Transactions.Models;
 using CrestApps.OrchardCore.Transactions.Services;
@@ -86,10 +88,12 @@ public sealed class TransactionPayController : Controller
     /// Starts the checkout that pays the transaction a pay link names.
     /// </summary>
     /// <param name="token">The signed token from the link.</param>
+    /// <param name="limiter">The attempt limiter.</param>
+    /// <param name="amount">The part of the balance to pay, or <see langword="null"/> for all of it.</param>
     [HttpPost("transactions/pay/{token}")]
     [RateLimitGroup(CheckoutConstants.RateLimitGroups.Start)]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Pay(string token, decimal? amount = null)
+    public async Task<IActionResult> Pay(string token, [FromServices] IAttemptLimiter limiter, decimal? amount = null)
     {
         var transaction = await FindAsync(token);
 
@@ -110,6 +114,14 @@ public sealed class TransactionPayController : Controller
         if (!TransactionStateMachine.TryGetPaymentAmount(transaction, amount, out var amountToPay))
         {
             return RedirectToRoute(TransactionsConstants.RouteNames.Pay, new { token, tooSmall = true });
+        }
+
+        // Every post starts a checkout, so it is held to the store's limit on checkouts started per client.
+        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.CheckoutStartNetwork, ClientNetworkKey.From(HttpContext), HttpContext.RequestAborted) is { Allowed: false } refused)
+        {
+            await ThrottlingServiceCollectionExtensions.WriteTooManyRequestsAsync(HttpContext, refused.RetryAfter, HttpContext.RequestAborted);
+
+            return new EmptyResult();
         }
 
         // The checkout belongs to whoever opened the link, a guest browser included; the settlement handler applies

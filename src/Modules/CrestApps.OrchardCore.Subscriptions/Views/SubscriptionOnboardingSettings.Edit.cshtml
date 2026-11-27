@@ -5,7 +5,7 @@
 @if (!Model.GivesSoldSitesAnAddress)
 {
     <div class="alert alert-warning" role="alert">
-        @T["A sold site has nowhere to answer unless its buyer enters a domain of their own, so other purchases are refused. Set a base domain, or turn on selling sites on a prefix of this site's own address."]
+        @T["A sold site has nowhere to answer unless its buyer enters a domain of their own, so other purchases are refused. Set a base domain (a site gets a host under it only while custom domains are off), or turn on selling sites on a prefix of this site's own address."]
     </div>
 }
 

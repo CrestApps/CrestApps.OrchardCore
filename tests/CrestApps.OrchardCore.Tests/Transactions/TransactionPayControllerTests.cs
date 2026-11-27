@@ -35,7 +35,7 @@ public sealed class TransactionPayControllerTests
         var controller = CreateController(engine.Object);
 
         // Act
-        var result = await controller.Pay("token-1");
+        var result = await controller.Pay("token-1", Mock.Of<CrestApps.OrchardCore.Throttling.IAttemptLimiter>(limiter => limiter.AcquireAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()) == Task.FromResult(new CrestApps.OrchardCore.Throttling.AttemptLimitResult(true, 1, TimeSpan.Zero))));
 
         // Assert
         var redirect = Assert.IsType<RedirectToRouteResult>(result);

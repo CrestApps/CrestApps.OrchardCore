@@ -193,6 +193,27 @@ public sealed class RoleGrantPolicyTests
     }
 
     [Fact]
+    public async Task AnAuditTrailRestore_ThatBringsBackARemovedRole_NeedsTheRightToAssignRoles()
+    {
+        // Round 2 (Mild): a Restore loads the old version and the current one, and the roles of every loaded version
+        // counted as already granted, so restoring an old version brought back a removed role without the right to assign it.
+        var editor = CalendarTestHarness.User("editor", CommonPermissions.EditContent.Name, MembershipsPermissions.ManageMemberships.Name);
+        var handler = CreateMembershipHandler(editor);
+        var snapshot = Product(["Member", "Staff"]);
+        var current = Product(["Member"]);
+
+        await handler.LoadedAsync(new LoadContentContext(snapshot), snapshot.GetOrCreate<MembershipPart>());
+        await handler.LoadedAsync(new LoadContentContext(current), current.GetOrCreate<MembershipPart>());
+
+        // Act
+        var context = new ValidateContentContext(snapshot);
+        await handler.ValidatingAsync(context, snapshot.GetOrCreate<MembershipPart>());
+
+        // Assert
+        Assert.False(context.ContentValidateResult.Succeeded);
+    }
+
+    [Fact]
     public async Task ASaveWithNoSignedInUser_IsTrusted()
     {
         // Arrange: setup, a background task or a remote deployment.

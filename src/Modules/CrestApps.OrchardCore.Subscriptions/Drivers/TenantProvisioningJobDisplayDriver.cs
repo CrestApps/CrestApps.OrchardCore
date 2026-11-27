@@ -55,6 +55,11 @@ public sealed class TenantProvisioningJobDisplayDriver : DisplayDriver<TenantPro
             results.Add(View("TenantProvisioningJob_Retry_SummaryAdmin", job).Location("Actions:5"));
         }
 
+        if (TenantProvisioningJobActions.CanReleasePaid(job))
+        {
+            results.Add(View("TenantProvisioningJob_ReleasePaid_SummaryAdmin", job).Location("Actions:7"));
+        }
+
         if (TenantProvisioningJobActions.CanMarkCreated(job))
         {
             results.Add(View("TenantProvisioningJob_MarkCreated_SummaryAdmin", job).Location("Actions:10"));

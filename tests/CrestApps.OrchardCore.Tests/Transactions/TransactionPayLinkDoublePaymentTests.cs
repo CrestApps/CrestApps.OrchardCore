@@ -130,6 +130,125 @@ public sealed class TransactionPayLinkDoublePaymentTests
     }
 
     [Fact]
+    public async Task APaymentMethodThatCantPayTheBalance_HoldsNothing()
+    {
+        // Round 2, #2: a guest's Bank Transfer was refused only after the gate held the transaction, so the real payer
+        // was kept out for the hold's window, and again each time the guest tried.
+        var harness = new Harness(108m);
+
+        harness.SeedSession("guest", 108m);
+        harness.SeedSession("payer", 108m);
+        harness.Provider.Capabilities.DefersPayment = true;
+
+        var refused = await harness.BeginAsync("guest");
+
+        harness.Provider.Capabilities.DefersPayment = false;
+
+        // Act
+        var paid = await harness.BeginAsync("payer");
+
+        // Assert
+        Assert.False(refused.Succeeded);
+        Assert.True(paid.Succeeded);
+    }
+
+    [Fact]
+    public async Task BeginningAgainFromTheSameCheckout_DoesNotExtendTheHold()
+    {
+        // Round 2, #2: each begin re-stamped the hold, so one request every couple of minutes kept the payer out.
+        var harness = new Harness(108m);
+
+        harness.SeedSession("holder", 108m);
+        harness.SeedSession("payer", 108m);
+
+        await harness.HoldAsync("holder");
+        harness.Clock.UtcNow += TimeSpan.FromSeconds(90);
+        await harness.HoldAsync("holder");
+        harness.Clock.UtcNow += TimeSpan.FromSeconds(60);
+
+        // Act
+        var paid = await harness.BeginAsync("payer");
+
+        // Assert
+        Assert.True(paid.Succeeded);
+    }
+
+    [Fact]
+    public async Task ABeginStillTalkingToTheProvider_HoldsPastTheWindow()
+    {
+        // Round 2 (Mild): a begin whose provider call took longer than the window let a second tab through the gate.
+        var harness = new Harness(108m);
+
+        harness.SeedSession("slow", 108m);
+        harness.SeedSession("second", 108m);
+
+        await harness.HoldAsync("slow");
+
+        var (locker, locked) = await harness.Lock.TryAcquireLockAsync(DefaultCheckoutEngine.SessionLockPrefix + "slow", TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(10));
+
+        harness.Clock.UtcNow += TimeSpan.FromMinutes(3);
+
+        // Act
+        PaymentBeginOutcome whileSlowIsBeginning;
+
+        await using (locker)
+        {
+            whileSlowIsBeginning = await harness.BeginAsync("second");
+        }
+
+        var afterwards = await harness.BeginAsync("second");
+
+        // Assert
+        Assert.True(locked);
+        Assert.False(whileSlowIsBeginning.Succeeded);
+        Assert.True(afterwards.Succeeded);
+    }
+
+    [Fact]
+    public async Task AnAbandonedPayment_IsCanceled_OnceTheHoldLimitPasses()
+    {
+        // Round 2, #2: a payer who abandoned 3-D Secure left a pending payment that held the transaction for good.
+        var harness = new Harness(108m);
+
+        harness.SeedSession("abandoned", 108m);
+        harness.SeedSession("payer", 108m);
+
+        await harness.HoldAsync("abandoned");
+        await harness.AttemptStore.CreateAsync(new PaymentAttempt
+        {
+            ItemId = "abandoned-attempt",
+            SessionId = "abandoned",
+            ReferenceType = TransactionsConstants.ReferenceTypes.Transaction,
+            ReferenceId = TransactionId,
+            ProviderKey = TestCheckoutPaymentProvider.ProviderKey,
+            ObligationId = CheckoutObligations.OneTime,
+            ExpectedAmount = 108m,
+            Currency = "USD",
+            State = PaymentAttemptState.Pending,
+            CreatedUtc = _now,
+            UpdatedUtc = _now,
+        }, TestContext.Current.CancellationToken);
+
+        harness.Clock.UtcNow += TimeSpan.FromMinutes(5);
+
+        var beforeTheLimit = await harness.BeginAsync("payer");
+
+        harness.Clock.UtcNow += TransactionSettlementPaymentGate.PendingHoldLimit;
+
+        // Act
+        var afterTheLimit = await harness.BeginAsync("payer");
+
+        // Assert
+        Assert.False(beforeTheLimit.Succeeded);
+        Assert.True(afterTheLimit.Succeeded);
+
+        var abandoned = await harness.AttemptStore.FindByIdAsync("abandoned-attempt", TestContext.Current.CancellationToken);
+
+        Assert.Equal(PaymentAttemptState.Canceled, abandoned.State);
+        Assert.True(abandoned.IsSuperseded);
+    }
+
+    [Fact]
     public async Task TwoPartPayments_OneAfterTheOther_AreBothCaptured()
     {
         // Arrange: the transaction takes part payments, and each tab asked to pay 40 of the 108 owed.
@@ -188,6 +307,9 @@ public sealed class TransactionPayLinkDoublePaymentTests
             var manager = TransactionManagerFactory.Create(TransactionStore);
             var distributedLock = new LocalLock(NullLogger<LocalLock>.Instance);
 
+            Provider = provider;
+            Lock = distributedLock;
+
             var services = new ServiceCollection();
             services.AddSingleton<IPaymentAttemptStore>(AttemptStore);
             var serviceProvider = services.BuildServiceProvider();
@@ -212,6 +334,13 @@ public sealed class TransactionPayLinkDoublePaymentTests
                 .AddSingleton<IPaymentAttemptStore>(AttemptStore)
                 .AddSingleton<ICheckoutSessionStore>(SessionStore)
                 .AddSingleton<IDistributedLock>(distributedLock)
+                .AddSingleton<ICheckoutPaymentReleaseService>(new CheckoutPaymentReleaseService(
+                    SessionStore,
+                    AttemptStore,
+                    providerResolver,
+                    distributedLock,
+                    Mock.Of<ISession>(),
+                    NullLogger<CheckoutPaymentReleaseService>.Instance))
                 .AddSingleton(Mock.Of<ISession>())
                 .AddSingleton<IClock>(Clock)
                 .AddSingleton<IStringLocalizer<TransactionSettlementPaymentGate>>(new PassThroughStringLocalizer<TransactionSettlementPaymentGate>())
@@ -234,6 +363,10 @@ public sealed class TransactionPayLinkDoublePaymentTests
 
         public TestClock Clock { get; }
 
+        public TestCheckoutPaymentProvider Provider { get; }
+
+        public LocalLock Lock { get; }
+
         public InMemoryPaymentAttemptStore AttemptStore { get; }
 
         public InMemoryCheckoutSessionStore SessionStore { get; }
@@ -244,6 +377,16 @@ public sealed class TransactionPayLinkDoublePaymentTests
 
         public TransactionSettlementPaymentGate CreateGate()
             => ActivatorUtilities.CreateInstance<TransactionSettlementPaymentGate>(_gateServices);
+
+        // The gate alone, as a begin that was let through and hasn't reached the provider yet.
+        public async Task HoldAsync(string sessionId)
+        {
+            var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(await SessionStore.GetAsync(sessionId, TestContext.Current.CancellationToken)), TestCheckoutPaymentProvider.ProviderKey);
+
+            await CreateGate().BeginningAsync(context, TestContext.Current.CancellationToken);
+
+            Assert.False(context.IsRefused);
+        }
 
         public Task<PaymentBeginOutcome> BeginAsync(string sessionId)
             => Engine.BeginPaymentAsync(sessionId, new BeginPaymentOptions { ProviderKey = TestCheckoutPaymentProvider.ProviderKey }, TestContext.Current.CancellationToken);

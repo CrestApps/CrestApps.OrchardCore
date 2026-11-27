@@ -24,6 +24,17 @@ public static class TenantProvisioningJobActions
     /// trying, is left for a person to finish.
     /// </summary>
     /// <param name="job">The job.</param>
+    /// <summary>
+    /// Whether staff can ask for a job that waits for its payment to be checked again, such as after the payment was
+    /// recorded somewhere the site's checkout doesn't see.
+    /// </summary>
+    /// <param name="job">The job.</param>
+    /// <returns><see langword="true"/> when the job waits for its payment and can still be created.</returns>
+    public static bool CanReleasePaid(TenantProvisioningJob job)
+        => job is not null &&
+            job.Status == TenantProvisioningStatus.AwaitingPayment &&
+            !string.IsNullOrEmpty(job.ProtectedAdminPassword);
+
     public static bool CanMarkCreated(TenantProvisioningJob job)
         => job is not null && job.Status == TenantProvisioningStatus.Abandoned;
 }

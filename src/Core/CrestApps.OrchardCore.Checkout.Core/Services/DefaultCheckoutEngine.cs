@@ -35,7 +35,7 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// </remarks>
 public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 {
-    internal const string SessionLockPrefix = "CHECKOUT_SESSION_";
+    public const string SessionLockPrefix = "CHECKOUT_SESSION_";
 
     private static readonly TimeSpan _lockTimeout = TimeSpan.FromSeconds(10);
     private static readonly TimeSpan _lockExpiration = TimeSpan.FromMinutes(2);
@@ -258,6 +258,17 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
                 session.ModifiedUtc = _clock.UtcNow;
 
                 await _sessionStore.SaveAsync(session, cancellationToken);
+            }
+
+            // A provider that can't take this payment is refused before the gates run, so nothing is held for a payment
+            // that was never going to be made. A gate may lower what is owed, never add an obligation, so the check
+            // after the gates still runs on what is left.
+            var obligationsBeforeGates = CheckoutObligations.GetExpectedObligationIds(invoice);
+
+            if (obligationsBeforeGates.Count > 0 &&
+                !TryValidateCapabilities(provider, obligationsBeforeGates, session.SettlesExistingBalance, session.SavePaymentMethod, out var earlyCapabilityError))
+            {
+                return Refused(telemetry, provider, "unsupported", PaymentBeginOutcome.Failure(earlyCapabilityError));
             }
 
             // What the purchase needs is held before any provider is contacted, so a buyer who can't have it, such as
@@ -742,6 +753,16 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
             }
 
             await CancelAttemptsAsync(session, "The checkout expired before it was completed.", cancellationToken);
+
+            // A checkout waiting on its payment is expired only once the provider canceled every payment still open: one
+            // the provider is still processing, such as a bank debit, must be left to finish.
+            if (session.Status == CheckoutSessionStatus.PaymentPending &&
+                (await _attemptStore.GetBySessionAsync(session.SessionId, cancellationToken)).Any(attempt => attempt.State is PaymentAttemptState.Created or PaymentAttemptState.Pending))
+            {
+                await _session.SaveChangesAsync(cancellationToken);
+
+                return new CheckoutCompletionResult { Status = CheckoutCompletionStatus.Pending };
+            }
 
             session.Status = CheckoutSessionStatus.Expired;
             session.ModifiedUtc = _clock.UtcNow;

@@ -210,22 +210,42 @@ public sealed class SecureKeypadCaptureTests
     }
 
     [Fact]
-    public async Task C1_OnceTheCallerHasStoppedForTheGracePeriod_TheKeypadIsTheirsAgain()
+    public async Task C1_AfterATimeOut_QuietTimeAlone_NeverGivesTheKeypadBack()
     {
-        // Arrange
+        // Arrange (round 2, #6): the caller went quiet for more than the grace period, found the card and typed it.
         var store = CreateNode();
-        await store.StartAsync("act-grace", SecureCaptureField.CardSecurityCode, TestContext.Current.CancellationToken);
+        await store.StartAsync("act-grace", SecureCaptureField.CreditCardNumber, TestContext.Current.CancellationToken);
         _now = _start + SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1);
         var timedOut = await store.OfferAsync("act-grace", "1", TestContext.Current.CancellationToken);
-        _now += SecureKeypadCaptures.Grace + TimeSpan.FromSeconds(1);
+        _now += SecureKeypadCaptures.Grace + TimeSpan.FromMinutes(5);
 
         // Act
-        var entry = await store.OfferAsync("act-grace", "2", TestContext.Current.CancellationToken);
+        var entries = await OfferOneByOneAsync(store, "act-grace", "4111111111111111");
 
         // Assert
         Assert.Equal(SecureKeypadEntryState.TimedOut, timedOut.State);
-        Assert.False(entry.Captured);
-        Assert.False(ReadActivity("act-grace").Has<SecureCaptureWindow>());
+        Assert.All(entries, entry => Assert.True(entry.Captured));
+        Assert.True(ReadActivity("act-grace").Has<SecureCaptureWindow>());
+    }
+
+    [Fact]
+    public async Task C1_AfterATimeOut_TheStarKey_GivesTheKeypadBack_AndIsDroppedItself()
+    {
+        // Arrange
+        var store = CreateNode();
+        await store.StartAsync("act-star", SecureCaptureField.CardSecurityCode, TestContext.Current.CancellationToken);
+        _now = _start + SecureKeypadCaptures.Expiry + TimeSpan.FromSeconds(1);
+        await store.OfferAsync("act-star", "1", TestContext.Current.CancellationToken);
+        _now += TimeSpan.FromSeconds(5);
+
+        // Act
+        var star = await store.OfferAsync("act-star", "*", TestContext.Current.CancellationToken);
+        var afterwards = await store.OfferAsync("act-star", "1", TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(star.Captured);
+        Assert.False(afterwards.Captured);
+        Assert.False(ReadActivity("act-star").Has<SecureCaptureWindow>());
     }
 
     [Fact]

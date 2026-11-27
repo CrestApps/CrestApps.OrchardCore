@@ -274,6 +274,15 @@ public sealed class SubscriptionAgreementsController : Controller
             return NotFound();
         }
 
+        // One bought with a promise to pay becomes active when its first payment arrives, which grants the plan's roles;
+        // only that payment starts it, never this button, whatever a request posts.
+        if (subscription.Status == SubscriptionStatus.Incomplete)
+        {
+            await _notifier.WarningAsync(H["This subscription is waiting for its first payment. It becomes active when the payment arrives."]);
+
+            return RedirectToAction(nameof(Detail), new { itemId });
+        }
+
         await _lifecycleService.ResumeAsync(itemId);
 
         await _notifier.SuccessAsync(H["The subscription is active again."]);

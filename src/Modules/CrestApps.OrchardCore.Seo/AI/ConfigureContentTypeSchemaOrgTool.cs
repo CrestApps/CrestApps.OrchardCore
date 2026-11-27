@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using System.Text.Json;
 using CrestApps.OrchardCore.Seo.Drivers;
 using CrestApps.OrchardCore.Seo.Models;
@@ -97,7 +98,7 @@ public sealed class ConfigureContentTypeSchemaOrgTool : AIFunction
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
 
-        var user = arguments.Services.GetRequiredService<IHttpContextAccessor>().HttpContext?.User;
+        var user = arguments.Services.GetService<IUserAccessor>()?.User ?? arguments.Services.GetRequiredService<IHttpContextAccessor>().HttpContext?.User;
 
         if (user is null || !await arguments.Services.GetRequiredService<IAuthorizationService>().AuthorizeAsync(user, EditContentTypes))
         {

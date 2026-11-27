@@ -634,7 +634,7 @@ public sealed class UsersStartup : StartupBase
             .WithDescription(S["Search the system for users."])
             .WithCategory(S["Users Management"])
             .Selectable();
-        services.RequireAIToolPermission(SearchForUsersTool.TheName, UsersPermissions.ViewUsers);
+        services.RequireAIToolPermission(SearchForUsersTool.TheName, UsersPermissions.ListUsers);
     }
 }
 

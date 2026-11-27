@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -76,7 +77,7 @@ public abstract class InvoicingToolBase : AIFunction
 
     protected static async Task<bool> IsAllowedAsync(IServiceProvider services, Permission permission)
     {
-        var user = services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var user = services.GetService<IUserAccessor>()?.User ?? services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
         return user?.Identity?.IsAuthenticated == true && await services.GetRequiredService<IAuthorizationService>().AuthorizeAsync(user, permission);
     }

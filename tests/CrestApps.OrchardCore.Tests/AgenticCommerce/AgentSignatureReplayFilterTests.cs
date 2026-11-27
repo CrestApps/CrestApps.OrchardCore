@@ -88,6 +88,29 @@ public sealed class AgentSignatureReplayFilterTests : IDisposable
     }
 
     [Fact]
+    public async Task AcpFilter_TheSameSignatureRetriedLongAfter_IsRefused_EvenWithinAWideClockSkew()
+    {
+        // Round 2 (Mild): ACP let the same idempotent request through again for twice the clock skew (up to two hours),
+        // and the idempotency layer keeps no failed answer, so a copy sent much later ran the request again.
+        _cache = new ClockCache(() => _clockNow);
+        var platform = AcpPlatform(AcpRequestSignature.BoundVersion);
+        platform.AcpSignatureClockSkewSeconds = 3600;
+        var signature = SignAcp("POST", CompletePath, Body);
+
+        // Act
+        var first = await InvokeAcpAsync(platform, "POST", CompletePath, Body, signature, "key-1");
+        _clockNow = _now.AddMinutes(5);
+        var soonAfter = await InvokeAcpAsync(platform, "POST", CompletePath, Body, signature, "key-1");
+        _clockNow = _now.AddMinutes(30);
+        var muchLater = await InvokeAcpAsync(platform, "POST", CompletePath, Body, signature, "key-1");
+
+        // Assert
+        Assert.Same(_passed, first);
+        Assert.Same(_passed, soonAfter);
+        Assert.Equal(StatusCodes.Status401Unauthorized, StatusCode(muchLater));
+    }
+
+    [Fact]
     public async Task AcpFilter_AGetWithAnIdempotencyKey_IsNotLetThroughTwice()
     {
         // Arrange: a GET has no idempotency layer to answer a repeat with its first result, so the key exempts nothing.

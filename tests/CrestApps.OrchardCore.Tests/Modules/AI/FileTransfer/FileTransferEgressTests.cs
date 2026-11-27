@@ -101,6 +101,11 @@ public sealed class FileTransferEgressTests
     [Theory]
     [InlineData("PassiveAllowUnroutable")]
     [InlineData("PASVUSE")]
+    [InlineData("07")]
+    [InlineData("+7")]
+    [InlineData("EPSV,PORT")]
+    [InlineData("PASV")]
+    [InlineData("AutoPassive")]
     public async Task FtpEditor_RefusesThePassiveModeThatConnectsWhereverTheServerSays(string dataConnectionType)
     {
         // FluentFTP's PASVUSE takes the address in the server's PASV answer as it is, even one on the site's own network.
@@ -110,6 +115,50 @@ public sealed class FileTransferEgressTests
         await driver.UpdateAsync(new McpResource { Source = FtpResourceConstants.Type }, context);
 
         Assert.True(context.Updater.ModelState.ContainsKey(nameof(FtpConnectionFieldsViewModel.DataConnectionType)));
+    }
+
+    [Theory]
+    [InlineData("EPSV", true)]
+    [InlineData("pasvex", true)]
+    [InlineData("6", true)]
+    [InlineData("2", false)]
+    [InlineData("PASVUSE", false)]
+    [InlineData("07", false)]
+    [InlineData("+7", false)]
+    [InlineData("EPSV,PORT", false)]
+    [InlineData("PASV", false)]
+    [InlineData("AutoPassive", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void FtpDataConnections_AreReadAsTheFtpClientReadsThem(string dataConnectionType, bool safe)
+        => Assert.Equal(safe, FtpDataConnections.IsSafe(dataConnectionType));
+
+    [Fact]
+    public async Task FtpFileSource_SavedThroughTheCatalog_WithAPassiveModeThatGoesWhereverTheServerSays_IsRefused()
+    {
+        // Round 2, #8: the recipe, API and catalog paths never checked the data connection type.
+        await using var services = FileSourceServices(new CrestApps.OrchardCore.AI.FileSources.Ftp.Startup());
+        await using var scope = services.CreateAsyncScope();
+        var connector = scope.ServiceProvider.GetRequiredKeyedService<IIngestionConnector>(FtpIngestionConnector.ConnectorName);
+        var source = new FileSource { ItemId = "fs-ftp", Source = FtpIngestionConnector.ConnectorName, DisplayText = "Share" };
+        source.Put(new FtpConnectionMetadata { Host = "ftp.example.com", Port = 21, EncryptionMode = "Explicit", DataConnectionType = "EPSV,PORT" });
+        var result = new ValidationResultDetails();
+
+        await connector.ValidateAsync(source, result, TestContext.Current.CancellationToken);
+
+        Assert.Contains(result.Errors, error => error.MemberNames.Contains(nameof(FtpConnectionMetadata.DataConnectionType)));
+    }
+
+    [Fact]
+    public void AnFtpConnection_IsHeldToPasvex_BeforeItConnects_UnlessItsOwnTypeIsSafe()
+    {
+        var policy = new FileTransferEgressPolicy(Options.Create(new FileTransferHostOptions()), hostEnvironment: null, Resolve);
+        var permissive = new FileTransferEgressPolicy(Options.Create(new FileTransferHostOptions { AllowPrivateNetwork = true }), hostEnvironment: null, Resolve);
+
+        Assert.Equal("PASVEX", FileTransferEgress.HoldFtpDataConnection(new FtpConnectionMetadata(), policy)?.DataConnectionType);
+        Assert.Equal("PASVEX", FileTransferEgress.HoldFtpDataConnection(new FtpConnectionMetadata { DataConnectionType = "AutoPassive" }, policy)?.DataConnectionType);
+        Assert.Null(FileTransferEgress.HoldFtpDataConnection(new FtpConnectionMetadata { DataConnectionType = "EPSV" }, policy));
+        Assert.Null(FileTransferEgress.HoldFtpDataConnection(new FtpConnectionMetadata { DataConnectionType = "AutoPassive" }, permissive));
     }
 
     [Fact]

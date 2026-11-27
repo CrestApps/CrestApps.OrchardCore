@@ -15,11 +15,13 @@ namespace CrestApps.OrchardCore.Users.Services;
 /// one account and the address it was mailed to: it is keyed on the account, not on what was typed, because a database
 /// that compares text loosely (SQL Server's default collation treats <c>AE</c> as <c>Æ</c>) finds an account for a
 /// look-alike address; and its hash holds the address, so it stops working if the account's address changes.
-/// Sending is limited per client network, per email (normalized as the account lookup normalizes it) and per account
-/// each day; checking per client network and per account, whose wrong codes block its code checks for a day once they
-/// reach the limit. The shared attempt limiter's policies count them, which an operator can change under
-/// <c>CrestApps_Throttling:AttemptPolicies</c>. With eight digits, five tries a code and ten wrong codes an account a
-/// day, a guesser has about one chance in ten million a day.
+/// Sending is limited per client network, per email (normalized as the account lookup normalizes it), per account and
+/// network each day, and per account each day with a much higher total; checking per client network, and per account
+/// and network, whose wrong codes stop new codes for that network for a day once they reach the limit. A right code is
+/// never refused because of a limit, and one network's misuse never stops the account's owner on another, so nobody can
+/// turn off an account's code sign-in by spending its limits. The shared attempt limiter's policies count them, which an
+/// operator can change under <c>CrestApps_Throttling:AttemptPolicies</c>. With eight digits, five tries a code and at most
+/// fifty codes an account a day, a guesser has about one chance in four hundred thousand a day.
 /// </summary>
 public sealed class EmailSignInCodes
 {
@@ -31,14 +33,20 @@ public sealed class EmailSignInCodes
     public const int CodeLength = 8;
 
     /// <summary>
-    /// The attempt policy that limits the codes made for one account, whatever address or network asked: a daily cap, so
-    /// neither guessing nor mail-bombing gets a fresh supply of codes.
+    /// The attempt policy that limits the codes made for one account from one client network: a daily cap, so neither
+    /// guessing nor mail-bombing gets a fresh supply of codes, and one network spending it doesn't stop the owner on another.
     /// </summary>
     public const string SendAccountPolicy = "email-signin-send-account";
 
     /// <summary>
-    /// The attempt policy that counts the wrong codes posted for one account, from any network: once it reaches its limit
-    /// the account's codes are not checked until the block ends.
+    /// The attempt policy that limits the codes made for one account from every network together: a much higher daily
+    /// cap, which bounds guessing however many networks a guesser has.
+    /// </summary>
+    public const string SendAccountTotalPolicy = "email-signin-send-account-total";
+
+    /// <summary>
+    /// The attempt policy that counts the wrong codes posted for one account from one client network: once it reaches its
+    /// limit, that network gets no new code for the account until the block ends. A right code is still accepted.
     /// </summary>
     public const string VerifyAccountPolicy = "email-signin-verify-account";
 
@@ -105,11 +113,27 @@ public sealed class EmailSignInCodes
     /// <param name="userId">The account's id.</param>
     /// <param name="email">The account's own address, which the code is mailed to.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task<string> IssueAsync(string userId, string email, CancellationToken cancellationToken = default)
+    public Task<string> IssueAsync(string userId, string email, CancellationToken cancellationToken = default)
+        => IssueAsync(userId, email, network: null, cancellationToken);
+
+    /// <summary>
+    /// Makes a new code for the account, asked for from <paramref name="network"/>, replacing any earlier one, and returns
+    /// it; or <see langword="null"/> when the account has had all the codes it may have today from that network or in
+    /// all, or that network posted too many wrong codes for it.
+    /// </summary>
+    /// <param name="userId">The account's id.</param>
+    /// <param name="email">The account's own address, which the code is mailed to.</param>
+    /// <param name="network">The client network that asked (see <c>ClientNetworkKey.NetworkOnly</c>).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<string> IssueAsync(string userId, string email, string network, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrEmpty(userId);
 
-        if (!(await _attemptLimiter.AcquireAsync(SendAccountPolicy, userId, cancellationToken)).Allowed)
+        var accountNetwork = AccountNetworkKey(userId, network);
+
+        if (!(await _attemptLimiter.PeekAsync(VerifyAccountPolicy, accountNetwork, cancellationToken)).Allowed ||
+            !(await _attemptLimiter.AcquireAsync(SendAccountPolicy, accountNetwork, cancellationToken)).Allowed ||
+            !(await _attemptLimiter.AcquireAsync(SendAccountTotalPolicy, userId, cancellationToken)).Allowed)
         {
             return null;
         }
@@ -138,14 +162,28 @@ public sealed class EmailSignInCodes
     /// <summary>
     /// Checks a code, counting the try, and tells a wrong code apart from no code to compare it with (none was sent, it
     /// expired or its tries are used up). A right code is used up. A code mailed to an address the account no longer
-    /// has is wrong. A wrong code counts toward the account's limit; once that is reached, no code of the account is
-    /// compared, the right one included, until the block ends (<see cref="EmailSignInCodeCheck.Blocked"/>).
+    /// has is wrong.
     /// </summary>
     /// <param name="userId">The account's id.</param>
     /// <param name="email">The account's own address now.</param>
     /// <param name="code">The code that was typed.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    public async Task<EmailSignInCodeCheck> CheckAsync(string userId, string email, string code, CancellationToken cancellationToken = default)
+    public Task<EmailSignInCodeCheck> CheckAsync(string userId, string email, string code, CancellationToken cancellationToken = default)
+        => CheckAsync(userId, email, code, network: null, cancellationToken);
+
+    /// <summary>
+    /// Checks a code posted from <paramref name="network"/>, counting the try, and tells a wrong code apart from no code
+    /// to compare it with (none was sent, it expired or its tries are used up). A right code is used up, and is never
+    /// refused because of a limit. A code mailed to an address the account no longer has is wrong. A wrong code counts
+    /// toward the account's limit for that network; once that is reached the answer is
+    /// <see cref="EmailSignInCodeCheck.Blocked"/>, and that network gets no new code for the account until the block ends.
+    /// </summary>
+    /// <param name="userId">The account's id.</param>
+    /// <param name="email">The account's own address now.</param>
+    /// <param name="code">The code that was typed.</param>
+    /// <param name="network">The client network that posted it (see <c>ClientNetworkKey.NetworkOnly</c>).</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    public async Task<EmailSignInCodeCheck> CheckAsync(string userId, string email, string code, string network, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(userId))
         {
@@ -166,11 +204,6 @@ public sealed class EmailSignInCodes
 
         await using (locker)
         {
-            if (!(await _attemptLimiter.PeekAsync(VerifyAccountPolicy, userId, cancellationToken)).Allowed)
-            {
-                return EmailSignInCodeCheck.Blocked;
-            }
-
             var json = await _cache.GetStringAsync(key, cancellationToken);
 
             if (string.IsNullOrEmpty(json) || JsonSerializer.Deserialize<CodeEntry>(json) is not { } entry || entry.ExpiresUtc <= _clock.UtcNow || entry.Attempts >= MaxAttempts)
@@ -188,9 +221,13 @@ public sealed class EmailSignInCodes
 
             if (!match)
             {
-                await _attemptLimiter.RecordFailureAsync(VerifyAccountPolicy, userId, cancellationToken);
+                var accountNetwork = AccountNetworkKey(userId, network);
 
-                return EmailSignInCodeCheck.Wrong;
+                await _attemptLimiter.RecordFailureAsync(VerifyAccountPolicy, accountNetwork, cancellationToken);
+
+                return (await _attemptLimiter.PeekAsync(VerifyAccountPolicy, accountNetwork, cancellationToken)).Allowed
+                    ? EmailSignInCodeCheck.Wrong
+                    : EmailSignInCodeCheck.Blocked;
             }
 
             await _cache.RemoveAsync(key, cancellationToken);
@@ -207,6 +244,11 @@ public sealed class EmailSignInCodes
     /// <param name="email">The typed address.</param>
     public string GetStandInId(string email)
         => "no-account:" + Sha256Hex($"{_shellSettings.Name}|no-account|{Normalize(email)}");
+
+    // An account's count for one client network: the account's own key plus the network, so the owner on one network is
+    // never stopped by what another network spent.
+    private static string AccountNetworkKey(string userId, string network)
+        => userId + "|" + (string.IsNullOrEmpty(network) ? "unknown" : network);
 
     // The key holds a hash of the account's id, compared exactly; nothing typed goes into it.
     private string CodeKey(string userId)

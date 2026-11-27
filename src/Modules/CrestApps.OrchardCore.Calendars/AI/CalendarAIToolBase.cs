@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
@@ -28,7 +29,7 @@ public abstract class CalendarAIToolBase : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        var user = arguments.Services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var user = arguments.Services?.GetService<IUserAccessor>()?.User ?? arguments.Services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
         if (user?.Identity?.IsAuthenticated != true)
         {

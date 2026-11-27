@@ -1,3 +1,4 @@
+using CrestApps.Core.Security;
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.Core.AI.Extensions;
@@ -42,7 +43,7 @@ public abstract class TicketAITool : AIFunction
     {
         ArgumentNullException.ThrowIfNull(arguments);
 
-        if (arguments.Services.GetService<IHttpContextAccessor>()?.HttpContext?.User is not { Identity.IsAuthenticated: true } user)
+        if ((arguments.Services.GetService<IUserAccessor>()?.User ?? arguments.Services.GetService<IHttpContextAccessor>()?.HttpContext?.User) is not { Identity.IsAuthenticated: true } user)
         {
             return "Only a signed-in user can work with tickets.";
         }
