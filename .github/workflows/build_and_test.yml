@@ -94,34 +94,42 @@ jobs:
     - name: Prepare the Aspire CLI bundle
       if: matrix.suite == 'build'
       uses: ./.github/actions/prepare-aspire-cli-bundle
-    - name: Build the solution
-      if: matrix.suite == 'build'
-      run: |
-        dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true
-    # A test job builds only the test projects it runs, and they build every project they reference (the unit test
-    # project also builds the modules its guards load without referencing them). Warnings are the build job's concern,
-    # so the analyzers are skipped here; the compiler still runs the source generators.
-    - name: Build the test projects
-      if: matrix.suite != 'build'
+    # The build job builds the whole solution with the analyzers on and warnings as errors. A test job builds only the
+    # test projects it runs, and they build every project they reference (the unit test project also builds the modules
+    # its guards load without referencing them); warnings are the build job's concern, so the analyzers are skipped
+    # there, and the compiler still runs the source generators.
+    #
+    # On Windows runners the Razor source generator now and then emits garbled code for a view the change never touched
+    # ("Newline in constant", an asp-for attribute read as C#), and the same commit builds cleanly in the next job. A
+    # failed build therefore stops the build servers and builds once more; the second build is incremental, and a real
+    # compile error fails it again.
+    - name: Build
       shell: pwsh
       run: |
-        $projects = switch ('${{ matrix.suite }}') {
-            'unit' { @('tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj') }
-            'activation' { @('tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj') }
+        # One line of build arguments per build (no path here contains a space).
+        $builds = switch ('${{ matrix.suite }}') {
+            'build' { '-c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyzers=true' }
+            'unit' { 'tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj -c Release /p:RunAnalyzers=false' }
+            'activation' { 'tests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests/CrestApps.OrchardCore.ContactCenter.FeatureActivationTests.csproj -c Release /p:RunAnalyzers=false' }
             'integration' {
-                @(
-                    'tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj',
-                    'tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj',
-                    'tests/CrestApps.OrchardCore.Learning.IntegrationTests/CrestApps.OrchardCore.Learning.IntegrationTests.csproj'
-                )
+                'tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
+                'tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
+                'tests/CrestApps.OrchardCore.Learning.IntegrationTests/CrestApps.OrchardCore.Learning.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
             }
         }
 
-        foreach ($project in $projects) {
-            dotnet build $project -c Release /p:RunAnalyzers=false
+        foreach ($line in $builds) {
+            $arguments = $line -split ' '
+            dotnet build @arguments
 
             if ($LASTEXITCODE -ne 0) {
-                exit $LASTEXITCODE
+                Write-Host "::warning title=Build retried::The build failed; stopping the build servers and building once more, in case it is the intermittent Razor generator fault."
+                dotnet build-server shutdown
+                dotnet build @arguments
+
+                if ($LASTEXITCODE -ne 0) {
+                    exit $LASTEXITCODE
+                }
             }
         }
     # The unit test assembly runs one test at a time (see TestParallelizationBehavior.cs), so one process uses one core.
