@@ -710,8 +710,8 @@ Before committing:
 3. Run `pwsh ./tests/run-unit-tests.ps1` (if build succeeds) - all tests must pass
 4. Verify no uncommitted asset changes with `git status`
 
-CI runs in two lanes so a push gets feedback fast without dropping any suite, and nothing reaches `main` or a
-`release/**` branch before every suite has passed:
+CI runs in two lanes so a push gets feedback fast without dropping any suite, and nothing reaches `main` before every
+suite has passed:
 
 | Workflow | When | What |
 | --- | --- | --- |
@@ -719,7 +719,9 @@ CI runs in two lanes so a push gets feedback fast without dropping any suite, an
 | Full - CI | Every merge queue group; a pull request labelled `full-ci` (and every push while the label is on); an approved review; a manual run | Windows and Linux: the same jobs. Plus the Telephony browser tests and the Contact Center distributed tests (Redis and PostgreSQL) |
 | Main - CI | Every push to `main` or `release/**` | Everything above, on both operating systems |
 
-Pull requests merge through the merge queue ("Merge when ready", or `gh pr merge --squash --auto`). The queue runs
+Pull requests into `main` merge through the merge queue ("Merge when ready", or `gh pr merge --squash --auto`), set up
+by the "Merge queue for main" ruleset. GitHub does not allow a merge queue on wildcard branches, so `release/**` keeps
+its plain pull request rule and Release - CI runs every suite before publishing. The queue runs
 Full - CI on the pull request combined with the latest `main`, and merges only when its required `Merge gate` check
 and `Test building assets` pass, which takes about 20 minutes. Add the `full-ci` label to find Windows or long-suite
 failures before queueing instead of in the queue.

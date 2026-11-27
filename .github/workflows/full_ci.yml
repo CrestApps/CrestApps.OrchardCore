@@ -47,7 +47,7 @@ jobs:
       os: ${{ (github.event_name == 'pull_request' || github.event_name == 'pull_request_review') && '["windows-latest"]' || '["ubuntu-latest", "windows-latest"]' }}
       long-suites: true
 
-  # The one required status check (see the "Protect main and releases" ruleset). It reports on every pull request
+  # The required status check of the "Merge queue for main" ruleset. It reports on every pull request
   # event so a pull request can join the merge queue, and in the queue it passes only when every suite passed on both
   # operating systems. On a pull request it fails only when a labelled run actually failed.
   merge_gate:
