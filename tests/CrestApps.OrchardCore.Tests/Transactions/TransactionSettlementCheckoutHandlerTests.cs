@@ -916,15 +916,21 @@ public sealed class TransactionSettlementCheckoutHandlerTests
     }
 
     private static TransactionSettlementPaymentGate CreateGate(FakeTransactionStore store)
-        => new(
+    {
+        var distributedLock = new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance);
+
+        return new(
             TransactionManagerFactory.Create(store),
-            new InMemoryPaymentAttemptStore(),
-            new CrestApps.OrchardCore.Tests.Checkout.Fakes.InMemoryCheckoutSessionStore(),
-            Mock.Of<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentReleaseService>(),
-            new global::OrchardCore.Locking.LocalLock(NullLogger<global::OrchardCore.Locking.LocalLock>.Instance),
+            new CrestApps.OrchardCore.Checkout.Core.Services.CheckoutPaymentHoldService(
+                new InMemoryPaymentAttemptStore(),
+                new CrestApps.OrchardCore.Tests.Checkout.Fakes.InMemoryCheckoutSessionStore(),
+                Mock.Of<CrestApps.OrchardCore.Checkout.Services.ICheckoutPaymentReleaseService>(),
+                distributedLock,
+                new TestClock(_now)),
+            distributedLock,
             Mock.Of<global::YesSql.ISession>(),
-            new TestClock(_now),
             new PassThroughStringLocalizer<TransactionSettlementPaymentGate>());
+    }
 
     private static PayLaterCheckoutPaymentProvider CreatePayLaterProvider()
     {

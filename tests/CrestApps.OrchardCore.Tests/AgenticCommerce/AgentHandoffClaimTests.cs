@@ -46,17 +46,46 @@ public sealed class AgentHandoffClaimTests
 
         var token = new SignedTokenService(_protection, _clock).Protect(AgenticCommerceStorage.HandoffTokenPurpose, checkout.ItemId, TimeSpan.FromDays(2));
 
-        // Act: the buyer opens it, then someone else does.
-        await CreateController(checkouts.Object, sessions.Object).Continue(token);
+        // Act: the buyer opens it and continues, then someone else does.
+        await CreateController(checkouts.Object, sessions.Object).ContinuePost(token);
 
         var claimed = session.GuestTokenHash;
 
-        await CreateController(checkouts.Object, sessions.Object).Continue(token);
+        await CreateController(checkouts.Object, sessions.Object).ContinuePost(token);
 
         // Assert
         Assert.False(string.IsNullOrEmpty(claimed));
         Assert.Equal(claimed, session.GuestTokenHash);
         Assert.Equal(1, saves);
+    }
+
+    /// <summary>
+    /// A link preview or a mail scanner fetches the link before the buyer does. That GET must not take the checkout: it
+    /// only shows the page whose Continue button, posted by the buyer, gives it.
+    /// </summary>
+    [Fact]
+    public async Task Continue_OpenedByAGet_DoesNotGiveTheCheckout()
+    {
+        // Arrange
+        var checkout = new AgentCheckout { ItemId = "agent-checkout-1", CheckoutSessionId = "session-1" };
+        var session = new CheckoutSession { SessionId = "session-1", Status = CheckoutSessionStatus.Pending, OwnerId = AgentPrincipal.OwnerPrefix + "platform-1" };
+
+        var checkouts = new Mock<IAgentCheckoutStore>();
+        checkouts.Setup(store => store.FindByIdAsync(checkout.ItemId, It.IsAny<CancellationToken>())).ReturnsAsync(checkout);
+
+        var sessions = new Mock<ICheckoutSessionStore>();
+        sessions.Setup(store => store.GetAsync("session-1", It.IsAny<CancellationToken>())).ReturnsAsync(session);
+
+        var token = new SignedTokenService(_protection, _clock).Protect(AgenticCommerceStorage.HandoffTokenPurpose, checkout.ItemId, TimeSpan.FromDays(2));
+
+        // Act
+        var result = await CreateController(checkouts.Object, sessions.Object).Continue(token);
+
+        // Assert
+        Assert.Equal("Claim", Assert.IsType<ViewResult>(result).ViewName);
+        Assert.True(string.IsNullOrEmpty(session.GuestTokenHash));
+        Assert.Equal(AgentPrincipal.OwnerPrefix + "platform-1", session.OwnerId);
+        sessions.Verify(store => store.SaveAsync(It.IsAny<CheckoutSession>(), It.IsAny<CancellationToken>()), Times.Never());
     }
 
     /// <summary>

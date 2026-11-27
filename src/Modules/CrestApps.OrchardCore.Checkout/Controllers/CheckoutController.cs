@@ -143,10 +143,12 @@ public sealed class CheckoutController : Controller
         // An edit can change what the checkout costs, so a payment begun for the old total is canceled and set aside
         // first: its client secret then can't settle the old amount, and the buyer pays the new total. A submit of the
         // stepped layout's payment step itself is the payment, not an edit, and is left alone. A one-page post saves every
-        // section whatever step it names, so it is always an edit. A payment the provider has already taken, or won't
-        // cancel, stops the edit.
+        // section whatever step it names, so it is always an edit. The step is the one the post actually saves: one naming
+        // the payment step that the buyer hasn't reached saves the current step, which is an edit. A payment the provider
+        // has already taken, or won't cancel, stops the edit.
         var postedAction = Request.Form[CheckoutConstants.FormActions.FieldName].ToString();
-        var isEdit = onePage || !string.IsNullOrEmpty(postedAction) || !string.Equals(model.Step, CheckoutConstants.PaymentStepKey, StringComparison.Ordinal);
+        var savedStep = !string.IsNullOrEmpty(model.Step) && session.SavedSteps.ContainsKey(model.Step) ? model.Step : flow.GetCurrentStep()?.Key;
+        var isEdit = onePage || !string.IsNullOrEmpty(postedAction) || !string.Equals(savedStep, CheckoutConstants.PaymentStepKey, StringComparison.Ordinal);
 
         if (isEdit && await _paymentReleaser.ReleaseAsync(session.SessionId, HttpContext.RequestAborted) == CheckoutPaymentReleaseResult.PaymentInProgress)
         {

@@ -46,6 +46,7 @@ namespace CrestApps.OrchardCore.Checkout
             public const string CouponCodeAgentPlatform = "coupon-code-agent-platform";
             public const string PaymentBeginCheckout = "payment-begin-checkout";
             public const string PaymentBeginNetwork = "payment-begin-network";
+            public const string PaymentBeginSite = "payment-begin-site";
             public const string PaymentDeclineAgentPlatform = "payment-decline-agent-platform";
             public const string PaymentDeclineAttempt = "payment-decline-attempt";
             public const string PaymentDeclineCustomer = "payment-decline-customer";
@@ -497,6 +498,14 @@ namespace CrestApps.OrchardCore.Checkout.Models
         Steps = 0,
         OnePage = 1,
     }
+    public sealed class CheckoutPaymentHold
+    {
+        public static readonly System.TimeSpan BeginWindow;
+        public static readonly System.TimeSpan PendingHoldLimit;
+        public CheckoutPaymentHold() { }
+        public System.DateTime HeldUtc { get; set; }
+        public string SessionId { get; set; }
+    }
     public sealed class CheckoutPickupOption
     {
         public CheckoutPickupOption() { }
@@ -882,6 +891,7 @@ namespace CrestApps.OrchardCore.Checkout.Services
         public string ErrorMessage { get; }
         public CrestApps.OrchardCore.Checkout.CheckoutFlow Flow { get; }
         public bool InvoiceChanged { get; set; }
+        public bool IsOffSession { get; init; }
         public bool IsRefused { get; }
         public string ProviderKey { get; }
         public void Refuse(string message) { }
@@ -1015,6 +1025,11 @@ namespace CrestApps.OrchardCore.Checkout.Services
     public interface ICheckoutPaymentGate
     {
         System.Threading.Tasks.Task BeginningAsync(CrestApps.OrchardCore.Checkout.Services.CheckoutPaymentBeginningContext context, System.Threading.CancellationToken cancellationToken = default);
+    }
+    public interface ICheckoutPaymentHoldService
+    {
+        System.Threading.Tasks.Task<bool> IsHeldByAnotherAsync(CrestApps.OrchardCore.Checkout.Models.CheckoutPaymentHold hold, string sessionId, System.Func<CrestApps.OrchardCore.Transactions.Models.PaymentAttempt, bool> isApplied = null, System.Threading.CancellationToken cancellationToken = default);
+        CrestApps.OrchardCore.Checkout.Models.CheckoutPaymentHold Take(CrestApps.OrchardCore.Checkout.Models.CheckoutPaymentHold current, string sessionId);
     }
     public interface ICheckoutPaymentProvider
     {

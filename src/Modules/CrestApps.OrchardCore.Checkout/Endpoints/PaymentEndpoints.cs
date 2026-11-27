@@ -67,7 +67,7 @@ public static class PaymentEndpoints
             return Error("The payment request was incomplete.", StatusCodes.Status400BadRequest);
         }
 
-        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, GetBeginPaymentKey(httpContext), cancellationToken) is { Allowed: false } begun)
+        if (await AcquireBeginPaymentAsync(limiter, httpContext, cancellationToken) is { Allowed: false } begun)
         {
             SetRetryAfter(httpContext, begun.RetryAfter);
 
@@ -225,6 +225,22 @@ public static class PaymentEndpoints
     // fresh budget with each checkout they started, so they were never throttled.
     internal static string GetBeginPaymentKey(HttpContext httpContext)
         => ClientNetworkKey.NetworkOnly(httpContext);
+
+    // Beginning a payment is counted per network and, for IPv6, per site too: one holder of a /48 has 65,536 /64 networks,
+    // and rotating through them gave a fresh network budget with each.
+    internal static async Task<AttemptLimitResult> AcquireBeginPaymentAsync(IAttemptLimiter limiter, HttpContext httpContext, CancellationToken cancellationToken)
+    {
+        var network = GetBeginPaymentKey(httpContext);
+        var result = await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, network, cancellationToken);
+        var site = ClientNetworkKey.Site(httpContext);
+
+        if (!result.Allowed || string.Equals(site, network, StringComparison.Ordinal))
+        {
+            return result;
+        }
+
+        return await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentBeginSite, site, cancellationToken);
+    }
 
     // Tells the buyer's page when to try again.
     private static JsonHttpResult<CheckoutErrorResponse> TooManyStatusChecks(HttpContext httpContext, TimeSpan retryAfter)

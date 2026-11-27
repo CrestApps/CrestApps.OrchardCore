@@ -43,6 +43,14 @@ public sealed class CheckoutPaymentBeginningContext
     public string ProviderKey { get; }
 
     /// <summary>
+    /// Gets a value indicating whether the payment is a charge the merchant starts on a payment method the payer saved
+    /// earlier, without the payer present (<see cref="CheckoutPaymentDataKeys.OffSession"/>), such as a renewal or an
+    /// autopay. Only server code can ask for one, so a gate that guards against a payer at the keyboard, such as the
+    /// card-testing protection, lets it through.
+    /// </summary>
+    public bool IsOffSession { get; init; }
+
+    /// <summary>
     /// Gets why the payment was refused, or <see langword="null"/> when it wasn't.
     /// </summary>
     public string ErrorMessage { get; private set; }

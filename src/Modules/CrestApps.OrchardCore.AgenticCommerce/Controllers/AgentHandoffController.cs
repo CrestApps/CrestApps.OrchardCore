@@ -53,13 +53,29 @@ public sealed class AgentHandoffController : Controller
     }
 
     /// <summary>
-    /// Gives the browser the checkout, then opens its next step; or, opened with <c>ec_version</c> by a platform that may
-    /// embed it, shows the UCP embedded checkout page.
+    /// Opens the checkout's next step in the browser it was given to. A checkout no browser was given yet is not given on
+    /// a GET, which a link preview or a mail scanner sends on its own: the page asks the buyer to continue, and that post
+    /// gives it (<see cref="ContinuePost"/>). Opened with <c>ec_version</c> by a platform that may embed it, shows the UCP
+    /// embedded checkout page.
     /// </summary>
     /// <param name="token">The signed hand-off token.</param>
     [AllowAnonymous]
     [HttpGet(AgentSiteUrls.HandoffPath + "/{token}", Name = "AgentCheckoutHandoff")]
-    public async Task<IActionResult> Continue(string token)
+    public Task<IActionResult> Continue(string token)
+        => OpenAsync(token, claim: false);
+
+    /// <summary>
+    /// Gives the browser the checkout when no browser was given it yet, then opens its next step.
+    /// </summary>
+    /// <param name="token">The signed hand-off token.</param>
+    [AllowAnonymous]
+    [HttpPost(AgentSiteUrls.HandoffPath + "/{token}")]
+    [ActionName(nameof(Continue))]
+    [ValidateAntiForgeryToken]
+    public Task<IActionResult> ContinuePost(string token)
+        => OpenAsync(token, claim: true);
+
+    private async Task<IActionResult> OpenAsync(string token, bool claim)
     {
         if (_urls.ReadHandoffToken(token) is not { } checkoutId ||
             await _checkouts.FindByIdAsync(checkoutId, HttpContext.RequestAborted) is not { } checkout ||
@@ -79,9 +95,17 @@ public sealed class AgentHandoffController : Controller
         // the signed-in user, or to a guest who holds its token. It is given once: the link opened again, by anyone who
         // got hold of it, doesn't hand the checkout over a second time. A checkout made for a linked buyer stays theirs.
         var claimed = false;
+        var claimable = (string.IsNullOrEmpty(session.OwnerId) && string.IsNullOrEmpty(session.GuestTokenHash)) ||
+            session.OwnerId?.StartsWith(AgentPrincipal.OwnerPrefix, StringComparison.Ordinal) == true;
 
-        if ((string.IsNullOrEmpty(session.OwnerId) && string.IsNullOrEmpty(session.GuestTokenHash)) ||
-            session.OwnerId?.StartsWith(AgentPrincipal.OwnerPrefix, StringComparison.Ordinal) == true)
+        // Given only by the buyer's own post, so a link preview that fetches the link first doesn't take the checkout. A
+        // platform embedding the checkout opens it in its own frame, where the signed link authorizes it, as before.
+        if (claimable && !claim && embedded is null)
+        {
+            return View("Claim");
+        }
+
+        if (claimable)
         {
             var userId = User.Identity?.IsAuthenticated == true ? User.FindFirstValue(ClaimTypes.NameIdentifier) : null;
 

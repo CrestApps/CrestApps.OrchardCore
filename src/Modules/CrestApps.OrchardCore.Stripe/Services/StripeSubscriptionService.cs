@@ -183,12 +183,14 @@ public sealed class StripeSubscriptionService : IStripeSubscriptionService
 
         // A canceled subscription's open invoice is no longer collected but can still be paid, so it is voided, which cancels
         // its PaymentIntent. Voided first, never after: Stripe voids only an open or uncollectible invoice, so one the buyer
-        // paid in the meantime makes this fail, and the subscription the buyer now pays for is never canceled.
+        // paid in the meantime makes this fail, and the subscription the buyer now pays for is never canceled. A first invoice
+        // Stripe marked paid for nothing, a trial's or one a coupon made free, collected no money, so it is canceled as usual:
+        // left running, the trial would bill the buyer of a checkout that never finished.
         if (model.VoidOpenInvoice)
         {
             var current = await subscriptionService.GetAsync(model.SubscriptionId, new SubscriptionGetOptions { Expand = ["latest_invoice"] });
 
-            if (current.LatestInvoice is { Status: "paid" })
+            if (current.LatestInvoice is { Status: "paid", AmountPaid: > 0 })
             {
                 throw new InvalidOperationException($"The latest invoice of Stripe subscription '{model.SubscriptionId}' is paid, so the subscription is not canceled.");
             }

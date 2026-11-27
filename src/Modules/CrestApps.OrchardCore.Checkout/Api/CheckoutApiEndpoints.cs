@@ -201,7 +201,7 @@ internal static class CheckoutApiEndpoints
             return ApiProblems.Validation("paymentMethod", "Choose how to pay.");
         }
 
-        if (await limiter.AcquireAsync(CheckoutConstants.AttemptPolicies.PaymentBeginNetwork, GetBeginPaymentKey(httpContext), httpContext.RequestAborted) is { Allowed: false } begun)
+        if (await PaymentEndpoints.AcquireBeginPaymentAsync(limiter, httpContext, httpContext.RequestAborted) is { Allowed: false } begun)
         {
             PaymentEndpoints.SetRetryAfter(httpContext, begun.RetryAfter);
 

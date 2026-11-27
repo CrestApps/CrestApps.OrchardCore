@@ -91,6 +91,29 @@ public sealed class PaymentVelocityGateTests
     }
 
     [Fact]
+    public async Task AMerchantInitiatedChargeOnASavedCard_SkipsTheGate()
+    {
+        // Arrange
+        var (gate, recorder) = Create();
+
+        for (var i = 0; i < 5; i++)
+        {
+            await recorder.RecordAsync(Session($"s{i}", network: "203.0.113.7", ownerId: "customer-1"), Attempt(CardProvider), TestContext.Current.CancellationToken);
+        }
+
+        var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(Session("s-renewal", network: "203.0.113.7", ownerId: "customer-1")), CardProvider)
+        {
+            IsOffSession = true,
+        };
+
+        // Act
+        await gate.BeginningAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(context.IsRefused);
+    }
+
+    [Fact]
     public async Task TheBlock_RecordsOnePaymentIssue()
     {
         var (_, recorder) = Create();

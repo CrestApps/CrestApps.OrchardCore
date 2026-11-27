@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Handlers
     }
     public sealed class OrderPaymentSettledTransactionHandler : CrestApps.OrchardCore.Transactions.Services.TransactionEventHandlerBase
     {
-        public OrderPaymentSettledTransactionHandler(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore orderStore, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Orders.Core.Services.IOrderEventHandler> orderHandlers, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Orders.Core.Handlers.OrderPaymentSettledTransactionHandler> logger) { }
+        public OrderPaymentSettledTransactionHandler(CrestApps.OrchardCore.Orders.Core.Services.IOrderStore orderStore, CrestApps.OrchardCore.Transactions.Services.ITransactionStore transactionStore, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Orders.Core.Services.IOrderEventHandler> orderHandlers, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Orders.Core.Handlers.OrderPaymentSettledTransactionHandler> logger) { }
         public override System.Threading.Tasks.Task StatusChangedAsync(CrestApps.OrchardCore.Transactions.Models.Transaction transaction, CrestApps.OrchardCore.Transactions.Models.TransactionStatus previous, CrestApps.OrchardCore.Transactions.Models.TransactionStatus current, System.Threading.CancellationToken cancellationToken = default) { }
     }
 }

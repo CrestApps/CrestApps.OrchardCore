@@ -12,6 +12,20 @@ namespace CrestApps.OrchardCore.Checkout.Core.Services;
 /// </summary>
 public sealed partial class DefaultCheckoutEngine
 {
+    // A checkout waiting on its provider keeps the time it started waiting. The sweep asks the provider again on every run,
+    // and bumping the time each run would keep an abandoned 3-D Secure checkout fresh for good, so it would never expire and
+    // release the stock, coupon and tender it holds.
+    private void MarkPaymentPending(CheckoutSession session)
+    {
+        if (session.Status == CheckoutSessionStatus.PaymentPending)
+        {
+            return;
+        }
+
+        session.Status = CheckoutSessionStatus.PaymentPending;
+        session.ModifiedUtc = _clock.UtcNow;
+    }
+
     // The network the payment comes from is kept on the checkout, so the card-testing protection counts a decline reported
     // later, by a webhook or the sweep, against it too.
     private async Task KeepClientNetworkAsync(CheckoutSession session, string clientNetworkKey, CancellationToken cancellationToken)

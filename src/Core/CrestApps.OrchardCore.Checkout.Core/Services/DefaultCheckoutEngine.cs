@@ -257,7 +257,7 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 
             // What the purchase needs is held before any provider is contacted, so a buyer who can't have it, such as
             // a promotion code's last use, is told before paying rather than charged for something already gone.
-            var gate = await RunPaymentGatesAsync(session, options.ProviderKey, cancellationToken);
+            var gate = await RunPaymentGatesAsync(session, options.ProviderKey, CheckoutPaymentDataKeys.IsSet(options.ProviderData, CheckoutPaymentDataKeys.OffSession), cancellationToken);
 
             if (gate.IsRefused)
             {
@@ -455,7 +455,7 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
             // completes.
             if (expectedObligations.Count == 0)
             {
-                var gate = await RunPaymentGatesAsync(session, providerKey: null, cancellationToken);
+                var gate = await RunPaymentGatesAsync(session, providerKey: null, offSession: false, cancellationToken);
 
                 if (gate.IsRefused)
                 {
@@ -505,8 +505,7 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
                 // The provider has not given an authoritative answer yet. Record that we are waiting and let
                 // the caller poll; blocking a request here would tie up a worker per customer and still time
                 // out behind a proxy long before a slow provider finished.
-                session.Status = CheckoutSessionStatus.PaymentPending;
-                session.ModifiedUtc = _clock.UtcNow;
+                MarkPaymentPending(session);
 
                 await _sessionStore.SaveAsync(session, cancellationToken);
                 await _session.SaveChangesAsync(cancellationToken);
@@ -565,9 +564,9 @@ public sealed partial class DefaultCheckoutEngine : ICheckoutEngine
 
     // Gives each gate its say. A gate that refuses and changed the invoice has the session saved, so the buyer sees
     // the new total; anything the gates wrote is committed while the session's lock is still held.
-    private async Task<CheckoutPaymentBeginningContext> RunPaymentGatesAsync(CheckoutSession session, string providerKey, CancellationToken cancellationToken)
+    private async Task<CheckoutPaymentBeginningContext> RunPaymentGatesAsync(CheckoutSession session, string providerKey, bool offSession, CancellationToken cancellationToken)
     {
-        var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(session), providerKey);
+        var context = new CheckoutPaymentBeginningContext(new CheckoutFlow(session), providerKey) { IsOffSession = offSession };
 
         foreach (var gate in _paymentGates)
         {

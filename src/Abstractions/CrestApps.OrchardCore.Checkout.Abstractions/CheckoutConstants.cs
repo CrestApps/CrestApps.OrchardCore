@@ -23,6 +23,13 @@ public static class CheckoutConstants
         public const string PaymentBeginNetwork = "payment-begin-network";
 
         /// <summary>
+        /// Begin-payment calls per IPv6 site (the /48) across every checkout: 120 per 10 minutes. One holder of a /48 has
+        /// 65,536 /64 networks, so rotating through them would otherwise get a fresh <see cref="PaymentBeginNetwork"/>
+        /// budget with each. An IPv4 caller is counted by <see cref="PaymentBeginNetwork"/> alone.
+        /// </summary>
+        public const string PaymentBeginSite = "payment-begin-site";
+
+        /// <summary>
         /// Begin-payment calls in one checkout's lifetime: 8 per 24 hours.
         /// </summary>
         public const string PaymentBeginCheckout = "payment-begin-checkout";

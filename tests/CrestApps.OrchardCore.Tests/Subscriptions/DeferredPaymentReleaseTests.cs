@@ -240,7 +240,7 @@ public sealed class DeferredPaymentReleaseTests
             .Callback((OrderPaidContext context, CancellationToken _) => settled.Add(context.Order.ItemId))
             .Returns(Task.CompletedTask);
 
-        var handler = new OrderPaymentSettledTransactionHandler(orders.Object, [orderHandler.Object], new TestClock(_now), NullLogger<OrderPaymentSettledTransactionHandler>.Instance);
+        var handler = new OrderPaymentSettledTransactionHandler(orders.Object, new FakeTransactionStore(), [orderHandler.Object], new TestClock(_now), NullLogger<OrderPaymentSettledTransactionHandler>.Instance);
         var transaction = new Transaction { ReferenceType = CheckoutReferenceTypes.Order, ReferenceId = "order-1" };
 
         Assert.False(order.IsPaymentCollected);
@@ -252,6 +252,59 @@ public sealed class DeferredPaymentReleaseTests
         // Assert
         Assert.True(order.IsPaymentCollected);
         Assert.Equal(_now, order.PaymentSettledUtc);
+        Assert.Equal(["order-1"], settled);
+    }
+
+    [Fact]
+    public async Task AnOrderPaidLater_KeepsWhatItHeldBack_UntilEveryBalanceOfTheOrderIsPaid()
+    {
+        // Arrange
+        var order = new Order { ItemId = "order-1", Status = OrderStatus.Paid, PaymentDeferred = true };
+        var orders = new Mock<IOrderStore>();
+        orders.Setup(store => store.FindByIdAsync("order-1", It.IsAny<CancellationToken>())).ReturnsAsync(order);
+
+        var settled = new List<string>();
+        var orderHandler = new Mock<IOrderEventHandler>();
+        orderHandler.Setup(value => value.PaymentSettledAsync(It.IsAny<OrderPaidContext>(), It.IsAny<CancellationToken>()))
+            .Callback((OrderPaidContext context, CancellationToken _) => settled.Add(context.Order.ItemId))
+            .Returns(Task.CompletedTask);
+
+        var purchase = new Transaction
+        {
+            ItemId = "purchase",
+            ReferenceType = CheckoutReferenceTypes.Order,
+            ReferenceId = "order-1",
+            CheckoutSessionId = "session-1",
+            TotalAmount = 500m,
+            Status = TransactionStatus.Outstanding,
+        };
+
+        var plan = new Transaction
+        {
+            ItemId = "plan",
+            ReferenceType = CheckoutReferenceTypes.Order,
+            ReferenceId = "order-1",
+            CheckoutSessionId = "session-1",
+            TotalAmount = 5m,
+            Status = TransactionStatus.Outstanding,
+            Recurrence = new TransactionRecurrence { CycleNumber = 1 },
+        };
+
+        var transactions = new FakeTransactionStore(purchase, plan);
+        var handler = new OrderPaymentSettledTransactionHandler(orders.Object, transactions, [orderHandler.Object], new TestClock(_now), NullLogger<OrderPaymentSettledTransactionHandler>.Instance);
+
+        // Act
+        plan.Status = TransactionStatus.Paid;
+        await handler.StatusChangedAsync(plan, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        var collectedAfterPlan = order.IsPaymentCollected;
+
+        purchase.Status = TransactionStatus.Paid;
+        await handler.StatusChangedAsync(purchase, TransactionStatus.Outstanding, TransactionStatus.Paid, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.False(collectedAfterPlan);
+        Assert.True(order.IsPaymentCollected);
         Assert.Equal(["order-1"], settled);
     }
 }

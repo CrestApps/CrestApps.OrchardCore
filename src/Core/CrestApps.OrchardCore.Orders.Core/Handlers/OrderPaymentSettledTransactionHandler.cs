@@ -14,6 +14,7 @@ namespace CrestApps.OrchardCore.Orders.Core.Handlers;
 public sealed class OrderPaymentSettledTransactionHandler : TransactionEventHandlerBase
 {
     private readonly IOrderStore _orderStore;
+    private readonly ITransactionStore _transactionStore;
     private readonly IEnumerable<IOrderEventHandler> _orderHandlers;
     private readonly IClock _clock;
     private readonly ILogger _logger;
@@ -23,11 +24,13 @@ public sealed class OrderPaymentSettledTransactionHandler : TransactionEventHand
     /// </summary>
     public OrderPaymentSettledTransactionHandler(
         IOrderStore orderStore,
+        ITransactionStore transactionStore,
         IEnumerable<IOrderEventHandler> orderHandlers,
         IClock clock,
         ILogger<OrderPaymentSettledTransactionHandler> logger)
     {
         _orderStore = orderStore;
+        _transactionStore = transactionStore;
         _orderHandlers = orderHandlers;
         _clock = clock;
         _logger = logger;
@@ -45,7 +48,7 @@ public sealed class OrderPaymentSettledTransactionHandler : TransactionEventHand
 
         var order = await _orderStore.FindByIdAsync(transaction.ReferenceId, cancellationToken);
 
-        if (order is null || order.IsPaymentCollected)
+        if (order is null || order.IsPaymentCollected || await HasOtherUnsettledAsync(transaction, cancellationToken))
         {
             return;
         }
@@ -56,5 +59,25 @@ public sealed class OrderPaymentSettledTransactionHandler : TransactionEventHand
         await _orderStore.UpdateAsync(order, cancellationToken);
 
         await _orderHandlers.InvokeAsync((handler, context) => handler.PaymentSettledAsync(context, cancellationToken), new OrderPaidContext(order), _logger);
+    }
+
+    // An order paid later can owe more than one balance, for example a one-time purchase and the first period of a plan
+    // bought with it. What the order held back is delivered only once none of them is still owed, so paying the plan's
+    // small balance doesn't release the large purchase. Later cycles of a plan bill new periods and don't hold the order.
+    private async Task<bool> HasOtherUnsettledAsync(Transaction paid, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(paid.CheckoutSessionId))
+        {
+            return false;
+        }
+
+        var transactions = await _transactionStore.GetByCheckoutSessionAsync(paid.CheckoutSessionId, cancellationToken) ?? [];
+
+        return transactions.Any(candidate =>
+            !string.Equals(candidate.ItemId, paid.ItemId, StringComparison.Ordinal) &&
+            string.Equals(candidate.ReferenceType, paid.ReferenceType, StringComparison.Ordinal) &&
+            string.Equals(candidate.ReferenceId, paid.ReferenceId, StringComparison.Ordinal) &&
+            (candidate.Recurrence?.CycleNumber ?? 1) <= 1 &&
+            candidate.Status is not (TransactionStatus.Paid or TransactionStatus.Refunded or TransactionStatus.Canceled));
     }
 }

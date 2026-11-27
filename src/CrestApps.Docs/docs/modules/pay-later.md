@@ -76,7 +76,7 @@ A promise to pay is not money, so Pay Later and the two methods below are limite
 
 - **Signed-in buyers only.** `PayLaterSettings.RequireSignedIn` is on by default, so guests are not offered Pay Later; untick it to offer it to them. Bank transfer and cash on delivery have the same option, off by default.
 - **Largest order.** `MaxOrderAmount` on each method leaves it out of a checkout whose total is higher. Empty means no limit.
-- **Nothing instant before the money.** What a product delivers instantly (a download, a membership, a site) is handed over only once the balance is paid, unless the product ticks **Deliver before payment** (`ProductPart.DeliverBeforePayment`). Goods ship when the store records the payment.
+- **Nothing instant before the money.** What a product delivers instantly (a download, a membership, a site) is handed over only once the balance is paid, unless the product ticks **Deliver before payment** (`ProductPart.DeliverBeforePayment`). An order that owes more than one balance, such as a one-time purchase and the first period of a plan bought with it, hands it over once every balance of that checkout is paid (or canceled); later periods of the plan don't hold it. Goods ship when the store records the payment.
 - **Subscriptions.** A subscription bought this way starts `Incomplete` and grants nothing until a transaction of its checkout is paid, unless the plan delivers before payment; a period left unpaid past its due date makes the subscription past due, and it lapses at the end of the grace window. A trial still grants access during the trial, since nothing is owed yet.
 
 These rules are checked when the payment step lists the methods (`IsAvailableAsync`) and again when the checkout engine begins the payment.
