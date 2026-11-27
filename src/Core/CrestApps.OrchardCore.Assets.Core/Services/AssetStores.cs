@@ -4,12 +4,14 @@ using CrestApps.Core.Models;
 using CrestApps.Core.Services;
 using CrestApps.OrchardCore.Assets.Core.Indexes;
 using CrestApps.OrchardCore.Assets.Models;
+using CrestApps.OrchardCore.Assets.Services;
 using CrestApps.OrchardCore.YesSql.Core.Services;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 using YesSql;
-using Asset = CrestApps.OrchardCore.Assets.Models.Asset;
+using YesSql.Services;
+using Asset =CrestApps.OrchardCore.Assets.Models.Asset;
 
 namespace CrestApps.OrchardCore.Assets.Core.Services;
 
@@ -63,14 +65,103 @@ public sealed class AssetTypeManager : CatalogManager<AssetType>
 /// </summary>
 public sealed class AssetStore : DocumentCatalog<Asset, AssetIndex>
 {
+    private readonly IEnumerable<IAssetUsage> _usages;
+
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AssetStore"/> class.
     /// </summary>
     /// <param name="session">The session.</param>
-    public AssetStore(ISession session)
+    /// <param name="usages">The modules whose records point to assets.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AssetStore(ISession session, IEnumerable<IAssetUsage> usages, IStringLocalizer<AssetStore> stringLocalizer)
         : base(session)
     {
+        _usages = usages;
+        S = stringLocalizer;
         CollectionName = AssetsConstants.CollectionName;
+    }
+
+    /// <summary>
+    /// Returns why records of other modules point to an asset.
+    /// </summary>
+    /// <param name="asset">The asset.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The reasons; empty when nothing points to the asset.</returns>
+    public async Task<IReadOnlyList<string>> GetUsageReasonsAsync(Asset asset, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(asset);
+
+        var reasons = new List<string>();
+
+        foreach (var usage in _usages)
+        {
+            if (await usage.GetUsageAsync(asset, cancellationToken) is { Length: > 0 } reason)
+            {
+                reasons.Add(reason);
+            }
+        }
+
+        return reasons;
+    }
+
+    /// <inheritdoc />
+    protected override async ValueTask DeletingAsync(Asset model)
+    {
+        // Records that point to the asset would lose it: an asset in use is retired, never deleted. Checked here, in the
+        // store, so no path deletes it; the admin page asks first and says why.
+        var reasons = await GetUsageReasonsAsync(model);
+
+        if (reasons.Count > 0)
+        {
+            throw new InvalidOperationException(S["The asset {0} is in use and can't be deleted: {1} Retire it instead.", model.Name, string.Join(" ", reasons)]);
+        }
+    }
+
+    /// <summary>
+    /// Lists the assets whose type is of a category, such as every vehicle, ordered by name, in the database.
+    /// </summary>
+    /// <param name="category">The category of their type.</param>
+    /// <param name="statuses">The states to keep, or <see langword="null"/> or empty for every state.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The assets.</returns>
+    public async Task<IReadOnlyList<Asset>> ListByCategoryAsync(AssetCategory category, IReadOnlyCollection<AssetStatus> statuses = null, CancellationToken cancellationToken = default)
+    {
+        var typeIds = await ListTypeIdsAsync(Session, category, cancellationToken);
+
+        if (typeIds.Length == 0)
+        {
+            return [];
+        }
+
+        var query = Session.Query<Asset, AssetIndex>(index => index.AssetTypeId.IsIn(typeIds), collection: CollectionName);
+
+        if (statuses is { Count: > 0 })
+        {
+            var values = statuses.Select(status => status.ToString()).ToArray();
+
+            query = query.Where(index => index.Status.IsIn(values));
+        }
+
+        return await LoadedAsync(await query.OrderBy(index => index.Name).ListAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// Lists the ids of the asset types of a category, in the database.
+    /// </summary>
+    /// <param name="session">The session.</param>
+    /// <param name="category">The category.</param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>The type ids.</returns>
+    public static async Task<string[]> ListTypeIdsAsync(ISession session, AssetCategory category, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+
+        var value = category.ToString();
+
+        return [.. (await session.QueryIndex<AssetTypeIndex>(index => index.Category == value, collection: AssetsConstants.CollectionName).ListAsync(cancellationToken))
+            .Select(index => index.ItemId)];
     }
 
     /// <summary>

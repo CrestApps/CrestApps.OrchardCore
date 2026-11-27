@@ -70,6 +70,11 @@ public class AssetsListViewModel
     public string TypeId { get; set; }
 
     /// <summary>
+    /// Gets or sets the type category filter, such as Vehicle; ignored when a type is chosen.
+    /// </summary>
+    public string Category { get; set; }
+
+    /// <summary>
     /// Gets or sets the state filter.
     /// </summary>
     public string Status { get; set; }
@@ -95,6 +100,12 @@ public class AssetsListViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> TypeOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the categories of the types there are.
+    /// </summary>
+    [BindNever]
+    public IList<SelectListItem> CategoryOptions { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the list.
@@ -371,6 +382,12 @@ public class AssetEditViewModel
     /// </summary>
     [BindNever]
     public bool ShowFleet { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the plate and VIN are shown: for vehicles, and for equipment and tools
+    /// when Fleet is on.
+    /// </summary>
+    public bool ShowVehicle { get; set; }
 }
 
 /// <summary>
@@ -383,6 +400,13 @@ public class AssetDetailsViewModel
     /// </summary>
     [BindNever]
     public Asset Asset { get; set; }
+
+    /// <summary>
+    /// Gets or sets what other modules show about the asset: the DetailAdmin display of their drivers of
+    /// <see cref="Asset"/>, rendered under the asset's own cards.
+    /// </summary>
+    [BindNever]
+    public IShape Sections { get; set; }
 
     /// <summary>
     /// Gets or sets its type.

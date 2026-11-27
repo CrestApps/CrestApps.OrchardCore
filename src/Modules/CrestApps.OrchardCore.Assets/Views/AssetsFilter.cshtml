@@ -5,6 +5,18 @@
 <style asp-name="bootstrap-select"></style>
 <script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
 
+@if (model.CategoryOptions.Count > 1)
+{
+    <div class="btn-group filter">
+        <select id="assets-category" name="category" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Category"]" data-dropdown-align-right="auto" aria-label="@T["Category"]" onchange="this.form.submit()">
+            <option value="">@T["Every category"]</option>
+            @foreach (var option in model.CategoryOptions)
+            {
+                <option value="@option.Value" selected="@option.Selected">@option.Text</option>
+            }
+        </select>
+    </div>
+}
 <div class="btn-group filter">
     <select id="assets-type" name="typeId" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Asset type"]" data-dropdown-align-right="auto" aria-label="@T["Asset type"]" onchange="this.form.submit()">
         <option value="">@T["Every type"]</option>
