@@ -11,6 +11,7 @@ using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Logging;
 using OrchardCore;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Locking;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
@@ -68,6 +69,13 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
     // Asked only between commits of a bulk send: once set, the send stops cleanly and keeps what it committed.
     private CancellationToken _stopToken;
+
+    // Whether this scope wrote an invitation (created, changed, held or failed one). A single invite that wrote nothing may
+    // let go of the e-mail lock at once (R10-Mi2); once anything is written, the lock is kept until the scope saves.
+    private bool _wroteInvitations;
+
+    // Whether the failures of single invites are decided once, when the scope ends (R10-Mi1).
+    private bool _failuresDecidedAtScopeEnd;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyInvitationService"/> class.
@@ -160,11 +168,12 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
         if (collector is null)
         {
-            // Nothing was written and nothing e-mailed, so the e-mail lock this invite took is let go of at once rather
-            // than held to the end of the scope (R9-Mi4). Otherwise a single invite keeps it until its scope saves: it
-            // commits nothing itself (that would commit its caller's unfinished work too), and its writes, e-mailed or
-            // held, must reach the database before another sender reads or counts them.
-            if (!_commitsAsItGoes && !_emailLimit.HasSent)
+            // When this scope has written no invitation (in a workflow loop, no earlier invite of it either), the e-mail
+            // lock this invite took is let go of at once rather than held to the end of the scope (R9-Mi4, R10-Mi2).
+            // Otherwise a single invite keeps it until its scope saves: it commits nothing itself (that would commit its
+            // caller's unfinished work too), and its writes, e-mailed or held, must reach the database before another
+            // sender reads or counts them.
+            if (!_commitsAsItGoes && !_wroteInvitations)
             {
                 await _emailLimit.ReleaseAsync();
             }
@@ -177,10 +186,32 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         if (result.Succeeded && result.Invitation.Status == SurveyInvitationStatus.Pending)
         {
             result.Invitation = (await DeliverAsync(survey, collector, result.Invitation, result.Link, isReminder: false, cancellationToken)).Invitation;
-            await ResolveFailuresAsync(cancellationToken);
+            await DecideFailuresAtScopeEndAsync(cancellationToken);
         }
 
         return result;
+    }
+
+    // Decides the failures of single invites once, when the scope's e-mail work ends, before its session is saved
+    // (R10-Mi1): in a workflow loop a later invite of the scope can then confirm an earlier failure (an e-mail went out
+    // after it) or show it was an outage (two failures in a row), as in a bulk send. Without a shell scope (a test, a
+    // tool) they are decided at once.
+    private async Task DecideFailuresAtScopeEndAsync(CancellationToken cancellationToken)
+    {
+        if (_commitsAsItGoes || ShellScope.Current is null)
+        {
+            await ResolveFailuresAsync(cancellationToken);
+
+            return;
+        }
+
+        if (!_failuresDecidedAtScopeEnd)
+        {
+            // Before the scope's other dispose callbacks, so before its session is saved, and before the e-mail lock,
+            // which is let go of last.
+            ShellScope.RegisterBeforeDispose(_ => ResolveFailuresAsync(CancellationToken.None));
+            _failuresDecidedAtScopeEnd = true;
+        }
     }
 
     /// <summary>
@@ -381,6 +412,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             var token = await IssueTokenAsync(survey, created, cancellationToken);
 
             await _invitationStore.CreateAsync(created, cancellationToken);
+            _wroteInvitations = true;
 
             return new SurveyInvitationResult { Invitation = created, Link = await _links.BuildAsync(token) };
         }
@@ -401,6 +433,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
             Apply(invitation);
             issued.ApplyTo(invitation);
+            _wroteInvitations = true;
 
             return true;
         }, cancellationToken: cancellationToken);
@@ -573,6 +606,54 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             if ((await DeliverAsync(survey, collector, invitation, link: null, isReminder: true, CancellationToken.None)).Sent)
             {
                 sent++;
+                await TryFailedBeforeAsync();
+            }
+        }
+
+        // The held first sends the mail server failed before, interleaved with the run's other e-mails (R10-M1): after
+        // each e-mail that goes out, one of them is tried. A refused address is then followed by an e-mail that goes out,
+        // which confirms that the failure was the address's, so several refused addresses in one list each use up an
+        // attempt every run; a throttle or an outage still shows as two failures in a row, of any kind, and stays lone.
+        var failedBefore = new Queue<string>();
+
+        async Task TryFailedBeforeAsync()
+        {
+            while (failedBefore.Count > 0 && !_emailLimit.IsClosed && !StopRequested)
+            {
+                var id = failedBefore.Dequeue();
+
+                if (!heldTried.Add(id))
+                {
+                    continue;
+                }
+
+                var invitation = await _invitationStore.ReloadAsync(id, CancellationToken.None);
+
+                if (invitation is null
+                    || invitation.Status != SurveyInvitationStatus.Pending
+                    || !invitation.TryGet<SurveyInvitationHold>(out var hold)
+                    || hold?.LastFailedUtc is null)
+                {
+                    continue;
+                }
+
+                if (invitation.ExpiresUtc is { } expires && expires <= now)
+                {
+                    // Expired: the last held pass marks it.
+                    heldTried.Remove(id);
+
+                    continue;
+                }
+
+                if (!(await DeliverAsync(survey, collector, invitation, link: null, isReminder: false, CancellationToken.None)).Sent)
+                {
+                    // Failed: the next e-mail that goes out tells whether the failure was the address's.
+                    return;
+                }
+
+                // It went out too, so it confirms the failures before it as well: the next one is tried.
+                justSent.Add(id);
+                sent++;
             }
         }
 
@@ -597,19 +678,34 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         {
             if (await EnterEmailSendAsync(cancellationToken))
             {
-                // First sends held back by the daily e-mail limit (or an unreadable opt-out list) go out first. Those the
-                // mail server failed before go out after the reminders (R7-M6): an address it keeps refusing never stands in
-                // front of the list's reminders, and by then an e-mail of the run that went out tells its failure from an
-                // outage. The reminder walk ends as soon as no more e-mail of this send goes out (today's limit, the
-                // sending window or a mail outage), so nothing is read or re-issued for reminders that would only wait.
-                sent += await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: false);
+                // First sends held back by the daily e-mail limit (or an unreadable opt-out list) go out first, then the
+                // reminders. Those the mail server failed before never stand in front of them (R7-M6): one is tried after
+                // each e-mail that goes out (TryFailedBeforeAsync, R10-M1), and the rest after the reminders. The reminder
+                // walk ends as soon as no more e-mail of this send goes out (today's limit, the sending window or a mail
+                // outage), so nothing is read or re-issued for reminders that would only wait.
+                await _invitationStore.VisitHeldByCollectorAsync(
+                    collector.ItemId,
+                    invitation =>
+                    {
+                        if (invitation.TryGet<SurveyInvitationHold>(out var hold) && hold?.LastFailedUtc is not null)
+                        {
+                            failedBefore.Enqueue(invitation.ItemId);
+                        }
+
+                        return Task.CompletedTask;
+                    },
+                    stop: null,
+                    SurveysConstants.PageSize,
+                    CancellationToken.None);
+
+                sent += await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: false, TryFailedBeforeAsync);
 
                 if (reminds)
                 {
                     await WalkAsync(emails: true, () => _emailLimit.IsClosed || StopRequested);
                 }
 
-                sent += await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: true);
+                sent += await SendHeldAsync(survey, collector, justSent, heldTried, failedBefore: true, afterDelivered: null);
 
                 // Failures counted and the rest committed, then the lock let go of, before the users are notified
                 // (R7-Mi8): the next send reads what this one e-mailed, and the notifications never run under the e-mail
@@ -869,6 +965,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
             {
                 if (Hold(held, isReminder: false))
                 {
+                    _wroteInvitations = true;
                     await _invitationStore.UpdateAsync(held, CancellationToken.None);
                 }
 
@@ -1070,7 +1167,14 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
     // overwritten (R8-Mi31): closing it needs a concurrency check on every writer of invitations. A bulk send lets go of
     // the copy once written (R8-Mi13), so a long walk keeps none of the copies it wrote.
     private Task<SurveyInvitation> SaveCheckedAsync(SurveyInvitation invitation, Func<SurveyInvitation, bool> apply, CancellationToken cancellationToken)
-        => _invitationStore.UpdateCurrentAsync(invitation, apply, detach: _commitsAsItGoes, cancellationToken);
+        => _invitationStore.UpdateCurrentAsync(invitation, current =>
+        {
+            var changed = apply(current);
+
+            _wroteInvitations |= changed;
+
+            return changed;
+        }, detach: _commitsAsItGoes, cancellationToken);
 
     // Whether the copy of an invitation a send holds is what the database has now.
     private static bool Matches(SurveyInvitationIndex row, SurveyInvitation invitation)
@@ -1100,7 +1204,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
         => first is null ? second is null : second is not null && Math.Abs((first.Value - second.Value).Ticks) < TimeSpan.TicksPerMillisecond;
 
     // Runs under the e-mail lock, so with CancellationToken.None: a cancel stops it between commits instead.
-    private async Task<int> SendHeldAsync(Survey survey, SurveyCollector collector, HashSet<string> sentIds, HashSet<string> tried, bool failedBefore)
+    private async Task<int> SendHeldAsync(Survey survey, SurveyCollector collector, HashSet<string> sentIds, HashSet<string> tried, bool failedBefore, Func<Task> afterDelivered)
     {
         // Held invitations are e-mails; while today's limit is still reached (or its lock is busy, or the mail server is
         // down) they all wait for another run.
@@ -1149,6 +1253,11 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
                 {
                     sentIds.Add(invitation.ItemId);
                     sent++;
+
+                    if (afterDelivered is not null)
+                    {
+                        await afterDelivered();
+                    }
                 }
             },
             stop: () => _emailLimit.IsClosed || StopRequested,
@@ -1383,6 +1492,7 @@ public sealed class SurveyInvitationService : ISurveyInvitationService
 
             if (CountAttempt(current, isReminder, lone, now))
             {
+                _wroteInvitations = true;
                 await _invitationStore.UpdateAsync(current, cancellationToken);
                 await _invitationStore.FlushAsync(cancellationToken);
             }
