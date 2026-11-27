@@ -76,7 +76,8 @@ jobs:
       with:
         # The migration additive-only gate (a unit test) checks never-released justifications against stable release
         # tags, so the unit jobs need the whole history. The other jobs only need the commit.
-        fetch-depth: ${{ matrix.suite == 'unit' && 0 || 1 }}
+        # Written this way round because 0 is falsy in expressions: "unit && 0 || 1" would always give 1.
+        fetch-depth: ${{ matrix.suite != 'unit' && 1 || 0 }}
     - uses: actions/setup-node@v7
       with:
         node-version-file: ".node-version"
