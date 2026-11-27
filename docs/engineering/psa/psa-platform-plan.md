@@ -1,6 +1,6 @@
 # PSA Platform Blueprint — Orchard Core + CrestApps
 
-Status: proposal, revision 2 (27 November 2026). Revision 2 answers the review on pull request #1378 (see the appendix *Review response*): every architecture decision is now taken (section 25), the plan builds on the existing ticket, agreement, time and e-mail plans and on open pull requests #817 and #1379 instead of competing with them, and competitor product names were removed as `AGENTS.md` requires. Planning document only; no implementation is included. The task-by-task guide for implementing this plan is [`psa-implementation-guide.md`](psa-implementation-guide.md).
+Status: proposal, revision 3 (27 November 2026). Every architecture decision is now taken (section 25), the plan builds on the existing ticket, agreement, time and e-mail plans and on open pull requests #817 and #1379 instead of competing with them, and competitor product names were removed as `AGENTS.md` requires. Planning document only; no implementation is included. The task-by-task guide for implementing this plan is [`psa-implementation-guide.md`](psa-implementation-guide.md).
 
 ## How to read this document
 
@@ -14,7 +14,7 @@ This is a planning and architecture blueprint only: it adds no code and changes 
 | **\[V-Ind\]** | Industry practice: verified in the public documentation of the leading PSA products reviewed (named only in the private research notes, see section 2), or a published standard named in the text. |
 | **\[Dec\]** | A decision taken in this plan (section 25 lists every one, with its industry basis and the alternatives rejected). |
 
-Revision 1 used an "assumption" label. Revision 2 has none: each former assumption is now a decision in section 25.2, or a measured gate with a target the implementing agent checks (section 23).
+Earlier revisions used an "assumption" label. This one has none: each former assumption is now a decision in section 25.2, or a measured gate with a target the implementing agent checks (section 23).
 
 **Research limits.**
 
@@ -27,7 +27,7 @@ Revision 1 used an "assumption" label. Revision 2 has none: each former assumpti
 
 ## 1. Executive Summary
 
-**The PSA platform is built mostly by composing what CrestApps already has: 42 of the 55 capabilities traced against the leading products (76%) rest on building blocks that exist and are tested today; the work left is five new building blocks, twelve enhancements to existing blocks, two integration blocks and three thin PSA modules, delivered as 17 work packages.** \[V-Repo\] \[Dec\]
+**The PSA platform is built mostly by composing what CrestApps already has: 42 of the 55 capabilities traced against the leading products (76%) rest on building blocks that exist and are tested today; the work left is five new building blocks, thirteen enhancements to existing blocks, two integration blocks and three thin PSA modules, delivered as 17 work packages.** \[V-Repo\] \[Dec\]
 
 **What already exists \[V-Repo\].** CrestApps.OrchardCore is a building-block library: 119 modules and 331 features (per its November 2026 audit), a building-block catalog (`docs/engineering/building-blocks.md`), layering rules enforced by 36 architecture tests, and approved engineering plans for the areas a PSA needs. PSA-relevant blocks that are implemented and tested:
 
@@ -245,12 +245,12 @@ Corrections to revision 1 found while reconciling \[V-Repo\]: Assets has no `IAs
 
 ## 6. Existing Building Block Inventory
 
-**For the PSA, 51 existing building blocks are reused: 39 as they are and 12 with enhancements.** \[Dec\]
+**For the PSA, 51 existing building blocks are reused: 38 as they are and 13 with enhancements.** \[Dec\]
 
 | Group | Reuse as is | Reuse with enhancement |
 | --- | --- | --- |
 | Platform | Orchard Core (all of section 4), CrestApps Core primitives, Timeline, Attachments, Webhooks, Data Connectors, Personal Data, Tenant Hierarchy, Content Access Control, Conditional Fields, Wizard, Numbering, Business Documents | Approvals (team approver rule, e-mail decisions), Reports (PSA data sets and role dashboards) |
-| People and organizations | Users, Parties, Staff, Teams, Skills, Addresses, PhoneNumbers, Geo | Accounts (health score provider, account hierarchy roll-ups), Omnichannel CRM (opportunity-to-quote) |
+| People and organizations | Parties, Staff, Teams, Skills, Addresses, PhoneNumbers, Geo | Users (session and MFA policy, D-20), Accounts (health score provider, account hierarchy roll-ups), Omnichannel CRM (opportunity-to-quote) |
 | Time | Calendars, Business Hours, Scheduling, Workforce, Service Levels | Time Tracker (work role, time approval, rate snapshot) |
 | Service and field work | Work Orders, Dispatch, OrTools | Tickets (changes, recurring, templates, catalog, CI links, e-mail bridge), Knowledge Base (lifecycle, ticket-to-article), Assets (CI relationships), Agreements (full contract model) |
 | Money | Transactions, Taxation, Payment Terms, Exchange Rates, Payroll | Invoicing (quote conversions, approve-and-post), Inventory (requisitions, decouple from Commerce feature) |
@@ -285,6 +285,7 @@ Each candidate was scored against the brief's ten building-block tests (single r
 - **Omnichannel Messaging (after #817):** OAuth mailbox sign-in and Graph / Gmail push inbound sources.
 - **Assets (after #1379):** CI relationships, licenses, discovery seam, `IAssetUsage` for linked CIs.
 - **Approvals:** Team approver rule, signed e-mail decisions, delegation, policy simulation.
+- **Users:** a session and MFA policy feature (D-20).
 - **Accounts and CRM:** health signals, hierarchy roll-ups, account-team notification routing, opportunity-to-quote links.
 - **Knowledge Base:** lifecycle with review dates, article from ticket, known errors.
 
@@ -454,7 +455,7 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | Organization & Party | Account → locations, members, e-mail domains; Contact | `PartyRef`, `ContactInfo`, `Address`, `PhoneNumber` | AccountCreated, MemberAdded, ContactMerged | Accounts, contacts, membership |
 | Sales | Opportunity; Estimate (Quote) → sections, lines, options | `Money`, `PriceTier`, `RecurringTerm` | OpportunityStageChanged, QuoteSent, QuoteAccepted, QuoteConverted | Opportunities, quotes, product prices |
-| Contracts | Agreement → entitlements, coverage rules, additions, milestones; RateCard → lines (role × stage); WorkRole | `Entitlement`, `CoverageRule`, `RateKey`, `BillingSchedule` | AgreementActivated, EntitlementDrawn, EntitlementThresholdReached, AgreementRenewed, AgreementExpiring | Agreements, entitlement ledger, rate cards |
+| Contracts | Agreement → entitlements, coverage rules, additions, milestones; RateCard → lines (role × stage); WorkRole | `Entitlement`, `CoverageRule`, `RateKey`, `BillingSchedule` | AgreementActivated, ThresholdReached, Exhausted, ToppedUp, AgreementRenewed, AgreementExpiring | Agreements (balances computed from usage, D-06), rate cards |
 | Service Management | Ticket → replies, links, approval, satisfaction; ChangeRequest (ticket with `ChangePart`); CatalogItem; RecurringTicketSchedule | `TicketLevel`, `TicketLink`, `ChangeWindow`, `RiskScore` | TicketCreated, StatusChanged, Assigned, Solved, ChangeApproved, ChangeImplemented | Tickets, desks, catalog |
 | Project Delivery | Project → phases, tasks, dependencies, milestones, baselines, budget lines; ProjectTemplate | `DateRange`, `Effort`, `Dependency(type, lag)` | ProjectCreated, TaskCompleted, MilestoneReached, BudgetThresholdReached, ProjectClosed | Projects, templates |
 | Field Service | WorkOrder → lines, checklist, signatures; Visit | `GeoPoint`, `TimeWindow` | WorkOrderCompleted, VisitStatusChanged | Work orders, visits |
@@ -479,7 +480,7 @@ flowchart LR
 | M04 | Accounts and CRM enhancement | Shared building block | Reuse with enhancement | Health signals, hierarchy roll-ups, account-team routing, opportunity-to-quote | Account page cards; CRM pages | WP03, WP07 |
 | M05 | Rates (`CrestApps.OrchardCore.Rates`) | Shared building block | Create new | Work roles, rate cards keyed by role × Time Tracker stage, resolution | Content > Rates | WP03 |
 | M06 | Messaging E-mail additions (on #817) | Shared building block | Reuse with enhancement | OAuth mailbox sign-in, Microsoft Graph and Gmail push sources | Omnichannel addresses (existing #817 pages) | WP05 |
-| M07 | Tickets enhancements (`Tickets.Email`, `Tickets.Changes`, `Tickets.Recurring`, `Tickets.Templates`, `Tickets.Assets`, catalog additions, SLA attainment and escalation) | Shared building block | Reuse with enhancement | ITSM gaps | Service Desk (existing menu); settings under Configuration > Tickets | WP04, WP05, WP11 |
+| M07 | Tickets enhancements (`Tickets.Email`, `Tickets.Changes`, `Tickets.Recurring`, `Tickets.Templates`, `Tickets.Assets`, catalog additions, SLA attainment and escalation) | Shared building block | Reuse with enhancement | ITSM gaps | Service Desk (existing menu): per-desk records beside Desks and Statuses; settings under Settings > Service Desk | WP04, WP05, WP11 |
 | M08 | Knowledge Base enhancement | Shared building block | Reuse with enhancement | Lifecycle, article from ticket, known errors | Existing KB pages | WP04 |
 | M09 | Agreements enhancement (+ `Agreements.Billing`) | Shared building block | Reuse with enhancement | Contract models, entitlements, coverage (A2), additions, renewals, billing | Content > Agreements (existing) | WP06 |
 | M10 | Estimates as quotes | Shared building block | Reuse with enhancement | Sections, recurring lines, signature, conversion targets | Commerce > Estimates (existing) | WP07 |
@@ -559,7 +560,14 @@ Specifications appear in order of business weight (contracts and money first, pl
 **C. Missing functionality.**
 
 - **Kinds** (open string, registered with `AddAgreementKind`): `RecurringService`, `BlockHours`, `Retainer`, `PerIncident`, `TimeAndMaterials`, `FixedPrice`, `Umbrella`.
-- **Entitlements** generalizing `AgreementHours`: a list of `Entitlement {Kind(Hours, Money, Incidents, Unlimited), Amount, Period(Term, Month, Quarter, Year), Rollover, Purchases[]}` where a purchase (top-up) adds amount for a date range. Balances stay **computed** from usage providers, as today (D-06); `AgreementUsage` gains `Unit` and `Quantity` (A4) so a retainer counts money and a per-incident contract counts tickets.
+- **Entitlements** generalizing `AgreementHours`: a list of `Entitlement {Kind(Hours, Money, Incidents, Unlimited), Amount, Period(Term, Month, Quarter, Year), Rollover, Purchases[]}` where a purchase (top-up) adds an amount valid for a date range.
+- **Rollover** (industry definition, applied per entitlement): `Rollover {Mode(None, Carry, CarryCapped), CapPercent?, ExpiresAfterPeriods?}`.
+    - `None` (default, and today's behaviour): an allowance unused at the end of its period expires.
+    - `Carry`: the unused amount of a period carries into the next period as a separate *carried amount* that keeps its origin period.
+    - `CarryCapped`: as `Carry`, but the amount carried out of one period is at most `CapPercent` of that period's allowance (100 = up to one more period's worth).
+    - `ExpiresAfterPeriods` (with either carry mode): a carried amount expires that many periods after the period it came from (1 = usable in the next period only). Empty means it never expires while the agreement is active.
+    - **Consumption order**, the same for every kind: carried amounts first, oldest origin first; then the current period's allowance; then purchases, earliest expiry first; then overage. Rollover never applies to `Term` entitlements (a block has no periods) or to `Unlimited`.
+    - Carried and purchased amounts are computed from usage at read time, like the rest of the balance (D-06); nothing is posted. Balances stay **computed** from usage providers, as today (D-06); `AgreementUsage` gains `Unit` and `Quantity` (A4) so a retainer counts money and a per-incident contract counts tickets.
 - **Coverage rules** (A2): covered and excluded work roles, Time Tracker stages, subject filters registered by consumers (desks, ticket types, categories for Tickets; project types for Projects), time window (a Business Hours schedule: inside or outside), sites; per-rule rate override (a Rates scope). `TicketAgreementTerms` become coverage rules through a resumable step with dual-read (D-19).
 - **Additions** (recurring lines): product, quantity (fixed or from an `IAdditionQuantitySource`), unit price, unit cost, frequency, advance or arrears, pro-rata policy, start, end.
 - **Milestones** for fixed price: amount, due rule (date, or project milestone achieved), status.
@@ -607,7 +615,7 @@ Exceptions: a failed automatic top-up records a payment issue through Checkout's
 
 **L. Reporting.** Agreement register, entitlement balances, expiring agreements, overage, profitability (M23), recurring revenue by type.
 
-**M. Testing.** Golden coverage decision table `tests/fixtures/psa/agreements/coverage.json` (overlaps, exclusions, umbrella, default, after-hours window, site); balance per entitlement kind with purchases, rollover and period boundaries; overage split determinism; migration verification (balances identical before and after) on SQLite and SQL Server in the PSA integration tests; every existing Agreements, Tickets and Work Orders test unchanged.
+**M. Testing.** Golden coverage decision table `tests/fixtures/psa/agreements/coverage.json` (overlaps, exclusions, umbrella, default, after-hours window, site); balance per entitlement kind with purchases, each rollover mode, carried-amount expiry, consumption order and period boundaries; overage split determinism; migration verification (balances identical before and after) on SQLite and SQL Server in the PSA integration tests; every existing Agreements, Tickets and Work Orders test unchanged.
 
 **N. Dependencies and order.** Needs M05, Invoicing, Accounts, Parties. Needed by M10, M11, M13, M14, M17, M23. WP06.
 
@@ -823,7 +831,7 @@ stateDiagram-v2
   Rejected --> Closed
 ```
 
-**H. UI.** Service Desk menu (existing): change tab, change calendar, recurring schedules, templates; escalation chains and mailbox-to-desk mapping under Configuration > Tickets; catalog fields on the category editor; asset panel.
+**H. UI.** Service Desk menu (existing): change tab, change calendar, recurring schedules, templates; escalation chains and the e-mail address to desk mapping in the Service Desk menu beside Desks and Statuses, ticket-wide options under Settings > Service Desk (`TicketSettingsAdminMenu`); catalog fields on the category editor; asset panel.
 
 **I. Security.** Per-desk permissions where relevant: `ManageChanges`, `ApproveChanges` (also via policy), `ManageRecurringTickets`, `ManageTicketTemplates`, `ManageEscalations`. Category audience enforced on the server at submit. Approval decisions are recorded by Approvals.
 
@@ -945,11 +953,11 @@ Decision D-09: the platform is the billing sub-ledger; revenue recognition (ASC 
 
 ### M21 Psa (application module)
 
-**A.** `CrestApps.OrchardCore.Psa` · PSA application module. **D.** (1) `Psa` setup recipe enabling the PSA feature set and creating defaults: Service Desk desk, ticket types (Incident, Service Request, Problem, Change when available), statuses mapped to categories, priorities with an impact × urgency matrix, business hours, SLA policies Gold, Silver, Bronze, Time Tracker stages Remote support, Onsite, After hours, Internal (with Billable and Payable categories), work roles Technician, Senior Engineer, Project Manager, a default rate card, agreement types for the seven kinds, project templates (customer onboarding, migration), expense categories, role dashboards; (2) role templates (recipe roles) for Service Desk Agent, Service Manager, Dispatcher, Field Technician, Project Manager, Resource Manager, Account Manager, Sales, Finance, Executive, PSA Administrator, Portal User, Portal Administrator, each holding only permissions that exist when the recipe runs; (3) **no menu groups** (D-16): every feature keeps its module's menu; PSA adds only Settings > PSA; (4) a Get Started page (not in the menu, linked from the PSA settings page and the empty states of PSA pages) with a checklist: company profile, e-mail addresses, business hours, SLA policies, stages and rates, agreement types, import accounts and contacts, invite staff; (5) a demo-data recipe for trials; (6) PSA settings: default stage per desk, invoice grouping policy, time approval period default; (7) a migration toolkit: ContentTransfer import templates (CSV) for accounts, contacts, assets, agreements with entitlements, open tickets and rate cards, so data exported from another PSA product can be loaded. **Rule:** PSA holds no logic another product could need. **O.** A fresh tenant set up with the recipe passes the end-to-end workflows built so far (section 23).
+**A.** `CrestApps.OrchardCore.Psa` · PSA application module. **D.** (1) `Psa` setup recipe enabling the PSA feature set and creating defaults: Service Desk desk, ticket types (Incident, Service Request, Problem, Change when available), statuses mapped to categories, priorities with an impact × urgency matrix, business hours, SLA policies Gold, Silver, Bronze, Time Tracker stages Remote support, Onsite, After hours, Internal (with Billable and Payable categories), work roles Technician, Senior Engineer, Project Manager, a default rate card, agreement types for the seven kinds, project templates (customer onboarding, migration), expense categories, role dashboards, and the Users session and MFA policy with the values of D-20; (2) role templates (recipe roles) for Service Desk Agent, Service Manager, Dispatcher, Field Technician, Project Manager, Resource Manager, Account Manager, Sales, Finance, Executive, PSA Administrator, Portal User, Portal Administrator, each holding only permissions that exist when the recipe runs; (3) **no menu groups** (D-16): every feature keeps its module's menu; PSA adds only Settings > PSA; (4) a Get Started page (not in the menu, linked from the PSA settings page and the empty states of PSA pages) with a checklist: company profile, e-mail addresses, business hours, SLA policies, stages and rates, agreement types, import accounts and contacts, invite staff; (5) a demo-data recipe for trials; (6) PSA settings: default stage per desk, invoice grouping policy, time approval period default; (7) a migration toolkit: ContentTransfer import templates (CSV) for accounts, contacts, assets, agreements with entitlements, open tickets and rate cards, so data exported from another PSA product can be loaded. **Rule:** PSA holds no logic another product could need. **O.** A fresh tenant set up with the recipe passes the end-to-end workflows built so far (section 23).
 
 ### M22 Psa.Portal
 
-**A.** `CrestApps.OrchardCore.Psa.Portal` · PSA application module. **B.** Composes Users My Account, Tickets Portal (with ratings and web form), the portal catalog (intake plan, with M07 additions), Invoicing My invoices (pay online), Scheduling self-service, Agreements balances (M09), Projects portal (M11), Knowledge Base help center, Estimates accept page. **D.** One branded portal shell with a menu built from registered sections (Resources `PageSections` pattern); **portal administrator** role per customer account who can manage that account's portal users, approve catalog requests and see all the account's tickets; regular portal users see their own tickets unless the account setting shares all; MFA option for portal sign-in; per-account branding is out of scope v1. **I.** Every portal query is scoped through `UserParties` and `IPartyMembershipService` \[V-Repo\]; portal users never receive internal notes, costs or other accounts' data; rate limits on public and portal endpoints (Orchard Rate Limits, already a Tickets Portal dependency \[V-Repo\]). **O.** A security test suite proves a portal user of account A cannot read, guess or enumerate any record of account B through pages, APIs, search, attachments or AI chat. WP04 (tickets, catalog, help center) and WP14 (invoices, agreements, projects).
+**A.** `CrestApps.OrchardCore.Psa.Portal` · PSA application module. **B.** Composes Users My Account, Tickets Portal (with ratings and web form), the portal catalog (intake plan, with M07 additions), Invoicing My invoices (pay online), Scheduling self-service, Agreements balances (M09), Projects portal (M11), Knowledge Base help center, Estimates accept page. **D.** One branded portal shell with a menu built from registered sections (Resources `PageSections` pattern); **portal administrator** role per customer account who can manage that account's portal users, approve catalog requests and see all the account's tickets; regular portal users see their own tickets unless the account setting shares all; MFA option for portal sign-in; per-account branding is out of scope v1. **I.** Every portal query is scoped through `UserParties` and `IPartyMembershipService` \[V-Repo\]; portal users never receive internal notes, costs or other accounts' data; portal administrators must enrol in two-factor sign-in, and an account setting can require it for all of that account's portal users (D-20); rate limits on public and portal endpoints (Orchard Rate Limits, already a Tickets Portal dependency \[V-Repo\]). **O.** A security test suite proves a portal user of account A cannot read, guess or enumerate any record of account B through pages, APIs, search, attachments or AI chat. WP04 (tickets, catalog, help center) and WP14 (invoices, agreements, projects).
 
 ### M23 Psa.Analytics
 
@@ -1430,7 +1438,7 @@ Key — Prevalence: how many of the three leading products document the capabili
 
 ```mermaid
 flowchart LR
-  WP00["P0 WP00 Readiness\nbaseline, golden data, gates"] --> WP01["P1 WP01 Foundations\nM01 M03, PSA tests, isolation harness"]
+  WP00["P0 WP00 Readiness\nbaseline, fixture conventions, spike"] --> WP01["P1 WP01 Foundations\nM01 M03, PSA tests, isolation harness"]
   WP00 --> WP02["P1 WP02 Boards\nM02"]
   WP01 --> WP03["P2 WP03 Rates and PSA skeleton\nM05 M04 M21"]
   WP03 --> WP04["P3 WP04 Service operations\nM07 M08 M22 v1"]
@@ -1454,7 +1462,7 @@ flowchart LR
 
 | Phase | Work package | Objectives | Modules | Needs | End-to-end workflow proven at the end | Risks and mitigation |
 | --- | --- | --- | --- | --- | --- | --- |
-| P0 | WP00 Readiness | Baseline, golden fixtures written by someone other than the implementer, benchmark gates | — | This plan | — | Golden data wrong → maintainer review of every fixture |
+| P0 | WP00 Readiness | Baseline, golden-fixture conventions and manifest, benchmark generator, Inventory decoupling compile spike | — | This plan | — | Golden data wrong → maintainer review of every fixture set before its work package |
 | P1 | WP01 Foundations | Record links, Approvals additions, PSA integration test project and fresh-tenant harness, isolation harness, PSA guards | M01, M03 | WP00 | Isolation harness green on Tickets, Invoicing, Agreements | Ticket-link regression → characterization tests and dual-read |
 | P1 | WP02 Boards | Extract boards from Tickets | M02 | WP00 | Ticket boards unchanged (existing tests) | Extraction regression → existing tests unchanged |
 | P2 | WP03 Rates and PSA skeleton | Work roles, rate cards, account health, roll-ups, PSA recipe, role templates, Get Started, settings | M05, M04 (1–3), M21 | WP01 | Fresh tenant from the `Psa` recipe; rates resolve | — |
@@ -1481,9 +1489,9 @@ flowchart LR
 | Level | Scope | Where and how | When it runs |
 | --- | --- | --- | --- |
 | Unit | Rules: rate precedence, coverage, entitlement balances, scheduler, SLA steps, policies, state machines | `tests/CrestApps.OrchardCore.Tests/<Area>`, the Kit style of `AgreementsTests` | The affected test classes after every task; the whole project once at the end of the work package |
-| Integration (real database) | Stores, indexes, locks, idempotency under parallel calls, migrations with dual-read and verification, recipe round-trips | New `tests/CrestApps.OrchardCore.Psa.IntegrationTests` (created in WP01, modelled on `CrestApps.OrchardCore.Commerce.IntegrationTests`), on SQLite in every run and SQL Server in CI | Every task that touches persistence; whole project at the end of the work package |
+| Integration (real database) | Stores, indexes, locks, idempotency under parallel calls, migrations with dual-read and verification, recipe round-trips | New `tests/CrestApps.OrchardCore.Psa.IntegrationTests` (created in WP01, modelled on `CrestApps.OrchardCore.Commerce.IntegrationTests`). SQLite: a step added to `.github/workflows/build_and_test.yml`, so it runs on every pull request and push. SQL Server: a new job in the same workflow with a SQL Server service container, run only on pushes (main and release branches), because no workflow provisions SQL Server today | Every task that touches persistence; whole project at the end of the work package |
 | Fresh-tenant harness | A tenant set up from the `Psa` recipe inside the integration test host | Same project | Every work package from WP03 |
-| End-to-end | The workflow(s) of the work package (section 22 table) in a browser | Playwright project for the PSA (created in WP01, modelled on `CrestApps.OrchardCore.Telephony.PlaywrightTests`) | End of each work package |
+| End-to-end | The workflow(s) of the work package (section 22 table) in a browser | Playwright project for the PSA (created in WP01, modelled on `CrestApps.OrchardCore.Telephony.PlaywrightTests`). CI runs it in `release_ci.yml` beside the Telephony Playwright tests (the only workflow that runs Playwright today); pull requests do not run it, so the implementing agent runs it locally and reports the result in the pull request | End of each work package |
 | Browser check | The pages the work package changed, both list layouts and both action modes (`AGENTS.md`) | Manual or Playwright | End of each work package, before the full suite |
 | Isolation | Every list, API, data set, search, attachment, timeline and AI tool for fixture users of two accounts and two tenants | Isolation harness from WP01 | Every work package |
 | Architecture | All 36 tests in `tests/CrestApps.OrchardCore.Tests/Architecture` plus the PSA guards | Existing | End of each work package |
@@ -1492,7 +1500,7 @@ flowchart LR
 | Performance | Budgets below on the reference data set | `tests/CrestApps.OrchardCore.Benchmarks` | End of WP06, WP08, WP09, WP10 and in WP16 |
 | AI evaluation | Triage accuracy, summary faithfulness, no out-of-scope data | Evaluation sets with recorded baselines | WP15 and after model changes |
 
-**Golden data (D-18).** Expected values that prove business rules are written in WP00 by a maintainer or a separate agent that does not implement the rules, and stored under `tests/fixtures/psa/` with a `README.md` saying who wrote each file and how: rate precedence, coverage decisions, entitlement balances, approval posting, 20 scheduler networks with expected dates (computed with an independent CPM tool), capacity cases, month-end billing, KPI values. A SHA-256 manifest (`tests/fixtures/psa/MANIFEST.sha256`) is checked by a test; changing a fixture needs the manifest change and a maintainer's approval. The implementing agent never edits a fixture: if it believes one is wrong, it stops and asks.
+**Golden data (D-18).** Expected values that prove business rules are written by a maintainer or a separate agent that does not implement those rules, before the work package that uses them starts (its task T00), and stored under `tests/fixtures/psa/<set>/` with a `README.md` entry saying who wrote each file and how. WP00 sets the shared conventions (JSON layout, `schemaVersion`, one `cases` array of `{id, description, timeZone, input, expected}`; pure dates as `YYYY-MM-DD` in the case's IANA time zone; instants as UTC with `Z`; durations as integer minutes; money as `{amount: "decimal string", currency}` rounded to the currency's `CurrencyScale` places with midpoint away from zero, as `Money` does), the manifest and its test. Each set has a schema note and at least one worked example (the guide gives them) and gates only its own work package: rates (WP03), agreement coverage, balances, migration and profitability (WP06), approval posting (WP08), scheduler networks computed with an independent critical-path tool (WP09), capacity (WP10), month-end billing (WP13), KPIs (WP15). A SHA-256 manifest (`tests/fixtures/psa/MANIFEST.sha256`) is checked by a test; `.github/CODEOWNERS` assigns the folder to maintainers, which protects it only when the branch protection of `main` requires code-owner review, a repository setting a maintainer must turn on. The implementing agent never edits a fixture: if it believes one is wrong, it stops and asks.
 
 **Data migrations (D-19).** Every migration is additive (`MigrationAdditiveOnlyGuardTests`). Data moves run as resumable steps that write the new shape beside the old one; reads use the new shape when present and fall back to the old (dual-read); a verification report (counts, balances, link totals before and after) is written to the log and the admin's notifications; the old fields are removed only in a later release after the verification has passed in production. Rollback is turning off the new feature: the old data was never changed.
 
@@ -1575,14 +1583,14 @@ flowchart TB
 | D-13 | Ticket e-mail is built on pull request #817; this plan adds only OAuth sign-in, Graph and Gmail push and sender throttling | Reuse of the channel owner; modern providers require OAuth | A second e-mail design |
 | D-14 | The service catalog is the intake plan's ticket types and categories, extended with per-category approvals, fulfilment templates and account audiences | Request types plus categories is the common help-desk model (ticket support plan §2) | A `ServiceCatalogItem` content type |
 | D-15 | Typed record links: contracts in `CrestApps.OrchardCore.Abstractions/Records`, index and store in `CrestApps.OrchardCore.YesSql.Core`, the index table created by the Resources module's migration (it already hosts the record picker and search endpoint) | Platform concept beside `RecordRef` | Each module keeping its own link index |
-| D-16 | Navigation follows the existing modules: work areas keep their menus (Service Desk, Field Service, Workforce, Time Tracker, Approvals, Assets, Commerce); shared records go under Content (Agreements, Rates, expense categories); settings under Settings; reports under Reports; Projects gets one new top-level work-area menu with an icon; the Get Started page is not in the menu; PSA adds no menu groups | `AGENTS.md` admin menu rules and existing placement (Agreements under Content) | PSA-specific menu groups |
+| D-16 | Navigation follows the existing modules: work areas keep their menus (Service Desk, Field Service, Workforce, Time Tracker, Approvals, Assets, Commerce); shared records go under Content (Agreements, Rates, expense categories); settings under Settings (ticket settings under Settings > Service Desk; per-desk records beside Desks and Statuses in the Service Desk menu); reports under Reports; Projects gets one new top-level work-area menu with an icon; the Get Started page is not in the menu; PSA adds no menu groups | `AGENTS.md` admin menu rules and existing placement (Agreements under Content) | PSA-specific menu groups |
 | D-17 | One branch and one pull request per work package, a commit per task | Maintainer convention for plans in this repository | One pull request per task |
-| D-18 | Golden test data written independently of the implementation, checksummed, maintainer-approved | Test oracles must not come from the code under test | Expected values written by the implementer |
+| D-18 | Golden test data written independently of the implementation, before the work package that uses it, to shared conventions; checksummed; maintainer-approved | Test oracles must not come from the code under test | Expected values written by the implementer |
 | D-19 | Additive migrations, dual-read, verification report, removal of old fields only in a later release | Expand-and-contract (parallel change) migration practice | In-place rewrites |
-| D-20 | Sessions per NIST SP 800-63B AAL2: re-authentication after 30 minutes idle and 12 hours at most; MFA required for staff with financial, security or cross-account permissions and for portal administrators, optional for other portal users per account | Published standard; ASVS 5.0 session and authentication chapters | Fixed long sessions; MFA for nobody or everybody |
+| D-20 | Sessions per NIST SP 800-63B AAL2: re-authentication after 30 minutes idle and 12 hours at most; MFA required for staff with financial, security or cross-account permissions and for portal administrators, optional for other portal users per account. Built as a reusable Users feature, `CrestApps.OrchardCore.Users.SessionPolicy` (idle and absolute limits on the sign-in cookie; permissions and roles that require Orchard Core two-factor enrolment), enabled and configured by the `Psa` recipe; the per-account portal flag is an Accounts setting read by the policy | Published standard; ASVS 5.0 session and authentication chapters | Fixed long sessions; MFA for nobody or everybody |
 | D-21 | SaaS targets: 99.9% monthly availability, RPO 15 minutes, RTO 4 hours, 35-day point-in-time restore, quarterly restore drill | Common SaaS service levels for business systems | — |
 | D-22 | SLA service credits are not automatic: the agreement SLA report shows breaches, and finance issues credit notes | Service credits depend on contract wording; automatic credits are rare | Automatic credit notes |
-| D-23 | Inventory depends on Commerce Foundation and Products; order, API and webhook integration in `[RequireFeatures]` startups | Layering rules; a PSA does not need a storefront | Enabling the storefront for every PSA tenant |
+| D-23 | Inventory depends on Commerce Foundation and Products; order, API and webhook integration in `[RequireFeatures]` startups. Decided by reading the code; confirmed by a throwaway-branch compile in WP00 before WP12 relies on it | Layering rules; a PSA does not need a storefront | Enabling the storefront for every PSA tenant |
 | D-24 | Field technicians use the existing offline Field page (Dispatch Technician Mobile: today's visits offline, sent once online) | Offline-first field apps are standard; the capability exists | A new mobile app |
 | D-25 | Work roles live in Rates; the person's default role is a card on the Staff editor | Billing role is separate from job title in the leading products | Job title as the billing role |
 | D-26 | Performance budgets and the reference data set of section 23 are targets checked by benchmarks | Measurable non-functional requirements | Unstated targets |
@@ -1631,27 +1639,3 @@ The task-by-task checklist, with what to read, steps, tests and completion crite
 - Critical path method and earned value management (ANSI/EIA-748) for project scheduling and reporting
 
 Product research on the three leading PSA products is kept outside the repository (D-28).
-
-## Appendix: Review response (pull request #1378)
-
-Every point of the review was accepted. Where it led, by point:
-
-| Review point | Change in revision 2 |
-| --- | --- |
-| E-mail conflicts with #817 | M06 rewritten as the delta on #817 (OAuth, Graph and Gmail push, sender throttling); `Tickets.Email` consumes #817; WP05 waits for the merge (D-13) |
-| Service catalog competes with the intake plan | No `ServiceCatalogItem`; catalog additions on `TicketCategoryPart` (D-14) |
-| Existing plans not referenced | Section 5.3 reconciles each plan and states which decisions bind this plan |
-| Assets conflicts with #1379 | M15 builds on #1379 and starts after it (WP11) |
-| One pull request per task | One branch and pull request per work package, a commit per task (D-17) |
-| Test cadence | Affected tests per task; build, browser check, full suite once at the end of the work package (section 23) |
-| Invented admin menu groups | Navigation decision D-16; M21 adds no menu groups |
-| Appendix A lists five architecture tests | The guide lists all 36 |
-| P1-06 cycle test duplicates? | The guide explains that `ModuleDependencyGraphTests` covers commerce assemblies only and adds a manifest-level check |
-| Open decisions (ADR-07, ADR-09, phases, spikes, link index home) | Decided: D-07, D-09, D-08, D-23 (Inventory spike done by reading the code), D-15 |
-| Plan items without tasks | Tasks added: SLA attainment and escalation, approval simulation, roll-ups and account-team routing, Get Started, demo data, PSA settings, bulk rate import, agreement profitability, rate cards on Staff and Account pages, localization and accessibility audit, migration toolkit |
-| Money safety needs real-database tests | PSA integration test project in WP01 (section 23) |
-| Test infrastructure too late | Integration project, fresh-tenant harness and Playwright project in WP01; one workflow proven per work package |
-| Golden data | Written in WP00 by someone other than the implementer, checksummed (D-18) |
-| Data migration safety | Additive, dual-read, verification report, rollback by feature (D-19) |
-| `IAssetOwnerSource` unverified | It does not exist; corrected to `AssetOwners.ToParty` and `PartyRef` |
-| Found during revision | Competitor names removed (D-28); billable-by-stage and charge-when-logged decisions honoured (D-11, D-12); entitlement ledger dropped (D-06); work-order time excluded from time posting |

@@ -1,6 +1,6 @@
 # PSA Implementation Guide
 
-Status: proposal, revision 2 (27 November 2026). This guide turns [`psa-platform-plan.md`](psa-platform-plan.md) into 17 work packages and their tasks, in order. It contains no code. The plan says **what** each module is (specifications M01–M23) and **why** (decisions D-01 to D-28 in its section 25); this guide says **how to build it, in which order, and how to know each step is done**.
+Status: proposal, revision 3 (27 November 2026). This guide turns [`psa-platform-plan.md`](psa-platform-plan.md) into 17 work packages and their tasks, in order. It contains no code. The plan says **what** each module is (specifications M01–M23) and **why** (decisions D-01 to D-28 in its section 25); this guide says **how to build it, in which order, and how to know each step is done**.
 
 Every decision is taken. If a step still seems to need a decision that is not written here or in the plan, stop and ask (section 1.7). Do not choose.
 
@@ -40,7 +40,7 @@ Every decision is taken. If a step still seems to need a decision that is not wr
 
 - This is the repository's convention (decision D-17): one branch and one pull request per plan, with **one commit per task (slice)**.
 - Branch: `psa/wp<NN>-<short-name>`, for example `psa/wp03-rates`. Pull request title: `PSA WP<NN>: <work package title>`.
-- Commit message: `WP<NN>-T<MM> <task title>` on the first line, then what the commit does.
+- Commit message: `WP<NN>-T<MM> <task title>` on the first line, then what the commit does. No trailers: no `Co-authored-by`, no session or tool trailers (`CLAUDE.md`).
 - Start a work package only when every work package in its **Needs** line is merged into `main`, and rebase on `main` first.
 - In the pull request description, copy the work package's **Done when** list and Appendix A, and tick each item.
 - Update the work package's row in Appendix C (Progress) in the last commit of the pull request.
@@ -100,7 +100,8 @@ Before the first task of a work package:
 | Work queues of an existing area | That area's existing menu: Service Desk, Field Service, Workforce, Time Tracker, Approvals, Assets, Commerce (invoices, estimates, inventory, billing review) |
 | Projects | One new top-level **Projects** menu with an icon (it is a work area like Service Desk) |
 | Shared business records | Content (Agreements already lives there; Rates and expense categories and policies go there) |
-| Settings | Settings (a settings group with `AddSiteSettingsPermission` when it uses a module permission) or Configuration > Tickets for ticket settings |
+| Settings | Settings (a settings group with `AddSiteSettingsPermission` when it uses a module permission); ticket-wide options under **Settings > Service Desk** (`TicketSettingsAdminMenu`) |
+| Per-desk ticket records (escalation chains, e-mail address to desk mapping, templates) | The **Service Desk** menu, beside Desks, Statuses, Priorities and Views (`TicketsAdminMenu`) |
 | Reports | Reports, never the module's own menu |
 | Self-service | My Work (staff) and the portal (customers) |
 | Get Started and other one-time setup pages | Not in the menu; linked from the module's pages |
@@ -281,17 +282,108 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 
 ## 4. WP00 Readiness
 
-- **Needs:** nothing. **Builds on:** plan sections 23 and 25.
-- **Who:** a maintainer or an agent that will **not** implement the business rules (golden data must be independent, D-18).
+- **Needs:** nothing. **Builds on:** plan sections 23 and 25 (D-18, D-23, D-26).
+- **Who:** a maintainer, or an agent that will **not** implement the business rules.
 
 | Task | What | Done when |
 | --- | --- | --- |
 | T01 Baseline | Build and run all tests; record in `docs/engineering/psa/baseline.md`: date, commit, results, failing test names | File merged |
-| T02 Golden fixtures | Write under `tests/fixtures/psa/`: `rates/precedence.json` (5 scopes × 4 line specificities × Fixed/Multiplier with expected rates), `agreements/coverage.json` (overlaps, exclusions, umbrella, default, after-hours, site), `agreements/balances.json` (each entitlement kind, purchases, rollover, period edges, overage split), `agreements/migration/` (current agreements and expected balances), `time/approval-posting.json`, `projects/networks/*.json` (20 networks, expected dates computed with an independent critical-path tool, tool and version recorded), `resource-planning/capacity.json`, `billing/month-end/` (3 accounts, 5 agreements, 400 entries, expected invoices), `analytics/kpis.json`; a `README.md` recording author and method per file | Each file reviewed by a maintainer |
-| T03 Fixture manifest | `tests/fixtures/psa/MANIFEST.sha256` and a unit test that fails when a fixture's hash differs from the manifest; create `.github/CODEOWNERS` (the repository has none) owning `tests/fixtures/psa/` by the maintainers, so fixture changes need their approval | Test passes; CODEOWNERS merged |
-| T04 Benchmark data set | In `tests/CrestApps.OrchardCore.Benchmarks`, a generator for the reference data set of plan section 23 and benchmarks for the budgets listed there (coverage, approval, recalculation, board, posting are added as their work packages land) | Generator runs; budgets file `docs/engineering/psa/budgets.md` copied from plan section 23 |
+| T02 Fixture conventions | Create `tests/fixtures/psa/README.md` with the conventions and worked examples below (copy them), one entry per set saying who will write it, and in which work package's T00 | File merged |
+| T03 Manifest and owners | `tests/fixtures/psa/MANIFEST.sha256` and a unit test that fails when a fixture's hash differs from it; `.github/CODEOWNERS` (the repository has none) assigning `tests/fixtures/psa/` to the maintainers | Test passes; a maintainer confirms the branch protection of `main` requires code-owner review (a repository setting, without which CODEOWNERS protects nothing) |
+| T04 Benchmark generator | In `tests/CrestApps.OrchardCore.Benchmarks`, a generator for the reference data set of plan section 23; `docs/engineering/psa/budgets.md` copied from plan section 23. Benchmarks for each budget are added by the work package that builds the code | Generator runs |
+| T05 Inventory decoupling spike (D-23) | On a throwaway branch (never merged): change the Inventory manifest dependency from `CommerceConstants.Features.Area` to Commerce Foundation and Products, drop the project references to `Commerce.Core`, `Commerce.Api.Core`, `Orders.Core` and `Customers.Abstractions`, build, and list every compile error with the type it needs and that type's owner. Write `docs/engineering/psa/inventory-decoupling.md`: the list, where each piece moves (an `[RequireFeatures]` startup or the owner's `.Abstractions`), and a yes/no on D-23 | Report merged; if it says no, stop and ask before WP12 |
 
-**Done when:** all four tasks merged.
+### 4.1 Golden fixture conventions (copy into `tests/fixtures/psa/README.md`)
+
+Every fixture set follows these rules, so the author and the implementer read it the same way.
+
+- **File:** JSON, one file per topic, `{"schemaVersion": 1, "description": "...", "cases": [ ... ]}`.
+- **Case:** `{"id": "kebab-case-id", "description": "one sentence", "timeZone": "America/New_York", "input": { ... }, "expected": { ... }}`.
+- **Dates:** a pure date is `"YYYY-MM-DD"` in the case's `timeZone`; an instant is ISO 8601 UTC with `Z`. Periods are inclusive of their first day and exclusive of the day after their last.
+- **Durations:** integer minutes.
+- **Money:** `{"amount": "123.45", "currency": "USD"}`, the amount a decimal string rounded to the currency's `CurrencyScale` places with midpoint away from zero (as `Money` rounds).
+- **IDs:** short readable strings (`"role-tech"`, `"agr-gold"`) that the test maps to real IDs.
+- **Expected values** are written by hand or with an independent tool named in the README, never by running the code under test.
+
+### 4.2 Worked examples (one per set; the T00 author writes the full set)
+
+**Rates (WP03, `rates/precedence.json`).**
+
+```json
+{"id": "agreement-beats-account", "timeZone": "America/New_York",
+ "input": {"date": "2026-12-01", "workRole": "role-tech", "stage": "stage-remote",
+  "cards": [
+   {"id": "default", "scope": "Default", "currency": "USD", "defaultRate": "120.00", "lines": [{"workRole": "role-tech", "kind": "Fixed", "value": "150.00"}]},
+   {"id": "acme", "scope": "Party:acc-acme", "currency": "USD", "lines": [{"workRole": "role-tech", "kind": "Fixed", "value": "140.00"}]},
+   {"id": "gold", "scope": "Agreement:agr-gold", "currency": "USD", "lines": [{"stage": "stage-remote", "kind": "Fixed", "value": "110.00"}]}],
+  "account": "acc-acme", "agreement": "agr-gold"},
+ "expected": {"billRate": {"amount": "110.00", "currency": "USD"}, "sourceCard": "gold"}}
+```
+
+**Agreement balances with rollover (WP06, `agreements/balances.json`).** Monthly allowance of 600 minutes, `CarryCapped` at 50% (at most 300 carried out of a period), carried amounts usable in the next period only, no rounding. `carriedOut` counts only the period's own unused allowance; a carried amount keeps its origin and never carries again.
+
+```json
+{"id": "carry-capped-then-expire", "timeZone": "America/New_York",
+ "input": {"entitlement": {"kind": "Hours", "amount": 600, "period": "Month", "rollover": {"mode": "CarryCapped", "capPercent": 50, "expiresAfterPeriods": 1}},
+  "roundingMinutes": 0,
+  "usage": [{"date": "2026-10-10", "minutes": 200}, {"date": "2026-11-05", "minutes": 700}, {"date": "2026-12-03", "minutes": 100}]},
+ "expected": {"periods": [
+   {"start": "2026-10-01", "allowance": 600, "carriedIn": 0,   "used": 200, "fromCarried": 0,   "fromAllowance": 200, "carriedOut": 300, "expired": 0,   "overage": 0},
+   {"start": "2026-11-01", "allowance": 600, "carriedIn": 300, "used": 700, "fromCarried": 300, "fromAllowance": 400, "carriedOut": 200, "expired": 0,   "overage": 0},
+   {"start": "2026-12-01", "allowance": 600, "carriedIn": 200, "used": 100, "fromCarried": 100, "fromAllowance": 0,   "carriedOut": 300, "expired": 100, "overage": 0}]}}
+```
+
+How it reads: October uses 200 of 600; 400 is unused, capped at 300 carried. November uses the 300 carried first, then 400 of its allowance; 200 unused is carried (under the cap). December uses 100 of the 200 carried; the other 100 expires at the end of December (one period after its origin); its own allowance is untouched, so 300 (the cap) carries into January.
+
+**Agreement coverage (WP06, `agreements/coverage.json`).**
+
+```json
+{"id": "after-hours-excluded-falls-to-tm", "timeZone": "America/New_York",
+ "input": {"account": "acc-acme", "workDate": "2026-12-05", "subject": "Ticket:t-1", "desk": "desk-service", "stage": "stage-after-hours",
+  "agreements": [
+   {"id": "agr-msp", "kind": "RecurringService", "start": "2026-01-01", "rules": [{"include": true, "desks": ["desk-service"]}, {"include": false, "stages": ["stage-after-hours"]}]},
+   {"id": "agr-tm", "kind": "TimeAndMaterials", "start": "2026-01-01", "rules": [{"include": true}]}]},
+ "expected": {"agreement": "agr-tm", "reason": "excluded-by-agr-msp"}}
+```
+
+**Time approval posting (WP08, `time/approval-posting.json`).** One period, an Hours agreement with 60 minutes left, entries in start order.
+
+```json
+{"id": "covered-overage-nonbillable", "timeZone": "America/New_York",
+ "input": {"balanceMinutesLeft": 60, "rate": {"amount": "150.00", "currency": "USD"},
+  "entries": [{"id": "e1", "start": "2026-12-01T14:00:00Z", "minutes": 45, "stageBillable": true, "chargedTo": "agr-gold"},
+              {"id": "e2", "start": "2026-12-01T16:00:00Z", "minutes": 30, "stageBillable": true, "chargedTo": "agr-gold"},
+              {"id": "e3", "start": "2026-12-01T18:00:00Z", "minutes": 60, "stageBillable": false, "chargedTo": null}]},
+ "expected": {"billableItems": [{"entry": "e2", "minutes": 15, "amount": {"amount": "37.50", "currency": "USD"}}]}}
+```
+
+**Scheduler networks (WP09, `projects/networks/*.json`).** Calendar Monday–Friday 09:00–17:00, durations in working minutes.
+
+```json
+{"id": "fs-with-lag", "timeZone": "America/New_York",
+ "input": {"projectStart": "2026-12-07", "tasks": [{"id": "a", "minutes": 960}, {"id": "b", "minutes": 480, "dependsOn": [{"task": "a", "type": "FS", "lagMinutes": 480}]}]},
+ "expected": {"tasks": [{"id": "a", "start": "2026-12-07", "finish": "2026-12-08", "critical": true}, {"id": "b", "start": "2026-12-10", "finish": "2026-12-10", "critical": true}]}}
+```
+
+**Capacity (WP10, `resource-planning/capacity.json`).**
+
+```json
+{"id": "holiday-and-half-day", "timeZone": "America/New_York",
+ "input": {"week": "2026-12-21", "contractMinutesPerDay": 480, "workDays": ["Mon", "Tue", "Wed", "Thu", "Fri"], "holidays": ["2026-12-25"], "absences": [{"date": "2026-12-24", "minutes": 240}]},
+ "expected": {"capacityMinutes": 1680}}
+```
+
+**Month-end billing (WP13, `billing/month-end/`).** A folder: `input.json` (accounts, agreements, rate cards, approved entries, expenses, grouping policy) and `expected-invoices.json` (one object per invoice: bill-to, currency, lines with source IDs and amounts, totals). Worked example of one line: 15 minutes of overage at 150.00 USD → `{"source": "TimeEntry:e2", "quantity": "0.25", "unitPrice": "150.00", "amount": "37.50"}`.
+
+**KPIs (WP15, `analytics/kpis.json`).**
+
+```json
+{"id": "utilization", "timeZone": "America/New_York",
+ "input": {"period": {"start": "2026-12-01", "end": "2026-12-31"}, "capacityMinutes": 9600, "approvedMinutesByStage": {"stage-remote": 5400, "stage-internal": 1200}, "utilizationStages": ["stage-remote"]},
+ "expected": {"utilizationPercent": "56.25"}}
+```
+
+**Done when:** T01–T05 merged. WP00 does **not** write the fixture sets themselves: each is written in the T00 task of the work package that uses it, so no work package waits for fixtures it does not need.
 
 ---
 
@@ -331,8 +423,13 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 ### T05 PSA test projects
 
 - **Read first:** `tests/CrestApps.OrchardCore.Commerce.IntegrationTests/` (fixture and host), `tests/CrestApps.OrchardCore.Telephony.PlaywrightTests/`.
-- **Steps:** create `tests/CrestApps.OrchardCore.Psa.IntegrationTests` (SQLite by default, SQL Server through an environment variable used in CI) with a tenant fixture that enables named features (the `Psa` recipe is used from WP03); create `tests/CrestApps.OrchardCore.Psa.PlaywrightTests` with one smoke test (sign in, open Service Desk); add both to the solution and CI.
-- **Tests first:** `TenantFixture_CreatesTenantWithFeatures`; `TwoTenants_DoNotSeeEachOthersRecords` (tickets).
+- **Steps:**
+    1. Create `tests/CrestApps.OrchardCore.Psa.IntegrationTests` (SQLite by default; SQL Server when the `PSA_SQLSERVER_CONNECTION` environment variable is set) with a tenant fixture that enables named features (the `Psa` recipe is used from WP03).
+    2. Create `tests/CrestApps.OrchardCore.Psa.PlaywrightTests` with one smoke test (sign in, open Service Desk). Add both projects to the solution.
+    3. CI, SQLite: add a step to `.github/workflows/build_and_test.yml` after the Learning integration tests that runs the PSA integration project. That workflow is called by `pr_ci.yml` and `main_ci.yml`, so it runs on every pull request and push.
+    4. CI, SQL Server: add a job to `build_and_test.yml` with a `mcr.microsoft.com/mssql/server` service container, `if: github.event_name == 'push'` (main and release pushes), that sets `PSA_SQLSERVER_CONNECTION` and runs the same project. No workflow provisions SQL Server today, so this job is new.
+    5. CI, Playwright: add the PSA Playwright project to the step in `.github/workflows/release_ci.yml` that runs the Telephony Playwright tests (the only workflow that installs browsers today). Pull requests do not run it: the agent runs it locally at the end of each work package and pastes the result into the pull request.
+- **Tests first:** `TenantFixture_CreatesTenantWithFeatures`; `TwoTenants_DoNotSeeEachOthersRecords` (tickets); `SqlServer_SkipsWithoutConnection` (the project still passes locally without SQL Server).
 - **Commit:** `WP01-T05 PSA integration and browser test projects`.
 
 ### T06 PSA architecture guards
@@ -365,6 +462,8 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 
 - **Needs:** WP01. **Builds on:** `staff-plan.md`, `accounts-plan.md`, `time-tracker-people-teams-review.md`. **Plan:** M05, M04 (1–3), M21; D-11, D-16, D-25.
 
+**T00 Golden fixtures (before any other task, by an independent author, D-18).** Write `tests/fixtures/psa/rates/precedence.json` (every precedence level × line specificity × Fixed/Multiplier, with expected rate and source card) by the conventions and worked examples of section 4; add them to the manifest; a maintainer reviews them. The implementing agent starts T01 only after this commit is on the branch. Commit: `WP03-T00 Golden fixtures`.
+
 ### T01 Work roles (M05)
 
 - Create the Rates block (R1); `WorkRole` record (R2); Content > Rates > Work Roles (R3); recipe and deployment (R6); permissions `ManageRates`, `ViewBillRates`, `ViewCostRates`; `IRateUsage` delete guard.
@@ -395,7 +494,15 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 - Create `src/Modules/CrestApps.OrchardCore.Psa` (module only), add to slnx and Targets; feature depending on the features available now; `Psa` recipe creating the defaults listed in plan M21 (1) that exist now (desk, ticket types, statuses, priorities and matrix, business hours, SLA policies, Time Tracker stages with categories, work roles, default rate card); recipe roles for the 13 role templates with only existing permissions; PSA settings under Settings > PSA (default stage per desk, time approval period default; billing grouping comes in WP13).
 - **Tests first (integration):** `PsaRecipe_FreshTenant_CreatesDefaults`; `RoleTemplates_NoUnknownPermissions`; `PsaSettings_RequirePermission` (`SiteSettingsGroupPermissionRegistrationTests` passes).
 
-### T07 Get Started page (M21)
+### T07 Session and MFA policy (D-20)
+
+- **Read first:** plan D-20; Orchard Core two-factor authentication features and the sign-in cookie options; `CrestApps.OrchardCore.Users` Startup and Manifest; `SiteSettingsGroupPermissionRegistrationTests`.
+- **Create:** feature `CrestApps.OrchardCore.Users.SessionPolicy` in the Users module (a reusable building-block addition, not PSA code): settings (Settings > Users > Session policy) for idle minutes, absolute hours, and permissions and roles that require two-factor sign-in; the sign-in cookie expires after the idle time without activity (sliding) and is rejected when its issue time is older than the absolute limit; a user holding a listed permission or role without two-factor enrolment is sent to the enrolment page after sign-in and cannot reach the admin until enrolled. Add an Accounts setting "Require two-factor sign-in for this account's portal users", read by the policy for portal users of that account.
+- **Psa recipe:** enables the feature with 30 minutes idle, 12 hours absolute, and requires two-factor for `ManageRates`, `ViewCostRates`, finance and security permissions, every permission that reaches all accounts, and the Portal Administrator role.
+- **Tests first (integration):** `Idle31Minutes_RequiresSignIn`; `IssuedThirteenHoursAgo_RequiresSignIn`; `PermissionHolderWithout2fa_RedirectedToEnrolment`; `PortalUserOfFlaggedAccount_Requires2fa`; `PortalUserOfUnflaggedAccount_NotRequired`.
+- **Commit:** `WP03-T07 Session and MFA policy`.
+
+### T08 Get Started page (M21)
 
 - A Get Started page (not in the menu) with the checklist of plan M21 (4), each item linking to the page that does it and showing done or not; linked from the PSA settings page and empty states.
 - **Tests first:** `Checklist_ItemDone_WhenRecordExists`.
@@ -413,10 +520,10 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 | T01 Ticket templates | `TicketTemplate` (type, category, field values, checklist, child-ticket definitions, default stage, estimate); Service Desk > Templates; "New from template"; `ITicketTemplateService.ApplyAsync` | `Apply_SetsFieldsAndChildren`; `Apply_OtherType_Refused` |
 | T02 Recurring tickets | `RecurringTicketSchedule` (template, RRULE via Calendars `RecurrenceRule`, time zone, account, desk, team, assignee, lead days, end rule, when previous open); background task creates each occurrence once under a lock (key = schedule + date), R14 | `Occurrence_OncePerDate_AfterRestart` (integration); `Dst_OccurrenceAtLocalTime`; `SkipWhenPreviousOpen` |
 | T03 Catalog additions | On `TicketCategoryPart`: approval policy (Ticket Approvals before work), fulfilment template (child tickets), audience by account, displayed price; portal flow unchanged (types, then categories); audience enforced on submit | `Submit_CategoryOutsideAudience_Refused`; `Submit_WithPolicy_StartsApproval`; `Approved_CreatesFulfilmentChildren` |
-| T04 Escalation chains | `EscalationChain` per desk (steps: trigger warning/breach of a metric; actions notify team lead, user or role, reassign team, raise priority, raise level), editor under Configuration > Tickets; an `IServiceLevelObserver` in Tickets runs each step once per timer | `Breach_RunsStepOnce`; `Warning_NotifiesTeamLead`; `Reassign_UsesTicketService` |
+| T04 Escalation chains | `EscalationChain` per desk (steps: trigger warning/breach of a metric; actions notify team lead, user or role, reassign team, raise priority, raise level), editor in the Service Desk menu beside Desks and Statuses; an `IServiceLevelObserver` in Tickets runs each step once per timer | `Breach_RunsStepOnce`; `Warning_NotifiesTeamLead`; `Reassign_UsesTicketService` |
 | T05 SLA attainment | Data set: met ÷ completed by policy, metric, priority, account, period (R8); goal % per policy for reporting; report under Reports | Data set isolation probe; `Attainment_FromTimers_MatchesFixture` |
 | T06 Knowledge Base lifecycle | Owner, review date, states Draft → In review → Published → Retired with approval type `KnowledgeArticle` for governed categories; review reminder once; "Create article from ticket" with link kind `DocumentedBy`; known-error flag linking a problem ticket | `GovernedPublish_NeedsApproval`; `ReviewReminder_Once`; `InternalArticle_NotInSuggestApiForAnonymous`; KB probes |
-| T07 Portal v1 | Create `CrestApps.OrchardCore.Psa.Portal`; portal shell built from registered sections: My tickets (existing Tickets Portal), Request a service (intake catalog), Help center (KB); portal administrator role per account (all the account's tickets, manage its portal users, approve catalog requests); rate limits | Portal probes in the isolation harness; `PortalAdmin_SeesAccountTickets`; `PortalUser_OwnTicketsOnly_WhenSharingOff` |
+| T07 Portal v1 | Create `CrestApps.OrchardCore.Psa.Portal`; portal shell built from registered sections: My tickets (existing Tickets Portal), Request a service (intake catalog), Help center (KB); portal administrator role per account (all the account's tickets, manage its portal users, approve catalog requests); portal administrators must enrol in two-factor sign-in and the account flag from WP03-T07 is shown on the account page; rate limits | Portal probes in the isolation harness; `PortalAdmin_SeesAccountTickets`; `PortalUser_OwnTicketsOnly_WhenSharingOff`; `PortalAdminWithout2fa_SentToEnrolment` |
 | T08 End-to-end W4 | Playwright: ticket → SLA warning → escalation → solve | The test |
 
 **Done when:** each feature can be enabled alone; existing Tickets tests unchanged; W4 passes.
@@ -434,7 +541,7 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 | T02 OAuth mailbox sign-in | OAuth 2.0 authorization code for Microsoft and Google on the address's Email card; refresh tokens stored through Data Connectors in Orchard Core Secrets; IMAP and SMTP use XOAUTH2; failed refresh disables the source and notifies | `ExpiredRefresh_DisablesAndNotifies`; secret never appears in logs |
 | T03 Microsoft Graph source | Change notifications (client state validated) trigger a delta query; each message becomes `InboundEmail` for `IEmailInboundReceiver`; cursor advances after commit | Recorded payloads: `DuplicateNotification_OnceOnly`; `ForgedNotification_ReadsNothing` |
 | T04 Gmail source | Pub/Sub push (token validated) triggers a history read; same rules as T03 | Same as T03 with Gmail payloads |
-| T05 Tickets.Email | Feature `CrestApps.OrchardCore.Tickets.Email`: address → desk and type mapping (Configuration > Tickets); threading by signed token, then `In-Reply-To`/`References`; new thread → ticket (requester through Parties; unknown sender → contact when allowed, else `RequesterUnverified`); reply → public reply; agent address → agent reply; closed beyond window → follow-up; CC → participants of the same account only; automatic mail → nothing, quarantined; outbound e-mails carry token and headers | `NewThread_CreatesTicket`; `Reply_PublicReply`; `AgentReply`; `ClosedBeyondWindow_FollowUp`; `CcOtherAccount_NotParticipant`; `AutoReply_Nothing` |
+| T05 Tickets.Email | Feature `CrestApps.OrchardCore.Tickets.Email`: address → desk and type mapping (Service Desk menu, beside Desks); threading by signed token, then `In-Reply-To`/`References`; new thread → ticket (requester through Parties; unknown sender → contact when allowed, else `RequesterUnverified`); reply → public reply; agent address → agent reply; closed beyond window → follow-up; CC → participants of the same account only; automatic mail → nothing, quarantined; outbound e-mails carry token and headers | `NewThread_CreatesTicket`; `Reply_PublicReply`; `AgentReply`; `ClosedBeyondWindow_FollowUp`; `CcOtherAccount_NotParticipant`; `AutoReply_Nothing` |
 | T06 End-to-end W2 (to solved) | Playwright with the raw-MIME webhook: e-mail → ticket → reply → solve | The test |
 
 **Done when:** M06 and `Tickets.Email` acceptance criteria pass.
@@ -445,18 +552,20 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 
 - **Needs:** WP03. **Builds on:** `ticket-time-agreements-reports-plan.md` (decisions §9 bind). **Plan:** M09; D-06, D-19, D-22.
 
+**T00 Golden fixtures (before any other task, by an independent author, D-18).** Write `agreements/coverage.json`, `agreements/balances.json` (each entitlement kind, purchases, each rollover mode, carried-amount expiry, consumption order, period edges, overage split), `agreements/migration/` (agreements as they are today with their expected balances and the expected verification report) and `agreements/profitability.json` by the conventions and worked examples of section 4; add them to the manifest; a maintainer reviews them. The implementing agent starts T01 only after this commit is on the branch. Commit: `WP06-T00 Golden fixtures`.
+
 | Task | Steps | Tests first |
 | --- | --- | --- |
 | T01 Characterize | Tests pinning current balances, warnings, ticket coverage selection, charge-when-logged, work-order usage | The characterization tests |
 | T02 Usage in units | `AgreementUsage` gains `Unit` (Minutes, Money, Incidents) and `Quantity`; existing providers report minutes as before | All T01 tests pass |
-| T03 Entitlements with dual-read | `Agreement.Entitlements` (Hours, Money, Incidents, Unlimited; period, rollover, purchases); balance service computes per entitlement; when `Entitlements` is empty it reads `AgreementHours` as one Hours entitlement; resumable step writes entitlements from `AgreementHours` with a verification report (R7) | Golden `agreements/balances.json`; migration fixture report matches (integration) |
+| T03 Entitlements with dual-read | `Agreement.Entitlements` (Hours, Money, Incidents, Unlimited; period; rollover exactly as plan M09 defines it: modes None, Carry, CarryCapped, cap, carried-amount expiry, consumption order; purchases); balance service computes per entitlement; when `Entitlements` is empty it reads `AgreementHours` as one Hours entitlement; resumable step writes entitlements from `AgreementHours` with a verification report (R7) | Golden `agreements/balances.json`; migration fixture report matches (integration) |
 | T04 Kinds and types | `AddAgreementKind` with the seven kinds; `AgreementType` templates and "New from type" (Content > Agreements > Types) | `NewFromType_CopiesTemplate`; `UnknownKind_Refused` |
 | T05 Coverage service | `CoverageRule`s, `ICoverageSubjectFilter` (Tickets registers desk, type, category filters), `IAgreementCoverageService` per plan M09 D rules 2–3; `AgreementCoverageIndex` (multi-row, add to `IndexDeclarationArchitectureTests`); resumable step converting `TicketAgreementTerms` to rules with verification; `ITicketAgreementResolver` becomes an adapter; `TicketTimeChargeResolver` unchanged in behaviour; `Agreement` registered as a Rates scope | Golden `agreements/coverage.json`; `TermsMigration_SameAgreementAsBefore` (integration); benchmark within budget |
 | T06 Money and incident usage | Tickets reports incidents for per-incident agreements (one per ticket solved under it); Invoicing Billing reports money for retainers (billable amounts charged to the agreement) through R5 | `PerIncident_CountsSolvedTickets`; `Retainer_DrawsBilledAmounts` |
 | T07 Additions and quantity sources | `Addition`s; `IAdditionQuantitySource` with a contact-count source in Accounts (asset counts come in WP11) | `Quantity_ReadAtRunDate`; `ProRata_MidPeriod` |
 | T08 Lifecycle, renewals, amendments, top-ups | States per plan M09 G; versions; renewal with uplift; amendments; threshold notices and automatic top-up in the existing background task; failed top-up → payment issue (Checkout on) or notice | State machine tests; `AutoRenew_NewVersionWithUplift`; `TopUp_OncePerThresholdAndPeriod` (integration) |
 | T09 Agreements.Billing | Bridge feature: one recurring plan per agreement with additions, synced on change; quantities frozen per run; milestones and overage as `BillableItem`s keyed by source; `IEstimateConversionTarget` (recurring section → agreement); grouping policy hook | `Activate_OneRecurringPlan`; `RunTwice_InvoicesOnce` (integration); `Overage_ItemOnce` |
-| T10 Health signals and profitability | Agreements' account health signals (consumption, renewal due); profitability read model (revenue vs cost) | Golden `analytics/kpis.json` agreement rows |
+| T10 Health signals and profitability | Agreements' account health signals (consumption, renewal due); profitability read model (revenue vs cost) | Golden `agreements/profitability.json` |
 | T11 End-to-end W3 and W8 | Integration and Playwright tests for both workflows | The tests |
 
 **Done when:** all existing Agreements, Tickets and Work Orders tests pass unchanged; acceptance criteria of plan M09 pass.
@@ -482,6 +591,8 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 
 - **Needs:** WP06. **Builds on:** `ticket-time-agreements-reports-plan.md`, `time-tracker-people-teams-review.md`. **Plan:** M13; D-11, D-12.
 
+**T00 Golden fixtures (before any other task, by an independent author, D-18).** Write `time/approval-posting.json` (covered, overage, non-billable, work-order-sourced, recall and re-approval cases) by the conventions and worked examples of section 4; add them to the manifest; a maintainer reviews them. The implementing agent starts T01 only after this commit is on the branch. Commit: `WP08-T00 Golden fixtures`.
+
 | Task | Steps | Tests first |
 | --- | --- | --- |
 | T01 Work role on entries | `TimeEntry.WorkRoleId` (additive), defaulted from the Staff default role; editable; `ITimeEntryDefaultsProvider` with a Tickets implementation; index column | `Default_FromStaff`; existing Time Tracker tests unchanged |
@@ -495,6 +606,8 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 ## 13. WP09 Projects
 
 - **Needs:** WP08, WP02. **Plan:** M11; D-08, D-16.
+
+**T00 Golden fixtures (before any other task, by an independent author, D-18).** Write `projects/networks/*.json`: 20 networks covering FS, SS, FF, SF, lags, pins, holidays and a 2,000-task network, with expected dates and critical flags computed by an independent critical-path tool named in the README by the conventions and worked examples of section 4; add them to the manifest; a maintainer reviews them. The implementing agent starts T01 only after this commit is on the branch. Commit: `WP09-T00 Golden fixtures`.
 
 | Task | Steps | Tests first |
 | --- | --- | --- |
@@ -511,6 +624,8 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 ## 14. WP10 Resource planning
 
 - **Needs:** WP09. **Builds on:** `workforce-management-plan.md`. **Plan:** M12.
+
+**T00 Golden fixtures (before any other task, by an independent author, D-18).** Write `resource-planning/capacity.json` (shift patterns, holidays, partial absences, time-zone and DST weeks) by the conventions and worked examples of section 4; add them to the manifest; a maintainer reviews them. The implementing agent starts T01 only after this commit is on the branch. Commit: `WP10-T00 Golden fixtures`.
 
 | Task | Steps | Tests first |
 | --- | --- | --- |
@@ -542,7 +657,7 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 
 | Task | Steps | Tests first |
 | --- | --- | --- |
-| T01 Decouple from the storefront | Manifest: depend on Commerce Foundation and Products instead of `CommerceConstants.Features.Area`; move order code (`InventoryOrderEventHandler`, availability for checkout, location service parts that read orders) into a startup marked `[RequireFeatures(Orders)]`; API endpoints and webhooks into their own `[RequireFeatures]` startups; types needed from Commerce.Core moved to the owner's `.Abstractions` | `Inventory_RunsWithoutStorefront` (integration); all existing Inventory tests unchanged |
+| T01 Decouple from the storefront | Follow `docs/engineering/psa/inventory-decoupling.md` (WP00-T05); if the code changed since, stop and ask. Manifest: depend on Commerce Foundation and Products instead of `CommerceConstants.Features.Area`; move order code (`InventoryOrderEventHandler`, availability for checkout, location service parts that read orders) into a startup marked `[RequireFeatures(Orders)]`; API endpoints and webhooks into their own `[RequireFeatures]` startups; types needed from Commerce.Core moved to the owner's `.Abstractions` | `Inventory_RunsWithoutStorefront` (integration); all existing Inventory tests unchanged |
 | T02 Suppliers | Supplier part on Accounts; purchase orders name a supplier account | `PurchaseOrder_SupplierIsAccount` |
 | T03 Requisitions | `PurchaseRequisition` with demand `RecordRef`; aggregate into purchase orders by supplier; approval type `PurchaseOrder` by amount; Estimates conversion target (hardware section → requisitions) | `QuoteHardware_ToRequisitions` |
 | T04 Serials and assets | Serial and lot tracking on receipt and issue; delivered serialized items create assets; reservations | `SerialIssuedTwice_Refused`; `Delivered_CreatesAssets` |
@@ -553,6 +668,8 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 ## 17. WP13 Billing review and expenses
 
 - **Needs:** WP08, WP09. **Builds on:** `invoicing-plan.md` §18 (billing sources). **Plan:** M17, M14.
+
+**T00 Golden fixtures (before any other task, by an independent author, D-18).** Write `billing/month-end/` (3 accounts, 5 agreements, 400 entries, expenses, a grouping policy; expected invoices) by the conventions and worked examples of section 4; add them to the manifest; a maintainer reviews them. The implementing agent starts T01 only after this commit is on the branch. Commit: `WP13-T00 Golden fixtures`.
 
 | Task | Steps | Tests first |
 | --- | --- | --- |
@@ -581,6 +698,8 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 ## 19. WP15 Analytics, AI and RMM
 
 - **Needs:** WP14, WP10, WP11. **Plan:** M20, M23, plan section 20, M19 (RMM); D-10.
+
+**T00 Golden fixtures (before any other task, by an independent author, D-18).** Write `analytics/kpis.json` (every KPI of plan section 19 on one fixed data set) and the AI evaluation sets by the conventions and worked examples of section 4; add them to the manifest; a maintainer reviews them. The implementing agent starts T01 only after this commit is on the branch. Commit: `WP15-T00 Golden fixtures`.
 
 | Task | Steps | Tests first |
 | --- | --- | --- |
@@ -616,7 +735,7 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 - [ ] Every task's **Tests first** list exists and passes; each test failed first.
 - [ ] The whole unit test project passed once at the end, including all 36 architecture tests: `AdminPostAntiforgeryArchitectureTests`, `AggregateLifecycleArchitectureTests`, `BinaryAssetIntegrityTests`, `ContactCenterArchitectureGuardTests`, `ContentsAdminListTermNameArchitectureTests`, `CreateViewTitleConventionTests`, `DependencyInjectionArchitectureTests`, `DeploymentStepSerializationArchitectureTests`, `DeploymentStepViewsArchitectureTests`, `DuplicatePatternRatchetTests`, `EditorRootViewArchitectureTests`, `EmptyCatchRatchetTests`, `FeatureIdLiteralRatchetTests`, `FileSizeRatchetTests`, `IndexDeclarationArchitectureTests`, `LayeringRatchetTests`, `LearningNotificationArchitectureTests`, `LocalizationSourceJsonIgnoreArchitectureTests`, `MigrationAdditiveOnlyGuardTests`, `ModuleDependencyGraphTests`, `OrderEventHandlerDependencyTests`, `PaymentProviderCapabilityTruthfulnessTests`, `PdfLibraryLicenseTests`, `PhoneNumberCanonicalizationArchitectureTests`, `ProjectReferenceRulesTests`, `ProviderHttpRetryArchitectureTests`, `ProviderWriteIdempotencyArchitectureTests`, `RecipeSchemaCoverageArchitectureTests`, `ResumableStepRequestTests`, `SiteSettingsGroupPermissionRegistrationTests`, `TenantHierarchyArchitectureTests`, `TimeZonePickerArchitectureTests`, `UnboundedCollectionLoadTests`, `UserListLoadArchitectureTests`, `ViewLocalizerFormatArgumentsArchitectureTests`, `WorkflowActivityViewsArchitectureTests`, plus the PSA guards from WP01-T06.
 - [ ] PSA integration tests pass (SQLite locally; SQL Server in CI).
-- [ ] The work package's end-to-end workflow passes (Playwright).
+- [ ] The work package's end-to-end workflow passes (Playwright, run locally; result pasted in the pull request, since pull request CI does not run Playwright).
 - [ ] Changed pages checked in a browser in both list layouts and both row-action modes.
 - [ ] Build passes with warnings as errors.
 - [ ] Golden fixtures unchanged (manifest test passes).
@@ -631,7 +750,7 @@ Read the fixture and its entry in `tests/fixtures/psa/README.md`; load it in the
 - [ ] Pages placed per section 1.6; top-level menu items have icons.
 - [ ] Module README, both manuals, `sidebars.js`, docs checks pass; `building-blocks.md` updated when a block or extension point changed.
 - [ ] No unused usings or services; no commented-out code; no competitor names.
-- [ ] Commits authored by the configured human author only, one per task, messages `WP<NN>-T<MM> ...`.
+- [ ] Commits authored by the configured human author only, one per task, messages `WP<NN>-T<MM> ...`, no trailers.
 - [ ] Appendix C row updated.
 
 ## 22. Appendix B: Glossary
