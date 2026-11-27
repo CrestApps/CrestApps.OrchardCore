@@ -1,0 +1,62 @@
+@using CrestApps.OrchardCore.AI.FileSources.Sftp.ViewModels
+
+@model SftpFileSourceViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Username" class="ocat-label ocat-label-required">@T["Username"]</label>
+    <div class="ocat-end">
+        <input asp-for="Username" class="form-control" autocomplete="off" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Password" class="ocat-label">@T["Password"]</label>
+    <div class="ocat-end">
+        <input asp-for="Password" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+        <span class="hint">
+            @if (Model.HasPassword)
+            {
+                @T["A password is stored. Leave this empty to keep it, or type a new one to replace it."]
+            }
+            else
+            {
+                @T["Leave empty when signing in with a private key."]
+            }
+        </span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="PrivateKey" class="ocat-label">@T["Private key"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="PrivateKey" class="form-control" rows="6" autocomplete="off" spellcheck="false"></textarea>
+        <span class="hint">
+            @if (Model.HasPrivateKey)
+            {
+                @T["A private key is stored. Leave this empty to keep it, or paste a new one to replace it."]
+            }
+            else
+            {
+                @T["Paste the PEM-encoded key. Stored encrypted, and never sent back to this form."]
+            }
+        </span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Passphrase" class="ocat-label">@T["Key passphrase"]</label>
+    <div class="ocat-end">
+        <input asp-for="Passphrase" class="form-control" type="password" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+        <span class="hint">
+            @if (Model.HasPassphrase)
+            {
+                @T["A passphrase is stored. Leave this empty to keep it."]
+            }
+            else
+            {
+                @T["Only needed when the private key is encrypted."]
+            }
+        </span>
+    </div>
+</div>
+

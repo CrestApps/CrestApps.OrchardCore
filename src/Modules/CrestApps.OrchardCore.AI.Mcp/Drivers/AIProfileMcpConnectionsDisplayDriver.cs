@@ -49,7 +49,7 @@ internal sealed class AIProfileMcpConnectionsDisplayDriver : DisplayDriver<AIPro
                 IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-        }).Location("Content:3#Capabilities;8");
+        }).Location(l => l.Zone("Content", "3").Tab(S["Capabilities"], "8").Card(S["MCP Connections"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

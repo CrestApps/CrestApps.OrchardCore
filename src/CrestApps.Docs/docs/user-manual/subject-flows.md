@@ -80,9 +80,30 @@ Extra fields on **Try Again** and **New Activity**:
 | **Target subject type** | New Activity only: the subject of the new activity. Empty means the same subject. |
 | **Maximum attempts** | Try Again only: how many tries in total. For dialer campaign work it replaces the dialer profile's **Max attempts**. Empty means no limit of the subject's own: dialer work then stops at the profile's **Max attempts**, and other work has no limit. |
 | **Urgency level** | The follow-up's urgency, from **Very low** to **Very high**. **Use original activity's urgency level** keeps the original. |
-| **Assignment type** | **Same owner** gives the follow-up to the user who completes the current activity. **Specific owner** gives it to the user you pick. |
-| **Assign to user** | The owner when **Specific owner** is chosen. Required then. |
 | **Default schedule hours** | How many hours later the follow-up is scheduled. The agent can change the date on the Complete page. When empty, a Try Again for dialer campaign work is dialed after the dialer profile's **Retry delay**, and other follow-ups are scheduled 24 hours later. |
+
+### Campaign, dialer and owner of the follow-up
+
+Below those fields, **Try Again** and **New Activity** have a follow-up section, in this order:
+
+| Field | What it does |
+| --- | --- |
+| **Campaign** | The campaign the follow-up belongs to. **Keep its campaign** leaves it as it is. A dialer queues the follow-up on this campaign's dialer queue. |
+| **Dial with** | **Same as before** (the default): a dialer activity goes back to the dialer under the same profile, and other work stays manual. **Manual: an agent works it**: an agent works and completes the follow-up by hand, and the dialer never calls it, even when the activity it follows was a dialer call. **A dialer profile by name**: the dialer calls the follow-up under that profile and offers it to whichever agent signed in to the campaign is free, so **Assign to** is hidden. |
+| **Assign to** | Who owns the follow-up, shown unless a dialer profile is picked: **The user who completed the activity**, such as the agent who chose the disposition; when the dialer completed it (nobody answered, or a machine did) and an agent works the follow-up by hand, the agent the dialer called for. **The agent the dialer called for**: the agent a dialer call was placed or connected for (the agent a Power or Progressive dial reserved, or the one a Predictive call was connected to), even when the system applied the disposition because nobody answered; with no such agent, the user who completed the activity. **A specific user**: the **User** you pick. **A pool of agents**: one user of a team, roles or a list of users, picked by **Round robin** (the user given an activity longest ago) or **Fewest open activities** (needs the Teams feature). When nobody is found, for example a call the system completed, any agent can take the follow-up. |
+
+**Dial with** decides whether the dialer or an agent works the follow-up, and **Assign to** decides which agent when an agent does:
+
+| You want | Set **Dial with** | Set **Assign to** |
+| --- | --- | --- |
+| The dialer to try the contact again, under the same profile | **Same as before** | Hidden, because the dialer offers the call to whichever agent is free |
+| The dialer to try the contact again, under another profile | That **dialer profile** | Hidden |
+| An agent to call the contact back by hand | **Manual: an agent works it** | **The user who completed the activity**, **The agent the dialer called for**, **A specific user** or **A pool of agents** |
+| Follow-ups spread across a team | **Manual: an agent works it** | **A pool of agents**, then **Round robin** or **Fewest open activities** |
+
+**Campaign** is independent of both: it only chooses the dialer queue the follow-up joins, or keeps the campaign it had. These settings only decide who works the follow-up *activity*. Replies a contact sends to a text are handled by the messaging inbox, where [routing rules](messaging-routing-rules.md) can give a conversation nobody owns to an agent.
+
+For example, to have an agent call back a contact the dialer reached: on the dialer campaign's subject, give the *Call back* disposition a **Try Again** action with **Dial with** set to *Manual: an agent works it* and **Assign to** *The agent the dialer called for*. The agent the dialer connected or held for the call gets the call back on their own list, and the dialer does not dial the contact again. To spread call backs across a team instead, pick **A pool of agents**. To hand manual work to the dialer, pick a dialer profile in **Dial with**.
 
 ## When no contact matches the caller
 

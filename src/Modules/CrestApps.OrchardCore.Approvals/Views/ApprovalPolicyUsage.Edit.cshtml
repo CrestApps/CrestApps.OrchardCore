@@ -1,0 +1,19 @@
+@model ApprovalPolicyViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="Enabled" type="checkbox" class="form-check-input" />
+            <label asp-for="Enabled" class="form-check-label">@T["Choose this policy for requests that name none"]</label>
+            <span class="hint dashed">@T["A request that names the policy uses it either way. Among the policies of the type whose conditions match, the first by order is used."]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Order">
+    <label asp-for="Order" class="ocat-label">@T["Order"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="Order" class="form-control" inputmode="numeric" placeholder="0" />
+        <span asp-validation-for="Order" class="text-danger"></span>
+        <span class="hint">@T["Lower comes first, such as a policy for large amounts before the general one."]</span>
+    </div>
+</div>

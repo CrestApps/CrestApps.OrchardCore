@@ -96,7 +96,7 @@ internal sealed class PayRunDisplayDriver : DisplayDriver<PayRun>
                     model.PayScheduleId = model.Schedules[0].Value;
                 }
             }
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "1").Card(S["Pay Run"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(PayRun run, UpdateEditorContext context)
     {

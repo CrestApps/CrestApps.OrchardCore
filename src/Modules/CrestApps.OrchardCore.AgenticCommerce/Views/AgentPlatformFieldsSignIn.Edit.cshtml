@@ -1,0 +1,47 @@
+@model AgentPlatformViewModel
+
+@* "New API key" has its own formaction, so the crestapps-browser helpers ask its question (data-confirm). *@
+<script asp-name="crestapps-browser" at="Foot"></script>
+
+@if (!Model.IsNew)
+{
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["API key"]</label>
+        <div class="ocat-end">
+            @if (string.IsNullOrEmpty(Model.ApiKeyHint))
+            {
+                <span class="text-body-secondary">@T["No API key yet."]</span>
+            }
+            else
+            {
+                <code>agk_…@Model.ApiKeyHint</code>
+            }
+            <button type="submit" class="btn btn-sm btn-secondary ms-2" formaction="@Url.Action("ApiKey", "AgentPlatforms", new { area = "CrestApps.OrchardCore.AgenticCommerce", id = Model.ItemId })" data-confirm-title="@T["New API key"]" data-confirm="@T["The old key stops working at once. Continue?"]">@T["New API key"]</button>
+            <span class="hint">@T["The platform sends it as a bearer token. ACP platforms sign in this way."]</span>
+        </div>
+    </div>
+}
+<div class="ocat-wrapper" asp-validation-class-for="OAuthClientId">
+    <label asp-for="OAuthClientId" class="ocat-label">@T["OAuth client ID"]</label>
+    <div class="ocat-end">
+        <input asp-for="OAuthClientId" class="form-control" maxlength="255" />
+        <span asp-validation-for="OAuthClientId" class="text-danger"></span>
+        <span class="hint">@T["The client ID of an application in Security › OpenID Connect › Applications that the platform signs in with, for its bearer tokens and for linking buyers' accounts."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="ProfileUrl">
+    <label asp-for="ProfileUrl" class="ocat-label">@T["UCP profile"]</label>
+    <div class="ocat-end">
+        <input asp-for="ProfileUrl" class="form-control" maxlength="1000" placeholder="https://platform.example/.well-known/ucp" />
+        <span asp-validation-for="ProfileUrl" class="text-danger"></span>
+        <span class="hint">@T["The address of the platform's UCP profile. The keys in it verify the platform's signed requests."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="AllowedIpRanges">
+    <label asp-for="AllowedIpRanges" class="ocat-label">@T["Allowed IP addresses"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="AllowedIpRanges" class="form-control" rows="3"></textarea>
+        <span asp-validation-for="AllowedIpRanges" class="text-danger"></span>
+        <span class="hint">@T["One address or range (such as 203.0.113.0/24) per line. Empty allows any. OpenAI asks stores to allow only its published ranges."]</span>
+    </div>
+</div>

@@ -64,6 +64,7 @@ public sealed class Startup : StartupBase
 
         services.AddScoped<CourseworkLearnerResolver>();
         services.AddDisplayDriver<SubmissionRow, SubmissionRowDisplayDriver>();
+        services.AddDisplayDriver<SubmissionGradingViewModel, SubmissionGradingDisplayDriver>();
         services.AddPersonalDataContributor<CourseworkPersonalDataContributor>();
     }
 }

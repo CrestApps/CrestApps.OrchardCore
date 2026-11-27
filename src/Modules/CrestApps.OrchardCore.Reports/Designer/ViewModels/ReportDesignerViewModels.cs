@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Reports.Designer.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Reports.Designer.ViewModels;
 
@@ -390,6 +391,12 @@ public class ReportGroupEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> Parents { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor shape, built by the display drivers of the view model: one card per section.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
 using OrchardCore.ContentManagement;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 
@@ -32,6 +34,9 @@ public sealed class ClassSessionsController : Controller
     private readonly LearnerUserLookup _users;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ClassSessionEditViewModel> _editDisplayManager;
+    private readonly IDisplayManager<ClassSessionCancelViewModel> _cancelDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -54,6 +59,9 @@ public sealed class ClassSessionsController : Controller
         LearnerUserLookup users,
         ILocalClock localClock,
         INotifier notifier,
+        IDisplayManager<ClassSessionEditViewModel> editDisplayManager,
+        IDisplayManager<ClassSessionCancelViewModel> cancelDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<ClassSessionsController> htmlLocalizer,
         IStringLocalizer<ClassSessionsController> stringLocalizer)
     {
@@ -63,6 +71,9 @@ public sealed class ClassSessionsController : Controller
         _users = users;
         _localClock = localClock;
         _notifier = notifier;
+        _editDisplayManager = editDisplayManager;
+        _cancelDisplayManager = cancelDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -135,7 +146,10 @@ public sealed class ClassSessionsController : Controller
             WaitlistMode = part.WaitlistMode,
         };
 
-        return View("Edit", Prepare(model, classItem, null));
+        Prepare(model, classItem, null);
+        model.Editor = await _editDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     /// <summary>
@@ -204,7 +218,10 @@ public sealed class ClassSessionsController : Controller
             model.Meetings.Add(new ClassMeetingRow());
         }
 
-        return View(Prepare(model, classItem, session));
+        Prepare(model, classItem, session);
+        model.Editor = await _editDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>
@@ -264,12 +281,16 @@ public sealed class ClassSessionsController : Controller
             return RedirectToAction(nameof(Index), new { classItemId = classItem.ContentItemId });
         }
 
-        return View(new ClassSessionCancelViewModel
+        var model = new ClassSessionCancelViewModel
         {
             Session = session,
             ClassItem = classItem,
             Taken = await _sessions.CountTakenAsync(session.ItemId),
-        });
+        };
+
+        model.Editor = await _cancelDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>
@@ -290,6 +311,8 @@ public sealed class ClassSessionsController : Controller
         {
             return refusal;
         }
+
+        model.Editor = await _cancelDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         if (string.IsNullOrWhiteSpace(model.Reason))
         {
@@ -440,6 +463,9 @@ public sealed class ClassSessionsController : Controller
     private async Task<IActionResult> SaveAsync(ContentItem classItem, SchedulingSession session, ClassSessionEditViewModel model, bool addMeeting, bool created)
     {
         model.Meetings ??= [];
+
+        Prepare(model, classItem, created ? null : session);
+        model.Editor = await _editDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: created);
 
         if (addMeeting)
         {

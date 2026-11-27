@@ -170,7 +170,7 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
             Selected = selectedCapabilities.Contains(capability.Name),
         }).ToList();
 
-        var fields = Initialize<StaffEditViewModel>("StaffMemberFields_Edit", model =>
+        void Populate(StaffEditViewModel model)
         {
             model.StaffMemberId = staff.ItemId;
             model.DisplayName = string.IsNullOrEmpty(values.UserId) ? values.DisplayName : staff.DisplayName ?? values.DisplayName;
@@ -197,11 +197,19 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
             model.EmploymentTypeOptions = StaffSelectLists.EmploymentTypes(S, values.EmploymentType);
             model.StatusOptions = StaffSelectLists.Statuses(S, values.Status);
             model.TimeZoneOptions = timeZoneOptions;
-        }).Location("Content:1");
+        }
+
+        // One shape per card, all of the same editor values, so the fields are bound once.
+        var person = Initialize<StaffEditViewModel>("StaffMemberPerson_Edit", Populate)
+            .Location(l => l.Zone("Content", "1").Card(S["Person"], "10"));
+        var employment = Initialize<StaffEditViewModel>("StaffMemberEmployment_Edit", Populate)
+            .Location(l => l.Zone("Content", "2").Card(S["Employment"], "20"));
+        var place = Initialize<StaffEditViewModel>("StaffMemberPlace_Edit", Populate)
+            .Location(l => l.Zone("Content", "3").Card(S["Place"], "30"));
 
         if (capabilityOptions.Count == 0)
         {
-            return fields;
+            return Combine(person, employment, place);
         }
 
         // Its own shape, so a theme or module can move, replace or hide the card.
@@ -209,9 +217,9 @@ internal sealed class StaffMemberDisplayDriver : DisplayDriver<StaffMember>
         {
             model.Capabilities = values.Capabilities;
             model.CapabilityOptions = capabilityOptions;
-        }).Location("Content:20");
+        }).Location(l => l.Zone("Content", "20").Card(S["Capabilities"], "50"));
 
-        return Combine(fields, capabilities);
+        return Combine(person, employment, place, capabilities);
     }
 
     private async Task<bool> CanSeeSensitiveAsync()

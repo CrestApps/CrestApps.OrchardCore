@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -9,6 +10,17 @@ namespace CrestApps.OrchardCore.Learning.Lti.Deployments;
 /// </summary>
 internal sealed class LearningExternalToolsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, LearningExternalToolsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LearningExternalToolsDeploymentStepDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public LearningExternalToolsDeploymentStepDisplayDriver(IStringLocalizer<LearningExternalToolsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc/>
     public override Task<IDisplayResult> DisplayAsync(LearningExternalToolsDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
@@ -17,5 +29,5 @@ internal sealed class LearningExternalToolsDeploymentStepDisplayDriver : Display
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(LearningExternalToolsDeploymentStep step, BuildEditorContext context)
-        => View("LearningExternalToolsDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("LearningExternalToolsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["External Tools"], "10"));
 }

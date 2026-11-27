@@ -1,0 +1,27 @@
+@model TimeOffAllotmentEditViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["People who may be off"]</label>
+    <div class="ocat-end">
+        <div class="d-flex flex-wrap gap-2">
+            @{
+                var days = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+            }
+            @for (var index = 0; index < 7; index++)
+            {
+                <div style="width: 5.5rem">
+                    <label for="Slots_@index" class="form-label small mb-1">@System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetAbbreviatedDayName(days[index])</label>
+                    <input type="number" min="0" name="Slots[@index]" id="Slots_@index" value="@Model.Slots.ElementAtOrDefault(index)" class="form-control" />
+                </div>
+            }
+        </div>
+        <span class="hint">@T["How many people may be off each day of the week."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Dates" class="ocat-label">@T["Other numbers on dates"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Dates" class="form-control font-monospace" rows="3" placeholder="2026-12-24 = 1&#10;2026-12-31 = 0"></textarea>
+        <span class="hint">@T["Optional. One per line: a date, an equals sign and the number of people on that date."]</span>
+    </div>
+</div>

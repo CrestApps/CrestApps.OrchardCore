@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 
 namespace CrestApps.OrchardCore.TimeTracker.Controllers;
@@ -31,6 +33,9 @@ public sealed class TimeSettingsController : Controller
     private readonly TimeStageManager _stages;
     private readonly TimeCategoryManager _categories;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<TimeStageEditViewModel> _stageDisplayManager;
+    private readonly IDisplayManager<TimeCategoryEditViewModel> _categoryDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -38,12 +43,24 @@ public sealed class TimeSettingsController : Controller
     /// <summary>
     /// Initializes a new instance of the <see cref="TimeSettingsController"/> class.
     /// </summary>
-    public TimeSettingsController(IAuthorizationService authorizationService, TimeStageManager stages, TimeCategoryManager categories, INotifier notifier, IHtmlLocalizer<TimeSettingsController> htmlLocalizer, IStringLocalizer<TimeSettingsController> stringLocalizer)
+    public TimeSettingsController(
+        IAuthorizationService authorizationService,
+        TimeStageManager stages,
+        TimeCategoryManager categories,
+        INotifier notifier,
+        IDisplayManager<TimeStageEditViewModel> stageDisplayManager,
+        IDisplayManager<TimeCategoryEditViewModel> categoryDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
+        IHtmlLocalizer<TimeSettingsController> htmlLocalizer,
+        IStringLocalizer<TimeSettingsController> stringLocalizer)
     {
         _authorizationService = authorizationService;
         _stages = stages;
         _categories = categories;
         _notifier = notifier;
+        _stageDisplayManager = stageDisplayManager;
+        _categoryDisplayManager = categoryDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -111,6 +128,7 @@ public sealed class TimeSettingsController : Controller
         var model = new TimeStageEditViewModel { Id = id, Name = stage.Name, Code = stage.Code, Color = stage.Color ?? Palette((await _stages.GetAllAsync()).Count()), Position = stage.Position, CategoryIds = [.. stage.CategoryIds], SelfService = stage.SelfService, Enabled = stage.Enabled };
 
         await PopulateAsync(model);
+        model.Editor = await _stageDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
 
         return View(model);
     }
@@ -136,6 +154,9 @@ public sealed class TimeSettingsController : Controller
             return NotFound();
         }
 
+        await PopulateAsync(form);
+        form.Editor = await _stageDisplayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
+
         stage.Name = form.Name?.Trim();
         stage.Code = string.IsNullOrWhiteSpace(form.Code) ? null : form.Code.Trim().ToUpperInvariant();
         stage.Color = string.IsNullOrWhiteSpace(form.Color) ? null : form.Color.Trim();
@@ -153,8 +174,6 @@ public sealed class TimeSettingsController : Controller
 
         if (!ModelState.IsValid)
         {
-            await PopulateAsync(form);
-
             return View(form);
         }
 
@@ -190,7 +209,11 @@ public sealed class TimeSettingsController : Controller
             return NotFound();
         }
 
-        return View(new TimeCategoryEditViewModel { Id = id, Name = category.Name, Code = category.Code, Color = category.Color ?? Palette((await _categories.GetAllAsync()).Count()), Position = category.Position, Factor = category.Factor, Enabled = category.Enabled });
+        var model = new TimeCategoryEditViewModel { Id = id, Name = category.Name, Code = category.Code, Color = category.Color ?? Palette((await _categories.GetAllAsync()).Count()), Position = category.Position, Factor = category.Factor, Enabled = category.Enabled };
+
+        model.Editor = await _categoryDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
+
+        return View(model);
     }
 
     /// <summary>
@@ -213,6 +236,8 @@ public sealed class TimeSettingsController : Controller
         {
             return NotFound();
         }
+
+        form.Editor = await _categoryDisplayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
 
         category.Name = form.Name?.Trim();
         category.Code = string.IsNullOrWhiteSpace(form.Code) ? null : form.Code.Trim().ToUpperInvariant();

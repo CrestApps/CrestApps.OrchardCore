@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
@@ -59,6 +61,22 @@ public sealed class BankAccountStatusChangedEvent : EventActivity
 /// </summary>
 public sealed class BankAccountStatusChangedEventDisplayDriver : ActivityDisplayDriver<BankAccountStatusChangedEvent, BankAccountStatusChangedEventViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="BankAccountStatusChangedEventDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public BankAccountStatusChangedEventDisplayDriver(IStringLocalizer<BankAccountStatusChangedEventDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(BankAccountStatusChangedEvent activity, BuildEditorContext context)
+        => Initialize<BankAccountStatusChangedEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+
     /// <inheritdoc />
     protected override void EditActivity(BankAccountStatusChangedEvent activity, BankAccountStatusChangedEventViewModel model)
         => model.Status = activity.Status;

@@ -47,15 +47,23 @@ internal sealed class FtpFileSourceDisplayDriver : FtpConnectionDisplayDriverBas
             return null;
         }
 
-        return Initialize<FtpFileSourceViewModel>("FtpFileSource_Edit", model =>
-        {
-            var folder = fileSource.GetOrCreate<RemoteFileSourceMetadata>();
-            model.RemoteRootPath = folder.RootPath;
-            model.RemoteRecursive = folder.Recursive;
-            model.RemoteMaxItems = folder.MaxItems;
+        return Combine(
+            Initialize<FtpFileSourceViewModel>("FtpFileSourceServer_Edit", model => Populate(fileSource, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Server"], "40")),
+            Initialize<FtpFileSourceViewModel>("FtpFileSourceFolder_Edit", model => Populate(fileSource, model))
+                .Location(l => l.Zone("Content", "5.1").Card(S["Folder"], "50")),
+            Initialize<FtpFileSourceViewModel>("FtpFileSourceConnection_Edit", model => Populate(fileSource, model))
+                .Location(l => l.Zone("Content", "5.2").Card(S["Connection Options"], "60")));
+    }
 
-            PopulateConnectionFields(fileSource.GetOrCreate<FtpConnectionMetadata>(), model);
-        }).Location("Content:5");
+    private static void Populate(FileSource fileSource, FtpFileSourceViewModel model)
+    {
+        var folder = fileSource.GetOrCreate<RemoteFileSourceMetadata>();
+        model.RemoteRootPath = folder.RootPath;
+        model.RemoteRecursive = folder.Recursive;
+        model.RemoteMaxItems = folder.MaxItems;
+
+        PopulateConnectionFields(fileSource.GetOrCreate<FtpConnectionMetadata>(), model);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(FileSource fileSource, UpdateEditorContext context)

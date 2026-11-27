@@ -25,9 +25,9 @@ The activity offers two outcomes:
 - **Matched** - the published event matches the selected type, or **Any event type** is selected.
 - **Ignored** - the published event does not match the selected type.
 
-When a workflow starts, the triggering event is available on the workflow input, including `EventType`, `InteractionId`, `AggregateType`, `AggregateId`, `ActorId`, `ActorType`, `AgentId`, `AgentUserId`, and `SourceComponent`. Task activities read these values through Liquid expressions such as `{{ Workflow.Input.InteractionId }}`.
+When a workflow starts, the triggering event is available on the workflow input, including `EventType`, `InteractionId`, `AggregateType`, `AggregateId`, `ActorId`, `ActorType`, `AgentId`, `AgentUserId`, `AgentUserName`, and `SourceComponent`. Task activities read these values through Liquid expressions such as `{{ Workflow.Input.InteractionId }}`.
 
-`ActorId` and `ActorType` say who made the change: the agent, a supervisor, a workflow, the telephony provider, or the platform (`system`). `AgentId` (the agent profile) and `AgentUserId` (the agent's user) say which agent the change is about, whoever made it. A workflow that acts on the agent, such as **Set Agent Presence**, reads `{{ Workflow.Input.AgentUserId }}`: when the platform reserves an agent or starts their wrap-up, the actor is the platform, not the agent.
+`ActorId` and `ActorType` say who made the change: the agent, a supervisor, a workflow, the telephony provider, or the platform (`system`). `AgentId` (the agent profile), `AgentUserId` (the agent's user) and `AgentUserName` (that user's name) say which agent the change is about, whoever made it. When the event's payload names no agent, they come from the call the event is about: the agent a Power or Progressive dial reserved before dialing, or the agent a Predictive call was connected to once a person answered. A Predictive call nobody answered never had an agent, so they are empty. A workflow that acts on the agent, such as **Set Agent Presence**, reads `{{ Workflow.Input.AgentUserId }}`: when the platform reserves an agent or starts their wrap-up, the actor is the platform, not the agent.
 
 ### Event payloads used for follow-ups
 

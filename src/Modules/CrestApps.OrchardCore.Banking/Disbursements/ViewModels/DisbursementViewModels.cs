@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Banking.Disbursements.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Banking.Disbursements.ViewModels;
 
@@ -180,6 +181,12 @@ public class DisbursementReturnsViewModel
     /// </summary>
     [BindNever]
     public DisbursementImportResult Result { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of the page's fields, built by display drivers so they are grouped in cards by placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

@@ -32,6 +32,13 @@ public sealed class ScheduleDialerRetryTaskDisplayDriver : ActivityDisplayDriver
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(ScheduleDialerRetryTask activity, BuildEditorContext context)
+    {
+        return Initialize<ScheduleDialerRetryTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(ScheduleDialerRetryTask activity, ScheduleDialerRetryTaskViewModel model)
     {
         model.ActivityItemId = activity.ActivityItemId;

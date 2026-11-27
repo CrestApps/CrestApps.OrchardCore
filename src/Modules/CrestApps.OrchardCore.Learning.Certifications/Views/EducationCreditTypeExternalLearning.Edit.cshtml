@@ -1,0 +1,11 @@
+@model EducationCreditTypeEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="AllowExternalLearning" class="form-check-input" />
+            <label asp-for="AllowExternalLearning" class="form-check-label">@T["People can record external learning of this type"]</label>
+            <span class="hint dashed">@T["They record learning done elsewhere with evidence on My education credits; a reviewer accepts it."]</span>
+        </div>
+    </div>
+</div>

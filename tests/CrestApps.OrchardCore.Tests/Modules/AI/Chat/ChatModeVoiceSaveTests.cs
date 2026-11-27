@@ -37,7 +37,7 @@ public sealed class ChatModeVoiceSaveTests
             null,
             Mock.Of<ISiteService>(),
             Mock.Of<IRealtimeVoiceResolver>(),
-            Mock.Of<IStringLocalizer<AIProfileChatModeDisplayDriver>>());
+            new PassThroughLocalizer<AIProfileChatModeDisplayDriver>());
         var profile = new AIProfile { Type = AIProfileType.Chat };
 
         // Act
@@ -58,7 +58,7 @@ public sealed class ChatModeVoiceSaveTests
             null,
             Mock.Of<ISiteService>(),
             Mock.Of<IRealtimeVoiceResolver>(),
-            Mock.Of<IStringLocalizer<AIProfileChatModeDisplayDriver>>());
+            new PassThroughLocalizer<AIProfileChatModeDisplayDriver>());
         var profile = new AIProfile { Type = AIProfileType.Chat };
         profile.AlterSettings<ChatModeProfileSettings>(settings => settings.VoiceName = "coral");
 
@@ -82,7 +82,7 @@ public sealed class ChatModeVoiceSaveTests
             null,
             Mock.Of<ISiteService>(),
             Mock.Of<IRealtimeVoiceResolver>(),
-            Mock.Of<IStringLocalizer<AIProfileTemplateChatModeDisplayDriver>>());
+            new PassThroughLocalizer<AIProfileTemplateChatModeDisplayDriver>());
         var template = new AIProfileTemplate { Name = "voice-template", Source = AITemplateSources.Profile };
 
         // Act

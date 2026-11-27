@@ -12,6 +12,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -34,6 +36,8 @@ public sealed class CertificationRecordsController : Controller
     private readonly IDisplayNameProvider _displayNameProvider;
     private readonly IClock _clock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<CertificationRecordEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -48,6 +52,8 @@ public sealed class CertificationRecordsController : Controller
     /// <param name="displayNameProvider">The display name provider.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the certificate editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CertificationRecordsController(
@@ -58,6 +64,8 @@ public sealed class CertificationRecordsController : Controller
         IDisplayNameProvider displayNameProvider,
         IClock clock,
         INotifier notifier,
+        IDisplayManager<CertificationRecordEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<CertificationRecordsController> htmlLocalizer,
         IStringLocalizer<CertificationRecordsController> stringLocalizer)
     {
@@ -68,6 +76,8 @@ public sealed class CertificationRecordsController : Controller
         _displayNameProvider = displayNameProvider;
         _clock = clock;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -174,6 +184,7 @@ public sealed class CertificationRecordsController : Controller
         };
 
         await FillAsync(model);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
 
         return View(model);
     }
@@ -206,6 +217,11 @@ public sealed class CertificationRecordsController : Controller
         {
             return await IssuedRecordRefusal();
         }
+
+        model.HeldByWorker = record.SubjectKind == SkillSubjectKind.Staff;
+        model.SubjectName = record.SubjectName;
+        await FillAsync(model);
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(model.Id));
 
         if (record.SubjectKind == SkillSubjectKind.User)
         {
@@ -250,10 +266,6 @@ public sealed class CertificationRecordsController : Controller
 
         if (!ModelState.IsValid)
         {
-            model.HeldByWorker = record.SubjectKind == SkillSubjectKind.Staff;
-            model.SubjectName = record.SubjectName;
-            await FillAsync(model);
-
             return View(model);
         }
 

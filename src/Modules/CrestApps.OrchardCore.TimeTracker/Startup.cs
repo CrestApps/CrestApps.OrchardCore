@@ -46,6 +46,9 @@ public sealed class Startup : StartupBase
         services.AddScoped<TimeTrackerTimeZone>();
         services.AddDisplayDriver<TimeEntryRow, TimeEntryRowDisplayDriver>();
         services.AddDisplayDriver<TimeSettingRow, TimeSettingRowDisplayDriver>();
+        services.AddDisplayDriver<TimeEntryEditViewModel, TimeEntryEditDisplayDriver>();
+        services.AddDisplayDriver<TimeStageEditViewModel, TimeStageEditDisplayDriver>();
+        services.AddDisplayDriver<TimeCategoryEditViewModel, TimeCategoryEditDisplayDriver>();
         services.AddNavigationProvider<TimeTrackerAdminMenu>();
     }
 }

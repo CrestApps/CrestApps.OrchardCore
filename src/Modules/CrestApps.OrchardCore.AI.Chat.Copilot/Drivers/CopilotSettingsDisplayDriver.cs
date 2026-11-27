@@ -106,7 +106,7 @@ public sealed class CopilotSettingsDisplayDriver : SiteDisplayDriver<CopilotSett
                 new SelectListItem(S["Responses (GPT-5 series)"], "responses"),
             ];
         })
-        .Location("Content:8%Copilot;1")
+        .Location(l => l.Zone("Content", "8").Card(S["Authentication"], "1"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, CopilotPermissionProvider.ManageCopilotSettings));
     }

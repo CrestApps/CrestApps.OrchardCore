@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Json.Schema;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -229,6 +230,13 @@ public class WorkOrdersDeploymentStepViewModel
 
 internal sealed class WorkOrdersDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, WorkOrdersDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public WorkOrdersDeploymentStepDisplayDriver(IStringLocalizer<WorkOrdersDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(WorkOrdersDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("WorkOrdersDeploymentStep_Summary", step).Location("Summary", "Content"),
@@ -238,7 +246,7 @@ internal sealed class WorkOrdersDeploymentStepDisplayDriver : DisplayDriver<Depl
         => Initialize<WorkOrdersDeploymentStepViewModel>("WorkOrdersDeploymentStep_Fields_Edit", model =>
         {
             model.IncludeAgreements = step.IncludeAgreements;
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Work Order Settings"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(WorkOrdersDeploymentStep step, UpdateEditorContext context)
     {

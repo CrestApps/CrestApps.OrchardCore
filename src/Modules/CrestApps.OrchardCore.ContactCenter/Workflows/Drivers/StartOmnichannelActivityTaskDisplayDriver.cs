@@ -32,6 +32,13 @@ public sealed class StartOmnichannelActivityTaskDisplayDriver : ActivityDisplayD
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(StartOmnichannelActivityTask activity, BuildEditorContext context)
+    {
+        return Initialize<StartOmnichannelActivityTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
+    /// <inheritdoc/>
     protected override void EditActivity(StartOmnichannelActivityTask activity, StartOmnichannelActivityTaskViewModel model)
     {
         model.ActivityItemId = activity.ActivityItemId;

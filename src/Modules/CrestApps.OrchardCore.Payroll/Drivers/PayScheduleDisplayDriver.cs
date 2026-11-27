@@ -51,7 +51,7 @@ internal sealed class PayScheduleDisplayDriver : DisplayDriver<PaySchedule>
 
     public override IDisplayResult Edit(PaySchedule schedule, BuildEditorContext context)
     {
-        return Initialize<PayScheduleViewModel>("PayScheduleFields_Edit", async model =>
+        void Fill(PayScheduleViewModel model)
         {
             model.Name = schedule.Name;
             model.Frequency = schedule.Frequency.ToString();
@@ -66,21 +66,29 @@ internal sealed class PayScheduleDisplayDriver : DisplayDriver<PaySchedule>
             model.ApprovalLeadDays = schedule.ApprovalLeadDays;
             model.ExtraPayPeriod = schedule.ExtraPayPeriod.ToString();
             model.Enabled = schedule.Enabled;
+        }
 
-            // The next periods from today in the site's time zone, so the schedule can be checked before saving.
-            if (!context.IsNew)
+        return Combine(
+            Initialize<PayScheduleViewModel>("PayScheduleFields_Edit", Fill)
+                .Location(l => l.Zone("Content", "1").Card(S["Schedule"], "10")),
+            Initialize<PayScheduleViewModel>("PayScheduleDates_Edit", async model =>
             {
-                var day = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
+                Fill(model);
 
-                for (var i = 0; i < 4; i++)
+                // The next periods from today in the site's time zone, so the schedule can be checked before saving.
+                if (!context.IsNew)
                 {
-                    var (start, end) = schedule.PeriodOn(day);
+                    var day = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
 
-                    model.NextPeriods.Add(S["{0} to {1}, paid {2}", start.ToString("d"), end.ToString("d"), schedule.PayDateFor(end).ToString("d")].Value);
-                    day = end.AddDays(1);
+                    for (var i = 0; i < 4; i++)
+                    {
+                        var (start, end) = schedule.PeriodOn(day);
+
+                        model.NextPeriods.Add(S["{0} to {1}, paid {2}", start.ToString("d"), end.ToString("d"), schedule.PayDateFor(end).ToString("d")].Value);
+                        day = end.AddDays(1);
+                    }
                 }
-            }
-        }).Location("Content:1");
+            }).Location(l => l.Zone("Content", "1").Card(S["Pay Date"], "20")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(PaySchedule schedule, UpdateEditorContext context)

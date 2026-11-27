@@ -62,37 +62,77 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
         var previous = context.PreviousActivity;
         var followUp = context.FollowUpActivity;
 
+        // A follow-up the subject's action gave to an agent is that agent's call: the dialer does not take it in.
         if (previous is null ||
             followUp is null ||
             context.Cancel ||
-            context.HasNamedOwner ||
-            !DialerActivitySourceHelper.IsDialerSource(previous.Source))
+            context.Route == FollowUpRoutingTarget.Agent ||
+            (context.HasNamedOwner && context.Route != FollowUpRoutingTarget.Dialer))
         {
             return;
         }
 
-        var previousItem = await _queueItemManager.FindByActivityIdAsync(previous.ItemId, cancellationToken);
+        var routedToDialer = context.Route == FollowUpRoutingTarget.Dialer;
 
-        if (previousItem is null ||
-            string.IsNullOrEmpty(previousItem.QueueId) ||
-            string.IsNullOrEmpty(previousItem.DialerProfileId) ||
-            QueueCallbackDialerProfile.IsCallbackProfile(previousItem.DialerProfileId))
+        if (!routedToDialer && !DialerActivitySourceHelper.IsDialerSource(previous.Source))
         {
-            _logger.LogWarning(
-                "The next attempt of dialer activity '{ActivityId}' was created, but the queue and dialer profile the first attempt was dialed with could not be found, so it was not queued for the dialer.",
-                previous.ItemId.SanitizeLogValue());
-
             return;
         }
 
-        var profile = await _profileReader.FindByIdAsync(previousItem.DialerProfileId, cancellationToken);
+        var previousItem = DialerActivitySourceHelper.IsDialerSource(previous.Source)
+            ? await _queueItemManager.FindByActivityIdAsync(previous.ItemId, cancellationToken)
+            : null;
+
+        string queueId;
+        string dialerProfileId;
+
+        if (routedToDialer)
+        {
+            // The subject's action named the campaign and profile, whoever carried the activity it follows.
+            if (string.IsNullOrEmpty(followUp.CampaignId) || string.IsNullOrEmpty(followUp.DialerProfileId))
+            {
+                _logger.LogWarning(
+                    "The follow-up of activity '{ActivityId}' was sent to the dialer, but it has no campaign or dialer profile, so it was not queued for the dialer.",
+                    previous.ItemId.SanitizeLogValue());
+
+                return;
+            }
+
+            queueId = ContactCenterConstants.CampaignQueue.CreateId(followUp.CampaignId);
+            dialerProfileId = followUp.DialerProfileId;
+        }
+        else
+        {
+            if (previousItem is null ||
+                string.IsNullOrEmpty(previousItem.QueueId) ||
+                string.IsNullOrEmpty(previousItem.DialerProfileId) ||
+                QueueCallbackDialerProfile.IsCallbackProfile(previousItem.DialerProfileId))
+            {
+                _logger.LogWarning(
+                    "The next attempt of dialer activity '{ActivityId}' was created, but the queue and dialer profile the first attempt was dialed with could not be found, so it was not queued for the dialer.",
+                    previous.ItemId.SanitizeLogValue());
+
+                return;
+            }
+
+            dialerProfileId = previousItem.DialerProfileId;
+
+            // A subject action that moves the follow-up to another campaign queues it on that campaign's dialer queue.
+            queueId = !string.IsNullOrEmpty(followUp.CampaignId) &&
+                !string.Equals(followUp.CampaignId, previous.CampaignId, StringComparison.Ordinal) &&
+                ContactCenterConstants.IsCampaignQueue(previousItem.QueueId)
+                    ? ContactCenterConstants.CampaignQueue.CreateId(followUp.CampaignId)
+                    : previousItem.QueueId;
+        }
+
+        var profile = await _profileReader.FindByIdAsync(dialerProfileId, cancellationToken);
 
         if (profile is null)
         {
             _logger.LogWarning(
                 "The next attempt of dialer activity '{ActivityId}' was created, but dialer profile '{DialerProfileId}' no longer exists, so it was not queued for the dialer.",
                 previous.ItemId.SanitizeLogValue(),
-                previousItem.DialerProfileId.SanitizeLogValue());
+                dialerProfileId.SanitizeLogValue());
 
             return;
         }
@@ -132,8 +172,6 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
         }
 
         var activityItemId = followUp.ItemId;
-        var queueId = previousItem.QueueId;
-        var dialerProfileId = previousItem.DialerProfileId;
 
         // Recorded on the attempt itself so the activity screens can say which dialer will call it.
         followUp.DialerProfileId = dialerProfileId;
@@ -141,7 +179,7 @@ public sealed class DialerFollowUpActivityHandler : IFollowUpActivityHandler
         // A person who answered the last call and found nobody there is not called again without an agent waiting for
         // them: the follow-up is a new activity, so the mark travels with its queue item. Once set it stays on every later
         // attempt of the contact, the safe reading of the rules on repeat calls after an abandoned one.
-        var requiresReservedAgent = previousItem.RequiresReservedAgent || await WasAbandonedAsync(previous.ItemId, cancellationToken);
+        var requiresReservedAgent = previousItem?.RequiresReservedAgent == true || await WasAbandonedAsync(previous.ItemId, cancellationToken);
 
         // Queueing commits, and the follow-up is only saved after this returns, so it is queued once it is.
         if (!_scopeExecutor.ScheduleAfterCommit<IActivityQueueService>(queueService =>

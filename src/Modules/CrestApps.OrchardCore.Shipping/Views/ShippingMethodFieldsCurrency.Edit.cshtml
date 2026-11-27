@@ -1,0 +1,19 @@
+@model ShippingMethodViewModel
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+    <div class="ocat-limited">
+        <select asp-for="Currency" asp-items="Model.Currencies" class="form-select">
+            <option value="">@T["Any"]</option>
+        </select>
+        <span class="hint">@T["The currency the amounts are in. The method is offered only for orders in it. Leave it on Any when the store sells in one currency."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="TaxCategoryCode" class="ocat-label">@T["Tax category code"]</label>
+    <div class="ocat-limited">
+        <input asp-for="TaxCategoryCode" class="form-control" />
+        <span class="hint">@T["How the shipping charge is taxed, by tax category code. Leave it empty for the store's default."]</span>
+    </div>
+</div>

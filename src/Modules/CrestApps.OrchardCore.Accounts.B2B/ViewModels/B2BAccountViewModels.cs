@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Orders.Core.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Accounts.B2B.ViewModels;
 
@@ -159,4 +160,10 @@ public class PriceListEditViewModel
 
     [BindNever]
     public string StoreCurrency { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor, the fields of the price list in their cards, built by the display drivers.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

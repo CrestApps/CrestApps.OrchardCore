@@ -45,7 +45,7 @@ internal sealed class SchedulingResourceFieldsDisplayDriver : DisplayDriver<Sche
 
     public override IDisplayResult Edit(SchedulingResource resource, BuildEditorContext context)
     {
-        return Initialize<SchedulingResourceViewModel>("SchedulingResourceFields_Edit", async model =>
+        return Build(async model =>
         {
             model.Name = resource.Name;
             model.Kind = resource.Kind.ToString();
@@ -61,7 +61,7 @@ internal sealed class SchedulingResourceFieldsDisplayDriver : DisplayDriver<Sche
             model.Enabled = resource.Enabled;
 
             await FillAsync(model);
-        }).Location("Content:1");
+        });
     }
 
     public override async Task<IDisplayResult> UpdateAsync(SchedulingResource resource, UpdateEditorContext context)
@@ -102,7 +102,7 @@ internal sealed class SchedulingResourceFieldsDisplayDriver : DisplayDriver<Sche
         resource.Enabled = posted.Enabled;
 
         // The form shows what was posted, so a line that can't be read stays as typed.
-        return Initialize<SchedulingResourceViewModel>("SchedulingResourceFields_Edit", async model =>
+        return Build(async model =>
         {
             model.Name = posted.Name;
             model.Kind = posted.Kind;
@@ -116,7 +116,17 @@ internal sealed class SchedulingResourceFieldsDisplayDriver : DisplayDriver<Sche
             model.Enabled = posted.Enabled;
 
             await FillAsync(model);
-        }).Location("Content:1");
+        });
+    }
+
+    // One shape per card, each a copy of the same view model so the fields bind once.
+    private CombinedResult Build(Func<SchedulingResourceViewModel, ValueTask> populate)
+    {
+        return Combine(
+            Initialize<SchedulingResourceViewModel>("SchedulingResourceFields_Edit", populate)
+                .Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<SchedulingResourceViewModel>("SchedulingResourceHours_Edit", populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Hours"], "20")));
     }
 
     private string Key(string name)

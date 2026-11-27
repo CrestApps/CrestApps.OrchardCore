@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Scheduling.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Scheduling.ViewModels;
 
@@ -55,4 +56,8 @@ public class NewAppointmentViewModel
     /// reCAPTCHA feature on and set up).
     /// </summary>
     public bool ShowReCaptcha { get; set; }
+
+    /// <summary>Gets or sets the editor of the staff booking page, built by the display drivers of this view model.</summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

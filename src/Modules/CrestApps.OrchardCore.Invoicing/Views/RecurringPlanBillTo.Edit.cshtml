@@ -1,0 +1,46 @@
+@model RecurringPlanEditViewModel
+
+@{
+    var billToJson = string.IsNullOrEmpty(Model.BillTo)
+        ? "[]"
+        : System.Text.Json.JsonSerializer.Serialize(new[] { new { value = Model.BillTo, text = Model.BillToName ?? Model.BillTo, selected = true } });
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="BillTo">
+    <label class="ocat-label">@T["Customer"]</label>
+    <div class="ocat-end">
+        @await Component.InvokeAsync("ItemSelector", new
+        {
+            id = "recurring-bill-to",
+            inputName = Html.NameFor(m => m.BillTo).ToString(),
+            endpoint = Model.PartySearchEndpoint,
+            initialItemsJson = billToJson,
+            multiple = false,
+            enableSearch = true,
+            buttonText = T["Find a customer"].Value,
+            searchPlaceholder = T["Search users, customers and accounts"].Value,
+            emptyResultsText = T["No one found."].Value,
+            noSelectionText = T["No one chosen."].Value,
+            selectedItemsLabel = T["Bill to"].Value,
+            availableItemsLabel = T["Found"].Value,
+            smallButton = false,
+        })
+        <span class="hint">@T["A user, customer or business account. Leave it empty to bill someone by name and e-mail only."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ContactName">
+    <label asp-for="ContactName" class="ocat-label">@T["Name on the invoices"]</label>
+    <div class="ocat-end">
+        <input asp-for="ContactName" class="form-control" autocomplete="off" maxlength="255" />
+        <span class="hint">@T["Left empty, the customer's billing name is used."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="ContactEmail">
+    <label asp-for="ContactEmail" class="ocat-label">@T["E-mail"]</label>
+    <div class="ocat-end">
+        <input asp-for="ContactEmail" type="email" class="form-control" autocomplete="off" maxlength="255" />
+        <span class="hint">@T["Where the invoices are sent."]</span>
+    </div>
+</div>

@@ -54,6 +54,7 @@ using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
 using OrchardCore.Workflows.Helpers;
+using CrestApps.OrchardCore.Orders.ViewModels;
 
 namespace CrestApps.OrchardCore.Orders;
 
@@ -124,6 +125,7 @@ public sealed class Startup : StartupBase
         services.AddScoped<CheckoutRecoveryService>();
         services.AddSingleton<IBackgroundTask, CheckoutRecoveryBackgroundTask>();
         services.AddDisplayDriver<Order, OrderDisplayDriver>();
+        services.AddDisplayDriver<DraftOrderEditViewModel, DraftOrderEditDisplayDriver>();
         services.AddNavigationProvider<OrderSettingsAdminMenu>();
         services.AddSiteDisplayDriver<OrderSettingsDisplayDriver>();
         services.AddSiteDisplayDriver<OrderEmailTemplateSettingsDisplayDriver>();
@@ -284,6 +286,8 @@ public sealed class GiftCardsStartup : StartupBase
         services.AddContentPart<GiftCardPart>()
             .UseDisplayDriver<GiftCardPartDisplayDriver>();
         services.AddDisplayDriver<GiftCard, GiftCardDisplayDriver>();
+        services.AddDisplayDriver<GiftCardCreateViewModel, GiftCardCreateDisplayDriver>();
+        services.AddDisplayDriver<GiftCardEditViewModel, GiftCardEditDisplayDriver>();
         services.AddScoped<GiftCardCheckoutService>();
         services.AddDisplayDriver<CheckoutFlow, GiftCardCheckoutFlowDisplayDriver>();
         services.AddPermissionProvider<GiftCardPermissionsProvider>();

@@ -54,7 +54,7 @@ public sealed class AICompletionWithConfigMcpConnectionsDisplayDriver : DisplayD
                     IsSelected = interaction.McpConnectionIds?.Contains(entry.ItemId) ?? false,
                 }).OrderBy(entry => entry.DisplayText)
                 .ToArray();
-        }).Location("Content:2#Capabilities;3");
+        }).Location(l => l.Zone("Content", "2").Tab(S["Capabilities"], "3").Card(S["MCP Connections"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AICompletionWithConfigTask activity, UpdateEditorContext context)

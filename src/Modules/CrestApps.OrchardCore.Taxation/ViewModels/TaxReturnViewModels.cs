@@ -85,6 +85,11 @@ public class TaxReturnDetailsViewModel
     public IShape Display { get; set; }
 
     /// <summary>
+    /// Gets or sets the form that marks the return as filed, built by display drivers.
+    /// </summary>
+    public IShape MarkFiledEditor { get; set; }
+
+    /// <summary>
     /// Gets or sets today, the day a return is marked as filed on by default.
     /// </summary>
     public DateOnly Today { get; set; }

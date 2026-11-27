@@ -1,0 +1,19 @@
+@model CoverageEditViewModel
+
+<div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /></div></div>
+<div class="ocat-wrapper">
+    <label asp-for="TeamId" class="ocat-label ocat-label-required">@T["Team"]</label>
+    <div class="ocat-end">
+        <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 24rem">
+            <option value="">@T["Choose a team"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="SkillId" class="ocat-label">@T["Skill"]</label>
+    <div class="ocat-end">
+        <select asp-for="SkillId" asp-items="Model.SkillOptions" class="form-select" style="max-width: 24rem">
+            <option value="">@T["Anyone on the team"]</option>
+        </select>
+    </div>
+</div>

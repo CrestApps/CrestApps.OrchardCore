@@ -23,6 +23,7 @@ using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using OrchardCore.Settings;
 using YesSql;
+using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Invoicing.Controllers;
 
@@ -48,6 +49,8 @@ public sealed class EstimatesAdminController : Controller
     private readonly ILocalClock _localClock;
     private readonly IAuthorizationService _authorizationService;
     private readonly ISession _session;
+    private readonly IDisplayManager<EstimateEditViewModel> _editorManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -63,6 +66,8 @@ public sealed class EstimatesAdminController : Controller
         ILocalClock localClock,
         IAuthorizationService authorizationService,
         ISession session,
+        IDisplayManager<EstimateEditViewModel> editorManager,
+        IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
         IHtmlLocalizer<EstimatesAdminController> htmlLocalizer,
         IStringLocalizer<EstimatesAdminController> stringLocalizer)
@@ -76,6 +81,8 @@ public sealed class EstimatesAdminController : Controller
         _localClock = localClock;
         _authorizationService = authorizationService;
         _session = session;
+        _editorManager = editorManager;
+        _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -487,6 +494,8 @@ public sealed class EstimatesAdminController : Controller
 
     private async Task<IActionResult> SaveAsync(Estimate estimate, EstimateEditViewModel model, string submit, bool isNew)
     {
+        model.Editor = await _editorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
+
         EstimateDraftEditor.Apply(model, estimate);
 
         if (!string.IsNullOrEmpty(estimate.Currency) && estimate.Currency.Length != 3)
@@ -569,6 +578,8 @@ public sealed class EstimatesAdminController : Controller
         {
             model.BillToName = await _parties.GetNameAsync(party) ?? model.BillTo;
         }
+
+        model.Editor = await _editorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(model.ItemId));
 
         return model;
     }

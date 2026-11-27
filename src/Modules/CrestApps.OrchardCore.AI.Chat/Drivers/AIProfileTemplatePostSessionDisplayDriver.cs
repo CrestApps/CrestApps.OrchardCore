@@ -106,7 +106,7 @@ public sealed class AIProfileTemplatePostSessionDisplayDriver : DisplayDriver<AI
                     .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
             }
-        }).Location("Content:10#Data Processing & Metrics;10")
+        }).Location(l => l.Zone("Content", "10").Tab(S["Data Processing & Metrics"], "10").Card(S["Post-Session Processing"], "10"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

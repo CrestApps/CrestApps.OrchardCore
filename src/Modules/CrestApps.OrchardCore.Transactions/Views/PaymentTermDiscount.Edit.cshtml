@@ -1,0 +1,18 @@
+@model PaymentTermViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DiscountPercent">
+    <label asp-for="DiscountPercent" class="ocat-label">@T["Discount (%)"]</label>
+    <div class="ocat-end">
+        <input asp-for="DiscountPercent" type="number" min="0" max="99.99" step="0.01" class="form-control" style="max-width: 10rem" />
+        <span asp-validation-for="DiscountPercent" class="text-danger"></span>
+        <span class="hint">@T["Optional. Taken off what is owed when it is paid within the days below."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="DiscountDays">
+    <label asp-for="DiscountDays" class="ocat-label">@T["Offered for (days)"]</label>
+    <div class="ocat-end">
+        <input asp-for="DiscountDays" type="number" min="1" max="3650" class="form-control" style="max-width: 10rem" />
+        <span asp-validation-for="DiscountDays" class="text-danger"></span>
+        <span class="hint">@T["The number of days after the issue date, the last day included."]</span>
+    </div>
+</div>

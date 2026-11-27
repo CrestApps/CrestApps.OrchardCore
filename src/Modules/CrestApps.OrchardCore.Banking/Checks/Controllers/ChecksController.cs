@@ -54,6 +54,10 @@ public sealed class ChecksController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IDisplayManager<CheckRecord> _displayManager;
+    private readonly IDisplayManager<CheckVoidViewModel> _voidDisplayManager;
+    private readonly IDisplayManager<CheckReprintViewModel> _reprintDisplayManager;
+    private readonly IDisplayManager<CheckNextNumberViewModel> _nextNumberDisplayManager;
+    private readonly IDisplayManager<CheckPrintRunViewModel> _printRunDisplayManager;
     private readonly INotifier _notifier;
     private readonly ILocalClock _localClock;
 
@@ -71,6 +75,10 @@ public sealed class ChecksController : Controller
         IAuthorizationService authorizationService,
         IUpdateModelAccessor updateModelAccessor,
         IDisplayManager<CheckRecord> displayManager,
+        IDisplayManager<CheckVoidViewModel> voidDisplayManager,
+        IDisplayManager<CheckReprintViewModel> reprintDisplayManager,
+        IDisplayManager<CheckNextNumberViewModel> nextNumberDisplayManager,
+        IDisplayManager<CheckPrintRunViewModel> printRunDisplayManager,
         INotifier notifier,
         ILocalClock localClock,
         IHtmlLocalizer<ChecksController> htmlLocalizer,
@@ -86,6 +94,10 @@ public sealed class ChecksController : Controller
         _authorizationService = authorizationService;
         _updateModelAccessor = updateModelAccessor;
         _displayManager = displayManager;
+        _voidDisplayManager = voidDisplayManager;
+        _reprintDisplayManager = reprintDisplayManager;
+        _nextNumberDisplayManager = nextNumberDisplayManager;
+        _printRunDisplayManager = printRunDisplayManager;
         _notifier = notifier;
         _localClock = localClock;
         H = htmlLocalizer;
@@ -702,11 +714,11 @@ public sealed class ChecksController : Controller
 
         var today = await GetLocalTodayAsync();
 
-        return View(new CheckVoidViewModel
+        return View(await VoidEditorAsync(new CheckVoidViewModel
         {
             Check = check,
             VoidedOn = (check.CheckDate > today ? check.CheckDate : today).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
-        });
+        }));
     }
 
     /// <summary>
@@ -735,7 +747,7 @@ public sealed class ChecksController : Controller
         {
             ModelState.AddModelError(nameof(CheckVoidViewModel.VoidedOn), S["Enter the void date."]);
 
-            return View(new CheckVoidViewModel { Check = check, Reason = reason, VoidedOn = voidedOn });
+            return View(await VoidEditorAsync(new CheckVoidViewModel { Check = check, Reason = reason, VoidedOn = voidedOn }));
         }
 
         var result = hasDate
@@ -757,7 +769,7 @@ public sealed class ChecksController : Controller
                 ModelState.AddModelError(string.Empty, error);
             }
 
-            return View(new CheckVoidViewModel { Check = check, Reason = reason, VoidedOn = voidedOn });
+            return View(await VoidEditorAsync(new CheckVoidViewModel { Check = check, Reason = reason, VoidedOn = voidedOn }));
         }
 
         await NotifyErrorsAsync(result.Errors);
@@ -1024,6 +1036,8 @@ public sealed class ChecksController : Controller
             }
         }
 
+        model.Editor = await _printRunDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         return model;
     }
 
@@ -1110,6 +1124,13 @@ public sealed class ChecksController : Controller
     private async Task<DateOnly> GetLocalTodayAsync()
         => DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
 
+    private async Task<CheckVoidViewModel> VoidEditorAsync(CheckVoidViewModel model)
+    {
+        model.Editor = await _voidDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return model;
+    }
+
     private async Task<CheckReprintViewModel> ReprintViewModelAsync(CheckReprintViewModel model, CheckRecord check)
     {
         model.Check = check;
@@ -1117,6 +1138,7 @@ public sealed class ChecksController : Controller
             .OrderBy(layout => layout.Name, StringComparer.OrdinalIgnoreCase)
             .Select(layout => new SelectListItem(layout.Name, layout.ItemId, layout.ItemId == model.LayoutId))
             .ToList();
+        model.Editor = await _reprintDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return model;
     }
@@ -1134,6 +1156,8 @@ public sealed class ChecksController : Controller
         {
             model.Current.Add((account.Name, await _checkService.GetNextNumberAsync(account.ItemId)));
         }
+
+        model.Editor = await _nextNumberDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return model;
     }

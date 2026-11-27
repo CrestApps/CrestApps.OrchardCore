@@ -1,0 +1,18 @@
+@model CheckPrintRunViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="LayoutId">
+    <label asp-for="LayoutId" class="ocat-label ocat-label-required">@T["Check layout"]</label>
+    <div class="ocat-end">
+        <select asp-for="LayoutId" asp-items="Model.LayoutOptions" class="form-select"></select>
+        <span asp-validation-for="LayoutId" class="text-danger"></span>
+        <span class="hint">@T["The account's default layout is chosen for you when it has one."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="FirstNumber">
+    <label asp-for="FirstNumber" class="ocat-label ocat-label-required">@T["Number on the first sheet"]</label>
+    <div class="ocat-end">
+        <input asp-for="FirstNumber" class="form-control" inputmode="numeric" />
+        <span asp-validation-for="FirstNumber" class="text-danger"></span>
+        <span class="hint">@T["The number printed on the top sheet in the printer. The next sheets get the next numbers. A number another check of the account has is refused."]</span>
+    </div>
+</div>

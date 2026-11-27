@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Workforce.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
 
@@ -204,6 +205,12 @@ public class AdherenceExceptionEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> WorkerOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model, whose fields are grouped in cards by their placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -236,6 +243,12 @@ public class AdherenceRuleSetEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> TeamOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model, whose fields are grouped in cards by their placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

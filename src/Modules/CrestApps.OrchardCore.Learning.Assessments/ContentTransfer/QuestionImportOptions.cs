@@ -77,7 +77,7 @@ internal sealed class QuestionImportOptionsDisplayDriver : DisplayDriver<ImportC
         {
             viewModel.QuestionBankId = model.GetOrCreate<QuestionImportOptionsPart>().QuestionBankId;
             viewModel.Banks = await EditableBanksAsync();
-        }).Location("Content:2");
+        }).Location(l => l.Zone("Content", "2").Card(S["Questions"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ImportContent model, UpdateEditorContext context)

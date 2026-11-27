@@ -28,6 +28,9 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
     private readonly IEnumerable<ISubjectActionHandler> _handlers;
     private readonly IEnumerable<IFollowUpActivityHandler> _followUpHandlers;
     private readonly INamedCatalog<LeadStatus> _leadStatuses;
+    private readonly IActivityDialerContributor _dialerContributor;
+    private readonly IActivityCallAgentResolver _callAgentResolver;
+    private readonly FollowUpOwnerPicker _ownerPicker;
 
     public DefaultSubjectActionExecutor(
         ISourceCatalog<SubjectAction> actionCatalog,
@@ -41,7 +44,10 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         ILogger<DefaultSubjectActionExecutor> logger,
         IEnumerable<ISubjectActionHandler> handlers = null,
         IEnumerable<IFollowUpActivityHandler> followUpHandlers = null,
-        INamedCatalog<LeadStatus> leadStatuses = null)
+        INamedCatalog<LeadStatus> leadStatuses = null,
+        IEnumerable<IActivityDialerContributor> dialerContributors = null,
+        IEnumerable<IActivityCallAgentResolver> callAgentResolvers = null,
+        IEnumerable<FollowUpOwnerPicker> ownerPickers = null)
     {
         _actionCatalog = actionCatalog;
         _subjectFlowSettingsService = subjectFlowSettingsService;
@@ -55,6 +61,9 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         _handlers = handlers ?? [];
         _followUpHandlers = followUpHandlers ?? [];
         _leadStatuses = leadStatuses;
+        _dialerContributor = dialerContributors?.FirstOrDefault();
+        _callAgentResolver = callAgentResolvers?.FirstOrDefault();
+        _ownerPicker = ownerPickers?.FirstOrDefault();
     }
 
     public async Task ExecuteAsync(SubjectActionExecutionContext context, CancellationToken cancellationToken = default)
@@ -306,10 +315,15 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return;
         }
 
+        var route = await ApplyRoutingAsync(action, nextAttempt);
+        await FillMissingOwnerAsync(nextAttempt, action, metadata.AssignmentType, metadata.NormalizedUserName, activity, now);
+
         // Whatever carried the first attempt takes the next one in too -- a dialer campaign queues it again -- or
-        // refuses it when no attempt is left.
+        // refuses it when no attempt is left. A follow-up the action gave to an agent stays off the dialer, and one it
+        // sent to the dialer is queued on its own campaign under its own profile.
         var followUp = new FollowUpActivityContext
         {
+            Route = route,
             PreviousActivity = activity,
             FollowUpActivity = nextAttempt,
             CreatedBy = OmnichannelConstants.ActionTypes.TryAgain,
@@ -414,8 +428,113 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             newActivity.PreferredDestination = OmnichannelHelper.GetPreferredDestenation(context.Contact, _contactMethods.Get(context.Contact), newActivity.Channel);
         }
 
+        // A new activity the action sends to the dialer is queued on its campaign by the same handlers that queue a
+        // dialer retry, so it is dialed under the profile the action names.
+        var newActivityRoute = await ApplyRoutingAsync(action, newActivity);
+        await FillMissingOwnerAsync(newActivity, action, metadata.AssignmentType, metadata.NormalizedUserName, activity, now);
+
+        if (newActivityRoute == FollowUpRoutingTarget.Dialer)
+        {
+            var followUp = new FollowUpActivityContext
+            {
+                PreviousActivity = activity,
+                FollowUpActivity = newActivity,
+                CreatedBy = OmnichannelConstants.ActionTypes.NewActivity,
+                Route = FollowUpRoutingTarget.Dialer,
+                HasChosenSchedule = true,
+            };
+
+            foreach (var handler in _followUpHandlers)
+            {
+                await handler.CreatingAsync(followUp);
+            }
+
+            if (followUp.Cancel)
+            {
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation(
+                        "Did not create the new activity of activity {ActivityId} for the dialer: {Reason}",
+                        activity.ItemId,
+                        followUp.CancelReason);
+                }
+
+                return;
+            }
+        }
+
         await _session.SaveAsync(newActivity, collection: OmnichannelConstants.CollectionName);
         context.CreatedActivities[action.ItemId] = newActivity;
+    }
+
+    /// <summary>
+    /// Routes the follow-up the action created the way the action says: to an agent (off the dialer), to the dialer
+    /// under a profile, or only to another campaign.
+    /// </summary>
+    /// <remarks>
+    /// A call back the dialer placed used to go back to the dialer whatever the subject flow wanted: "Try again" queued
+    /// the next attempt in the same campaign under the same profile. The action can now give the call to an agent, so
+    /// the dialer never calls it again, send manual work to the dialer, or move it to another campaign.
+    /// </remarks>
+    private async Task<FollowUpRoutingTarget> ApplyRoutingAsync(SubjectAction action, OmnichannelActivity followUp)
+    {
+        if (!action.TryGet<FollowUpRoutingMetadata>(out var routing) || !routing.ChangesRouting())
+        {
+            return FollowUpRoutingTarget.SameAsBefore;
+        }
+
+        var campaignId = string.IsNullOrWhiteSpace(routing.CampaignId) ? followUp.CampaignId : routing.CampaignId.Trim();
+
+        switch (routing.Target)
+        {
+            case FollowUpRoutingTarget.Agent:
+                var source = string.IsNullOrWhiteSpace(routing.Source) || !FollowUpRoutes.IsAgentSource(routing.Source)
+                    ? ActivitySources.Manual
+                    : routing.Source.Trim();
+
+                FollowUpRoutes.ApplyAgentRoute(followUp, source, campaignId, ownerId: null, ownerName: null, _clock.UtcNow);
+
+                return FollowUpRoutingTarget.Agent;
+
+            case FollowUpRoutingTarget.Dialer:
+                var profile = _dialerContributor is null || string.IsNullOrWhiteSpace(routing.DialerProfileId)
+                    ? null
+                    : await _dialerContributor.FindByIdAsync(routing.DialerProfileId.Trim());
+
+                if (profile is null)
+                {
+                    _logger.LogWarning(
+                        "Subject action {SubjectActionId} sends its follow-up to dialer profile '{DialerProfileId}', which does not exist or the dialer is off; the follow-up is routed as before.",
+                        action.ItemId,
+                        routing.DialerProfileId);
+
+                    followUp.CampaignId = campaignId;
+
+                    return FollowUpRoutingTarget.SameAsBefore;
+                }
+
+                var destination = await ActivityDialDestinations.FindAsync(followUp, _contentManager, _contactMethods);
+
+                if (string.IsNullOrWhiteSpace(destination))
+                {
+                    _logger.LogWarning(
+                        "Subject action {SubjectActionId} sends its follow-up to the dialer, but the contact has no number the dialer can call; the follow-up is routed as before.",
+                        action.ItemId);
+
+                    followUp.CampaignId = campaignId;
+
+                    return FollowUpRoutingTarget.SameAsBefore;
+                }
+
+                FollowUpRoutes.ApplyDialerRoute(followUp, profile, campaignId, destination);
+
+                return FollowUpRoutingTarget.Dialer;
+
+            default:
+                followUp.CampaignId = campaignId;
+
+                return FollowUpRoutingTarget.SameAsBefore;
+        }
     }
 
     private async Task<SubjectFlowSettings> FindFlowSettingsForSubjectAsync(string subjectContentType)
@@ -611,6 +730,20 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
             return true;
         }
 
+        if (effectiveAssignmentType == SubjectActionOwnerAssignmentType.CallAgent)
+        {
+            await AssignCallAgentAsync(followUpActivity, completedActivity, assignedToUtc);
+
+            return true;
+        }
+
+        if (effectiveAssignmentType == SubjectActionOwnerAssignmentType.Pool)
+        {
+            await AssignFromPoolAsync(followUpActivity, action, assignedToUtc);
+
+            return true;
+        }
+
         var owner = await _session.Query<User, UserIndex>(x => x.NormalizedUserName == normalizedUserName).FirstOrDefaultAsync();
 
         if (owner is null)
@@ -626,6 +759,114 @@ internal sealed class DefaultSubjectActionExecutor : ISubjectActionExecutor
         AssignOwner(followUpActivity, owner.UserId, owner.UserName, assignedToUtc);
 
         return true;
+    }
+
+    /// <summary>
+    /// Gives a manual follow-up that would otherwise have no owner to the agent the call was placed or connected for.
+    /// </summary>
+    /// <remarks>
+    /// "The user who completed the activity" names nobody when the dialer completed it, as it does when nobody answers
+    /// or a machine does, and the follow-up an agent was to work by hand was left with no owner. The agent the dialer
+    /// held or connected for the call is the one who calls back. Work the dialer queues is offered to whoever is free, so
+    /// it is left without an owner.
+    /// </remarks>
+    private async Task FillMissingOwnerAsync(
+        OmnichannelActivity followUpActivity,
+        SubjectAction action,
+        SubjectActionOwnerAssignmentType assignmentType,
+        string normalizedUserName,
+        OmnichannelActivity completedActivity,
+        DateTime assignedToUtc)
+    {
+        // An automated (AI) follow-up runs on its own and needs no owner.
+        if (!string.IsNullOrEmpty(followUpActivity.AssignedToId) ||
+            followUpActivity.InteractionType != ActivityInteractionType.Manual ||
+            ActivitySources.IsDialer(followUpActivity.Source) ||
+            SubjectActionOwnerAssignmentTypeResolver.Resolve(assignmentType, normalizedUserName) != SubjectActionOwnerAssignmentType.SameOwner)
+        {
+            return;
+        }
+
+        var userId = _callAgentResolver is null
+            ? null
+            : await _callAgentResolver.FindAgentUserIdAsync(completedActivity.ItemId);
+
+        var agent = string.IsNullOrEmpty(userId)
+            ? null
+            : await _session.Query<User, UserIndex>(x => x.UserId == userId).FirstOrDefaultAsync();
+
+        if (agent is null)
+        {
+            _logger.LogWarning(
+                "Nobody completed activity {ActivityId} and no agent was on its call, so the follow-up of subject action {SubjectActionId} has no owner; any agent can take it.",
+                completedActivity.ItemId,
+                action.ItemId);
+
+            return;
+        }
+
+        AssignOwner(followUpActivity, agent.UserId, agent.UserName, assignedToUtc);
+
+        if (followUpActivity.Status is ActivityStatus.Scheduled or ActivityStatus.NotStated)
+        {
+            followUpActivity.Status = OmnichannelAutomationHelper.GetInitialActivityStatus(followUpActivity.InteractionType, hasAssignedUser: true);
+        }
+    }
+
+    /// <summary>
+    /// Gives the follow-up to the agent the call was placed or connected for. A Power dial that reached an answering
+    /// machine is dispositioned by the system, so nobody completed it; the agent the dialer held for the call is still
+    /// on the call, and is the one who calls back. With no such agent, whoever completed the activity owns it.
+    /// </summary>
+    private async Task AssignCallAgentAsync(OmnichannelActivity followUpActivity, OmnichannelActivity completedActivity, DateTime assignedToUtc)
+    {
+        var userId = _callAgentResolver is null
+            ? null
+            : await _callAgentResolver.FindAgentUserIdAsync(completedActivity.ItemId);
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var agent = await _session.Query<User, UserIndex>(x => x.UserId == userId).FirstOrDefaultAsync();
+
+            if (agent is not null)
+            {
+                AssignOwner(followUpActivity, agent.UserId, agent.UserName, assignedToUtc);
+
+                return;
+            }
+        }
+
+        AssignOwner(followUpActivity, completedActivity.CompletedById, completedActivity.CompletedByUsername, assignedToUtc);
+    }
+
+    /// <summary>
+    /// Gives the follow-up to one user of the action's pool. A pool with nobody to pick leaves the follow-up for any
+    /// agent rather than dropping it.
+    /// </summary>
+    private async Task AssignFromPoolAsync(OmnichannelActivity followUpActivity, SubjectAction action, DateTime assignedToUtc)
+    {
+        if (_ownerPicker is null || !action.TryGet<FollowUpOwnerPoolMetadata>(out var pool))
+        {
+            _logger.LogWarning(
+                "Subject action {SubjectActionId} assigns its follow-up from a pool, but {Reason}; the follow-up is left for any agent.",
+                action.ItemId,
+                _ownerPicker is null ? "the Teams feature is off" : "it names no pool");
+
+            AssignOwner(followUpActivity, null, null, assignedToUtc);
+
+            return;
+        }
+
+        var (userId, userName) = await _ownerPicker.PickAsync(pool);
+
+        if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning(
+                "The pool of subject action {SubjectActionId} has nobody to give the follow-up to; it is left for any agent.",
+                action.ItemId);
+        }
+
+        AssignOwner(followUpActivity, userId, userName, assignedToUtc);
     }
 
     private static void AssignOwner(

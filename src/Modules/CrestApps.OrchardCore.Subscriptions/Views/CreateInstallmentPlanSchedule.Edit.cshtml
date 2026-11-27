@@ -1,0 +1,23 @@
+@using CrestApps.OrchardCore.Subscriptions.Models
+@using CrestApps.OrchardCore.Subscriptions.ViewModels
+@model CreateInstallmentPlanViewModel
+
+<p id="installment-schedule-empty" class="text-muted mb-0">@T["Enter the total, the down payment and the number of payments to see the schedule."]</p>
+<div id="installment-schedule" class="table-responsive d-none">
+    <table class="table table-sm align-middle mb-0">
+        <thead>
+            <tr>
+                <th scope="col">@T["Payment"]</th>
+                <th scope="col">@T["Due"]</th>
+                <th scope="col" class="text-end">@T["Amount"]</th>
+            </tr>
+        </thead>
+        <tbody id="installment-schedule-rows"></tbody>
+        <tfoot>
+            <tr>
+                <th scope="row" colspan="2">@T["Total"]</th>
+                <th scope="row" class="text-end" id="installment-schedule-total"></th>
+            </tr>
+        </tfoot>
+    </table>
+</div>

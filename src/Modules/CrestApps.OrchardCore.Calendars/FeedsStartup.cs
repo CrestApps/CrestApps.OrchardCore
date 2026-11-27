@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Calendars.Core.ICalendar;
 using CrestApps.OrchardCore.Calendars.Drivers;
 using CrestApps.OrchardCore.Calendars.Endpoints;
 using CrestApps.OrchardCore.Calendars.Models;
+using CrestApps.OrchardCore.Calendars.ViewModels;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +22,7 @@ public sealed class FeedsStartup : StartupBase
     {
         services.AddScoped<ICalendarImporter>();
         services.AddDisplayDriver<Calendar, CalendarFeedsDisplayDriver>();
+        services.AddDisplayDriver<CalendarFeedViewModel, CalendarImportDisplayDriver>();
     }
 
     /// <inheritdoc />

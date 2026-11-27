@@ -94,7 +94,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
                 model.Name = deployment.Name;
                 model.ModelName = deployment.ModelName;
                 model.IsNew = context.IsNew;
-            }).Location("Content:1"),
+            }).Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
         };
 
         if (!HasContainedConnection(deployment.ClientName))
@@ -102,7 +102,7 @@ internal sealed class AIDeploymentDisplayDriver : DisplayDriver<AIDeployment>
             results.Add(Initialize<EditDeploymentConnectionViewModel>("AIDeploymentConnectionName_Edit", async model =>
             {
                 await PopulateConnectionEditorAsync(model, deployment);
-            }).Location("Content:5"));
+            }).Location(l => l.Zone("Content", "5").Card(S["General"], "10")));
         }
 
         return Combine(results.ToArray());

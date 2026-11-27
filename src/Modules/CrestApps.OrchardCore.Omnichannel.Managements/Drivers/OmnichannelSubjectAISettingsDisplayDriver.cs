@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Core.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
@@ -22,90 +23,103 @@ internal sealed class OmnichannelSubjectAISettingsDisplayDriver : ContentTypePar
     private readonly DefaultSpeechVoicePresenter _speechVoicePresenter;
     private readonly IHandoffQueueOptionsProvider _handoffQueueOptionsProvider;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="OmnichannelSubjectAISettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="profileManager">The AI profile manager.</param>
     /// <param name="deploymentManager">The AI deployment manager.</param>
     /// <param name="speechVoicePresenter">The speech voice presenter.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="handoffQueueOptionsProvider">The optional handoff queue options provider (present when Contact Center is enabled).</param>
     public OmnichannelSubjectAISettingsDisplayDriver(
         IAIProfileManager profileManager,
         IAIDeploymentManager deploymentManager,
         DefaultSpeechVoicePresenter speechVoicePresenter,
+        IStringLocalizer<OmnichannelSubjectAISettingsDisplayDriver> stringLocalizer,
         IHandoffQueueOptionsProvider handoffQueueOptionsProvider = null)
     {
         _profileManager = profileManager;
         _deploymentManager = deploymentManager;
         _speechVoicePresenter = speechVoicePresenter;
+        S = stringLocalizer;
         _handoffQueueOptionsProvider = handoffQueueOptionsProvider;
     }
 
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
     {
-        return Initialize<OmnichannelSubjectAISettingsViewModel>("OmnichannelSubjectAISettings_Edit", async model =>
+        // The AI configuration and the live agent handoff are cards of their own, each hidden by the subject settings
+        // when it does not apply.
+        return Combine(
+            Initialize<OmnichannelSubjectAISettingsViewModel>("OmnichannelSubjectAISettings_Edit", model => PopulateAsync(contentTypePartDefinition, model))
+                .Location(l => l.Zone("Content", "2").Card(S["AI Configuration"], "30")),
+            Initialize<OmnichannelSubjectAISettingsViewModel>("OmnichannelSubjectAIHandoff_Edit", model => PopulateAsync(contentTypePartDefinition, model))
+                .Location(l => l.Zone("Content", "3").Card(S["Live Agent Handoff"], "40")));
+    }
+
+    private async ValueTask PopulateAsync(ContentTypePartDefinition contentTypePartDefinition, OmnichannelSubjectAISettingsViewModel model)
+    {
+        var settings = contentTypePartDefinition.GetSettings<OmnichannelSubjectAISettings>();
+        var baseSettings = contentTypePartDefinition.GetSettings<OmnichannelSubjectPartSettings>();
+        var isInbound = baseSettings.Direction == SubjectDirection.Inbound;
+
+        // AI configuration only applies to an inbound subject that runs an automated interaction. Outbound
+        // subjects are configured for automation when their inventory is loaded using the Automatic source,
+        // so the AI defaults are chosen there rather than on the subject type.
+        model.CanAutomate = isInbound && baseSettings.InteractionType == ActivityInteractionType.Automated;
+
+        // Handoff applies to any automated conversation for this subject: an inbound automated subject, or any
+        // outbound subject (whose AI settings are chosen at inventory load). So it is shown more broadly than
+        // the inbound-only AI configuration.
+        model.ShowHandoffSettings = model.CanAutomate || baseSettings.Direction == SubjectDirection.Outbound;
+        model.ShowVoiceSettings = model.CanAutomate && string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
+        model.ShowSmsSettings = model.CanAutomate && string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase);
+
+        model.ProfileId = settings.ProfileId;
+        model.SubjectGoal = settings.SubjectGoal;
+        model.SpeechToTextDeploymentName = settings.SpeechToTextDeploymentName;
+        model.TextToSpeechDeploymentName = settings.TextToSpeechDeploymentName;
+        model.TextToSpeechVoiceId = settings.TextToSpeechVoiceId;
+        model.AllowAIToUpdateContact = settings.AllowAIToUpdateContact;
+        model.AllowAIToUpdateSubject = settings.AllowAIToUpdateSubject;
+        model.NoResponseTimeoutInMinutes = settings.NoResponseTimeoutInMinutes;
+        model.SmsResponseDelayInSeconds = settings.SmsResponseDelayInSeconds;
+        model.SmsOptOutKeywords = string.Join(Environment.NewLine, OmnichannelSmsComplianceHelper.NormalizeOptOutKeywords(settings.SmsOptOutKeywords));
+        model.EnableAgentHandoff = settings.EnableAgentHandoff;
+        model.HandoffQueueId = settings.HandoffQueueId;
+        model.HandoffOnUserRequest = settings.HandoffOnUserRequest;
+        model.HandoffOnQualifiedLead = settings.HandoffOnQualifiedLead;
+        model.HandoffOnFrustration = settings.HandoffOnFrustration;
+
+        // When Contact Center is enabled, offer a queue picker; otherwise the editor falls back to a free-text
+        // queue id (the runtime reads the id regardless of how it was entered).
+        if (_handoffQueueOptionsProvider is not null)
         {
-            var settings = contentTypePartDefinition.GetSettings<OmnichannelSubjectAISettings>();
-            var baseSettings = contentTypePartDefinition.GetSettings<OmnichannelSubjectPartSettings>();
-            var isInbound = baseSettings.Direction == SubjectDirection.Inbound;
+            var queues = await _handoffQueueOptionsProvider.GetQueuesAsync();
 
-            // AI configuration only applies to an inbound subject that runs an automated interaction. Outbound
-            // subjects are configured for automation when their inventory is loaded using the Automatic source,
-            // so the AI defaults are chosen there rather than on the subject type.
-            model.CanAutomate = isInbound && baseSettings.InteractionType == ActivityInteractionType.Automated;
-
-            // Handoff applies to any automated conversation for this subject: an inbound automated subject, or any
-            // outbound subject (whose AI settings are chosen at inventory load). So it is shown more broadly than
-            // the inbound-only AI configuration.
-            model.ShowHandoffSettings = model.CanAutomate || baseSettings.Direction == SubjectDirection.Outbound;
-            model.ShowVoiceSettings = model.CanAutomate && string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Phone, StringComparison.OrdinalIgnoreCase);
-            model.ShowSmsSettings = model.CanAutomate && string.Equals(baseSettings.Channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase);
-
-            model.ProfileId = settings.ProfileId;
-            model.SubjectGoal = settings.SubjectGoal;
-            model.SpeechToTextDeploymentName = settings.SpeechToTextDeploymentName;
-            model.TextToSpeechDeploymentName = settings.TextToSpeechDeploymentName;
-            model.TextToSpeechVoiceId = settings.TextToSpeechVoiceId;
-            model.AllowAIToUpdateContact = settings.AllowAIToUpdateContact;
-            model.AllowAIToUpdateSubject = settings.AllowAIToUpdateSubject;
-            model.NoResponseTimeoutInMinutes = settings.NoResponseTimeoutInMinutes;
-            model.SmsResponseDelayInSeconds = settings.SmsResponseDelayInSeconds;
-            model.SmsOptOutKeywords = string.Join(Environment.NewLine, OmnichannelSmsComplianceHelper.NormalizeOptOutKeywords(settings.SmsOptOutKeywords));
-            model.EnableAgentHandoff = settings.EnableAgentHandoff;
-            model.HandoffQueueId = settings.HandoffQueueId;
-            model.HandoffOnUserRequest = settings.HandoffOnUserRequest;
-            model.HandoffOnQualifiedLead = settings.HandoffOnQualifiedLead;
-            model.HandoffOnFrustration = settings.HandoffOnFrustration;
-
-            // When Contact Center is enabled, offer a queue picker; otherwise the editor falls back to a free-text
-            // queue id (the runtime reads the id regardless of how it was entered).
-            if (_handoffQueueOptionsProvider is not null)
+            model.HandoffQueues = queues.Select(queue => new SelectListItem(queue.Name, queue.Id)
             {
-                var queues = await _handoffQueueOptionsProvider.GetQueuesAsync();
+                Selected = string.Equals(queue.Id, settings.HandoffQueueId, StringComparison.OrdinalIgnoreCase),
+            });
+            model.HasHandoffQueuePicker = true;
+        }
 
-                model.HandoffQueues = queues.Select(queue => new SelectListItem(queue.Name, queue.Id)
-                {
-                    Selected = string.Equals(queue.Id, settings.HandoffQueueId, StringComparison.OrdinalIgnoreCase),
-                });
-                model.HasHandoffQueuePicker = true;
-            }
+        var chatProfiles = await _profileManager.GetAsync(AIProfileType.Chat);
 
-            var chatProfiles = await _profileManager.GetAsync(AIProfileType.Chat);
-
-            model.Profiles = chatProfiles
-                .Where(HasInitialPrompt)
-                .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
-                .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId));
-            model.SpeechToTextDeployments = BuildDeploymentOptions(
-                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.SpeechToText),
-                model.SpeechToTextDeploymentName);
-            model.TextToSpeechDeployments = BuildDeploymentOptions(
-                await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.TextToSpeech),
-                model.TextToSpeechDeploymentName);
-            model.TextToSpeechVoices = SelectVoice(
-                await _speechVoicePresenter.GetVoiceMenuItemsAsync(model.TextToSpeechDeploymentName),
-                model.TextToSpeechVoiceId);
-        }).Location("Content:2");
+        model.Profiles = chatProfiles
+            .Where(HasInitialPrompt)
+            .OrderBy(profile => profile.DisplayText ?? profile.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(profile => new SelectListItem(profile.DisplayText ?? profile.Name, profile.ItemId));
+        model.SpeechToTextDeployments = BuildDeploymentOptions(
+            await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.SpeechToText),
+            model.SpeechToTextDeploymentName);
+        model.TextToSpeechDeployments = BuildDeploymentOptions(
+            await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.TextToSpeech),
+            model.TextToSpeechDeploymentName);
+        model.TextToSpeechVoices = SelectVoice(
+            await _speechVoicePresenter.GetVoiceMenuItemsAsync(model.TextToSpeechDeploymentName),
+            model.TextToSpeechVoiceId);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)

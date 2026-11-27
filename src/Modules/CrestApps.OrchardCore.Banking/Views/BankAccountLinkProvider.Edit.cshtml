@@ -1,0 +1,12 @@
+@model BankAccountLinkViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p>@T["Sign in to your bank in the {0} window and choose the account. The bank's own routing and account numbers are saved, and the account is verified at once. Your bank password goes to the bank, never to this site.", Model.ProviderDisplayName]</p>
+        @if (!Model.IsNew)
+        {
+            <p class="mb-0">@T["The bank's numbers replace those of {0} ({1}).", Model.AccountName, string.IsNullOrEmpty(Model.MaskedNumber) ? T["no number yet"].Value : Model.MaskedNumber]</p>
+        }
+        <div class="text-danger mt-2 d-none" data-bank-account-link-error role="alert"></div>
+    </div>
+</div>

@@ -1,0 +1,10 @@
+@model ClassSessionCancelViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Reason">
+    <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Reason" class="form-control" rows="3" maxlength="1000" required></textarea>
+        <span asp-validation-for="Reason"></span>
+        <span class="hint">@T["Kept on each cancelled registration."]</span>
+    </div>
+</div>

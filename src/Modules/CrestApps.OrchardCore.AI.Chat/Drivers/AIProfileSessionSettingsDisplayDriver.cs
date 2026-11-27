@@ -30,7 +30,7 @@ public sealed class AIProfileSessionSettingsDisplayDriver : DisplayDriver<AIProf
         {
             var dataExtractionSettings = profile.GetSettings<AIProfileDataExtractionSettings>();
             model.SessionInactivityTimeoutInMinutes = dataExtractionSettings.SessionInactivityTimeoutInMinutes;
-        }).Location("Content:1#Data Processing & Metrics;10");
+        }).Location(l => l.Zone("Content", "1").Tab(S["Data Processing & Metrics"], "10").Card(S["Sessions"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

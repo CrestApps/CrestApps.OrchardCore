@@ -14,6 +14,7 @@ using CrestApps.OrchardCore.Banking.Disbursements.Navigation;
 using CrestApps.OrchardCore.Banking.Disbursements.Recipes;
 using CrestApps.OrchardCore.Banking.Disbursements.Reports;
 using CrestApps.OrchardCore.Banking.Disbursements.Services;
+using CrestApps.OrchardCore.Banking.Disbursements.ViewModels;
 using CrestApps.OrchardCore.Banking.Disbursements.Workflows;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Workflows;
@@ -58,6 +59,7 @@ public sealed class Startup : StartupBase
             (serviceProvider, fileStore) => new DisbursementFileStore(new EncryptedFileStore(fileStore, serviceProvider.GetRequiredService<IDataProtectionProvider>(), DisbursementsConstants.FileProtectionPurpose)));
         services.AddDisplayDriver<Disbursement, DisbursementDisplayDriver>();
         services.AddDisplayDriver<DisbursementBatch, DisbursementBatchDisplayDriver>();
+        services.AddDisplayDriver<DisbursementReturnsViewModel, DisbursementReturnsDisplayDriver>();
         services.AddPermissionProvider<DisbursementsPermissionProvider>();
         services.AddNavigationProvider<DisbursementsAdminMenu>();
     }

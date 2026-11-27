@@ -39,7 +39,7 @@ public sealed class ProductVariantsPartSettingsDisplayDriver : ContentTypePartDe
             {
                 model.Options.Add(new ProductVariantOptionSettingsViewModel());
             }
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["Variant Options"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)

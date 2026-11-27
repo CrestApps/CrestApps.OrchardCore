@@ -88,7 +88,7 @@ internal sealed class OmnichannelChannelEndpointDisplayDriver : DisplayDriver<Om
                     Selected = capabilities.Contains(capability.Name, StringComparer.OrdinalIgnoreCase),
                 })
                 .ToList();
-        }).Location("Content:1%General;1");
+        }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(OmnichannelChannelEndpoint endpoint, UpdateEditorContext context)

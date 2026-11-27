@@ -39,7 +39,13 @@ public sealed class SchedulingEditorDriverTests
 
         // Act
         var result = CreateResourceDriver().Edit(resource, PostedFormUpdateModel.CreateContext(new SchedulingResourceViewModel()));
-        var model = Assert.Single(await DisplayResultModels.BuildAsync<SchedulingResourceViewModel>(result));
+        var models = await DisplayResultModels.BuildAsync<SchedulingResourceViewModel>(result);
+
+        // One shape for each card, General and Hours, each a copy of the resource's values.
+        Assert.Equal(2, models.Count);
+        Assert.All(models, card => Assert.Equal("Dr. Lee", card.Name));
+
+        var model = models[0];
 
         // Assert
         Assert.Equal("Dr. Lee", model.Name);
@@ -98,9 +104,12 @@ public sealed class SchedulingEditorDriverTests
 
         // Act
         var result = await UpdateAsync(CreateResourceDriver(), new SchedulingResource(), context);
-        var model = Assert.Single(await DisplayResultModels.BuildAsync<SchedulingResourceViewModel>(result));
+        var models = await DisplayResultModels.BuildAsync<SchedulingResourceViewModel>(result);
+        var model = models[0];
 
         // Assert
+        Assert.Equal(2, models.Count);
+        Assert.All(models, card => Assert.Equal("Someday whenever", card.WorkingHours));
         Assert.Equal(["The name is required."], context.Updater.ModelState[$"{nameof(SchedulingResource)}.{nameof(SchedulingResourceViewModel.Name)}"].Errors.Select(error => error.ErrorMessage));
         Assert.StartsWith("This line can't be read:", Assert.Single(context.Updater.ModelState[$"{nameof(SchedulingResource)}.{nameof(SchedulingResourceViewModel.WorkingHours)}"].Errors).ErrorMessage);
         Assert.Equal(["'Mars/Olympus' is not a time zone."], context.Updater.ModelState[$"{nameof(SchedulingResource)}.{nameof(SchedulingResourceViewModel.TimeZoneId)}"].Errors.Select(error => error.ErrorMessage));
@@ -139,7 +148,12 @@ public sealed class SchedulingEditorDriverTests
 
             await UpdateAsync(driver, type, context);
 
-            return Assert.Single(await DisplayResultModels.BuildAsync<AppointmentTypeViewModel>(driver.Edit(type, context)));
+            // One shape for each card: General, Time, Who and Booking Rules.
+            var models = await DisplayResultModels.BuildAsync<AppointmentTypeViewModel>(driver.Edit(type, context));
+
+            Assert.Equal(4, models.Count);
+
+            return models[0];
         }, commit: false);
 
         // Assert
@@ -218,10 +232,10 @@ public sealed class SchedulingEditorDriverTests
         var shapes = EditorDisplayManagement.ZoneShapes(editor);
 
         // Assert
-        Assert.Equal(["SchedulingResourceFields_Edit", ExtraSectionDisplayDriver<SchedulingResource>.ShapeType], shapes.Select(shape => shape.Metadata.Type));
+        Assert.Equal(["SchedulingResourceFields_Edit", "SchedulingResourceHours_Edit", ExtraSectionDisplayDriver<SchedulingResource>.ShapeType], shapes.Select(shape => shape.Metadata.Type));
         Assert.Equal("Room 1", Assert.IsAssignableFrom<SchedulingResourceViewModel>(shapes[0]).Name);
-        Assert.Equal(nameof(SchedulingResource), shapes[0].Metadata.Prefix);
-        Assert.Equal(ExtraSectionDisplayDriver<SchedulingResource>.Note, Assert.IsAssignableFrom<ExtraSectionViewModel>(shapes[1]).Note);
+        Assert.All(shapes.Take(2), shape => Assert.Equal(nameof(SchedulingResource), shape.Metadata.Prefix));
+        Assert.Equal(ExtraSectionDisplayDriver<SchedulingResource>.Note, Assert.IsAssignableFrom<ExtraSectionViewModel>(shapes[2]).Note);
     }
 
     [Fact]
@@ -243,7 +257,7 @@ public sealed class SchedulingEditorDriverTests
         // Assert
         Assert.Equal(["The name is required."], updater.ModelState["SchedulingResource.Name"].Errors.Select(error => error.ErrorMessage));
         Assert.Equal([RefusingSectionDisplayDriver<SchedulingResource>.Error], updater.ModelState["SchedulingResource.Note"].Errors.Select(error => error.ErrorMessage));
-        Assert.Equal(2, EditorDisplayManagement.ZoneShapes(editor).Count);
+        Assert.Equal(3, EditorDisplayManagement.ZoneShapes(editor).Count);
     }
 
     [Fact]
@@ -264,7 +278,7 @@ public sealed class SchedulingEditorDriverTests
         }, commit: false);
 
         // Assert
-        Assert.Equal(["AppointmentTypeFields_Edit", ExtraSectionDisplayDriver<AppointmentType>.ShapeType], shapes.Select(shape => shape.Metadata.Type));
+        Assert.Equal(["AppointmentTypeFields_Edit", "AppointmentTypeTime_Edit", "AppointmentTypeWho_Edit", "AppointmentTypeRules_Edit", ExtraSectionDisplayDriver<AppointmentType>.ShapeType], shapes.Select(shape => shape.Metadata.Type));
         Assert.Equal("Checkup", Assert.IsAssignableFrom<AppointmentTypeViewModel>(shapes[0]).Name);
     }
 

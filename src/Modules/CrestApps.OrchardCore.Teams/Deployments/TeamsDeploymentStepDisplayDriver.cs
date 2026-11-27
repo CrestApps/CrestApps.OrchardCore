@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -6,6 +7,13 @@ namespace CrestApps.OrchardCore.Teams.Deployments;
 
 internal sealed class TeamsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, TeamsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public TeamsDeploymentStepDisplayDriver(IStringLocalizer<TeamsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(TeamsDeploymentStep step, BuildDisplayContext context)
     {
         return CombineAsync(
@@ -15,6 +23,6 @@ internal sealed class TeamsDeploymentStepDisplayDriver : DisplayDriver<Deploymen
 
     public override IDisplayResult Edit(TeamsDeploymentStep step, BuildEditorContext context)
     {
-        return View("TeamsDeploymentStep_Fields_Edit", step).Location("Content");
+        return View("TeamsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Teams"], "10"));
     }
 }

@@ -1,0 +1,11 @@
+@model CrestApps.OrchardCore.Orders.ViewModels.OrderSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="AllowQuoteRequests" type="checkbox" class="form-check-input" />
+            <label asp-for="AllowQuoteRequests" class="form-check-label">@T["Take quote requests"]</label>
+            <span class="hint dashed">@T["Signed-in buyers can send their cart as a quote request. It becomes a draft order: set its prices, then send it, and the buyer accepts it by paying."]</span>
+        </div>
+    </div>
+</div>

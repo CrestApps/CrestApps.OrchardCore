@@ -7,6 +7,7 @@ using OrchardCore.ContentManagement.Metadata.Models;
 using OrchardCore.ContentTypes.Editors;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.ContentFields.Drivers;
 
@@ -14,27 +15,38 @@ public sealed class AddressFieldSettingsDriver : ContentPartFieldDefinitionDispl
 {
     private readonly ICountryService _countryService;
 
-    public AddressFieldSettingsDriver(ICountryService countryService)
+    internal readonly IStringLocalizer S;
+
+    public AddressFieldSettingsDriver(ICountryService countryService, IStringLocalizer<AddressFieldSettingsDriver> stringLocalizer)
     {
         _countryService = countryService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ContentPartFieldDefinition model, BuildEditorContext context)
-        => Initialize<AddressFieldSettingsViewModel>("AddressFieldSettings_Edit", async viewModel =>
-        {
-            var settings = model.GetSettings<AddressFieldSettings>();
+        => Combine(
+            Initialize<AddressFieldSettingsViewModel>("AddressFieldSettingsBehavior_Edit", viewModel => FillValues(viewModel, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Behavior"], "15")),
+            Initialize<AddressFieldSettingsViewModel>("AddressFieldSettings_Edit", async viewModel =>
+            {
+                FillValues(viewModel, model);
+                viewModel.CountryOptions = (await _countryService.GetCountriesAsync())
+                    .Select(country => new SelectListItem(country.Name, country.Code))
+                    .ToArray();
+            }).Location(l => l.Zone("Content", "2").Card(S["Settings"], "20")));
 
-            viewModel.Hint = settings.Hint;
-            viewModel.Required = settings.Required;
-            viewModel.ShowName = settings.ShowName;
-            viewModel.ShowCompany = settings.ShowCompany;
-            viewModel.ShowPhone = settings.ShowPhone;
-            viewModel.Countries = settings.Countries ?? [];
-            viewModel.DefaultCountry = settings.DefaultCountry;
-            viewModel.CountryOptions = (await _countryService.GetCountriesAsync())
-                .Select(country => new SelectListItem(country.Name, country.Code))
-                .ToArray();
-        }).Location("Content");
+    private static void FillValues(AddressFieldSettingsViewModel viewModel, ContentPartFieldDefinition model)
+    {
+        var settings = model.GetSettings<AddressFieldSettings>();
+
+        viewModel.Hint = settings.Hint;
+        viewModel.Required = settings.Required;
+        viewModel.ShowName = settings.ShowName;
+        viewModel.ShowCompany = settings.ShowCompany;
+        viewModel.ShowPhone = settings.ShowPhone;
+        viewModel.Countries = settings.Countries ?? [];
+        viewModel.DefaultCountry = settings.DefaultCountry;
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentPartFieldDefinition model, UpdatePartFieldEditorContext context)
     {

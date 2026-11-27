@@ -2,6 +2,7 @@ using CrestApps.Core;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 
@@ -13,6 +14,17 @@ namespace CrestApps.OrchardCore.Workforce.Drivers;
 /// </summary>
 internal sealed class WorkforcePayCodeDisplayDriver : DisplayDriver<PayCode>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="WorkforcePayCodeDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public WorkforcePayCodeDisplayDriver(IStringLocalizer<WorkforcePayCodeDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(PayCode code, BuildEditorContext context)
     {
         return Initialize<WorkforcePayCodeWindowViewModel>("WorkforcePayCodeWindow_Edit", model =>
@@ -22,7 +34,7 @@ internal sealed class WorkforcePayCodeDisplayDriver : DisplayDriver<PayCode>
             model.WindowStart = window.WindowStart;
             model.WindowEnd = window.WindowEnd;
             model.Weekdays = window.Weekdays.Select(day => day.ToString()).ToList();
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Shift Differential Hours"], "70"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(PayCode code, UpdateEditorContext context)

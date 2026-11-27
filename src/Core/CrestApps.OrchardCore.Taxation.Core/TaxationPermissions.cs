@@ -34,6 +34,14 @@ public static class TaxationPermissions
         isSecurityCritical: true);
 
     /// <summary>
+    /// Grants managing tax forms: their fields and the formulas every filing of them is worked out with.
+    /// </summary>
+    public static readonly Permission ManageTaxForms = new(
+        "ManageTaxForms",
+        LocalizationSource.Create("Manage tax forms", typeof(TaxationPermissions)),
+        isSecurityCritical: true);
+
+    /// <summary>
     /// Grants marking tax returns as filed, amending them, recording their payments and filing them electronically. It
     /// grants <see cref="ManageTaxReturns"/> too.
     /// </summary>

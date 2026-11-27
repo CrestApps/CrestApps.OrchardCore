@@ -400,6 +400,12 @@ public class QuoteRequestViewModel
 
 public class DraftOrderEditViewModel
 {
+    /// <summary>
+    /// Gets or sets the editor of the page, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
+
     public string CustomerEmail { get; set; }
 
     public string CustomerName { get; set; }

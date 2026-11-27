@@ -76,7 +76,7 @@ public sealed class TwilioPhoneNumberVerificationSettingsDisplayDriver : SiteDis
             viewModel.Fields = settings.Fields;
             viewModel.HasApiKeySecret = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKeySecret);
             viewModel.HasAuthToken = ProtectedSettingExtensions.HasSecret(settings.ProtectedAuthToken);
-        }).Location("Content:7#Twilio")
+        }).Location(l => l.Zone("Content", "7").Tab(S["Twilio"], "7").Card(S["Connection"], "10"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
             _httpContextAccessor.HttpContext?.User,

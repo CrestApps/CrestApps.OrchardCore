@@ -24,6 +24,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Migrations;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
@@ -250,6 +251,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<MessagingConversation, MessagingConversationDisplayDriver>();
         services.AddDisplayDriver<MessageTemplate, MessageTemplateDisplayDriver>();
         services.AddDisplayDriver<MessagingBroadcast, MessagingBroadcastDisplayDriver>();
+        services.AddDisplayDriver<BroadcastCreateViewModel, BroadcastCreateDisplayDriver>();
         services.AddNavigationProvider<MessagingAdminMenu>();
 
         // The workspace page's view assembly, the menu count each user's pages share, and the composer's contact search.

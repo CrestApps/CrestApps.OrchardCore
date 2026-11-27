@@ -33,15 +33,26 @@ public sealed class TaxationPartSettingsDisplayDriver : ContentTypePartDefinitio
     /// <inheritdoc />
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
     {
-        return Initialize<TaxationPartSettingsViewModel>("TaxationPartSettings_Edit", async model =>
-        {
-            var settings = contentTypePartDefinition.GetSettings<TaxationPartSettings>();
+        return Combine(
+            Initialize<TaxationPartSettingsViewModel>("TaxationPartSettings_Edit", async model =>
+            {
+                Populate(model, contentTypePartDefinition);
 
-            model.DefaultTaxCategoryCode = settings.DefaultTaxCategoryCode;
-            model.DefaultTaxClassificationCode = settings.DefaultTaxClassificationCode;
-            model.AllowClassificationOverride = settings.AllowClassificationOverride;
-            model.TaxCategories = await BuildCategoryListAsync();
-        }).Location("Content");
+                model.TaxCategories = await BuildCategoryListAsync();
+            }).Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<TaxationPartSettingsViewModel>("TaxationPartSettingsBehavior_Edit", model => Populate(model, contentTypePartDefinition))
+                .Location(l => l.Zone("Content", "2").Card(S["Behavior"], "15")));
+    }
+
+    private static void Populate(TaxationPartSettingsViewModel model, ContentTypePartDefinition contentTypePartDefinition)
+    {
+        var settings = contentTypePartDefinition.GetSettings<TaxationPartSettings>();
+
+        model.DefaultTaxCategoryCode = settings.DefaultTaxCategoryCode;
+        model.DefaultTaxClassificationCode = settings.DefaultTaxClassificationCode;
+        model.AllowClassificationOverride = settings.AllowClassificationOverride;
+        model.ShowClassification = settings.ShowClassification;
+        model.ShowExternalTaxCode = settings.ShowExternalTaxCode;
     }
 
     /// <inheritdoc />
@@ -56,6 +67,8 @@ public sealed class TaxationPartSettingsDisplayDriver : ContentTypePartDefinitio
             DefaultTaxCategoryCode = model.DefaultTaxCategoryCode,
             DefaultTaxClassificationCode = model.DefaultTaxClassificationCode,
             AllowClassificationOverride = model.AllowClassificationOverride,
+            ShowClassification = model.ShowClassification,
+            ShowExternalTaxCode = model.ShowExternalTaxCode,
         });
 
         return Edit(contentTypePartDefinition, context);

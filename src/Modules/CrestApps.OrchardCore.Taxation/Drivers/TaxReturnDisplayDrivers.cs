@@ -45,7 +45,7 @@ internal sealed class TaxReturnPeriodSummaryDisplayDriver : DisplayDriver<TaxRet
             return null;
         }
 
-        var formName = _service.GetForms().TryGetValue(summary.Form ?? string.Empty, out var form)
+        var formName = (await _service.GetFormsAsync(includeDisabled: true)).TryGetValue(summary.Form ?? string.Empty, out var form)
             ? _localizerFactory.Localize(form.DisplayName).Value
             : summary.Form;
         var canPrepare = await _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TaxationPermissions.ManageTaxReturns);
@@ -121,7 +121,7 @@ internal sealed class TaxReturnDisplayDriver : DisplayDriver<TaxReturn>
         }
 
         var registration = await _registrations.FindByIdAsync(taxReturn.RegistrationId);
-        var formName = _service.GetForms().TryGetValue(taxReturn.Form ?? string.Empty, out var form)
+        var formName = (await _service.GetFormsAsync(includeDisabled: true)).TryGetValue(taxReturn.Form ?? string.Empty, out var form)
             ? _localizerFactory.Localize(form.DisplayName).Value
             : taxReturn.Form;
         var amends = string.IsNullOrEmpty(taxReturn.AmendsId) ? null : await _returns.FindByIdAsync(taxReturn.AmendsId);

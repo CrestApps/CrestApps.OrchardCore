@@ -50,7 +50,7 @@ internal sealed class AIProfileTemplateMcpConnectionsDisplayDriver : DisplayDriv
                 IsSelected = mcpMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-        }).Location("Content:3#Capabilities;8")
+        }).Location(l => l.Zone("Content", "3").Tab(S["Capabilities"], "8").Card(S["MCP Connections"], "20"))
         .RenderWhen(() => Task.FromResult(template.Source == AITemplateSources.Profile));
     }
 

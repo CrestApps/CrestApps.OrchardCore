@@ -306,6 +306,12 @@ public class WorkOrderTypeEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> StockItemOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -393,6 +399,12 @@ public class ChecklistTemplateEditViewModel
     /// Gets or sets the questions.
     /// </summary>
     public List<QuestionEditModel> Questions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>
@@ -424,6 +436,12 @@ public class WorkOrderSubStatusEditViewModel
     /// Gets or sets whether it stops the service level clock.
     /// </summary>
     public bool PausesSla { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

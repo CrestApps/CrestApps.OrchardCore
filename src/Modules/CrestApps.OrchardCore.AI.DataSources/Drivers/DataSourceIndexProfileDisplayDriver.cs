@@ -56,7 +56,7 @@ public sealed class DataSourceIndexProfileDisplayDriver : DisplayDriver<IndexPro
             model.EmbeddingDeployments = BuildEmbeddingDeploymentItems(deployments, model.EmbeddingDeploymentName);
             model.IsLocked = !string.IsNullOrEmpty(model.EmbeddingDeploymentName) &&
                 !string.IsNullOrEmpty(indexProfile.IndexFullName);
-        }).Location("Content:3");
+        }).Location(l => l.Zone("Content", "3").Card(S["Embedding"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(IndexProfile indexProfile, UpdateEditorContext context)

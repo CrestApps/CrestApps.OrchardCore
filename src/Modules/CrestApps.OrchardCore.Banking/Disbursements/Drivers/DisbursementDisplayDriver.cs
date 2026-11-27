@@ -71,7 +71,7 @@ internal sealed class DisbursementDisplayDriver : DisplayDriver<Disbursement>
             .OrderBy(account => account.HolderName, StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        return Initialize<DisbursementViewModel>("DisbursementFields_Edit", model =>
+        void Populate(DisbursementViewModel model)
         {
             model.Method = disbursement.Method;
             model.SourceBankAccountId = disbursement.SourceBankAccountId;
@@ -92,7 +92,13 @@ internal sealed class DisbursementDisplayDriver : DisplayDriver<Disbursement>
                 new SelectListItem(S["None"], string.Empty),
                 .. payees.Select(account => new SelectListItem($"{account.HolderName} · {account.Name} ({BankAccountNumbers.Masked(account)})", account.ItemId, account.ItemId == disbursement.DestinationBankAccountId)),
             ];
-        }).Location("Content:1");
+        }
+
+        return Combine(
+            Initialize<DisbursementViewModel>("DisbursementFields_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["Payment"], "10")),
+            Initialize<DisbursementViewModel>("DisbursementPayee_Edit", Populate)
+                .Location(l => l.Zone("Content", "2").Card(S["Payee"], "20")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Disbursement disbursement, UpdateEditorContext context)

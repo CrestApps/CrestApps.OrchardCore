@@ -30,6 +30,7 @@ using OrchardCore.Recipes;
 using OrchardCore.Navigation;
 using OrchardCore.Security.Permissions;
 using OrchardCore.Settings;
+using CrestApps.OrchardCore.Transactions.ViewModels;
 
 namespace CrestApps.OrchardCore.Transactions;
 
@@ -111,7 +112,8 @@ public sealed class CheckoutStartup : StartupBase
         services
             .AddDisplayDriver<PaymentAttempt, PaymentAttemptDisplayDriver>()
             .AddDisplayDriver<PaymentRefund, PaymentRefundDisplayDriver>()
-            .AddDisplayDriver<PaymentIssue, PaymentIssueDisplayDriver>();
+            .AddDisplayDriver<PaymentIssue, PaymentIssueDisplayDriver>()
+            .AddDisplayDriver<RefundRequestViewModel, RefundRequestDisplayDriver>();
         services.AddScoped<ICommercePersonalDataContributor, TransactionSettlementPersonalDataContributor>();
     }
 }

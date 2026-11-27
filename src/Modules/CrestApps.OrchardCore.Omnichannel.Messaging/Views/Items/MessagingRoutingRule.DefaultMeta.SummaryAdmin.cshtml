@@ -1,0 +1,5 @@
+@model ShapeViewModel<MessagingRoutingRule>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Order: rules with a lower number are tried first"]">
+    <i class="fa-solid fa-arrow-down-1-9 text-secondary me-1" aria-hidden="true"></i>@Model.Value.Order
+</span>

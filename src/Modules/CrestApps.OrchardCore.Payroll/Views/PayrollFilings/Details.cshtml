@@ -38,14 +38,15 @@
 </div>
 
 <div class="card mb-3">
-    <div class="card-header">@T["Boxes"]</div>
+    <div class="card-header">@T["Fields"]</div>
     <div class="card-body">
         <table class="table table-sm mb-0">
-            <thead><tr><th>@T["Box"]</th><th class="text-end">@T["Amount"]</th></tr></thead>
+            <thead><tr><th>@T["Box or line"]</th><th>@T["Label"]</th><th class="text-end">@T["Amount"]</th></tr></thead>
             <tbody>
                 @foreach (var (box, amount) in filing.Boxes)
                 {
-                    <tr><td>@box</td><td class="text-end">@amount.ToString("N2", CultureInfo.CurrentCulture)</td></tr>
+                    var label = Model.BoxLabels.GetValueOrDefault("filing:" + box) ?? Model.BoxLabels.GetValueOrDefault("person:" + box);
+                    <tr><td>@box</td><td class="text-muted">@label</td><td class="text-end">@amount.ToString("N2", CultureInfo.CurrentCulture)</td></tr>
                 }
             </tbody>
         </table>
@@ -66,7 +67,7 @@
                         <th>@T["Person"]</th>
                         @foreach (var column in columns)
                         {
-                            <th class="text-end">@column</th>
+                            <th class="text-end" title="@Model.BoxLabels.GetValueOrDefault("person:" + column)">@column</th>
                         }
                         <th></th>
                     </tr>

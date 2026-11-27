@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 
@@ -92,4 +93,8 @@ public class QuizOverridesViewModel
 
     /// <summary>Gets or sets why.</summary>
     public string Reason { get; set; }
+
+    /// <summary>Gets or sets the editor the display drivers build: its fields in cards.</summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

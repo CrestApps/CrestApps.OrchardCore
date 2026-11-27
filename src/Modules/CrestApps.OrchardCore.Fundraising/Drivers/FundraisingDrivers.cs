@@ -177,25 +177,41 @@ internal sealed class FundraisingSettingsDisplayDriver : SiteDisplayDriver<Fundr
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IAuthorizationService _authorizationService;
 
-    public FundraisingSettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    internal readonly IStringLocalizer S;
+
+    public FundraisingSettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IStringLocalizer<FundraisingSettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     protected override string SettingsGroupId
         => FundraisingConstants.SettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, FundraisingSettings settings, BuildEditorContext context)
-        => Initialize<FundraisingSettingsViewModel>("FundraisingSettings_Edit", model =>
-        {
-            model.OrganizationName = settings.OrganizationName;
-            model.TaxId = settings.TaxId;
-            model.ReceiptStatement = settings.ReceiptStatement;
-            model.EmailReceipts = settings.EmailReceipts;
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, FundraisingPermissions.ManageFundraising))
-        .OnGroup(SettingsGroupId);
+    {
+        return Combine(
+            Initialize<FundraisingSettingsViewModel>("FundraisingSettings_Edit", model => Fill(model, settings))
+                .Location(l => l.Zone("Content", "1").Card(S["Organization"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, FundraisingPermissions.ManageFundraising))
+                .OnGroup(SettingsGroupId),
+            Initialize<FundraisingSettingsViewModel>("FundraisingSettingsReceipts_Edit", model => Fill(model, settings))
+                .Location(l => l.Zone("Content", "2").Card(S["Receipts"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, FundraisingPermissions.ManageFundraising))
+                .OnGroup(SettingsGroupId));
+    }
+
+    private static void Fill(FundraisingSettingsViewModel model, FundraisingSettings settings)
+    {
+        model.OrganizationName = settings.OrganizationName;
+        model.TaxId = settings.TaxId;
+        model.ReceiptStatement = settings.ReceiptStatement;
+        model.EmailReceipts = settings.EmailReceipts;
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, FundraisingSettings settings, UpdateEditorContext context)
     {

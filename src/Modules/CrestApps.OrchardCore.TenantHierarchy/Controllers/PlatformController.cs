@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Environment.Shell;
 using OrchardCore.Modules;
@@ -27,6 +29,8 @@ public sealed class PlatformController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly ShellSettings _shellSettings;
+    private readonly IDisplayManager<ParentPolicyEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -38,6 +42,8 @@ public sealed class PlatformController : Controller
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="shellSettings">The settings of the Default tenant.</param>
+    /// <param name="displayManager">The display manager of the parent policy editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public PlatformController(
@@ -45,6 +51,8 @@ public sealed class PlatformController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         ShellSettings shellSettings,
+        IDisplayManager<ParentPolicyEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<PlatformController> htmlLocalizer,
         IStringLocalizer<PlatformController> stringLocalizer)
     {
@@ -52,6 +60,8 @@ public sealed class PlatformController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _shellSettings = shellSettings;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -141,6 +151,8 @@ public sealed class PlatformController : Controller
             model.Slug = suggestion.Slug;
         }
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         return View("EditParent", model);
     }
 
@@ -158,6 +170,9 @@ public sealed class PlatformController : Controller
             return Forbid();
         }
 
+        model.IsNew = true;
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         var (result, errors) = await _platformService.MakeParentAsync(model.TenantName, model.Slug, model.DisplayName, model.ToPolicy());
 
         if (result.Succeeded)
@@ -168,7 +183,6 @@ public sealed class PlatformController : Controller
         }
 
         AddErrors(result, errors);
-        model.IsNew = true;
         await PopulateAsync(model, setupService);
 
         return View("EditParent", model);
@@ -242,6 +256,7 @@ public sealed class PlatformController : Controller
 
         model.FromPolicy(node.Settings.GetParentPolicy());
         await PopulateAsync(model, setupService);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         return View(model);
     }
@@ -261,6 +276,9 @@ public sealed class PlatformController : Controller
             return Forbid();
         }
 
+        model.TenantName = id;
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         var (result, errors) = await _platformService.UpdateParentAsync(id, model.DisplayName, model.ToPolicy());
 
         if (result.Succeeded)
@@ -271,7 +289,6 @@ public sealed class PlatformController : Controller
         }
 
         AddErrors(result, errors);
-        model.TenantName = id;
         await PopulateAsync(model, setupService);
 
         return View(model);

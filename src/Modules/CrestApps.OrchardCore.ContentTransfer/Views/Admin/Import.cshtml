@@ -58,25 +58,20 @@
     @Html.ValidationSummary(false, string.Empty, new { @class = "text-danger" })
 }
 
-<div class="card text-bg-theme mb-3">
-    <div class="card-header fw-bold">@title</div>
-    <div class="card-body">
-        <form id="import-form" asp-route-contentTypeId="@(Model.TargetName)" enctype="multipart/form-data" method="post" data-content-transfer-import data-config="@JsonSerializer.Serialize(importConfig, JOptions.CamelCase)">
+<form id="import-form" asp-route-contentTypeId="@(Model.TargetName)" enctype="multipart/form-data" method="post" data-content-transfer-import data-config="@JsonSerializer.Serialize(importConfig, JOptions.CamelCase)">
 
-            @await DisplayAsync(Model.Content)
-            <div id="upload-progress" class="mb-3 mt-2" style="display:none;">
-                <div class="progress">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
-                </div>
-                <small class="text-muted mt-1 d-block" id="upload-status">@T["Uploading..."]</small>
-            </div>
-            <div id="upload-error" class="alert alert-danger mt-2" style="display:none;"></div>
-            <div class="action-bar-bottom" id="upload-actions">
-                <button type="submit" class="btn btn-primary">@T["Upload"]</button>
-            </div>
-        </form>
+    @await DisplayAsync(Model.Content)
+    <div id="upload-progress" class="mb-3 mt-2" style="display:none;">
+        <div class="progress">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
+        </div>
+        <small class="text-muted mt-1 d-block" id="upload-status">@T["Uploading..."]</small>
     </div>
-</div>
+    <div id="upload-error" class="alert alert-danger mt-2" style="display:none;"></div>
+    <div class="action-bar-bottom" id="upload-actions">
+        <button type="submit" class="btn btn-primary">@T["Upload"]</button>
+    </div>
+</form>
 
 <div class="card mb-3">
     <div class="card-header fw-bold">@T["File Requirements"]</div>

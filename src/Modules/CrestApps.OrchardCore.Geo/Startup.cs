@@ -39,6 +39,7 @@ public sealed class Startup : StartupBase
         services.AddSiteDisplayDriver<GeoSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(GeoSettingsDisplayDriver.GroupId, GeoPermissions.ManageGeoSettings);
         services.AddDisplayDriver<TerritoryRow, TerritoryRowDisplayDriver>();
+        services.AddDisplayDriver<TerritoryEditViewModel, TerritoryEditDisplayDriver>();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, GeocodeBackgroundTask>());
         services.AddNavigationProvider<GeoAdminMenu>();
     }

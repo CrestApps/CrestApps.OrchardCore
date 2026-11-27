@@ -42,6 +42,8 @@ public sealed class TaxationPartDisplayDriver : ContentPartDisplayDriver<Taxatio
             model.TaxClassificationCode = context.IsNew ? settings.DefaultTaxClassificationCode : part.TaxClassificationCode;
             model.ExternalTaxCode = part.ExternalTaxCode;
             model.AllowClassificationOverride = settings.AllowClassificationOverride;
+            model.ShowClassification = settings.ShowClassification;
+            model.ShowExternalTaxCode = settings.ShowExternalTaxCode;
 
             if (settings.AllowClassificationOverride)
             {
@@ -59,13 +61,27 @@ public sealed class TaxationPartDisplayDriver : ContentPartDisplayDriver<Taxatio
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
+        // An editor that was not on the form posts nothing; the part keeps what it has rather than being cleared.
+        if (!model.Rendered)
+        {
+            return Edit(part, context);
+        }
+
         part.Taxable = model.Taxable;
-        part.ExternalTaxCode = model.ExternalTaxCode;
+
+        if (settings.ShowExternalTaxCode)
+        {
+            part.ExternalTaxCode = model.ExternalTaxCode;
+        }
 
         if (settings.AllowClassificationOverride)
         {
             part.TaxCategoryCode = model.TaxCategoryCode;
-            part.TaxClassificationCode = model.TaxClassificationCode;
+
+            if (settings.ShowClassification)
+            {
+                part.TaxClassificationCode = model.TaxClassificationCode;
+            }
         }
         else
         {

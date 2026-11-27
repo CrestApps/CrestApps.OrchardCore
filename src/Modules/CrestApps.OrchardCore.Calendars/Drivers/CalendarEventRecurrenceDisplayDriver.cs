@@ -42,7 +42,7 @@ internal sealed class CalendarEventRecurrenceDisplayDriver : DisplayDriver<Calen
         {
             model.IsOccurrence = calendarEvent.SeriesId is not null;
             Load(calendarEvent, model);
-        }).Location("Content:5%Repeat;2");
+        }).Location(l => l.Zone("Content", "5").Card(S["Repeat"], "2"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CalendarEvent calendarEvent, UpdateEditorContext context)

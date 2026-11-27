@@ -64,7 +64,7 @@ public sealed class PayLaterSettingsDisplayDriver : SiteDisplayDriver<PayLaterSe
             {
                 model.PaymentTerms = [.. (await terms.GetEnabledAsync()).Select(term => new SelectListItem(term.Name, term.ItemId))];
             }
-        }).Location("Content:1")
+        }).Location(l => l.Zone("Content", "1").Card(S["Pay Later"], "10"))
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TransactionsPermissions.ManageTransactionSettings))
         .OnGroup(SettingsGroupId);
     }

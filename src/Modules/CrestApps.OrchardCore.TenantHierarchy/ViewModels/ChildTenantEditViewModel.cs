@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.TenantHierarchy.Models;
 using CrestApps.OrchardCore.TenantHierarchy.Services;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.TenantHierarchy.ViewModels;
 
@@ -85,4 +86,17 @@ public class ChildTenantEditViewModel
     /// </summary>
     [BindNever]
     public int MaxChildren { get; set; }
+
+    /// <summary>
+    /// Gets a value indicating whether a child tenant is created, as opposed to edited.
+    /// </summary>
+    [BindNever]
+    public bool IsNew
+        => Info is null;
+
+    /// <summary>
+    /// Gets or sets the editor shape, built by the display drivers of the view model: one card per section.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

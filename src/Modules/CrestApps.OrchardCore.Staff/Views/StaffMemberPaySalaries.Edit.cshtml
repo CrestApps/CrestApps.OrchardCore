@@ -1,0 +1,11 @@
+@model CrestApps.OrchardCore.Staff.Drivers.StaffPayViewModel
+
+<div class="row g-2 fw-semibold small mb-1"><div class="col-md-4">@T["From"]</div><div class="col-md-4">@T["Yearly amount"]</div></div>
+@for (var i = 0; i < Model.Salaries.Count; i++)
+{
+    <div class="row g-2 mb-2">
+        <div class="col-md-4"><input type="date" name="@Html.NameFor(m => m.Salaries[i].EffectiveFrom)" value="@Model.Salaries[i].EffectiveFrom?.ToString("yyyy-MM-dd")" class="form-control" aria-label="@T["From"]" /></div>
+        <div class="col-md-4"><input name="@Html.NameFor(m => m.Salaries[i].AnnualAmount)" value="@Model.Salaries[i].AnnualAmount" class="form-control" inputmode="decimal" aria-label="@T["Yearly amount"]" placeholder="52000" /></div>
+    </div>
+}
+<span class="hint">@T["For salaried staff. Give a raise a new row from the day it starts, so earlier pay stays as it was. Amounts use a dot for decimals. Save to get more empty rows. Every change is kept in the staff member's history."]</span>

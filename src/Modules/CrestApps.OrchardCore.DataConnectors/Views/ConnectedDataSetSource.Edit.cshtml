@@ -1,0 +1,46 @@
+@model ConnectedDataSetFieldsViewModel
+
+@{
+    var accessModeName = Html.NameFor(model => model.AccessMode);
+    var sectionId = Html.IdFor(model => model.AccessMode) + "_Section";
+    var resourcesId = Html.IdFor(model => model.Resource) + "_Resources";
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="Resource" class="ocat-label">@T["Resource"]</label>
+    <div class="ocat-end">
+        <input asp-for="Resource" class="form-control" list="@resourcesId" autocomplete="off" />
+        <datalist id="@resourcesId">
+            @foreach (var resource in Model.Resources)
+            {
+                <option value="@resource.Name">@resource.DisplayName@(string.IsNullOrEmpty(resource.Kind) ? string.Empty : $" ({resource.Kind})")</option>
+            }
+        </datalist>
+        @if (!string.IsNullOrEmpty(Model.DiscoveryError))
+        {
+            <div class="text-warning mt-1"><i class="fa-solid fa-triangle-exclamation me-1" aria-hidden="true"></i>@T["The connection's resources couldn't be listed: {0}", Model.DiscoveryError]</div>
+        }
+        else if (Model.Resources.Count > 0)
+        {
+            <span class="hint">@T["Pick one of the {0} resources the connection lists, or type a name.", Model.Resources.Count]</span>
+        }
+        <span class="hint">@T["What the data set reads: a table or view (schema.name), an index or alias, a path on the API's base URL, or a file of the media library, depending on the connection."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Access"]</label>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="@accessModeName" id="@(sectionId)_Live" value="@nameof(DataSetAccessMode.Live)" checked="@(Model.AccessMode == DataSetAccessMode.Live)" disabled="@(!Model.SupportsLive)" />
+            <label class="form-check-label" for="@(sectionId)_Live">@T["Live"]</label>
+            <span class="hint dashed">@T["Every read goes to the external system, so readers always see its current rows. Use it for sources that answer fast."]</span>
+        </div>
+        <div class="form-check">
+            <input class="form-check-input" type="radio" name="@accessModeName" id="@(sectionId)_Imported" value="@nameof(DataSetAccessMode.Imported)" checked="@(Model.AccessMode == DataSetAccessMode.Imported)" disabled="@(!Model.SupportsImport)" />
+            <label class="form-check-label" for="@(sectionId)_Imported">@T["Imported"]</label>
+            <span class="hint dashed">@T["The rows are copied into the site's database on a schedule and read from there, so reports stay fast and keep working when the source is down."]</span>
+        </div>
+        <span asp-validation-for="AccessMode" class="text-danger"></span>
+    </div>
+</div>

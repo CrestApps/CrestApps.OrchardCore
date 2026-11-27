@@ -1,68 +1,32 @@
 @using CrestApps.OrchardCore.Currencies
 @model DisbursementViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Payment"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="Method">
-            <label asp-for="Method" class="ocat-label ocat-label-required">@T["Sent by"]</label>
-            <div class="ocat-end">
-                <select asp-for="Method" asp-items="Model.MethodOptions" class="form-select"></select>
-                <span asp-validation-for="Method" class="text-danger"></span>
-                <span class="hint">@T["A bank file pays into the payee's bank account; a printed check is mailed; paid outside the system records a wire or cash payment."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="SourceBankAccountId">
-            <label asp-for="SourceBankAccountId" class="ocat-label">@T["From"]</label>
-            <div class="ocat-end">
-                <select asp-for="SourceBankAccountId" asp-items="Model.SourceAccountOptions" class="form-select"></select>
-                <span asp-validation-for="SourceBankAccountId" class="text-danger"></span>
-                <span class="hint">@T["The business's bank account the money leaves from. Needed for a bank file or a check."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Amount">
-            <label asp-for="Amount" class="ocat-label ocat-label-required">@T["Amount"]</label>
-            <div class="ocat-end ocat-limited-wrapper">
-                <input asp-for="Amount" type="number" step="@CurrencyScale.GetInputStep(Model.Currency)" min="0" class="form-control" autocomplete="off" />
-                <span asp-validation-for="Amount" class="text-danger"></span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Memo">
-            <label asp-for="Memo" class="ocat-label">@T["Memo"]</label>
-            <div class="ocat-end">
-                <input asp-for="Memo" class="form-control" maxlength="200" />
-            </div>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="Method">
+    <label asp-for="Method" class="ocat-label ocat-label-required">@T["Sent by"]</label>
+    <div class="ocat-end">
+        <select asp-for="Method" asp-items="Model.MethodOptions" class="form-select"></select>
+        <span asp-validation-for="Method" class="text-danger"></span>
+        <span class="hint">@T["A bank file pays into the payee's bank account; a printed check is mailed; paid outside the system records a wire or cash payment."]</span>
     </div>
 </div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Payee"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="DestinationBankAccountId">
-            <label asp-for="DestinationBankAccountId" class="ocat-label">@T["Bank account"]</label>
-            <div class="ocat-end">
-                <select asp-for="DestinationBankAccountId" asp-items="Model.DestinationAccountOptions" class="form-select"></select>
-                <span asp-validation-for="DestinationBankAccountId" class="text-danger"></span>
-                <span class="hint">@T["The payee's verified bank account, for a bank file. Only verified accounts are listed."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="PayeeName">
-            <label asp-for="PayeeName" class="ocat-label">@T["Payee name"]</label>
-            <div class="ocat-end">
-                <input asp-for="PayeeName" class="form-control" maxlength="100" />
-                <span asp-validation-for="PayeeName" class="text-danger"></span>
-                <span class="hint">@T["Left empty, the account holder's name is used."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper">
-            <div class="ocat-end ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="IsBusinessPayee" class="form-check-input" />
-                    <label asp-for="IsBusinessPayee" class="form-check-label">@T["The payee is a business"]</label>
-                    <span class="hint dashed">@T["A bank file pays a business with a corporate entry (CCD) and a person with a personal one (PPD)."]</span>
-                </div>
-            </div>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="SourceBankAccountId">
+    <label asp-for="SourceBankAccountId" class="ocat-label">@T["From"]</label>
+    <div class="ocat-end">
+        <select asp-for="SourceBankAccountId" asp-items="Model.SourceAccountOptions" class="form-select"></select>
+        <span asp-validation-for="SourceBankAccountId" class="text-danger"></span>
+        <span class="hint">@T["The business's bank account the money leaves from. Needed for a bank file or a check."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Amount">
+    <label asp-for="Amount" class="ocat-label ocat-label-required">@T["Amount"]</label>
+    <div class="ocat-end ocat-limited-wrapper">
+        <input asp-for="Amount" type="number" step="@CurrencyScale.GetInputStep(Model.Currency)" min="0" class="form-control" autocomplete="off" />
+        <span asp-validation-for="Amount" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Memo">
+    <label asp-for="Memo" class="ocat-label">@T["Memo"]</label>
+    <div class="ocat-end">
+        <input asp-for="Memo" class="form-control" maxlength="200" />
     </div>
 </div>

@@ -2,6 +2,8 @@
 
 @model TaxationPartViewModel
 
+<input type="hidden" asp-for="Rendered" value="true" />
+
 <div class="ocat-wrapper" asp-validation-class-for="Taxable">
     <div class="ocat-end-offset">
         <div class="form-check">
@@ -23,21 +25,27 @@
         </div>
     </div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="TaxClassificationCode">
-        <label asp-for="TaxClassificationCode" class="ocat-label">@T["Tax classification"]</label>
+    @if (Model.ShowClassification)
+    {
+        <div class="ocat-wrapper" asp-validation-class-for="TaxClassificationCode">
+            <label asp-for="TaxClassificationCode" class="ocat-label">@T["Tax classification"]</label>
+            <div class="ocat-end">
+                <select asp-for="TaxClassificationCode" asp-items="Model.TaxCategories" class="form-select"></select>
+                <span asp-validation-for="TaxClassificationCode"></span>
+                <span class="hint">@T["An optional, more specific category that refines the tax category, for example Television."]</span>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.ShowExternalTaxCode)
+{
+    <div class="ocat-wrapper" asp-validation-class-for="ExternalTaxCode">
+        <label asp-for="ExternalTaxCode" class="ocat-label">@T["External tax code"]</label>
         <div class="ocat-end">
-            <select asp-for="TaxClassificationCode" asp-items="Model.TaxCategories" class="form-select"></select>
-            <span asp-validation-for="TaxClassificationCode"></span>
-            <span class="hint">@T["An optional, more specific category that refines the tax category, for example Television."]</span>
+            <input type="text" asp-for="ExternalTaxCode" class="form-control" />
+            <span asp-validation-for="ExternalTaxCode"></span>
+            <span class="hint">@T["An optional external or provider-specific tax code."]</span>
         </div>
     </div>
 }
-
-<div class="ocat-wrapper" asp-validation-class-for="ExternalTaxCode">
-    <label asp-for="ExternalTaxCode" class="ocat-label">@T["External tax code"]</label>
-    <div class="ocat-end">
-        <input type="text" asp-for="ExternalTaxCode" class="form-control" />
-        <span asp-validation-for="ExternalTaxCode"></span>
-        <span class="hint">@T["An optional external or provider-specific tax code."]</span>
-    </div>
-</div>

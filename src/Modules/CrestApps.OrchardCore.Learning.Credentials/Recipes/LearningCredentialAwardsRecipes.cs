@@ -280,6 +280,13 @@ internal sealed class LearningCredentialAwardsDeploymentSource : DeploymentSourc
 /// </summary>
 internal sealed class LearningCredentialAwardsDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, LearningCredentialAwardsDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public LearningCredentialAwardsDeploymentStepDisplayDriver(IStringLocalizer<LearningCredentialAwardsDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc/>
     public override Task<IDisplayResult> DisplayAsync(LearningCredentialAwardsDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
@@ -288,7 +295,7 @@ internal sealed class LearningCredentialAwardsDeploymentStepDisplayDriver : Disp
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(LearningCredentialAwardsDeploymentStep step, BuildEditorContext context)
-        => View("LearningCredentialAwardsDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("LearningCredentialAwardsDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["Credential Awards"], "10"));
 }
 
 /// <summary>

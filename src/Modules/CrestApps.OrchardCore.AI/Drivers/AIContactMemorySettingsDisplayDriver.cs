@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.AI.Core.Models;
 using CrestApps.OrchardCore.AI.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -22,15 +23,22 @@ public sealed class AIContactMemorySettingsDisplayDriver : SiteDisplayDriver<AIC
     /// <inheritdoc/>
     protected override string SettingsGroupId => AIConstants.AISettingsGroupId;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="AIContactMemorySettingsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The HTTP context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    public AIContactMemorySettingsDisplayDriver(IHttpContextAccessor httpContextAccessor, IAuthorizationService authorizationService)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public AIContactMemorySettingsDisplayDriver(
+        IHttpContextAccessor httpContextAccessor,
+        IAuthorizationService authorizationService,
+        IStringLocalizer<AIContactMemorySettingsDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -40,7 +48,7 @@ public sealed class AIContactMemorySettingsDisplayDriver : SiteDisplayDriver<AIC
         {
             model.Instructions = settings.Instructions;
             model.DefaultInstructions = AIContactMemoryService.SystemPrompt;
-        }).Location("Content:8%Contact memory;8")
+        }).Location(l => l.Zone("Content", "8").Card(S["Contact Memory"], "8"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext.User, AIPermissions.ManageAIProfiles));
     }

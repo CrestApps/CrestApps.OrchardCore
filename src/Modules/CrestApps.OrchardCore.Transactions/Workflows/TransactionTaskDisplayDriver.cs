@@ -1,4 +1,7 @@
 using System.Reflection;
+using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
 
@@ -13,6 +16,22 @@ public sealed class TransactionTaskDisplayDriver<TActivity> : ActivityDisplayDri
     where TActivity : TransactionTaskActivity<TActivity>, ITask
 {
     private static readonly PropertyInfo[] _modelProperties = typeof(TransactionTaskViewModel).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TransactionTaskDisplayDriver{TActivity}"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public TransactionTaskDisplayDriver(IStringLocalizer<TransactionTaskDisplayDriver<TActivity>> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<TransactionTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
 
     /// <inheritdoc />
     protected override void EditActivity(TActivity activity, TransactionTaskViewModel model)

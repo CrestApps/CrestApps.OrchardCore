@@ -1,0 +1,5 @@
+@model StaffEditViewModel
+
+<div class="ocat-wrapper"><label asp-for="WorkLocation" class="ocat-label">@T["Work location"]</label><div class="ocat-end"><input asp-for="WorkLocation" class="form-control" /><span class="hint">@T["The office, store or depot they work at."]</span></div></div>
+<div class="ocat-wrapper"><label asp-for="HomeBase" class="ocat-label">@T["Home base"]</label><div class="ocat-end"><input asp-for="HomeBase" class="form-control" /><span class="hint">@T["Where a field worker starts and ends the day."]</span></div></div>
+<div class="ocat-wrapper"><label asp-for="TimeZoneId" class="ocat-label">@T["Time zone"]</label><div class="ocat-end"><select asp-for="TimeZoneId" asp-items="Model.TimeZoneOptions" class="form-select" style="max-width: 22rem"><option value="">@T["The main team's time zone"]</option></select></div></div>

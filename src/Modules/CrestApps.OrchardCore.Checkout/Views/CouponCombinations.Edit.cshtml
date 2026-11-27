@@ -1,0 +1,30 @@
+@using Microsoft.AspNetCore.Mvc.Localization
+@using CrestApps.OrchardCore.Checkout.Models
+@using CrestApps.OrchardCore.Checkout.ViewModels
+@model CouponEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <p class="text-body-secondary mb-0">@T["Which other discounts can be used on the same order. When discounts can't all be used together, the buyer gets the combination that takes off the most, and is told which code wasn't used."]</p>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="CombinesWithProductDiscounts" class="form-check-input" />
+            <label asp-for="CombinesWithProductDiscounts" class="form-check-label">@T["Product discounts"]</label>
+        </div>
+        <span class="hint dashed">@T["Discounts limited to some products or categories."]</span>
+        <div class="form-check">
+            <input asp-for="CombinesWithOrderDiscounts" class="form-check-input" />
+            <label asp-for="CombinesWithOrderDiscounts" class="form-check-label">@T["Order discounts"]</label>
+        </div>
+        <span class="hint dashed">@T["Discounts off the whole order."]</span>
+        <div class="form-check">
+            <input asp-for="CombinesWithShippingDiscounts" class="form-check-input" />
+            <label asp-for="CombinesWithShippingDiscounts" class="form-check-label">@T["Shipping discounts"]</label>
+        </div>
+        <span class="hint dashed">@T["Free or cheaper shipping."]</span>
+    </div>
+</div>

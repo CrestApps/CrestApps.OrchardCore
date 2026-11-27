@@ -1,0 +1,65 @@
+@model InvoicingSettingsViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="PricesIncludeTax" class="form-check-input" />
+            <label asp-for="PricesIncludeTax" class="form-check-label">@T["Prices include tax"]</label>
+            <span class="hint dashed">@T["New invoices take their line prices as tax-inclusive, and the tax is worked out of them."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="AllowPartialPayment" class="form-check-input" />
+            <label asp-for="AllowPartialPayment" class="form-check-label">@T["Let customers pay part of an invoice"]</label>
+            <span class="hint dashed">@T["Customers can pay any amount up to what is due from the invoice's pay link."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="IssueOnSend" class="form-check-input" />
+            <label asp-for="IssueOnSend" class="form-check-label">@T["Sending a draft issues it"]</label>
+            <span class="hint dashed">@T["Sending a draft to the customer first issues it, so it gets its number. Otherwise only issued invoices can be sent."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="ApprovalThreshold">
+    <label asp-for="ApprovalThreshold" class="ocat-label">@T["Approve invoices from"]</label>
+    <div class="ocat-limited">
+        <input asp-for="ApprovalThreshold" type="number" step="any" min="0" class="form-control" />
+        <span asp-validation-for="ApprovalThreshold"></span>
+        <span class="hint">@T["Optional. An invoice totaling at least this, in its own currency, is submitted for approval and issued only when someone with the Approve invoices permission, other than who submitted it, approves it. 0 approves every invoice; empty approves none."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="AllowFutureIssueDate" class="form-check-input" />
+            <label asp-for="AllowFutureIssueDate" class="form-check-label">@T["Allow issue dates after today"]</label>
+            <span class="hint dashed">@T["An invoice can be issued with a date in the future. Otherwise it is dated the day it is issued or earlier."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-label"></div>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="ChronologicalIssueDates" class="form-check-input" />
+            <label asp-for="ChronologicalIssueDates" class="form-check-label">@T["Date invoices in the order they are numbered"]</label>
+            <span class="hint dashed">@T["An invoice can't be dated before the last invoice issued, so numbers and dates go up together, as some countries require."]</span>
+        </div>
+    </div>
+</div>

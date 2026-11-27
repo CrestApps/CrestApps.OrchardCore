@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Markets.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Markets.ViewModels;
 
@@ -47,6 +48,12 @@ public class MarketEditViewModel
 
     [BindNever]
     public IList<SelectListItem> Cultures { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor of the market, built by the display drivers of <see cref="MarketEditViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

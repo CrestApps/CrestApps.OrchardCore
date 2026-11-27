@@ -28,6 +28,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using OrchardCore.Settings;
+using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Subscriptions.Controllers;
 
@@ -52,6 +53,8 @@ public sealed class InstallmentPlansController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IClock _clock;
+    private readonly IDisplayManager<CreateInstallmentPlanViewModel> _editorManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -70,6 +73,8 @@ public sealed class InstallmentPlansController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IClock clock,
+        IDisplayManager<CreateInstallmentPlanViewModel> editorManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<InstallmentPlansController> htmlLocalizer,
         IStringLocalizer<InstallmentPlansController> stringLocalizer)
     {
@@ -83,6 +88,8 @@ public sealed class InstallmentPlansController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _clock = clock;
+        _editorManager = editorManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -205,6 +212,8 @@ public sealed class InstallmentPlansController : Controller
             await _notifier.WarningAsync(H["No payment provider that can keep a card for later payments is enabled. Enable and configure one, such as Stripe, before creating a plan."]);
         }
 
+        model.Editor = await _editorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         return View(model);
     }
 
@@ -220,6 +229,8 @@ public sealed class InstallmentPlansController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _editorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         if (!model.TotalAmount.HasValue)
         {
@@ -276,6 +287,8 @@ public sealed class InstallmentPlansController : Controller
         }
 
         await PopulateAsync(model);
+
+        model.Editor = await _editorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         return View(model);
     }

@@ -152,7 +152,7 @@ internal sealed class CreateWorkOrderSubjectActionDisplayDriver : DisplayDriver<
                 new SelectListItem(S["The type's"], string.Empty, metadata.Priority is null),
                 .. Enum.GetValues<WorkOrderPriority>().Select(priority => new SelectListItem(PriorityText(priority), priority.ToString(), priority == metadata.Priority)),
             ];
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Work Order"], "5"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(SubjectAction action, UpdateEditorContext context)

@@ -34,6 +34,18 @@ public class TaxationPartViewModel
     /// </summary>
     public bool AllowClassificationOverride { get; set; }
 
+    [BindNever]
+    public bool ShowClassification { get; set; }
+
+    [BindNever]
+    public bool ShowExternalTaxCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether the editor was on the posted form. A type that places the editor
+    /// elsewhere, or removes it, does not post it, and the part is then left as it is.
+    /// </summary>
+    public bool Rendered { get; set; }
+
     /// <summary>
     /// Gets or sets the list of available tax categories used to populate the category and
     /// classification dropdowns.

@@ -1,0 +1,41 @@
+@model PayrollPayCodeViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Priority">
+    <label asp-for="Priority" class="ocat-label">@T["Priority"]</label>
+    <div class="ocat-end">
+        <input asp-for="Priority" type="number" min="0" max="10000" class="form-control" style="max-width: 8rem" />
+        <span asp-validation-for="Priority" class="text-danger"></span>
+        <span class="hint">@T["Deductions are taken smallest number first; when net pay is too small, the largest numbers are cut first."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Arrears">
+    <label asp-for="Arrears" class="ocat-label">@T["When pay is too small"]</label>
+    <div class="ocat-end">
+        <select asp-for="Arrears" class="form-select" style="max-width: 24rem">
+            <option value="None">@T["Drop what could not be taken"]</option>
+            <option value="CarryForward">@T["Owe it and take it on the next pay"]</option>
+        </select>
+        <span asp-validation-for="Arrears" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Proration" class="ocat-label">@T["Part of a period"]</label>
+    <div class="ocat-end">
+        <select asp-for="Proration" class="form-select" style="max-width: 24rem">
+            <option value="None">@T["Pay or take the whole amount"]</option>
+            <option value="WorkingDays">@T["By working days employed"]</option>
+            <option value="CalendarDays">@T["By calendar days employed"]</option>
+        </select>
+        <span class="hint">@T["For a fixed amount in a period the person was hired, left or had a pay change in."]</span>
+    </div>
+</div>
+@if (Model.FormBoxOptions.Count > 0)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="FormBoxes" class="ocat-label">@T["Tax form fields"]</label>
+        <div class="ocat-end">
+            <select asp-for="FormBoxes" asp-items="Model.FormBoxOptions" class="form-select" multiple size="5" style="max-width: 24rem"></select>
+            <span class="hint">@T["The fields (boxes and lines) of the tax forms the amounts are reported in, such as W-2 box 12D."]</span>
+        </div>
+    </div>
+}

@@ -1,0 +1,33 @@
+@model ExternalToolViewModel
+
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Issuer"]</label>
+    <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.Issuer" aria-label="@T["Issuer"]" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Client ID"]</label>
+    <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.ClientId" aria-label="@T["Client ID"]" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Deployment ID"]</label>
+    <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.DeploymentId" aria-label="@T["Deployment ID"]" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Authorization endpoint"]</label>
+    <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.AuthorizationEndpoint" aria-label="@T["Authorization endpoint"]" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Token endpoint"]</label>
+    <div class="ocat-end">
+        <input class="form-control font-monospace" readonly value="@Model.TokenEndpoint" aria-label="@T["Token endpoint"]" />
+        <span class="hint">@T["The OpenID server's token endpoint. The tool signs in to it with a client assertion signed by its key (private_key_jwt); the OpenID server must allow the client credentials flow."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Platform JWKS URL"]</label>
+    <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.PlatformJwksUrl" aria-label="@T["Platform JWKS URL"]" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label class="ocat-label">@T["Deep Linking return URL"]</label>
+    <div class="ocat-end"><input class="form-control font-monospace" readonly value="@Model.DeepLinkingReturnUrl" aria-label="@T["Deep Linking return URL"]" /></div>
+</div>

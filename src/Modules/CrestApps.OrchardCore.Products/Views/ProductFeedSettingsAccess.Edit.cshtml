@@ -1,0 +1,16 @@
+@model CrestApps.OrchardCore.Products.Feeds.ProductFeedSettingsViewModel
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="KeyAction" class="ocat-label">@T["Feed key"]</label>
+    <div class="ocat-limited">
+        <select asp-for="KeyAction" class="form-select">
+            <option value="">@(Model.HasKey ? T["Keep the key"] : T["Public: no key"])</option>
+            <option value="new">@(Model.HasKey ? T["Make a new key"] : T["Make a key"])</option>
+            @if (Model.HasKey)
+            {
+                <option value="remove">@T["Remove the key, so it's public"]</option>
+            }
+        </select>
+        <span class="hint">@T["With a key, the feed's address carries it and others can't read the feed. A new key stops the old address working."]</span>
+    </div>
+</div>

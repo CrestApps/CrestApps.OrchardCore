@@ -1,0 +1,16 @@
+@model BankAccountLinkViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="HolderName" class="ocat-label ocat-label-required">@T["Account holder"]</label>
+    <div class="ocat-end">
+        <input asp-for="HolderName" class="form-control" maxlength="255" required />
+        <span class="hint">@T["The name of the account holder as the bank knows it."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="255" />
+        <span class="hint">@T["The name the account is listed by. Leave it empty to use the bank's name and the account's last digits."]</span>
+    </div>
+</div>

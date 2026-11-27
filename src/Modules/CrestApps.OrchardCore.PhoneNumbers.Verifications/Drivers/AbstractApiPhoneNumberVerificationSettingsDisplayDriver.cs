@@ -70,7 +70,7 @@ public sealed class AbstractApiPhoneNumberVerificationSettingsDisplayDriver : Si
             viewModel.IsEnabled = settings.IsEnabled;
             viewModel.AuthenticationType = PhoneNumberVerificationAuthenticationType.ApiKey;
             viewModel.HasApiKey = ProtectedSettingExtensions.HasSecret(settings.ProtectedApiKey);
-        }).Location("Content:5#AbstractAPI")
+        }).Location(l => l.Zone("Content", "5").Tab(S["AbstractAPI"], "5").Card(S["Connection"], "10"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(
             _httpContextAccessor.HttpContext?.User,

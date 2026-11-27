@@ -157,6 +157,22 @@ public sealed class VisitAssignedEventDisplayDriver : ActivityDisplayDriver<Visi
 /// </summary>
 public sealed class VisitStatusChangedEventDisplayDriver : ActivityDisplayDriver<VisitStatusChangedEvent, VisitStatusChangedEventViewModel>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VisitStatusChangedEventDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public VisitStatusChangedEventDisplayDriver(IStringLocalizer<VisitStatusChangedEventDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(VisitStatusChangedEvent activity, BuildEditorContext context)
+        => Initialize<VisitStatusChangedEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+
     /// <inheritdoc/>
     protected override ValueTask EditActivityAsync(VisitStatusChangedEvent activity, VisitStatusChangedEventViewModel model)
     {

@@ -20,17 +20,7 @@
             <p class="mb-0 small">@T["Open it on the device and keep it open. It is shown only now; if it is lost, give the kiosk a new address."]</p>
         </div>
     }
-    <div class="card text-bg-theme mb-3"><div class="card-body">
-        <div class="ocat-wrapper"><label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label><div class="ocat-end"><input asp-for="Name" class="form-control" /><span class="hint">@T["Where it stands, such as Warehouse back door."]</span></div></div>
-        <div class="ocat-wrapper">
-            <label asp-for="TeamId" class="ocat-label">@T["For"]</label>
-            <div class="ocat-end">
-                <select asp-for="TeamId" asp-items="Model.TeamOptions" class="form-select" style="max-width: 22rem"><option value="">@T["Any worker"]</option></select>
-                <span class="hint">@T["Optional. Only workers of this team and its sub-teams can clock in on it."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper"><div class="ocat-end-offset"><div class="form-check"><input asp-for="Enabled" class="form-check-input" /><label asp-for="Enabled" class="form-check-label">@T["In use"]</label></div></div></div>
-    </div></div>
+    @await DisplayAsync(Model.Editor)
     <div class="action-bar-bottom">
         <button class="btn btn-primary" type="submit">@T["Save"]</button>
         <a class="btn btn-secondary cancel" asp-action="Index">@T["Cancel"]</a>

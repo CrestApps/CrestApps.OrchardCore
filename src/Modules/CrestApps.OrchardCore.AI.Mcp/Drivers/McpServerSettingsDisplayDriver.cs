@@ -94,7 +94,12 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                     new SelectListItem(S["API key"], nameof(McpServerAuthenticationType.ApiKey)),
                     new SelectListItem(S["None (Anonymous access)"], nameof(McpServerAuthenticationType.None)),
                 ];
-            }).Location("Content:10%MCP Server;1")
+            }).Location(l => l.Zone("Content", "10").Card(S["Authentication"], "10"))
+            .OnGroup(SettingsGroupId),
+            Initialize<McpServerSettingsViewModel>("McpServerSettingsTools_Edit", model =>
+            {
+                model.ExposeAllTools = settings.ExposeAllTools;
+            }).Location(l => l.Zone("Content", "10.1").Card(S["Exposed Tools"], "20"))
             .OnGroup(SettingsGroupId),
         };
 
@@ -114,7 +119,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                         Description = entry.Value.Description,
                         IsSelected = selected.Contains(entry.Key),
                     }).OrderBy(entry => entry.DisplayText).ToArray());
-            }).Location("Content:10%MCP Server;5")
+            }).Location(l => l.Zone("Content", "10.5").Card(S["Exposed Tools"], "20"))
             .OnGroup(SettingsGroupId));
         }
 
@@ -133,7 +138,7 @@ public sealed class McpServerSettingsDisplayDriver : SiteDisplayDriver<McpServer
                     })
                     .OrderBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
                     .ToArray();
-            }).Location("Content:10%MCP Server;10")
+            }).Location(l => l.Zone("Content", "10.6").Card(S["Exposed Tools"], "20"))
             .OnGroup(SettingsGroupId));
         }
 

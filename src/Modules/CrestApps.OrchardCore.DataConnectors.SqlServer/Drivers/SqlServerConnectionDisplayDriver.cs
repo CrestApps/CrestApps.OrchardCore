@@ -40,8 +40,15 @@ internal sealed class SqlServerConnectionDisplayDriver : DisplayDriver<DataConne
             return null;
         }
 
-        return Initialize<SqlServerConnectionViewModel>("SqlServerConnection_Edit", model =>
-        {
+        return Combine(
+            Initialize<SqlServerConnectionViewModel>("SqlServerConnection_Edit", model => FillValues(model, connection))
+                .Location(l => l.Zone("Content", "5").Card(S["Connection"], "20")),
+            Initialize<SqlServerConnectionViewModel>("SqlServerConnectionAuthentication_Edit", model => FillValues(model, connection))
+                .Location(l => l.Zone("Content", "6").Card(S["Authentication"], "30")));
+    }
+
+    private void FillValues(SqlServerConnectionViewModel model, DataConnection connection)
+    {
             var settings = connection.GetOrCreate<SqlServerConnectionSettings>();
 
             model.Server = settings.Server;
@@ -54,7 +61,6 @@ internal sealed class SqlServerConnectionDisplayDriver : DisplayDriver<DataConne
             model.ConnectTimeoutSeconds = settings.ConnectTimeoutSeconds;
             model.HasPassword = _secretManager.Has(connection, SqlServerDataConnector.PasswordSecret);
             model.AllowHostIdentity = _allowHostIdentity;
-        }).Location("Content:5");
     }
 
     public override async Task<IDisplayResult> UpdateAsync(DataConnection connection, UpdateEditorContext context)

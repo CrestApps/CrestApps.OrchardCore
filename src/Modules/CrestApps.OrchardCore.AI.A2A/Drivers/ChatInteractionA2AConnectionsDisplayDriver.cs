@@ -46,7 +46,7 @@ internal sealed class ChatInteractionA2AConnectionsDisplayDriver : DisplayDriver
                 IsSelected = interaction.A2AConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-        }).Location("Parameters:4#Capabilities;5");
+        }).Location(l => l.Zone("Parameters", "4").Tab(S["Capabilities"], "5").Card(S["A2A Connections"], "30"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ChatInteraction interaction, UpdateEditorContext context)

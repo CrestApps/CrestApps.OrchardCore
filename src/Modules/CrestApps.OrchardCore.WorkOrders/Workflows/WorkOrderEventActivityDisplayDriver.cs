@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Display;
@@ -17,14 +18,25 @@ public sealed class WorkOrderEventActivityDisplayDriver<TActivity> : ActivityDis
 {
     private readonly WorkOrderSettingManager<WorkOrderType> _types;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="WorkOrderEventActivityDisplayDriver{TActivity}"/> class.
     /// </summary>
     /// <param name="types">The work order types.</param>
-    public WorkOrderEventActivityDisplayDriver(WorkOrderSettingManager<WorkOrderType> types)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public WorkOrderEventActivityDisplayDriver(
+        WorkOrderSettingManager<WorkOrderType> types,
+        IStringLocalizer<WorkOrderEventActivityDisplayDriver<TActivity>> stringLocalizer)
     {
         _types = types;
+        S = stringLocalizer;
     }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<WorkOrderEventActivityViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
 
     /// <inheritdoc/>
     protected override async ValueTask EditActivityAsync(TActivity activity, WorkOrderEventActivityViewModel model)

@@ -1,45 +1,44 @@
 @model ApprovalPolicyConditionsViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Conditions"]</div>
-    <div class="card-body">
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
         <p class="hint">@T["The policy is chosen for a request that names none only when these match. Empty conditions match every request."]</p>
-        @if (Model.ShowsAmount)
-        {
-            <div class="ocat-wrapper" asp-validation-class-for="MinimumAmount">
-                <label asp-for="MinimumAmount" class="ocat-label">@T["Amount"]</label>
-                <div class="ocat-end">
-                    <div class="input-group" style="max-width: 32rem">
-                        <span class="input-group-text">@T["from"]</span>
-                        <input asp-for="MinimumAmount" class="form-control" inputmode="decimal" aria-label="@T["Least amount"]" />
-                        <span class="input-group-text">@T["to"]</span>
-                        <input asp-for="MaximumAmount" class="form-control" inputmode="decimal" aria-label="@T["Most amount"]" />
-                        <input asp-for="Currency" class="form-control text-uppercase" style="max-width: 6rem" maxlength="3" placeholder="USD" aria-label="@T["Currency"]" />
-                    </div>
-                    <span asp-validation-for="MinimumAmount" class="text-danger"></span>
-                    <span asp-validation-for="MaximumAmount" class="text-danger"></span>
-                    <span class="hint">@T["Only requests with an amount in this range, and in this currency when one is given. Empty for any amount."]</span>
-                </div>
-            </div>
-        }
-        @if (Model.ShowsScope)
-        {
-            <div class="ocat-wrapper">
-                <label asp-for="AccessScope" class="ocat-label">@T["Scope"]</label>
-                <div class="ocat-end">
-                    @if (Model.ScopeOptions.Count > 0)
-                    {
-                        <select asp-for="AccessScope" asp-items="Model.ScopeOptions" class="form-select" style="max-width: 24rem">
-                            <option value="">@T["Any"]</option>
-                        </select>
-                    }
-                    else
-                    {
-                        <input asp-for="AccessScope" class="form-control" style="max-width: 24rem" />
-                    }
-                    <span class="hint">@T["Only requests of this scope, such as one employer. Empty for any."]</span>
-                </div>
-            </div>
-        }
     </div>
 </div>
+@if (Model.ShowsAmount)
+{
+    <div class="ocat-wrapper" asp-validation-class-for="MinimumAmount">
+        <label asp-for="MinimumAmount" class="ocat-label">@T["Amount"]</label>
+        <div class="ocat-end">
+            <div class="input-group" style="max-width: 32rem">
+                <span class="input-group-text">@T["from"]</span>
+                <input asp-for="MinimumAmount" class="form-control" inputmode="decimal" aria-label="@T["Least amount"]" />
+                <span class="input-group-text">@T["to"]</span>
+                <input asp-for="MaximumAmount" class="form-control" inputmode="decimal" aria-label="@T["Most amount"]" />
+                <input asp-for="Currency" class="form-control text-uppercase" style="max-width: 6rem" maxlength="3" placeholder="USD" aria-label="@T["Currency"]" />
+            </div>
+            <span asp-validation-for="MinimumAmount" class="text-danger"></span>
+            <span asp-validation-for="MaximumAmount" class="text-danger"></span>
+            <span class="hint">@T["Only requests with an amount in this range, and in this currency when one is given. Empty for any amount."]</span>
+        </div>
+    </div>
+}
+@if (Model.ShowsScope)
+{
+    <div class="ocat-wrapper">
+        <label asp-for="AccessScope" class="ocat-label">@T["Scope"]</label>
+        <div class="ocat-end">
+            @if (Model.ScopeOptions.Count > 0)
+            {
+                <select asp-for="AccessScope" asp-items="Model.ScopeOptions" class="form-select" style="max-width: 24rem">
+                    <option value="">@T["Any"]</option>
+                </select>
+            }
+            else
+            {
+                <input asp-for="AccessScope" class="form-control" style="max-width: 24rem" />
+            }
+            <span class="hint">@T["Only requests of this scope, such as one employer. Empty for any."]</span>
+        </div>
+    </div>
+}

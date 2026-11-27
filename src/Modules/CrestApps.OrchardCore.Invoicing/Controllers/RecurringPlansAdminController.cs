@@ -26,6 +26,7 @@ using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
 using OrchardCore.Settings;
+using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Invoicing.Controllers;
 
@@ -48,6 +49,8 @@ public sealed class RecurringPlansAdminController : Controller
     private readonly ISiteService _siteService;
     private readonly ILocalClock _localClock;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IDisplayManager<RecurringPlanEditViewModel> _editorManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -62,6 +65,8 @@ public sealed class RecurringPlansAdminController : Controller
         ISiteService siteService,
         ILocalClock localClock,
         IAuthorizationService authorizationService,
+        IDisplayManager<RecurringPlanEditViewModel> editorManager,
+        IUpdateModelAccessor updateModelAccessor,
         INotifier notifier,
         IHtmlLocalizer<RecurringPlansAdminController> htmlLocalizer,
         IStringLocalizer<RecurringPlansAdminController> stringLocalizer)
@@ -74,6 +79,8 @@ public sealed class RecurringPlansAdminController : Controller
         _siteService = siteService;
         _localClock = localClock;
         _authorizationService = authorizationService;
+        _editorManager = editorManager;
+        _updateModelAccessor = updateModelAccessor;
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -397,6 +404,8 @@ public sealed class RecurringPlansAdminController : Controller
 
     private async Task<IActionResult> SaveAsync(RecurringPlan plan, RecurringPlanEditViewModel model, string submit, bool isNew)
     {
+        model.Editor = await _editorManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew);
+
         Apply(model, plan);
 
         if (!string.IsNullOrEmpty(plan.Currency) && plan.Currency.Length != 3)
@@ -591,6 +600,8 @@ public sealed class RecurringPlansAdminController : Controller
         {
             model.BillToName = await _parties.GetNameAsync(party) ?? model.BillTo;
         }
+
+        model.Editor = await _editorManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: string.IsNullOrEmpty(model.ItemId));
 
         return model;
     }

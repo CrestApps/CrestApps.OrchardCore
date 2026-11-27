@@ -181,6 +181,8 @@ Rules only apply to items that carry the **Taxation** part. Add it to each conte
 | **Default tax category** | The category new items of this type start with. |
 | **Default tax classification** | An optional, more specific category new items start with, for example *Television* under *Electronics*. |
 | **Allow editors to override the classification** | Ticked (the default): editors can pick a different category on each item. Cleared: every item always uses the defaults above. |
+| **Show the tax classification** | Ticked (the default): editors also see **Tax classification**. Clear it for a type that only needs a category; each item keeps the classification it has. |
+| **Show the external tax code** | Ticked (the default): editors see **External tax code**. Clear it for a type taxed only by your own tax rules. |
 
 Create your categories first: these drop-downs only list existing categories, plus **None**.
 
@@ -190,8 +192,8 @@ On each item, the **Taxation** part shows:
 | --- | --- |
 | **Taxable** | Ticked by default. Clear it for an item that is never taxed. |
 | **Tax category** | The item's category. Shown only when editors may override the classification. |
-| **Tax classification** | An optional, more specific category. Shown only when editors may override the classification. |
-| **External tax code** | Optional. A code used by an outside tax service. |
+| **Tax classification** | An optional, more specific category. Shown only when editors may override the classification and the type shows it. |
+| **External tax code** | Optional. A code used by an outside tax service. Shown unless the type hides it. |
 
 ### Classify many products at once with a taxonomy
 

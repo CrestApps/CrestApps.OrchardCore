@@ -1,0 +1,23 @@
+@model IncomeTaxWithholdingViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="SupplementalRate">
+    <label asp-for="SupplementalRate" class="ocat-label">@T["Flat rate (%)"]</label>
+    <div class="ocat-end">
+        <input asp-for="SupplementalRate" class="form-control" inputmode="decimal" style="max-width: 8rem" placeholder="22" />
+        <span asp-validation-for="SupplementalRate" class="text-danger"></span>
+        <span class="hint">@T["Withheld from bonuses and commissions when a run uses the flat method; empty to withhold them with regular income."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="SupplementalExcessRate">
+    <label asp-for="SupplementalExcessRate" class="ocat-label">@T["Rate over a year's amount (%)"]</label>
+    <div class="ocat-end">
+        <div class="input-group" style="max-width: 24rem">
+            <input asp-for="SupplementalExcessRate" class="form-control" inputmode="decimal" placeholder="37" aria-label="@T["Rate over a year's amount (%)"]" />
+            <span class="input-group-text">@T["over"]</span>
+            <input asp-for="SupplementalExcessThreshold" class="form-control" inputmode="decimal" placeholder="1000000" aria-label="@T["Year's amount"]" />
+        </div>
+        <span asp-validation-for="SupplementalExcessRate" class="text-danger"></span>
+        <span asp-validation-for="SupplementalExcessThreshold" class="text-danger"></span>
+        <span class="hint">@T["The rate withheld from the supplemental income a person is paid in a calendar year above the amount, whatever the method and the election; empty for none."]</span>
+    </div>
+</div>

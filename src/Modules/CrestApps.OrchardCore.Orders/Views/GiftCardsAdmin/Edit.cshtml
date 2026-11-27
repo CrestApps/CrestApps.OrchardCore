@@ -45,45 +45,7 @@
 <form asp-action="Edit" asp-route-itemId="@Model.ItemId" method="post">
     <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
-    <div class="ocat-wrapper" asp-validation-class-for="RecipientName">
-        <label asp-for="RecipientName" class="ocat-label">@T["Recipient's name"]</label>
-        <div class="ocat-end">
-            <input asp-for="RecipientName" class="form-control" />
-        </div>
-    </div>
-
-    <div class="ocat-wrapper" asp-validation-class-for="RecipientEmail">
-        <label asp-for="RecipientEmail" class="ocat-label">@T["Recipient's email"]</label>
-        <div class="ocat-end">
-            <input asp-for="RecipientEmail" type="email" class="form-control" />
-            <span asp-validation-for="RecipientEmail"></span>
-        </div>
-    </div>
-
-    <div class="ocat-limited-wrapper" asp-validation-class-for="Expires">
-        <label asp-for="Expires" class="ocat-label">@T["Expires"]</label>
-        <div class="ocat-limited">
-            <input asp-for="Expires" type="datetime-local" class="form-control" />
-        </div>
-    </div>
-
-    <div class="ocat-wrapper" asp-validation-class-for="Note">
-        <label asp-for="Note" class="ocat-label">@T["Note"]</label>
-        <div class="ocat-end">
-            <input asp-for="Note" class="form-control" />
-            <span class="hint">@T["For the store only."]</span>
-        </div>
-    </div>
-
-    <div class="ocat-wrapper" asp-validation-class-for="IsEnabled">
-        <div class="ocat-end-offset">
-            <div class="form-check">
-                <input asp-for="IsEnabled" class="form-check-input" />
-                <label asp-for="IsEnabled" class="form-check-label">@T["Enabled"]</label>
-            </div>
-            <span class="hint dashed">@T["Clear it to stop the card paying for anything, without changing its balance."]</span>
-        </div>
-    </div>
+    @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
         <button type="submit" class="btn btn-primary">@T["Save"]</button>

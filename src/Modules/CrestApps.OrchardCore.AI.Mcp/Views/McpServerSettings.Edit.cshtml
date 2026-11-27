@@ -30,18 +30,6 @@
     </div>
 </div>
 
-<div class="ocat-wrapper">
-    <div class="ocat-end-offset">
-        <div class="form-check">
-            <input type="checkbox" class="form-check-input" asp-for="ExposeAllTools" id="mcpServerExposeAllTools" />
-            <label class="form-check-label" asp-for="ExposeAllTools">
-                @T["Expose all tools"]
-            </label>
-            <span class="hint dashed">@T["When enabled, every non-hidden tool and configured tool instance is exposed to MCP clients and the selection below is ignored. Leave disabled to expose only the tools you select."]</span>
-        </div>
-    </div>
-</div>
-
 <script at="Foot">
     document.addEventListener('DOMContentLoaded', () => {
         const authSelect = document.querySelector('[name$="AuthenticationType"]');
@@ -57,22 +45,6 @@
 
             authSelect.addEventListener('change', toggleAuthSections);
             toggleAuthSections();
-        }
-
-        const exposeAllTools = document.getElementById('mcpServerExposeAllTools');
-
-        if (exposeAllTools) {
-            const toolSelectors = [
-                document.querySelector('.tool-groups-container')?.closest('.ocat-wrapper'),
-                document.querySelector('[id^="tool-instance-"]')?.closest('.ocat-wrapper'),
-            ].filter(Boolean);
-
-            function toggleToolSelectors() {
-                toolSelectors.forEach(section => section.classList.toggle('d-none', exposeAllTools.checked));
-            }
-
-            exposeAllTools.addEventListener('change', toggleToolSelectors);
-            toggleToolSelectors();
         }
     });
 </script>

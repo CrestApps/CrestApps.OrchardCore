@@ -26,6 +26,7 @@ public sealed class ContactCenterActivityDialerContributorTests
             profileManager.Object,
             Mock.Of<IActivityQueueService>(),
             Mock.Of<IQueueItemManager>(),
+            Mock.Of<IQueuedWorkWithdrawalService>(),
             Mock.Of<global::YesSql.ISession>(),
             Mock.Of<global::OrchardCore.Locking.Distributed.IDistributedLock>(),
             global::Microsoft.Extensions.Options.Options.Create(new ContactCenterCoordinationOptions()));
@@ -62,6 +63,7 @@ public sealed class ContactCenterActivityDialerContributorTests
             profileManager.Object,
             Mock.Of<IActivityQueueService>(),
             Mock.Of<IQueueItemManager>(),
+            Mock.Of<IQueuedWorkWithdrawalService>(),
             Mock.Of<global::YesSql.ISession>(),
             Mock.Of<global::OrchardCore.Locking.Distributed.IDistributedLock>(),
             global::Microsoft.Extensions.Options.Options.Create(new ContactCenterCoordinationOptions()));
@@ -84,6 +86,7 @@ public sealed class ContactCenterActivityDialerContributorTests
             Mock.Of<IDialerProfileManager>(),
             queueService.Object,
             Mock.Of<IQueueItemManager>(),
+            Mock.Of<IQueuedWorkWithdrawalService>(),
             Mock.Of<global::YesSql.ISession>(),
             Mock.Of<global::OrchardCore.Locking.Distributed.IDistributedLock>(),
             global::Microsoft.Extensions.Options.Options.Create(new ContactCenterCoordinationOptions()));
@@ -121,6 +124,7 @@ public sealed class ContactCenterActivityDialerContributorTests
             Mock.Of<IDialerProfileManager>(),
             Mock.Of<IActivityQueueService>(),
             Mock.Of<IQueueItemManager>(),
+            Mock.Of<IQueuedWorkWithdrawalService>(),
             Mock.Of<global::YesSql.ISession>(),
             Mock.Of<global::OrchardCore.Locking.Distributed.IDistributedLock>(),
             global::Microsoft.Extensions.Options.Options.Create(new ContactCenterCoordinationOptions()));
@@ -166,6 +170,7 @@ public sealed class ContactCenterActivityDialerContributorTests
             Mock.Of<IDialerProfileManager>(),
             queueService.Object,
             queueItemManager.Object,
+            Mock.Of<IQueuedWorkWithdrawalService>(),
             Mock.Of<global::YesSql.ISession>(),
             Mock.Of<global::OrchardCore.Locking.Distributed.IDistributedLock>(),
             global::Microsoft.Extensions.Options.Options.Create(new ContactCenterCoordinationOptions()));
@@ -211,6 +216,7 @@ public sealed class ContactCenterActivityDialerContributorTests
             Mock.Of<IDialerProfileManager>(),
             Mock.Of<IActivityQueueService>(),
             queueItemManager.Object,
+            Mock.Of<IQueuedWorkWithdrawalService>(),
             Mock.Of<global::YesSql.ISession>(),
             Mock.Of<global::OrchardCore.Locking.Distributed.IDistributedLock>(),
             global::Microsoft.Extensions.Options.Options.Create(new ContactCenterCoordinationOptions()));
@@ -384,6 +390,7 @@ public sealed class ContactCenterActivityDialerContributorTests
             Mock.Of<IDialerProfileManager>(),
             queueService,
             queueItemManager,
+            Mock.Of<IQueuedWorkWithdrawalService>(),
             Mock.Of<global::YesSql.ISession>(),
             distributedLock.Object,
             global::Microsoft.Extensions.Options.Options.Create(new ContactCenterCoordinationOptions()));

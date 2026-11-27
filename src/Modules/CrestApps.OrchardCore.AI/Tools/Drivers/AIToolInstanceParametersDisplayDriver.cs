@@ -60,7 +60,7 @@ internal sealed class AIToolInstanceParametersDisplayDriver : DisplayDriver<AITo
                 [instance.Source] = capabilities,
             };
             model.ContextKeys = [.. _contextResolvers.SelectMany(resolver => resolver.SupportedKeys)];
-        }).Location("Content:10");
+        }).Location(l => l.Zone("Content", "10").Card(S["Parameters"], "40"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstance instance, UpdateEditorContext context)

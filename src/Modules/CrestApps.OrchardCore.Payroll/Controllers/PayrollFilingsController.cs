@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
@@ -190,7 +191,7 @@ public sealed class PayrollFilingsController : Controller
             EmployerId = employer?.ItemId,
             Year = await TodayYearAsync(),
             Employers = Options(employers, employer?.ItemId),
-            Forms = employer is null ? [] : [.. _service.FormsFor(employer).Select(form => new SelectListItem(_localizerFactory.Localize(form.DisplayName).Value, form.Name))],
+            Forms = employer is null ? [] : [.. (await _service.FormsForAsync(employer, HttpContext.RequestAborted)).Select(form => new SelectListItem(_localizerFactory.Localize(form.DisplayName).Value, form.Name))],
             Filings = filings,
             List = new AdminListContext<PayrollFiling> { Source = filings },
         });
@@ -238,13 +239,20 @@ public sealed class PayrollFilingsController : Controller
         }
 
         var employer = await _employers.FindByIdAsync(filing.EmployerId);
-        var form = employer is null ? null : _service.FormsFor(employer).FirstOrDefault(candidate => candidate.Name == filing.Form);
+        var form = await _service.FindFormAsync(filing.Form, HttpContext.RequestAborted);
+        var record = HttpContext.RequestServices.GetService<CrestApps.OrchardCore.Taxation.Services.ITaxFormManager>() is { } taxForms
+            ? await taxForms.FindByNameAsync(filing.Form, HttpContext.RequestAborted)
+            : null;
 
         return View(new PayrollFilingDetailsViewModel
         {
             Filing = filing,
             EmployerName = employer?.Name,
             FormName = form is null ? filing.Form : _localizerFactory.Localize(form.DisplayName).Value,
+            BoxLabels = record?.Fields
+                .Where(box => !string.IsNullOrEmpty(box.Number))
+                .GroupBy(box => (box.Level, box.Number))
+                .ToDictionary(group => (group.Key.Level == CrestApps.OrchardCore.Taxation.Models.TaxFormFieldLevel.Recipient ? "person:" : "filing:") + group.Key.Number, group => group.First().Label, StringComparer.Ordinal) ?? [],
             FiledOn = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime),
             Amends = string.IsNullOrEmpty(filing.AmendsId) ? null : await _filings.FindByIdAsync(filing.AmendsId),
         });
@@ -362,7 +370,7 @@ public sealed class PayrollFilingsController : Controller
             return Forbid();
         }
 
-        return File(await _documents.WriteAsync(filing, person), "application/pdf", PayrollTaxFormDocuments.FileName(filing));
+        return File(await _documents.WriteAsync(filing, person), "application/pdf", await _documents.FileNameAsync(filing));
     }
 
     [Admin("payroll/year-end", "PayrollYearEnd")]

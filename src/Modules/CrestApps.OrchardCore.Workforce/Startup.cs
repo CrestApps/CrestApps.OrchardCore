@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.Workforce.Migrations;
 using CrestApps.OrchardCore.Workforce.Models;
 using CrestApps.OrchardCore.Workforce.Navigation;
 using CrestApps.OrchardCore.Workforce.Services;
+using CrestApps.OrchardCore.Workforce.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -50,6 +51,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<StaffMember, WorkforceStaffDisplayDriver>();
         services.AddPageSection(StaffProfileSections.PageName, StaffProfileSections.Work, LocalizationSource.Create<Startup>("Work"), "fa-solid fa-briefcase", 40);
         services.AddDisplayDriver<ActivityCode, ActivityCodeRowDisplayDriver>();
+        services.AddDisplayDriver<ActivityCodeEditViewModel, ActivityCodeEditDisplayDriver>();
         services.AddPermissionProvider<WorkforcePermissionsProvider>();
         services.AddNavigationProvider<WorkforceAdminMenu>();
     }

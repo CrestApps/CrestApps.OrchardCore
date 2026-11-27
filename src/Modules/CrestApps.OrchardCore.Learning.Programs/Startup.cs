@@ -70,6 +70,8 @@ public sealed class RequiredLearningStartup : StartupBase
         services.AddNavigationProvider<ProgramsAdminMenu>();
         services.AddDisplayDriver<LearningRequirement, LearningRequirementRowDisplayDriver>();
         services.AddDisplayDriver<RequiredLearningAssignment, RequiredLearningAssignmentRowDisplayDriver>();
+        services.AddDisplayDriver<RequiredLearningEditViewModel, RequiredLearningEditDisplayDriver>();
+        services.AddDisplayDriver<RequiredLearningExemptViewModel, RequiredLearningExemptDisplayDriver>();
         services.AddDisplayDriver<RequiredLearningPreviewRow, RequiredLearningPreviewRowDisplayDriver>();
         services.AddProtectedFileArea<RequiredLearningEvidence>(RequiredLearningEvidence.Folder);
         services.AddScoped<IProtectedFileAccessPolicy<RequiredLearningEvidence>, RequiredLearningEvidencePolicy>();

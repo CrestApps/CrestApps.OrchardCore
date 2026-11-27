@@ -1,0 +1,39 @@
+@model BillableItemViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Quantity">
+    <label asp-for="Quantity" class="ocat-label">@T["Quantity"]</label>
+    <div class="ocat-limited">
+        <div class="input-group">
+            <input asp-for="Quantity" type="number" step="any" min="0" class="form-control" />
+            <input asp-for="Unit" class="form-control" placeholder="@T["unit, such as hours"]" maxlength="20" />
+        </div>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="UnitCost">
+    <label asp-for="UnitCost" class="ocat-label">@T["Cost each"]</label>
+    <div class="ocat-limited">
+        <input asp-for="UnitCost" type="number" step="any" min="0" class="form-control" />
+        <span class="hint">@T["What it cost you, or the price when there is no markup."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="MarkupPercent">
+    <label asp-for="MarkupPercent" class="ocat-label">@T["Markup (%)"]</label>
+    <div class="ocat-limited">
+        <input asp-for="MarkupPercent" type="number" step="any" min="0" class="form-control" />
+        <span class="hint">@T["Added to the cost to bill it, such as 10 to pass an expense on at cost plus 10%."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
+    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Currency" class="form-control text-uppercase" maxlength="3" />
+        <span class="hint">@T["Offered only on invoices in this currency."]</span>
+    </div>
+</div>
+<div class="ocat-limited-wrapper" asp-validation-class-for="TaxCategoryCode">
+    <label asp-for="TaxCategoryCode" class="ocat-label">@T["Tax category"]</label>
+    <div class="ocat-limited">
+        <input asp-for="TaxCategoryCode" class="form-control" maxlength="50" />
+        <span class="hint">@T["Optional. The tax category code the invoice's tax is worked out with."]</span>
+    </div>
+</div>

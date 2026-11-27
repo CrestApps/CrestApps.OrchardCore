@@ -1,6 +1,7 @@
 using CrestApps.OrchardCore.Addresses.Core.Editing;
 using CrestApps.OrchardCore.Teams.Models;
 using CrestApps.OrchardCore.Teams.ViewModels;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -16,10 +17,16 @@ internal sealed class TeamAddressDisplayDriver : DisplayDriver<Team>
     private readonly IAddressEditorService _addressEditor;
     private readonly IShapeFactory _shapeFactory;
 
-    public TeamAddressDisplayDriver(IAddressEditorService addressEditor, IShapeFactory shapeFactory)
+    internal readonly IStringLocalizer S;
+
+    public TeamAddressDisplayDriver(
+        IAddressEditorService addressEditor,
+        IShapeFactory shapeFactory,
+        IStringLocalizer<TeamAddressDisplayDriver> stringLocalizer)
     {
         _addressEditor = addressEditor;
         _shapeFactory = shapeFactory;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(Team team, BuildEditorContext context)
@@ -63,7 +70,7 @@ internal sealed class TeamAddressDisplayDriver : DisplayDriver<Team>
         {
             model.Address = address;
             model.AddressEditor = editor;
-        }).Location("Content:2");
+        }).Location(l => l.Zone("Content", "2").Card(S["Address"], "20"));
     }
 
     private static AddressEditorOptions EditorOptions(string country)

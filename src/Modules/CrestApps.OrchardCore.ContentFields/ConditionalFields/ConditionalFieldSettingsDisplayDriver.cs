@@ -71,7 +71,7 @@ internal sealed class ConditionalFieldSettingsDisplayDriver : ContentPartFieldDe
             {
                 viewModel.Conditions.Add(new ConditionalFieldConditionRow());
             }
-        }).Location("Content:30");
+        }).Location(l => l.Zone("Content", "30").Card(S["Show This Field When"], "70"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ContentPartFieldDefinition model, UpdatePartFieldEditorContext context)

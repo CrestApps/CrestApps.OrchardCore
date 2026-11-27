@@ -1,0 +1,25 @@
+@model WorkOrderTypeEditViewModel
+
+@if (Model.ChecklistOptions.Count == 0)
+{
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <span class="hint">@T["No checklists yet."] <a asp-action="EditChecklist">@T["Add a checklist"]</a></span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@T["Checklists"]</span>
+        <div class="ocat-end">
+            @foreach (var option in Model.ChecklistOptions)
+            {
+                <div class="form-check">
+                    <input type="checkbox" class="form-check-input" name="ChecklistTemplateIds" value="@option.Value" id="checklist-@option.Value" checked="@option.Selected" />
+                    <label class="form-check-label" for="checklist-@option.Value">@option.Text</label>
+                </div>
+            }
+        </div>
+    </div>
+}

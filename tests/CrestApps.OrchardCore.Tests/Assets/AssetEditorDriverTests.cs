@@ -41,7 +41,15 @@ public sealed class AssetEditorDriverTests
         {
             var result = ((IDisplayDriver<Asset>)CreateDriver(services, fleet: true)).BuildEditorAsync(asset, BuildContext(isNew: false));
 
-            return Assert.Single(await DisplayResultModels.BuildAsync<AssetEditViewModel>(await result));
+            // One shape for each card: Details, Owner and Place, Installation and Warranty, Type Details, Documents and Fleet.
+            var models = await DisplayResultModels.BuildAsync<AssetEditViewModel>(await result);
+
+            Assert.Equal(6, models.Count);
+
+            // Every card fills the asset's values; the Details card also carries the type.
+            Assert.All(models, card => Assert.Equal("asset-1", card.AssetId));
+
+            return models[0];
         }, commit: false);
 
         // Assert
@@ -129,10 +137,14 @@ public sealed class AssetEditorDriverTests
         }, commit: false);
 
         // Assert
-        Assert.Equal(["AssetFields_Edit", ExtraSectionDisplayDriver<Asset>.ShapeType], shapes.Select(shape => shape.Metadata.Type));
+        // The editor is one shape for each card; the other module's section is placed at Content:5, so it sits by position
+        // among the cards (after Documents, which holds the same position, and before Fleet).
+        Assert.Equal(
+            ["AssetFields_Edit", "AssetOwner_Edit", "AssetWarranty_Edit", "AssetAttributes_Edit", "AssetDocuments_Edit", ExtraSectionDisplayDriver<Asset>.ShapeType, "AssetFleet_Edit"],
+            shapes.Select(shape => shape.Metadata.Type));
         Assert.Equal("Boiler", Assert.IsAssignableFrom<AssetEditViewModel>(shapes[0]).Name);
-        Assert.Equal(nameof(Asset), shapes[0].Metadata.Prefix);
-        Assert.Equal(ExtraSectionDisplayDriver<Asset>.Note, Assert.IsAssignableFrom<ExtraSectionViewModel>(shapes[1]).Note);
+        Assert.All(shapes.Where(shape => shape.Metadata.Type != ExtraSectionDisplayDriver<Asset>.ShapeType), shape => Assert.Equal(nameof(Asset), shape.Metadata.Prefix));
+        Assert.Equal(ExtraSectionDisplayDriver<Asset>.Note, Assert.IsAssignableFrom<ExtraSectionViewModel>(shapes[5]).Note);
     }
 
     [Fact]
@@ -168,7 +180,8 @@ public sealed class AssetEditorDriverTests
             services.GetRequiredService<AssetTypeManager>(),
             services.GetRequiredService<AssetOwnerDirectory>(),
             services.GetRequiredService<ISession>(),
-            fleet ? [new FleetFeature()] : []);
+            fleet ? [new FleetFeature()] : [],
+            RecipeRoundTrip.Localizer<AssetDisplayDriver>());
 
     private static UpdateEditorContext BuildContext(bool isNew)
         => PostedFormUpdateModel.CreateContext(null, isNew);

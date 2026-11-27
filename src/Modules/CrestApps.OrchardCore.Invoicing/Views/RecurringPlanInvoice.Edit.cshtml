@@ -1,0 +1,69 @@
+@model RecurringPlanEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Currency">
+    <label asp-for="Currency" class="ocat-label">@T["Currency"]</label>
+    <div class="ocat-limited">
+        <input asp-for="Currency" class="form-control text-uppercase" maxlength="3" autocomplete="off" placeholder="USD" />
+        <span class="hint">@T["Left empty, the site's default currency is used."]</span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="PaymentTermId">
+    <label asp-for="PaymentTermId" class="ocat-label">@T["Payment term"]</label>
+    <div class="ocat-limited">
+        <select asp-for="PaymentTermId" asp-items="Model.PaymentTerms" class="form-select">
+            <option value="">@T["The default payment term"]</option>
+        </select>
+        <span class="hint">@T["When each invoice is due."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="PricesIncludeTax" />
+            <label class="form-check-label" asp-for="PricesIncludeTax">@T["Prices include tax"]</label>
+            <span class="hint dashed">@T["The prices typed are tax-inclusive, and the tax is worked out of them."]</span>
+        </div>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PurchaseOrderNumber">
+    <label asp-for="PurchaseOrderNumber" class="ocat-label">@T["Purchase order"]</label>
+    <div class="ocat-end">
+        <input asp-for="PurchaseOrderNumber" class="form-control" maxlength="100" autocomplete="off" />
+        <span class="hint">@T["The customer's purchase order number, printed on each invoice."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Reference">
+    <label asp-for="Reference" class="ocat-label">@T["Reference"]</label>
+    <div class="ocat-end">
+        <input asp-for="Reference" class="form-control" maxlength="100" autocomplete="off" />
+        <span class="hint">@T["Printed and searchable. Left empty, the plan's name is used."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Notes">
+    <label asp-for="Notes" class="ocat-label">@T["Notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Notes" rows="2" class="form-control" maxlength="4000"></textarea>
+        <span class="hint">@T["Printed on each invoice; the period placeholders work here too. Left empty, the default notes are printed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Terms">
+    <label asp-for="Terms" class="ocat-label">@T["Terms"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Terms" rows="2" class="form-control" maxlength="4000"></textarea>
+        <span class="hint">@T["Left empty, the default terms from the invoicing settings are printed."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="InternalNote">
+    <label asp-for="InternalNote" class="ocat-label">@T["Internal note"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="InternalNote" rows="2" class="form-control" maxlength="4000"></textarea>
+        <span class="hint">@T["Seen by staff only, never printed."]</span>
+    </div>
+</div>

@@ -16,6 +16,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -42,6 +44,8 @@ public sealed class ShiftTradesController : Controller
     private readonly IClock _clock;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<ShiftTradeCreateViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -61,6 +65,8 @@ public sealed class ShiftTradesController : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     public ShiftTradesController(
         IAuthorizationService authorizationService,
         IShiftTradeService tradeService,
@@ -73,7 +79,9 @@ public sealed class ShiftTradesController : Controller
         ILocalClock localClock,
         INotifier notifier,
         IHtmlLocalizer<ShiftTradesController> htmlLocalizer,
-        IStringLocalizer<ShiftTradesController> stringLocalizer)
+        IStringLocalizer<ShiftTradesController> stringLocalizer,
+        IDisplayManager<ShiftTradeCreateViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor)
     {
         _authorizationService = authorizationService;
         _tradeService = tradeService;
@@ -87,6 +95,8 @@ public sealed class ShiftTradesController : Controller
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
     }
 
     /// <summary>
@@ -156,6 +166,8 @@ public sealed class ShiftTradesController : Controller
 
         await PopulateAsync(model);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
+
         return View(model);
     }
 
@@ -175,10 +187,14 @@ public sealed class ShiftTradesController : Controller
             return Forbid();
         }
 
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
+
         if (refresh)
         {
             ModelState.Clear();
             await PopulateAsync(model);
+
+            model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
 
             return View(model);
         }
@@ -216,6 +232,8 @@ public sealed class ShiftTradesController : Controller
         }
 
         await PopulateAsync(model);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
 
         return View(model);
     }

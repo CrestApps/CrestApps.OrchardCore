@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Json.Schema;
+using Microsoft.Extensions.Localization;
 using OrchardCore.Deployment;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -63,13 +64,20 @@ internal sealed class UserAudiencesDeploymentSource : DeploymentSourceBase<UserA
 
 internal sealed class UserAudiencesDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, UserAudiencesDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public UserAudiencesDeploymentStepDisplayDriver(IStringLocalizer<UserAudiencesDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(UserAudiencesDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("UserAudiencesDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("UserAudiencesDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(UserAudiencesDeploymentStep step, BuildEditorContext context)
-        => View("UserAudiencesDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("UserAudiencesDeploymentStep_Fields_Edit", step).Location(l => l.Zone("Content", "1").Card(S["User Audiences"], "10"));
 }
 
 internal sealed class UserAudiencesDeploymentStepSchema : DeploymentStepSchemaDefinitionBase

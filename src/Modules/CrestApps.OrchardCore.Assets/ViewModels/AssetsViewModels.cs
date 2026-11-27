@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
 using Asset = CrestApps.OrchardCore.Assets.Models.Asset;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Assets.ViewModels;
 
@@ -136,6 +137,12 @@ public class AssetTypeEditViewModel
     /// Gets or sets the meters; rows without a name are left out.
     /// </summary>
     public List<MeterEditModel> Meters { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, the fields of the type in their cards, built by the display drivers.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

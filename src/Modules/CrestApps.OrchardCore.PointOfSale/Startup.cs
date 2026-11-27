@@ -15,6 +15,7 @@ using CrestApps.OrchardCore.PointOfSale.Models;
 using CrestApps.OrchardCore.PointOfSale.Navigation;
 using CrestApps.OrchardCore.PointOfSale.Recipes;
 using CrestApps.OrchardCore.PointOfSale.Services;
+using CrestApps.OrchardCore.PointOfSale.ViewModels;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.Deployment;
 using Microsoft.AspNetCore.Builder;
@@ -64,6 +65,8 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<Register, RegisterDisplayDriver>();
         services.AddDisplayDriver<RegisterShift, RegisterShiftDisplayDriver>();
         services.AddDisplayDriver<PosDepartment, PosDepartmentDisplayDriver>();
+        services.AddDisplayDriver<RegisterEditViewModel, RegisterEditDisplayDriver>();
+        services.AddDisplayDriver<PosDepartmentEditViewModel, PosDepartmentEditDisplayDriver>();
 
         // Departments come before registers, whose keys name them.
         services.AddRecipeExecutionStep<PosDepartmentsStep>();

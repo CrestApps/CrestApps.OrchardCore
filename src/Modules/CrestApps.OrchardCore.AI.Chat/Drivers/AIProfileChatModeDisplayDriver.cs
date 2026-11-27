@@ -102,7 +102,7 @@ public sealed class AIProfileChatModeDisplayDriver : DisplayDriver<AIProfile>
             model.UntranscribedRealtimeDeploymentNames = await RealtimeTranscriptionCoverage.GetUntranscribedAsync(
                 realtimeDeployments,
                 clientName => _deploymentManager.ResolveSlotAsync(AIDeploymentSlotNames.SpeechToText, clientName: clientName));
-        }).Location("Content:1.7%Deployments & Interactions;2")
+        }).Location(l => l.Zone("Content", "1.7").Card(S["Deployments & Interactions"], "2"))
         .RenderWhen(async () =>
         {
             if (profile.Type != AIProfileType.Chat)

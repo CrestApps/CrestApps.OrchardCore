@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using YesSql;
@@ -27,6 +29,8 @@ public sealed class AssetTypesController : Controller
     private readonly AssetStore _assetStore;
     private readonly ISession _session;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<AssetTypeEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
 
@@ -39,6 +43,8 @@ public sealed class AssetTypesController : Controller
     /// <param name="assetStore">The asset store.</param>
     /// <param name="session">The session.</param>
     /// <param name="notifier">The notifier.</param>
+    /// <param name="displayManager">The display manager of the type editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public AssetTypesController(
         IAuthorizationService authorizationService,
@@ -47,6 +53,8 @@ public sealed class AssetTypesController : Controller
         AssetStore assetStore,
         ISession session,
         INotifier notifier,
+        IDisplayManager<AssetTypeEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<AssetTypesController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
@@ -55,6 +63,8 @@ public sealed class AssetTypesController : Controller
         _assetStore = assetStore;
         _session = session;
         _notifier = notifier;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
     }
 
@@ -120,6 +130,7 @@ public sealed class AssetTypesController : Controller
         };
 
         AddBlankRows(model);
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, string.IsNullOrEmpty(id));
 
         return View(model);
     }
@@ -147,6 +158,8 @@ public sealed class AssetTypesController : Controller
             return NotFound();
         }
 
+        form.Editor = await _displayManager.UpdateEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
+
         item.Name = form.Name?.Trim();
         item.Category = form.Category;
         item.Description = string.IsNullOrWhiteSpace(form.Description) ? null : form.Description.Trim();
@@ -163,6 +176,7 @@ public sealed class AssetTypesController : Controller
         if (!ModelState.IsValid)
         {
             AddBlankRows(form);
+            form.Editor = await _displayManager.BuildEditorAsync(form, _updateModelAccessor.ModelUpdater, isNew);
 
             return View(form);
         }

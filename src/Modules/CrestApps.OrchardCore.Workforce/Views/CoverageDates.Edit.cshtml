@@ -1,0 +1,13 @@
+@model CoverageEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="EffectiveFrom" class="ocat-label">@T["Applies"]</label>
+    <div class="ocat-end">
+        <div class="d-flex align-items-center gap-2">
+            <input asp-for="EffectiveFrom" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["From"]" />
+            <span>@T["to"]</span>
+            <input asp-for="EffectiveTo" type="date" class="form-control" style="max-width: 12rem" aria-label="@T["To"]" />
+        </div>
+        <span class="hint">@T["Leave empty to apply always."]</span>
+    </div>
+</div>

@@ -1,0 +1,34 @@
+@model MessagingRoutingRuleViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="DisplayText">
+    <label asp-for="DisplayText" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="DisplayText" class="form-control" />
+        <span asp-validation-for="DisplayText" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="Order">
+    <label asp-for="Order" class="ocat-label">@T["Order"]</label>
+    <div class="ocat-end">
+        <input asp-for="Order" type="number" step="1" class="form-control" />
+        <span class="hint">@T["Rules are tried from the lowest order up. The first rule that finds an agent assigns the conversation."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" asp-for="Enabled" />
+            <label class="form-check-label" asp-for="Enabled">@T["Enabled"]</label>
+            <span class="hint dashed">@T["A disabled rule is never tried."]</span>
+        </div>
+    </div>
+</div>

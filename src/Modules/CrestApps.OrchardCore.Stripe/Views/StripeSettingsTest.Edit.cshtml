@@ -1,0 +1,94 @@
+@using CrestApps.OrchardCore.Stripe.Core
+@using CrestApps.OrchardCore.Stripe.ViewModels
+@using Microsoft.AspNetCore.Routing
+
+@inject LinkGenerator LinkGenerator
+@model StripeSettingsViewModel
+
+@{
+    var connectUrl = LinkGenerator.GetPathByName(ViewContext.HttpContext, StripeConstants.RouteName.Connect);
+    var disconnectUrl = LinkGenerator.GetPathByName(ViewContext.HttpContext, StripeConstants.RouteName.Disconnect);
+    var testConnected = !string.IsNullOrEmpty(Model.TestAccountId);
+}
+
+<div class="testing-stripe-settings@(Model.IsLive ? " d-none" : string.Empty)" data-stripe-environment>
+
+    <div class="ocat-wrapper" asp-validation-class-for="TestPublishableKey">
+        <label asp-for="TestPublishableKey" class="ocat-label">@T["Test Publishable Key"]</label>
+        <div class="ocat-end">
+            @if (Model.TestPublishableKeyFromConfiguration)
+            {
+                <input class="form-control" type="text" value="@Model.TestPublishableKey" readonly disabled />
+                <span class="hint">@T["Configured from the application settings."]</span>
+            }
+            else
+            {
+                <input asp-for="TestPublishableKey" class="form-control" type="text" placeholder="pk_test_..." data-stripe-publishable />
+                <span asp-validation-for="TestPublishableKey"></span>
+                <span class="hint">@T["Required: the card form on the payment step uses it."]</span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper" asp-validation-class-for="TestPrivateSecret">
+        <label asp-for="TestPrivateSecret" class="ocat-label">@T["Test Secret Key"]</label>
+        <div class="ocat-end">
+            @if (Model.TestPrivateSecretFromConfiguration)
+            {
+                <input class="form-control" type="text" placeholder="@T["Configured from the application settings."]" readonly disabled />
+                <span class="hint">@T["Configured from the application settings. The key is never shown."]</span>
+            }
+            else
+            {
+                <input asp-for="TestPrivateSecret" class="form-control" secret-input secret-saved="@Model.HasTestPrivateSecret" placeholder="@(Model.HasTestPrivateSecret ? T["A secret key is stored. Provide a new value to replace it."].Value : "sk_test_...")" data-stripe-secret />
+                <span asp-validation-for="TestPrivateSecret"></span>
+            }
+        </div>
+    </div>
+
+    <div class="ocat-wrapper">
+        <label class="ocat-label">@T["Status"]</label>
+        <div class="ocat-end">
+            @if (testConnected)
+            {
+                <div class="alert alert-success mb-2" role="alert">
+                    @T["Connected to the test Stripe account <code>{0}</code>.", Model.TestAccountId]
+                </div>
+                <button type="button" class="btn btn-danger stripe-disconnect" data-url="@disconnectUrl" data-live="false">@T["Disconnect"]</button>
+            }
+            else if (Model.HasTestPrivateSecret)
+            {
+                <div data-stripe-connect-area>
+                    <button type="button" class="btn btn-primary stripe-connect" data-url="@connectUrl" data-live="false">@T["Connect"]</button>
+                    <span class="hint">@T["Verifies the saved key and creates the webhook automatically."]</span>
+                </div>
+                <div class="alert alert-info mb-0 d-none" role="alert" data-stripe-save-first>
+                    @T["You changed the keys. Save the settings first, then connect with the new keys."]
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info mb-0" role="alert">
+                    @T["Enter your keys and save the settings. The <strong>Connect</strong> button appears here once a secret key is saved."]
+                </div>
+            }
+        </div>
+    </div>
+        <div class="ocat-wrapper" asp-validation-class-for="TestWebhookSecret">
+            <label asp-for="TestWebhookSecret" class="ocat-label">@T["Test Webhook Signing Secret"]</label>
+            <div class="ocat-end">
+                @if (Model.TestWebhookSecretFromConfiguration)
+                {
+                    <input class="form-control" type="text" placeholder="@T["Configured from the application settings."]" readonly disabled />
+                    <span class="hint">@T["Configured from the application settings. Connect does not create a webhook while it is set, so register the webhook in the Stripe dashboard with this signing secret."]</span>
+                }
+                else
+                {
+                    <input asp-for="TestWebhookSecret" class="form-control" secret-input secret-saved="@Model.HasTestWebhookSecret" placeholder="@(Model.HasTestWebhookSecret ? T["A signing secret is stored. Provide a new value to replace it."].Value : "whsec_...")" />
+                    <span asp-validation-for="TestWebhookSecret"></span>
+                    <span class="hint">@T["Filled in automatically when you connect. Set it manually only for local development with the Stripe CLI."]</span>
+                }
+            </div>
+        </div>
+
+</div>

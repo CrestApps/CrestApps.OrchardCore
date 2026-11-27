@@ -22,6 +22,7 @@ using CrestApps.OrchardCore.Customers.PersonalData;
 using CrestApps.OrchardCore.Customers.Recipes;
 using CrestApps.OrchardCore.Customers.Services;
 using CrestApps.OrchardCore.Users.Core;
+using CrestApps.OrchardCore.Customers.ViewModels;
 using CrestApps.OrchardCore.Orders.Core;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.Orders.Core.Models;
@@ -123,6 +124,9 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<CustomersAdminMenu>();
         services.AddNavigationProvider<CustomersAccountMenu>();
         services.AddDisplayDriver<Customer, CustomerDisplayDriver>();
+        services.AddDisplayDriver<CustomerEditViewModel, CustomerEditDisplayDriver>();
+        services.AddDisplayDriver<CustomerAddressViewModel, CustomerAddressEditDisplayDriver>();
+        services.AddDisplayDriver<MyAccountViewModel, MyAccountEditDisplayDriver>();
     }
 }
 

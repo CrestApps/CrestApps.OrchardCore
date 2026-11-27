@@ -125,6 +125,8 @@ public sealed class MarketplaceCommissionInputCultureTests
             TestSecurity.Granting(MarketplacePermissions.ManageMarketplace),
             Mock.Of<INotifier>(),
             Mock.Of<IShapeFactory>(),
+            Mock.Of<global::OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Marketplace.ViewModels.VendorEditViewModel>>(),
+            Mock.Of<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>(),
             Mock.Of<IClock>(),
             new EchoHtmlLocalizer<VendorsAdminController>(),
             new PassThroughStringLocalizer<VendorsAdminController>());

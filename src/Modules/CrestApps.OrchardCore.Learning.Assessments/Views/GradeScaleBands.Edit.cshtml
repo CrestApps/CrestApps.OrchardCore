@@ -1,0 +1,28 @@
+@model GradeScaleEditViewModel
+
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["From (%)"]</th>
+                        <th scope="col">@T["Grade"]</th>
+                        <th scope="col" class="text-center">@T["Passes"]</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Bands.Count; i++)
+                    {
+                        <tr>
+                            <td><input asp-for="Bands[i].MinPercent" type="number" min="0" max="100" step="0.01" class="form-control form-control-sm" aria-label="@T["From (%)"]" /></td>
+                            <td><input asp-for="Bands[i].Label" class="form-control form-control-sm" maxlength="50" aria-label="@T["Grade"]" /></td>
+                            <td class="text-center"><input asp-for="Bands[i].Passing" type="checkbox" class="form-check-input" aria-label="@T["Passes"]" /></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <span class="hint">@T["Each band runs from its percentage up to the next band. The lowest band starts at 0%. Leave a row empty to remove it."]</span>
+    </div>
+</div>

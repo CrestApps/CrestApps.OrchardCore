@@ -84,9 +84,9 @@ internal sealed class BusinessHoursScheduleDisplayDriver : DisplayDriver<Busines
         }
 
         return Combine(
-            Initialize<BusinessHoursScheduleViewModel>("BusinessHoursScheduleGeneral_Edit", PopulateAsync).Location("Content:1%General;1"),
-            Initialize<BusinessHoursScheduleViewModel>("BusinessHoursScheduleWeekly_Edit", PopulateAsync).Location("Content:1%Weekly hours;2"),
-            Initialize<BusinessHoursScheduleViewModel>("BusinessHoursScheduleSpecialDays_Edit", PopulateAsync).Location("Content:1%Holidays and special days;3"));
+            Initialize<BusinessHoursScheduleViewModel>("BusinessHoursScheduleGeneral_Edit", PopulateAsync).Location(l => l.Zone("Content", "1").Card(S["General"], "1")),
+            Initialize<BusinessHoursScheduleViewModel>("BusinessHoursScheduleWeekly_Edit", PopulateAsync).Location(l => l.Zone("Content", "1").Card(S["Weekly Hours"], "2")),
+            Initialize<BusinessHoursScheduleViewModel>("BusinessHoursScheduleSpecialDays_Edit", PopulateAsync).Location(l => l.Zone("Content", "1").Card(S["Holidays and Special Days"], "3")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(BusinessHoursSchedule schedule, UpdateEditorContext context)

@@ -39,13 +39,19 @@ internal sealed class SseMcpConnectionDisplayDriver : ConnectionAuthDisplayDrive
             return null;
         }
 
-        return Initialize<SseConnectionFieldsViewModel>("SseMcpConnectionFields_Edit", model =>
-        {
-            var metadata = connection.GetOrCreate<SseMcpConnectionMetadata>();
-            model.Endpoint = metadata.Endpoint?.ToString();
+        return Combine(
+            Initialize<SseConnectionFieldsViewModel>("SseMcpConnectionEndpoint_Edit", model => Populate(connection, model))
+                .Location(l => l.Zone("Content", "1").Card(S["Connection"], "20")),
+            Initialize<SseConnectionFieldsViewModel>("SseMcpConnectionAuthentication_Edit", model => Populate(connection, model))
+                .Location(l => l.Zone("Content", "2").Card(S["Authentication"], "30")));
+    }
 
-            PopulateAuthFields(metadata, model, McpJOptions.SchemaSerializerOptions);
-        }).Location("Content:1");
+    private static void Populate(McpConnection connection, SseConnectionFieldsViewModel model)
+    {
+        var metadata = connection.GetOrCreate<SseMcpConnectionMetadata>();
+        model.Endpoint = metadata.Endpoint?.ToString();
+
+        PopulateAuthFields(metadata, model, McpJOptions.SchemaSerializerOptions);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpConnection connection, UpdateEditorContext context)

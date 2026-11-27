@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Marketing.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Marketing.ViewModels;
 
@@ -51,6 +52,12 @@ public class SegmentEditViewModel
 
     [BindNever]
     public int? Reachable { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor of the segment, built by the display drivers of <see cref="SegmentEditViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 public class CampaignsIndexViewModel
@@ -98,6 +105,12 @@ public class CampaignEditViewModel
     [BindNever]
     public bool CanChange
         => Campaign is null || Campaign.Status is CampaignStatus.Draft or CampaignStatus.Scheduled;
+
+    /// <summary>
+    /// Gets or sets the editor of the campaign, built by the display drivers of <see cref="CampaignEditViewModel"/>.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 public class UnsubscribeViewModel

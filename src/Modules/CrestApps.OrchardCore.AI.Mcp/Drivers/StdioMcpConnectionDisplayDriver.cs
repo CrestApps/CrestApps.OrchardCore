@@ -93,7 +93,7 @@ internal sealed class StdioMcpConnectionDisplayDriver : DisplayDriver<McpConnect
               }
             }
             """;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", "2").Card(S["Connection"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpConnection connection, UpdateEditorContext context)

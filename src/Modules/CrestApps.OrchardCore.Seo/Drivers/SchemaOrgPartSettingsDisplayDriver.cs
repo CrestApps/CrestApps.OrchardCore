@@ -59,7 +59,7 @@ internal sealed class SchemaOrgPartSettingsDisplayDriver : ContentTypePartDefini
             model.SchemaType = settings.SchemaType;
             model.Properties = JsonSerializer.Serialize(settings.Properties ?? [], EditorJsonOptions);
             model.EditorData = BuildEditorData(contentTypePartDefinition.ContentTypeDefinition);
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "5").Card(S["Schema.org Structured Data"], "20"));
     }
 
     /// <inheritdoc/>

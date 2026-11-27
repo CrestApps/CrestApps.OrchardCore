@@ -49,7 +49,7 @@ internal sealed class AlgoliaDocumentationToolInstanceDisplayDriver : DisplayDri
             model.IndexName = settings.IndexName;
             model.MaxResults = settings.MaxResults;
             model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Algolia Index"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstance instance, UpdateEditorContext context)

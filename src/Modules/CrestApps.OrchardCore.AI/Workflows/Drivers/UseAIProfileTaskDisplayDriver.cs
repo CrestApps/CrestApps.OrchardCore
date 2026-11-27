@@ -45,6 +45,13 @@ public sealed class UseAIProfileTaskDisplayDriver : ActivityDisplayDriver<UseAIP
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(UseAIProfileTask activity, BuildEditorContext context)
+    {
+        return Initialize<UseAIProfileTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Profile"], "10"));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(UseAIProfileTask activity, UpdateEditorContext context)
     {
         var model = new UseAIProfileTaskViewModel();

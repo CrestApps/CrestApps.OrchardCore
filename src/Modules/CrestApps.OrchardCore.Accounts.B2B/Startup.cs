@@ -18,6 +18,7 @@ using CrestApps.OrchardCore.Shipping;
 using CrestApps.OrchardCore.Shipping.Services;
 using OrchardCore.Deployment;
 using CrestApps.OrchardCore.Accounts.B2B.Services;
+using CrestApps.OrchardCore.Accounts.B2B.ViewModels;
 using CrestApps.OrchardCore.Orders.Core.Services;
 using CrestApps.OrchardCore.Parties;
 using CrestApps.OrchardCore.PersonalData.Core;
@@ -90,6 +91,7 @@ public sealed class Startup : StartupBase
         services.AddNavigationProvider<B2BAccountsAdminMenu>();
         services.AddNavigationProvider<BusinessAccountMenu>();
         services.AddDisplayDriver<PriceList, PriceListDisplayDriver>();
+        services.AddDisplayDriver<PriceListEditViewModel, PriceListEditDisplayDriver>();
     }
 }
 

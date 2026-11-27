@@ -70,45 +70,57 @@ internal sealed class AsteriskSettingsDisplayDriver : SiteDisplayDriver<Asterisk
 
     public override IDisplayResult Edit(ISite site, AsteriskSettings settings, BuildEditorContext context)
     {
-        return Initialize<AsteriskSettingsViewModel>("AsteriskSettings_Edit", model =>
-        {
-            model.IsEnabled = settings.IsEnabled;
-            model.BaseUrl = settings.BaseUrl;
-            model.UserName = settings.UserName;
-            model.ApplicationName = settings.ApplicationName;
-            model.EndpointTemplate = settings.EndpointTemplate;
-            model.OutboundCallerId = settings.OutboundCallerId;
-            model.TimeoutSeconds = settings.TimeoutSeconds > 0
-                ? settings.TimeoutSeconds
-                : AsteriskConstants.DefaultTimeoutSeconds;
-            model.VoicemailContext = settings.VoicemailContext;
-            model.VoicemailExtensionTemplate = settings.VoicemailExtensionTemplate;
-            model.VoicemailPriority = settings.VoicemailPriority > 0
-                ? settings.VoicemailPriority
-                : 1;
-            model.WebSocketUrl = settings.WebSocketUrl;
-            model.SipDomain = settings.SipDomain;
-            model.TurnUrls = settings.TurnUrls;
-            model.IceTransportPolicy = string.IsNullOrWhiteSpace(settings.IceTransportPolicy)
-                ? AsteriskConstants.DefaultIceTransportPolicy
-                : settings.IceTransportPolicy;
-            model.WebRtcCodecs = string.IsNullOrWhiteSpace(settings.WebRtcCodecs)
-                ? AsteriskConstants.DefaultWebRtcCodecs
-                : settings.WebRtcCodecs;
-            model.PjsipCredentialLifetimeMinutes = settings.PjsipCredentialLifetimeMinutes > 0
-                ? settings.PjsipCredentialLifetimeMinutes
-                : AsteriskConstants.DefaultPjsipCredentialLifetimeMinutes;
-            model.PjsipContactExpirationSeconds = settings.PjsipContactExpirationSeconds > 0
-                ? settings.PjsipContactExpirationSeconds
-                : AsteriskConstants.DefaultPjsipContactExpirationSeconds;
-            model.PjsipRealtimeProviderInvariantName = settings.PjsipRealtimeProviderInvariantName;
-            model.PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix;
-            model.HasPassword = ProtectedSettingExtensions.HasSecret(settings.Password);
-            model.HasTurnSharedSecret = ProtectedSettingExtensions.HasSecret(settings.TurnSharedSecret);
-            model.HasPjsipRealtimeConnectionString = ProtectedSettingExtensions.HasSecret(settings.PjsipRealtimeConnectionString);
-        }).Location("Content:10#Asterisk")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
-        .OnGroup(SettingsGroupId);
+        return Combine(
+            BuildCard("AsteriskSettingsProvider_Edit", settings, S["Provider"], "10"),
+            BuildCard("AsteriskSettingsVoicemail_Edit", settings, S["Voicemail"], "20"),
+            BuildCard("AsteriskSettingsBrowserAudio_Edit", settings, S["Browser Audio"], "30"),
+            BuildCard("AsteriskSettingsPjsipRealtime_Edit", settings, S["PJSIP Realtime"], "40"));
+    }
+
+    private ShapeResult BuildCard(string shapeType, AsteriskSettings settings, string cardName, string cardPosition)
+    {
+        return Initialize<AsteriskSettingsViewModel>(shapeType, model => Populate(settings, model))
+            .Location(l => l.Zone("Content", "10").Tab(S["Asterisk"]).Card(cardName, cardPosition))
+            .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, TelephonyPermissions.ManageTelephonySettings))
+            .OnGroup(SettingsGroupId);
+    }
+
+    private static void Populate(AsteriskSettings settings, AsteriskSettingsViewModel model)
+    {
+        model.IsEnabled = settings.IsEnabled;
+        model.BaseUrl = settings.BaseUrl;
+        model.UserName = settings.UserName;
+        model.ApplicationName = settings.ApplicationName;
+        model.EndpointTemplate = settings.EndpointTemplate;
+        model.OutboundCallerId = settings.OutboundCallerId;
+        model.TimeoutSeconds = settings.TimeoutSeconds > 0
+            ? settings.TimeoutSeconds
+            : AsteriskConstants.DefaultTimeoutSeconds;
+        model.VoicemailContext = settings.VoicemailContext;
+        model.VoicemailExtensionTemplate = settings.VoicemailExtensionTemplate;
+        model.VoicemailPriority = settings.VoicemailPriority > 0
+            ? settings.VoicemailPriority
+            : 1;
+        model.WebSocketUrl = settings.WebSocketUrl;
+        model.SipDomain = settings.SipDomain;
+        model.TurnUrls = settings.TurnUrls;
+        model.IceTransportPolicy = string.IsNullOrWhiteSpace(settings.IceTransportPolicy)
+            ? AsteriskConstants.DefaultIceTransportPolicy
+            : settings.IceTransportPolicy;
+        model.WebRtcCodecs = string.IsNullOrWhiteSpace(settings.WebRtcCodecs)
+            ? AsteriskConstants.DefaultWebRtcCodecs
+            : settings.WebRtcCodecs;
+        model.PjsipCredentialLifetimeMinutes = settings.PjsipCredentialLifetimeMinutes > 0
+            ? settings.PjsipCredentialLifetimeMinutes
+            : AsteriskConstants.DefaultPjsipCredentialLifetimeMinutes;
+        model.PjsipContactExpirationSeconds = settings.PjsipContactExpirationSeconds > 0
+            ? settings.PjsipContactExpirationSeconds
+            : AsteriskConstants.DefaultPjsipContactExpirationSeconds;
+        model.PjsipRealtimeProviderInvariantName = settings.PjsipRealtimeProviderInvariantName;
+        model.PjsipRealtimeTablePrefix = settings.PjsipRealtimeTablePrefix;
+        model.HasPassword = ProtectedSettingExtensions.HasSecret(settings.Password);
+        model.HasTurnSharedSecret = ProtectedSettingExtensions.HasSecret(settings.TurnSharedSecret);
+        model.HasPjsipRealtimeConnectionString = ProtectedSettingExtensions.HasSecret(settings.PjsipRealtimeConnectionString);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, AsteriskSettings settings, UpdateEditorContext context)

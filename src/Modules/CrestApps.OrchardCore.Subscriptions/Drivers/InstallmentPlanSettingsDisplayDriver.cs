@@ -71,17 +71,22 @@ public sealed class InstallmentPlanSettingsDisplayDriver : SiteDisplayDriver<Ins
             return null;
         }
 
-        return Initialize<InstallmentPlanSettingsViewModel>("InstallmentPlanSettings_Edit", model =>
-        {
-            model.RetryDays = string.Join(", ", (settings.RetryDays ?? []).Select(days => days.ToString(CultureInfo.InvariantCulture)));
-            model.DefaultCollectionMethod = settings.DefaultCollectionMethod;
-            model.CheckoutInstallmentCounts = string.Join(", ", (settings.CheckoutInstallmentCounts ?? []).Select(count => count.ToString(CultureInfo.InvariantCulture)));
-            model.CheckoutFrequency = settings.CheckoutFrequency;
-            model.CheckoutMinimumAmount = settings.CheckoutMinimumAmount;
-            model.CheckoutSources = [.. (settings.CheckoutSources ?? [])];
-            model.AvailableSources = BuildSourceItems(settings.CheckoutSources ?? []);
-        }).Location("Content:20")
-        .OnGroup(SettingsGroupId);
+        ShapeResult Card(string shapeType, string position, LocalizedString card, string cardPosition)
+            => Initialize<InstallmentPlanSettingsViewModel>(shapeType, model =>
+            {
+                model.RetryDays = string.Join(", ", (settings.RetryDays ?? []).Select(days => days.ToString(CultureInfo.InvariantCulture)));
+                model.DefaultCollectionMethod = settings.DefaultCollectionMethod;
+                model.CheckoutInstallmentCounts = string.Join(", ", (settings.CheckoutInstallmentCounts ?? []).Select(count => count.ToString(CultureInfo.InvariantCulture)));
+                model.CheckoutFrequency = settings.CheckoutFrequency;
+                model.CheckoutMinimumAmount = settings.CheckoutMinimumAmount;
+                model.CheckoutSources = [.. (settings.CheckoutSources ?? [])];
+                model.AvailableSources = BuildSourceItems(settings.CheckoutSources ?? []);
+            }).Location(l => l.Zone("Content", position).Card(card, cardPosition))
+            .OnGroup(SettingsGroupId);
+
+        return Combine(
+            Card("InstallmentPlanSettingsDefaults_Edit", "20", S["Installment Plans"], "10"),
+            Card("InstallmentPlanSettingsCheckout_Edit", "20.1", S["Installments at Checkout"], "20"));
     }
 
     /// <inheritdoc/>

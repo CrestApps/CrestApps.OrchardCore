@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Memory.ViewModels;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Users.Models;
@@ -18,20 +19,25 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
     private readonly IAIMemoryStore _memoryStore;
     private readonly IAuthorizationService _authorizationService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="UserMemoryDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="memoryStore">The memory store.</param>
     /// <param name="authorizationService">The authorization service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public UserMemoryDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAIMemoryStore memoryStore,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IStringLocalizer<UserMemoryDisplayDriver> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _memoryStore = memoryStore;
         _authorizationService = authorizationService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(User user, BuildEditorContext context)
@@ -54,7 +60,7 @@ internal sealed class UserMemoryDisplayDriver : DisplayDriver<User>
             model.IsOtherUser = isOtherUser;
             model.UserId = user.UserId;
             model.ReturnUrl = httpContext?.Request.GetEncodedPathAndQuery();
-        }).Location("Content:10");
+        }).Location(l => l.Zone("Content", "10").Card(S["AI Memory"], "100"));
     }
 
     private bool IsCurrentUser(User user)

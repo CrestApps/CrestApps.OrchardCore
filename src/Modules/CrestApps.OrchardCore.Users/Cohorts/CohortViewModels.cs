@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Users.Cohorts;
 
@@ -63,6 +65,12 @@ public class CohortEditViewModel
     /// Gets or sets the description.
     /// </summary>
     public string Description { get; set; }
+
+    /// <summary>
+    /// Gets or sets the editor shape, built by the display drivers of the view model: one card per section.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

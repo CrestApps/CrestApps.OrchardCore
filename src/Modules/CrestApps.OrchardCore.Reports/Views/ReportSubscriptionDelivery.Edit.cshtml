@@ -1,0 +1,29 @@
+@model ReportSubscriptionEditViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Recipients">
+    <label asp-for="Recipients" class="ocat-label ocat-label-required">@T["Email to"]</label>
+    <div class="ocat-end">
+        <input asp-for="Recipients" class="form-control" autocomplete="off" />
+        <span asp-validation-for="Recipients"></span>
+        <span class="hint">@T["Email addresses, separated by commas."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="AttachmentFormat">
+    <label asp-for="AttachmentFormat" class="ocat-label">@T["Attach the report as"]</label>
+    <div class="ocat-end">
+        <select asp-for="AttachmentFormat" asp-items="Model.Formats" class="form-select"><option value="">@T["No file"]</option></select>
+        <span asp-validation-for="AttachmentFormat"></span>
+        <span class="hint">@T["The email shows the report's numbers and tables either way."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="IsEnabled">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsEnabled" type="checkbox" class="form-check-input" />
+            <label asp-for="IsEnabled" class="form-check-label">@T["On"]</label>
+        </div>
+        <span class="hint dashed">@T["A subscription that's off isn't sent."]</span>
+    </div>
+</div>

@@ -48,44 +48,58 @@ internal sealed class AgentPlatformDisplayDriver : DisplayDriver<AgentPlatform>
     }
 
     public override IDisplayResult Edit(AgentPlatform platform, BuildEditorContext context)
-        => Initialize<AgentPlatformViewModel>("AgentPlatformFields_Edit", model =>
-        {
-            model.ItemId = platform.ItemId;
-            model.IsNew = context.IsNew;
-            model.Name = platform.Name;
-            model.Description = platform.Description;
-            model.Enabled = platform.Enabled;
-            model.TestMode = platform.TestMode;
-            model.Protocols = [.. platform.Protocols ?? []];
-            model.OAuthClientId = platform.OAuthClientId;
-            model.ProfileUrl = platform.ProfileUrl;
-            model.WebhookUrl = platform.WebhookUrl;
-            model.AllowedPaymentHandlers = string.Join(Environment.NewLine, platform.AllowedPaymentHandlers ?? []);
-            model.AllowedIpRanges = string.Join(Environment.NewLine, platform.AllowedIpRanges ?? []);
-            model.EmbeddedCheckoutOrigins = string.Join(Environment.NewLine, platform.EmbeddedCheckoutOrigins ?? []);
-            model.AcpOrderCreatedEvent = platform.AcpOrderCreatedEvent;
-            model.AcpOrderUpdatedEvent = platform.AcpOrderUpdatedEvent;
-            model.AcpRequireSignedRequests = platform.AcpRequireSignedRequests;
-            model.AcpSignatureAlgorithm = platform.AcpSignatureAlgorithm ?? AcpRequestSignature.ES256;
-            model.AcpSignaturePublicKey = platform.AcpSignaturePublicKey;
-            model.AcpSignatureClockSkewSeconds = platform.AcpSignatureClockSkewSeconds;
+    {
+        return Combine(
+            Initialize<AgentPlatformViewModel>("AgentPlatformFields_Edit", model => Fill(model, platform, context))
+                .Location(l => l.Zone("Content", "1").Card(S["The Platform"], "10")),
+            Initialize<AgentPlatformViewModel>("AgentPlatformFieldsSignIn_Edit", model => Fill(model, platform, context))
+                .Location(l => l.Zone("Content", "2").Card(S["How It Signs In"], "20")),
+            Initialize<AgentPlatformViewModel>("AgentPlatformFieldsSignatures_Edit", model => Fill(model, platform, context))
+                .Location(l => l.Zone("Content", "3").Card(S["ACP Request Signatures"], "30")),
+            Initialize<AgentPlatformViewModel>("AgentPlatformFieldsEmbedding_Edit", model => Fill(model, platform, context))
+                .Location(l => l.Zone("Content", "4").Card(S["Embedded Checkout"], "40")),
+            Initialize<AgentPlatformViewModel>("AgentPlatformFieldsPayments_Edit", model => Fill(model, platform, context))
+                .Location(l => l.Zone("Content", "5").Card(S["Payments and Order Updates"], "50")));
+    }
 
-            // A new platform signs its target too; one saved before versions existed keeps the body-only form until moved.
-            model.AcpSignatureVersion = platform.AcpSignatureVersion ?? (context.IsNew ? AcpRequestSignature.BoundVersion : AcpRequestSignature.BodyOnlyVersion);
-            model.SignatureVersionOptions =
-            [
-                new SelectListItem(S["Version 2: the timestamp, method, path and body"], AcpRequestSignature.BoundVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-                new SelectListItem(S["Version 1: the body only (older platforms)"], AcpRequestSignature.BodyOnlyVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-            ];
-            model.SignatureAlgorithmOptions = [.. AcpRequestSignature.Algorithms.Select(algorithm => new SelectListItem(algorithm, algorithm))];
-            model.ApiKeyHint = platform.ApiKeyHint;
-            model.HasWebhookSecret = !string.IsNullOrEmpty(platform.ProtectedWebhookSecret);
-            model.ProtocolOptions =
-            [
-                new SelectListItem(S["Universal Commerce Protocol (UCP)"], AgenticCommerceConstants.Protocols.Ucp, platform.Uses(AgenticCommerceConstants.Protocols.Ucp)),
-                new SelectListItem(S["Agentic Commerce Protocol (ACP)"], AgenticCommerceConstants.Protocols.Acp, platform.Uses(AgenticCommerceConstants.Protocols.Acp)),
-            ];
-        }).Location("Content:1");
+    private void Fill(AgentPlatformViewModel model, AgentPlatform platform, BuildEditorContext context)
+    {
+        model.ItemId = platform.ItemId;
+        model.IsNew = context.IsNew;
+        model.Name = platform.Name;
+        model.Description = platform.Description;
+        model.Enabled = platform.Enabled;
+        model.TestMode = platform.TestMode;
+        model.Protocols = [.. platform.Protocols ?? []];
+        model.OAuthClientId = platform.OAuthClientId;
+        model.ProfileUrl = platform.ProfileUrl;
+        model.WebhookUrl = platform.WebhookUrl;
+        model.AllowedPaymentHandlers = string.Join(Environment.NewLine, platform.AllowedPaymentHandlers ?? []);
+        model.AllowedIpRanges = string.Join(Environment.NewLine, platform.AllowedIpRanges ?? []);
+        model.EmbeddedCheckoutOrigins = string.Join(Environment.NewLine, platform.EmbeddedCheckoutOrigins ?? []);
+        model.AcpOrderCreatedEvent = platform.AcpOrderCreatedEvent;
+        model.AcpOrderUpdatedEvent = platform.AcpOrderUpdatedEvent;
+        model.AcpRequireSignedRequests = platform.AcpRequireSignedRequests;
+        model.AcpSignatureAlgorithm = platform.AcpSignatureAlgorithm ?? AcpRequestSignature.ES256;
+        model.AcpSignaturePublicKey = platform.AcpSignaturePublicKey;
+        model.AcpSignatureClockSkewSeconds = platform.AcpSignatureClockSkewSeconds;
+
+        // A new platform signs its target too; one saved before versions existed keeps the body-only form until moved.
+        model.AcpSignatureVersion = platform.AcpSignatureVersion ?? (context.IsNew ? AcpRequestSignature.BoundVersion : AcpRequestSignature.BodyOnlyVersion);
+        model.SignatureVersionOptions =
+        [
+            new SelectListItem(S["Version 2: the timestamp, method, path and body"], AcpRequestSignature.BoundVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+            new SelectListItem(S["Version 1: the body only (older platforms)"], AcpRequestSignature.BodyOnlyVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+        ];
+        model.SignatureAlgorithmOptions = [.. AcpRequestSignature.Algorithms.Select(algorithm => new SelectListItem(algorithm, algorithm))];
+        model.ApiKeyHint = platform.ApiKeyHint;
+        model.HasWebhookSecret = !string.IsNullOrEmpty(platform.ProtectedWebhookSecret);
+        model.ProtocolOptions =
+        [
+            new SelectListItem(S["Universal Commerce Protocol (UCP)"], AgenticCommerceConstants.Protocols.Ucp, platform.Uses(AgenticCommerceConstants.Protocols.Ucp)),
+            new SelectListItem(S["Agentic Commerce Protocol (ACP)"], AgenticCommerceConstants.Protocols.Acp, platform.Uses(AgenticCommerceConstants.Protocols.Acp)),
+        ];
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(AgentPlatform platform, UpdateEditorContext context)
     {

@@ -76,7 +76,7 @@ public sealed class SubscriptionSettingsDisplayDriver : SiteDisplayDriver<Subscr
             model.AllowGuestSignup = settings.AllowGuestSignup;
             model.Currency = settings.Currency;
             model.Currencies = await BuildCurrencyOptionsAsync(model.Currency);
-        }).Location("Content:5")
+        }).Location(l => l.Zone("Content", "5").Card(S["Subscriptions"], "10"))
         .OnGroup(SettingsGroupId);
     }
 

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Reports.Subscriptions.Models;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Reports.ViewModels;
 
@@ -47,4 +48,10 @@ public class ReportSubscriptionEditViewModel
     [BindNever]
     public bool IsNew
         => Subscription is null;
+
+    /// <summary>
+    /// Gets or sets the editor shape, built by the display drivers of the view model: one card per section.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

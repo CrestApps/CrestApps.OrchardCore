@@ -249,6 +249,17 @@ public sealed class LateFeePoliciesController : CatalogAdminController<LateFeePo
 /// </summary>
 public sealed class LateFeePolicyDisplayDriver : DisplayDriver<LateFeePolicy>
 {
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LateFeePolicyDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public LateFeePolicyDisplayDriver(IStringLocalizer<LateFeePolicyDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     /// <inheritdoc/>
     public override Task<IDisplayResult> DisplayAsync(LateFeePolicy policy, BuildDisplayContext context)
     {
@@ -271,7 +282,13 @@ public sealed class LateFeePolicyDisplayDriver : DisplayDriver<LateFeePolicy>
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(LateFeePolicy policy, BuildEditorContext context)
-        => Initialize<LateFeePolicyViewModel>("LateFeePolicyFields_Edit", model =>
+        => Combine(
+            CardShape("LateFeePolicyDetails_Edit", policy, "1", S["Policy"], "10"),
+            CardShape("LateFeePolicyFee_Edit", policy, "2", S["Fee"], "20"),
+            CardShape("LateFeePolicySchedule_Edit", policy, "3", S["Schedule"], "30"));
+
+    private ShapeResult CardShape(string shapeType, LateFeePolicy policy, string position, LocalizedString card, string cardPosition)
+        => Initialize<LateFeePolicyViewModel>(shapeType, model =>
         {
             model.Name = policy.Name;
             model.Description = policy.Description;
@@ -286,7 +303,7 @@ public sealed class LateFeePolicyDisplayDriver : DisplayDriver<LateFeePolicy>
             model.MinimumBalance = policy.MinimumBalance > 0m ? policy.MinimumBalance : null;
             model.Taxable = policy.Taxable;
             model.SendDebitNote = policy.SendDebitNote;
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", position).Card(card, cardPosition));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(LateFeePolicy policy, UpdateEditorContext context)

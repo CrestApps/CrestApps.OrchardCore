@@ -1,0 +1,20 @@
+@model TimeClockPolicyEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="RoundingMinutes" class="ocat-label">@T["Round punch times to"]</label>
+    <div class="ocat-end d-flex flex-wrap gap-2">
+        <select asp-for="RoundingMinutes" class="form-select" style="max-width: 12rem">
+            <option value="0">@T["Don't round"]</option>
+            <option value="1">@T["1 minute"]</option>
+            <option value="5">@T["5 minutes"]</option>
+            <option value="6">@T["6 minutes (a tenth of an hour)"]</option>
+            <option value="15">@T["15 minutes"]</option>
+        </select>
+        <select asp-for="RoundingDirection" class="form-select" style="max-width: 22rem" aria-label="@T["Which way"]">
+            <option value="Nearest">@T["To the nearest step"]</option>
+            <option value="FavorWorker">@T["Starts down, ends up (the worker never loses time)"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper"><label asp-for="EarlyGraceMinutes" class="ocat-label">@T["Early grace"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="EarlyGraceMinutes" type="number" step="1" min="0" max="120" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["minutes"]</span></div><span class="hint">@T["Clocking in this early, or out this late, is paid from the shift&#39;s start or to its end."]</span></div></div>
+<div class="ocat-wrapper"><label asp-for="LateGraceMinutes" class="ocat-label">@T["Late grace"]</label><div class="ocat-end"><div class="input-group" style="max-width: 12rem"><input asp-for="LateGraceMinutes" type="number" step="1" min="0" max="120" class="form-control" style="max-width: 12rem" /><span class="input-group-text">@T["minutes"]</span></div><span class="hint">@T["Clocking in this late, or out this early, is paid as on time and isn&#39;t an exception."]</span></div></div>

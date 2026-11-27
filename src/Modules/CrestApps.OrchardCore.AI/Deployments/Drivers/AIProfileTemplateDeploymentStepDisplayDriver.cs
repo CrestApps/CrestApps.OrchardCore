@@ -45,7 +45,7 @@ internal sealed class AIProfileTemplateDeploymentStepDisplayDriver : DisplayDriv
             model.IncludeAll = step.IncludeAll;
             model.TemplateNames = step.TemplateNames;
             model.AllTemplateNames = (await _templatesCatalog.GetAllAsync()).Select(x => x.Name).Order().ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["AI Profile Templates"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfileTemplateDeploymentStep step, UpdateEditorContext context)

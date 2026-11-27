@@ -15,6 +15,8 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -40,6 +42,8 @@ public sealed class TimeOffController : Controller
     private readonly IShiftService _shiftService;
     private readonly ILocalClock _localClock;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<TimeOffRequestEditViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -60,6 +64,8 @@ public sealed class TimeOffController : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
+    /// <param name="displayManager">The display manager of the editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     public TimeOffController(
         IAuthorizationService authorizationService,
         ITimeOffRequestService requestService,
@@ -73,7 +79,9 @@ public sealed class TimeOffController : Controller
         ILocalClock localClock,
         INotifier notifier,
         IHtmlLocalizer<TimeOffController> htmlLocalizer,
-        IStringLocalizer<TimeOffController> stringLocalizer)
+        IStringLocalizer<TimeOffController> stringLocalizer,
+        IDisplayManager<TimeOffRequestEditViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor)
     {
         _authorizationService = authorizationService;
         _requestService = requestService;
@@ -88,6 +96,8 @@ public sealed class TimeOffController : Controller
         _notifier = notifier;
         H = htmlLocalizer;
         S = stringLocalizer;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
     }
 
     /// <summary>
@@ -226,6 +236,8 @@ public sealed class TimeOffController : Controller
 
         await PopulateAsync(model);
 
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
+
         return View(model);
     }
 
@@ -244,6 +256,8 @@ public sealed class TimeOffController : Controller
         {
             return Forbid();
         }
+
+        model.Editor = await _displayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
 
         var worker = string.IsNullOrEmpty(model.WorkerId) ? null : await _workerManager.FindByIdAsync(model.WorkerId);
 
@@ -325,6 +339,8 @@ public sealed class TimeOffController : Controller
 
         model.WorkerName = worker?.DisplayName;
         await PopulateAsync(model);
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, true);
 
         return View(model);
     }

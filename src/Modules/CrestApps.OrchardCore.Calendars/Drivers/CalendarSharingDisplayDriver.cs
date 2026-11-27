@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Calendars.Services;
 using CrestApps.OrchardCore.Calendars.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Security.Services;
@@ -22,16 +23,20 @@ internal sealed class CalendarSharingDisplayDriver : DisplayDriver<Calendar>
     private readonly ICalendarAccessService _accessService;
     private readonly IHttpContextAccessor _httpContextAccessor;
 
+    internal readonly IStringLocalizer S;
+
     public CalendarSharingDisplayDriver(
         IRoleService roleService,
         CalendarUserLookup userLookup,
         ICalendarAccessService accessService,
-        IHttpContextAccessor httpContextAccessor)
+        IHttpContextAccessor httpContextAccessor,
+        IStringLocalizer<CalendarSharingDisplayDriver> stringLocalizer)
     {
         _roleService = roleService;
         _userLookup = userLookup;
         _accessService = accessService;
         _httpContextAccessor = httpContextAccessor;
+        S = stringLocalizer;
     }
 
     public override async Task<IDisplayResult> EditAsync(Calendar calendar, BuildEditorContext context)
@@ -69,7 +74,7 @@ internal sealed class CalendarSharingDisplayDriver : DisplayDriver<Calendar>
                 .Order(StringComparer.OrdinalIgnoreCase)
                 .Select(role => new SelectListItem(role, role))
                 .ToList();
-        }).Location("Content:10%Sharing;3");
+        }).Location(l => l.Zone("Content", "10").Card(S["Sharing"], "3"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Calendar calendar, UpdateEditorContext context)

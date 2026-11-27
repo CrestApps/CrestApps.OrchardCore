@@ -35,7 +35,7 @@ internal sealed class IncomeTaxFlatRateDisplayDriver : IncomeTaxRuleSourceDispla
             model.YearlyExemption = Text(rule.YearlyExemption);
             model.YearlyMaximum = Text(rule.YearlyMaximum);
             model.ExemptionAllowance = Text(rule.ExemptionAllowance);
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Rate"], "20"));
 
     public override async Task<IDisplayResult> UpdateAsync(IncomeTaxRule rule, UpdateEditorContext context)
     {
@@ -76,7 +76,7 @@ internal sealed class IncomeTaxShareOfTaxDisplayDriver : IncomeTaxRuleSourceDisp
             model.ShareOfTaxCode = rule.ShareOfTaxCode;
             model.ShareMultiplier = Text(rule.ShareMultiplier);
             model.YearlyMaximum = Text(rule.YearlyMaximum);
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Share of Another Tax"], "20"));
 
     public override async Task<IDisplayResult> UpdateAsync(IncomeTaxRule rule, UpdateEditorContext context)
     {
@@ -120,26 +120,34 @@ internal sealed class IncomeTaxTableDisplayDriver : IncomeTaxRuleSourceDisplayDr
         => IncomeTaxRuleSources.TaxTable;
 
     public override IDisplayResult Edit(IncomeTaxRule rule, BuildEditorContext context)
-        => Initialize<IncomeTaxTableViewModel>("IncomeTaxTable_Edit", async model =>
-        {
-            model.Method = rule.Method;
-            model.TaxTableId = rule.TaxTableId;
-            model.WageBase = Text(rule.WageBase);
-            model.Annualize = rule.Annualize;
-            model.UsesElections = rule.UsesElections;
-            model.AllowanceAmount = Text(rule.AllowanceAmount);
-            model.SupplementalRate = Text(rule.SupplementalRate);
-            model.SupplementalExcessRate = Text(rule.SupplementalExcessRate);
-            model.SupplementalExcessThreshold = Text(rule.SupplementalExcessThreshold);
+        => Combine(
+            Initialize<IncomeTaxTableViewModel>("IncomeTaxTable_Edit", async model =>
+            {
+                Populate(model, rule);
 
-            // Only the methods that work on a table: the rate and amount methods are sources of their own.
-            model.Methods = [.. _methods.Methods.Values
-                .Where(method => _methodProvider.GetMethod(method.Name) is { } calculation && calculation.Inputs.HasFlag(TaxCalculationMethodInputs.TaxTable))
-                .Select(method => new SelectListItem(method.DisplayName?.Value ?? method.Name, method.Name, string.Equals(method.Name, rule.Method, StringComparison.OrdinalIgnoreCase)))];
-            model.Tables = [.. (await _tables.GetAllAsync())
-                .OrderBy(table => table.Name, StringComparer.CurrentCultureIgnoreCase)
-                .Select(table => new SelectListItem(table.Name, table.ItemId, table.ItemId == rule.TaxTableId))];
-        }).Location("Content:5");
+                // Only the methods that work on a table: the rate and amount methods are sources of their own.
+                model.Methods = [.. _methods.Methods.Values
+                    .Where(method => _methodProvider.GetMethod(method.Name) is { } calculation && calculation.Inputs.HasFlag(TaxCalculationMethodInputs.TaxTable))
+                    .Select(method => new SelectListItem(method.DisplayName?.Value ?? method.Name, method.Name, string.Equals(method.Name, rule.Method, StringComparison.OrdinalIgnoreCase)))];
+                model.Tables = [.. (await _tables.GetAllAsync())
+                    .OrderBy(table => table.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(table => new SelectListItem(table.Name, table.ItemId, table.ItemId == rule.TaxTableId))];
+            }).Location(l => l.Zone("Content", "5").Card(S["Table"], "20")),
+            Initialize<IncomeTaxTableViewModel>("IncomeTaxTableSupplemental_Edit", model => Populate(model, rule))
+                .Location(l => l.Zone("Content", "6").Card(S["Bonuses and Commissions"], "25")));
+
+    private static void Populate(IncomeTaxTableViewModel model, IncomeTaxRule rule)
+    {
+        model.Method = rule.Method;
+        model.TaxTableId = rule.TaxTableId;
+        model.WageBase = Text(rule.WageBase);
+        model.Annualize = rule.Annualize;
+        model.UsesElections = rule.UsesElections;
+        model.AllowanceAmount = Text(rule.AllowanceAmount);
+        model.SupplementalRate = Text(rule.SupplementalRate);
+        model.SupplementalExcessRate = Text(rule.SupplementalExcessRate);
+        model.SupplementalExcessThreshold = Text(rule.SupplementalExcessThreshold);
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(IncomeTaxRule rule, UpdateEditorContext context)
     {
@@ -180,7 +188,7 @@ internal sealed class IncomeTaxFixedAmountDisplayDriver : IncomeTaxRuleSourceDis
         {
             model.FixedAmount = Text(rule.FixedAmount);
             model.YearlyMaximum = Text(rule.YearlyMaximum);
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Amount"], "20"));
 
     public override async Task<IDisplayResult> UpdateAsync(IncomeTaxRule rule, UpdateEditorContext context)
     {
@@ -234,27 +242,39 @@ internal sealed class IncomeTaxWithholdingDisplayDriver : IncomeTaxRuleSourceDis
     // A source whose pack edits it with its own driver isn't edited here too.
 
     public override IDisplayResult Edit(IncomeTaxRule rule, BuildEditorContext context)
-        => Initialize<IncomeTaxWithholdingViewModel>("IncomeTaxWithholding_Edit", async model =>
-        {
-            var method = GetMethod(rule);
+    {
+        var method = GetMethod(rule);
 
-            model.MethodDisplayName = _localizerFactory.Localize(method.DisplayName).Value;
-            model.HandlesSupplementalIncome = method.HandlesSupplementalIncome;
-            model.TableInputs = [.. method.Tables.Select(table => (table.Key, _localizerFactory.Localize(table.Label).Value, table.Required))];
-            model.ParameterInputs = [.. method.Parameters.Select(parameter => (parameter.Key, _localizerFactory.Localize(parameter.Label).Value, parameter.Required))];
-            model.Tables = new Dictionary<string, string>(rule.Tables ?? [], StringComparer.Ordinal);
-            model.Parameters = (rule.Parameters ?? []).ToDictionary(pair => pair.Key, pair => Text(pair.Value), StringComparer.Ordinal);
-            model.UsesElections = rule.UsesElections;
-            model.AllowanceAmount = Text(rule.AllowanceAmount);
-            model.SupplementalRate = Text(rule.SupplementalRate);
-            model.SupplementalExcessRate = Text(rule.SupplementalExcessRate);
-            model.SupplementalExcessThreshold = Text(rule.SupplementalExcessThreshold);
-            model.ShowDeductedTaxCodes = OwnsDeductedTaxCodes(rule);
-            model.DeductedTaxCodes = string.Join(", ", rule.DeductedTaxCodes ?? []);
-            model.AvailableTables = [.. (await _tables.GetAllAsync())
-                .OrderBy(table => table.Name, StringComparer.CurrentCultureIgnoreCase)
-                .Select(table => new SelectListItem(table.Name, table.ItemId))];
-        }).Location("Content:5");
+        return Combine(
+            Initialize<IncomeTaxWithholdingViewModel>("IncomeTaxWithholding_Edit", async model =>
+            {
+                Populate(model, rule, method);
+
+                model.TableInputs = [.. method.Tables.Select(table => (table.Key, _localizerFactory.Localize(table.Label).Value, table.Required))];
+                model.ParameterInputs = [.. method.Parameters.Select(parameter => (parameter.Key, _localizerFactory.Localize(parameter.Label).Value, parameter.Required))];
+                model.Tables = new Dictionary<string, string>(rule.Tables ?? [], StringComparer.Ordinal);
+                model.Parameters = (rule.Parameters ?? []).ToDictionary(pair => pair.Key, pair => Text(pair.Value), StringComparer.Ordinal);
+                model.ShowDeductedTaxCodes = OwnsDeductedTaxCodes(rule);
+                model.DeductedTaxCodes = string.Join(", ", rule.DeductedTaxCodes ?? []);
+                model.AvailableTables = [.. (await _tables.GetAllAsync())
+                    .OrderBy(table => table.Name, StringComparer.CurrentCultureIgnoreCase)
+                    .Select(table => new SelectListItem(table.Name, table.ItemId))];
+            }).Location(l => l.Zone("Content", "5").Card(_localizerFactory.Localize(method.DisplayName).Value, "20")),
+            Initialize<IncomeTaxWithholdingViewModel>("IncomeTaxWithholdingSupplemental_Edit", model => Populate(model, rule, method))
+                .Location(l => l.Zone("Content", "6").Card(S["Bonuses and Commissions"], "25"))
+                .RenderWhen(() => Task.FromResult(!method.HandlesSupplementalIncome)));
+    }
+
+    private void Populate(IncomeTaxWithholdingViewModel model, IncomeTaxRule rule, IIncomeTaxWithholdingMethod method)
+    {
+        model.MethodDisplayName = _localizerFactory.Localize(method.DisplayName).Value;
+        model.HandlesSupplementalIncome = method.HandlesSupplementalIncome;
+        model.UsesElections = rule.UsesElections;
+        model.AllowanceAmount = Text(rule.AllowanceAmount);
+        model.SupplementalRate = Text(rule.SupplementalRate);
+        model.SupplementalExcessRate = Text(rule.SupplementalExcessRate);
+        model.SupplementalExcessThreshold = Text(rule.SupplementalExcessThreshold);
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(IncomeTaxRule rule, UpdateEditorContext context)
     {

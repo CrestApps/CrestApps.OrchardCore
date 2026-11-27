@@ -63,7 +63,7 @@ internal sealed class McpConnectionDeploymentStepDisplayDriver : DisplayDriver<D
             {
                 Selected = step.ConnectionIds is not null && step.ConnectionIds.Contains(connection.ItemId),
             }).ToArray();
-        }).Location("Content");
+        }).Location(l => l.Zone("Content", "1").Card(S["MCP Connections"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(McpConnectionDeploymentStep step, UpdateEditorContext context)

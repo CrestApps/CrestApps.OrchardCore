@@ -39,6 +39,12 @@ public sealed class TicketEventDisplayDriver<TActivity> : ActivityDisplayDriver<
         S = stringLocalizer;
     }
 
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+    {
+        return Initialize<TicketEventViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
+    }
+
     protected override async ValueTask EditActivityAsync(TActivity activity, TicketEventViewModel model)
     {
         model.DeskIds = [.. activity.DeskIds];
@@ -194,11 +200,24 @@ public sealed class TicketTaskDisplayDriver<TActivity> : ActivityDisplayDriver<T
     private readonly ICatalog<TicketStatus> _statuses;
     private readonly ICatalog<TicketPriority> _priorities;
 
-    public TicketTaskDisplayDriver(ICatalog<TicketDesk> desks, ICatalog<TicketStatus> statuses, ICatalog<TicketPriority> priorities)
+    internal readonly IStringLocalizer S;
+
+    public TicketTaskDisplayDriver(
+        ICatalog<TicketDesk> desks,
+        ICatalog<TicketStatus> statuses,
+        ICatalog<TicketPriority> priorities,
+        IStringLocalizer<TicketTaskViewModel> stringLocalizer)
     {
         _desks = desks;
         _statuses = statuses;
         _priorities = priorities;
+        S = stringLocalizer;
+    }
+
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+    {
+        return Initialize<TicketTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
     }
 
     protected override async ValueTask EditActivityAsync(TActivity activity, TicketTaskViewModel model)

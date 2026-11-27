@@ -45,7 +45,7 @@ internal sealed class SearchIndexDocumentationToolInstanceDisplayDriver : Displa
             model.BaseUrl = settings.BaseUrl;
             model.IndexUrl = settings.IndexUrl;
             model.MaxResults = settings.MaxResults;
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Search Index"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstance instance, UpdateEditorContext context)

@@ -307,7 +307,12 @@ public sealed class BillableItemDisplayDriver : DisplayDriver<BillableItem>
 
     /// <inheritdoc/>
     public override IDisplayResult Edit(BillableItem item, BuildEditorContext context)
-        => Initialize<BillableItemViewModel>("BillableItemFields_Edit", async model =>
+        => Combine(
+            CardShape("BillableItemCharge_Edit", item, "1", S["Charge"], "10"),
+            CardShape("BillableItemPrice_Edit", item, "2", S["Price"], "20"));
+
+    private ShapeResult CardShape(string shapeType, BillableItem item, string position, LocalizedString card, string cardPosition)
+        => Initialize<BillableItemViewModel>(shapeType, async model =>
         {
             var settings = await _siteService.GetSettingsAsync<InvoicingSettings>();
 
@@ -325,7 +330,7 @@ public sealed class BillableItemDisplayDriver : DisplayDriver<BillableItem>
             model.IsBilled = item.IsBilled;
             model.InvoiceId = item.InvoiceId;
             model.PartySearchEndpoint = _links.GetPathByRouteValues(_httpContextAccessor.HttpContext, InvoicePartySearchEndpoints.RouteName, values: null);
-        }).Location("Content:1");
+        }).Location(l => l.Zone("Content", position).Card(card, cardPosition));
 
     /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(BillableItem item, UpdateEditorContext context)

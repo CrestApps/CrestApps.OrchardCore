@@ -12,6 +12,7 @@ using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Localization;
 using OrchardCore.Recipes.Models;
 using OrchardCore.Recipes.Services;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Geo.Recipes;
 
@@ -109,13 +110,21 @@ internal sealed class GeoDeploymentSource : DeploymentSourceBase<GeoDeploymentSt
 
 internal sealed class GeoDeploymentStepDisplayDriver : DisplayDriver<DeploymentStep, GeoDeploymentStep>
 {
+    internal readonly IStringLocalizer S;
+
+    public GeoDeploymentStepDisplayDriver(IStringLocalizer<GeoDeploymentStepDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override Task<IDisplayResult> DisplayAsync(GeoDeploymentStep step, BuildDisplayContext context)
         => CombineAsync(
             View("GeoDeploymentStep_Summary", step).Location("Summary", "Content"),
             View("GeoDeploymentStep_Thumbnail", step).Location("Thumbnail", "Content"));
 
     public override IDisplayResult Edit(GeoDeploymentStep step, BuildEditorContext context)
-        => View("GeoDeploymentStep_Fields_Edit", step).Location("Content");
+        => View("GeoDeploymentStep_Fields_Edit", step)
+            .Location(l => l.Zone("Content", "1").Card(S["Export"], "10"));
 }
 
 /// <summary>

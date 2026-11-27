@@ -42,6 +42,13 @@ public sealed class SplitTrafficTaskDisplayDriver : ActivityDisplayDriver<SplitT
     }
 
     /// <inheritdoc/>
+    public override IDisplayResult Edit(SplitTrafficTask activity, BuildEditorContext context)
+    {
+        return Initialize<SplitTrafficTaskViewModel>(ActivityName + "_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Split"], "10"));
+    }
+
+    /// <inheritdoc/>
     public override async Task<IDisplayResult> UpdateAsync(SplitTrafficTask activity, UpdateEditorContext context)
     {
         var model = new SplitTrafficTaskViewModel();

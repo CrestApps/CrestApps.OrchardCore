@@ -1,92 +1,42 @@
 @model BusinessDocumentTemplateViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["The template"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="Name">
-            <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
-            <div class="ocat-end">
-                <input asp-for="Name" class="form-control" maxlength="255" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-                <span class="hint">@T["A name staff recognize, such as Standard or Wholesale."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Description">
-            <label asp-for="Description" class="ocat-label">@T["Notes"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="Description" class="form-control" rows="2"></textarea>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Kinds">
-            <label class="ocat-label">@T["Used for"]</label>
-            <div class="ocat-end">
-                @if (Model.KindOptions.Count == 0)
-                {
-                    <span class="hint">@T["No enabled feature prints business documents yet. The template is used for every kind of document."]</span>
-                }
-                @foreach (var option in Model.KindOptions)
-                {
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Kinds)" value="@option.Value" id="@Html.IdFor(m => m.Kinds)-@option.Value" checked="@option.Selected" />
-                        <label class="form-check-label" for="@Html.IdFor(m => m.Kinds)-@option.Value">@option.Text</label>
-                    </div>
-                }
-                <span class="hint">@T["The kinds of documents the template is for. Choose none to use it for every kind."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="IsDefault">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="IsDefault" class="form-check-input" />
-                    <label asp-for="IsDefault" class="form-check-label">@T["Default template"]</label>
-                    <span class="hint dashed">@T["Documents of its kinds that name no template are printed with it. Saving it as the default stops another template from being the default for the same kinds."]</span>
-                </div>
-            </div>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" maxlength="255" />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["A name staff recognize, such as Standard or Wholesale."]</span>
     </div>
 </div>
-
-<div class="card mb-3">
-    <div class="card-header">@T["Look"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="LogoUrl">
-            <label asp-for="LogoUrl" class="ocat-label">@T["Logo"]</label>
-            <div class="ocat-end">
-                <input asp-for="LogoUrl" class="form-control" maxlength="1000" placeholder="/media/logo.png" />
-                <span asp-validation-for="LogoUrl" class="text-danger"></span>
-                <span class="hint">@T["The address of a PNG or JPEG image in the media library, such as /media/logo.png. PDFs show only an image from the media library. A document with its own logo keeps it."]</span>
+<div class="ocat-wrapper" asp-validation-class-for="Description">
+    <label asp-for="Description" class="ocat-label">@T["Notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="Kinds">
+    <label class="ocat-label">@T["Used for"]</label>
+    <div class="ocat-end">
+        @if (Model.KindOptions.Count == 0)
+        {
+            <span class="hint">@T["No enabled feature prints business documents yet. The template is used for every kind of document."]</span>
+        }
+        @foreach (var option in Model.KindOptions)
+        {
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="@Html.NameFor(m => m.Kinds)" value="@option.Value" id="@Html.IdFor(m => m.Kinds)-@option.Value" checked="@option.Selected" />
+                <label class="form-check-label" for="@Html.IdFor(m => m.Kinds)-@option.Value">@option.Text</label>
             </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="UseAccentColor">
-            <div class="ocat-end-offset">
-                <div class="form-check">
-                    <input asp-for="UseAccentColor" class="form-check-input" />
-                    <label asp-for="UseAccentColor" class="form-check-label">@T["Use an accent color"]</label>
-                    <span class="hint dashed">@T["The title, the header of the line table and the total are printed in it."]</span>
-                </div>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="AccentColor">
-            <label asp-for="AccentColor" class="ocat-label">@T["Accent color"]</label>
-            <div class="ocat-end">
-                <input asp-for="AccentColor" type="color" class="form-control form-control-color" />
-                <span asp-validation-for="AccentColor" class="text-danger"></span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="PaperSize">
-            <label asp-for="PaperSize" class="ocat-label">@T["Paper size"]</label>
-            <div class="ocat-end">
-                <select asp-for="PaperSize" asp-items="Model.PaperSizeOptions" class="form-select"></select>
-                <span asp-validation-for="PaperSize" class="text-danger"></span>
-                <span class="hint">@T["The size of the pages of PDFs and of printed pages."]</span>
-            </div>
-        </div>
-        <div class="ocat-wrapper" asp-validation-class-for="Footer">
-            <label asp-for="Footer" class="ocat-label">@T["Footer"]</label>
-            <div class="ocat-end">
-                <textarea asp-for="Footer" class="form-control" rows="3"></textarea>
-                <span class="hint">@T["Text printed at the bottom of the documents, such as a registration number or a thank-you note. A document with its own footer keeps it."]</span>
-            </div>
+        }
+        <span class="hint">@T["The kinds of documents the template is for. Choose none to use it for every kind."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="IsDefault">
+    <div class="ocat-end-offset">
+        <div class="form-check">
+            <input asp-for="IsDefault" class="form-check-input" />
+            <label asp-for="IsDefault" class="form-check-label">@T["Default template"]</label>
+            <span class="hint dashed">@T["Documents of its kinds that name no template are printed with it. Saving it as the default stops another template from being the default for the same kinds."]</span>
         </div>
     </div>
 </div>

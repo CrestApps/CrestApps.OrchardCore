@@ -1,0 +1,17 @@
+@model CheckNextNumberViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="BankAccountId">
+    <label asp-for="BankAccountId" class="ocat-label ocat-label-required">@T["Bank account"]</label>
+    <div class="ocat-end">
+        <select asp-for="BankAccountId" asp-items="Model.BankAccountOptions" class="form-select"></select>
+        <span asp-validation-for="BankAccountId" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="NextNumber">
+    <label asp-for="NextNumber" class="ocat-label ocat-label-required">@T["Next number"]</label>
+    <div class="ocat-end">
+        <input asp-for="NextNumber" class="form-control" inputmode="numeric" />
+        <span asp-validation-for="NextNumber" class="text-danger"></span>
+        <span class="hint">@T["The number printed on the first check of the new stock. A number a check of the account already has is refused."]</span>
+    </div>
+</div>

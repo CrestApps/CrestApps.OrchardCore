@@ -74,5 +74,5 @@ internal sealed class WorkforceStaffDisplayDriver : DisplayDriver<StaffMember>
             model.MaxHoursPerWeek = values.MaxHoursPerWeek;
             model.MaxHoursPerDay = values.MaxHoursPerDay;
             model.Availability = values.Availability;
-        }).Location("Content:5");
+        }).Location(l => l.Zone("Content", "5").Card(S["Workforce Shifts"], "45"));
 }

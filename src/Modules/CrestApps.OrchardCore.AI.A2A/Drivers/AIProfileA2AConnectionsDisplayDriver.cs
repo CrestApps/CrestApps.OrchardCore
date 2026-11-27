@@ -49,7 +49,7 @@ internal sealed class AIProfileA2AConnectionsDisplayDriver : DisplayDriver<AIPro
                 IsSelected = a2aMetadata.ConnectionIds?.Contains(entry.ItemId) ?? false,
             }).OrderBy(entry => entry.DisplayText)
         .ToArray();
-        }).Location("Content:4#Capabilities;8");
+        }).Location(l => l.Zone("Content", "4").Tab(S["Capabilities"], "8").Card(S["A2A Connections"], "30"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

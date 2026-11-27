@@ -72,7 +72,7 @@ internal sealed class CalendarSubscriptionDisplayDriver : DisplayDriver<Calendar
                 new SelectListItem(S["The external calendar's copy wins"], nameof(CalendarSyncConflictPolicy.ExternalWins)),
                 new SelectListItem(S["This calendar's copy wins"], nameof(CalendarSyncConflictPolicy.LocalWins)),
             ];
-        }).Location("Content:20%Subscription;5");
+        }).Location(l => l.Zone("Content", "20").Card(S["Subscription"], "5"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(Calendar calendar, UpdateEditorContext context)

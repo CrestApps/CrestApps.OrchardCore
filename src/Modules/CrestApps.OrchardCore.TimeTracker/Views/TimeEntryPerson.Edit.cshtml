@@ -1,0 +1,40 @@
+@model TimeEntryEditViewModel
+
+@{
+    var isNew = string.IsNullOrEmpty(Model.Id);
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="UserId">
+    <label asp-for="UserId" class="ocat-label">@T["Person"]</label>
+    <div class="ocat-end">
+        @if (isNew)
+        {
+            @await Component.InvokeAsync("UserPicker", new
+            {
+                audience = "Staff",
+                name = Html.NameFor(m => m.UserId).ToString(),
+                selectedValues = string.IsNullOrEmpty(Model.UserId) ? Array.Empty<string>() : new[] { Model.UserId },
+                valueType = "userId",
+                multiple = false,
+                buttonText = T["Choose a person"].Value,
+                searchPlaceholder = T["Search people"].Value,
+                smallButton = false,
+            })
+        }
+        else
+        {
+            <input type="text" class="form-control" value="@Model.UserName" readonly />
+            <input type="hidden" asp-for="UserId" />
+        }
+        <span asp-validation-for="UserId" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper" asp-validation-class-for="StageId">
+    <label asp-for="StageId" class="ocat-label">@T["Stage"]</label>
+    <div class="ocat-end">
+        <select asp-for="StageId" asp-items="Model.StageOptions" class="form-select">
+            <option value="">@T["Choose a stage"]</option>
+        </select>
+        <span asp-validation-for="StageId" class="text-danger"></span>
+    </div>
+</div>

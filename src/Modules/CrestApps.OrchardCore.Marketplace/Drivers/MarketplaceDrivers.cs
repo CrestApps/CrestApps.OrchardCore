@@ -117,18 +117,32 @@ internal sealed class MarketplaceSettingsDisplayDriver : SiteDisplayDriver<Marke
         => MarketplaceConstants.SettingsGroupId;
 
     public override IDisplayResult Edit(ISite site, MarketplaceSettings settings, BuildEditorContext context)
-        => Initialize<MarketplaceSettingsViewModel>("MarketplaceSettings_Edit", model =>
-        {
-            model.CommissionPercent = settings.CommissionPercent;
-            model.HoldDays = settings.HoldDays;
-            model.ReleaseOnFulfillment = settings.ReleaseOnFulfillment;
-            model.AutomaticPayouts = settings.AutomaticPayouts;
-            model.DefaultCountry = settings.DefaultCountry;
-            model.PayoutProvider = settings.PayoutProvider;
-            model.PayoutProviders = [.. _payoutProviders.Select(provider => provider.Name)];
-        }).Location("Content:1")
-        .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, MarketplacePermissions.ManageMarketplace))
-        .OnGroup(SettingsGroupId);
+    {
+        return Combine(
+            Initialize<MarketplaceSettingsViewModel>("MarketplaceSettings_Edit", model => Fill(model, settings))
+                .Location(l => l.Zone("Content", "1").Card(S["Commission"], "10"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, MarketplacePermissions.ManageMarketplace))
+                .OnGroup(SettingsGroupId),
+            Initialize<MarketplaceSettingsViewModel>("MarketplaceSettingsRelease_Edit", model => Fill(model, settings))
+                .Location(l => l.Zone("Content", "2").Card(S["Holding Sales"], "20"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, MarketplacePermissions.ManageMarketplace))
+                .OnGroup(SettingsGroupId),
+            Initialize<MarketplaceSettingsViewModel>("MarketplaceSettingsPayouts_Edit", model => Fill(model, settings))
+                .Location(l => l.Zone("Content", "3").Card(S["Payouts"], "30"))
+                .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, MarketplacePermissions.ManageMarketplace))
+                .OnGroup(SettingsGroupId));
+    }
+
+    private void Fill(MarketplaceSettingsViewModel model, MarketplaceSettings settings)
+    {
+        model.CommissionPercent = settings.CommissionPercent;
+        model.HoldDays = settings.HoldDays;
+        model.ReleaseOnFulfillment = settings.ReleaseOnFulfillment;
+        model.AutomaticPayouts = settings.AutomaticPayouts;
+        model.DefaultCountry = settings.DefaultCountry;
+        model.PayoutProvider = settings.PayoutProvider;
+        model.PayoutProviders = [.. _payoutProviders.Select(provider => provider.Name)];
+    }
 
     public override async Task<IDisplayResult> UpdateAsync(ISite site, MarketplaceSettings settings, UpdateEditorContext context)
     {

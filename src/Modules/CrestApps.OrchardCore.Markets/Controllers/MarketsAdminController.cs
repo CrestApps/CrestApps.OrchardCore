@@ -15,6 +15,7 @@ using Microsoft.Extensions.Options;
 using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Localization;
 using OrchardCore.Modules;
@@ -34,6 +35,8 @@ public sealed class MarketsAdminController : Controller
     private readonly ILocalizationService _localizationService;
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
+    private readonly IDisplayManager<MarketEditViewModel> _editorDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IClock _clock;
 
     internal readonly IHtmlLocalizer H;
@@ -45,6 +48,8 @@ public sealed class MarketsAdminController : Controller
         ILocalizationService localizationService,
         IAuthorizationService authorizationService,
         INotifier notifier,
+        IDisplayManager<MarketEditViewModel> editorDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IClock clock,
         IHtmlLocalizer<MarketsAdminController> htmlLocalizer,
         IStringLocalizer<MarketsAdminController> stringLocalizer)
@@ -54,6 +59,8 @@ public sealed class MarketsAdminController : Controller
         _localizationService = localizationService;
         _authorizationService = authorizationService;
         _notifier = notifier;
+        _editorDisplayManager = editorDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         _clock = clock;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -89,7 +96,11 @@ public sealed class MarketsAdminController : Controller
             return Forbid();
         }
 
-        return View("Edit", await PopulateAsync(new MarketEditViewModel()));
+        var model = await PopulateAsync(new MarketEditViewModel());
+
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     [HttpPost]
@@ -101,11 +112,16 @@ public sealed class MarketsAdminController : Controller
             return Forbid();
         }
 
+        // The lists of choices are filled before the editor copies the model into its shapes.
+        await PopulateAsync(model);
+
+        model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         await ValidateAsync(model, itemId: null);
 
         if (!ModelState.IsValid)
         {
-            return View("Edit", await PopulateAsync(model));
+            return View("Edit", model);
         }
 
         var market = new Market { ItemId = IdGenerator.GenerateId(), CreatedUtc = _clock.UtcNow };
@@ -129,7 +145,7 @@ public sealed class MarketsAdminController : Controller
             return NotFound();
         }
 
-        return View(await PopulateAsync(new MarketEditViewModel
+        var model = await PopulateAsync(new MarketEditViewModel
         {
             Name = market.Name,
             Countries = string.Join(", ", market.Countries),
@@ -139,7 +155,11 @@ public sealed class MarketsAdminController : Controller
             Culture = market.Culture,
             PricesIncludeTax = market.PricesIncludeTax,
             IsEnabled = market.IsEnabled,
-        }, market.ItemId));
+        }, market.ItemId);
+
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -156,11 +176,16 @@ public sealed class MarketsAdminController : Controller
             return NotFound();
         }
 
+        // The lists of choices are filled before the editor copies the model into its shapes.
+        await PopulateAsync(model, market.ItemId);
+
+        model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         await ValidateAsync(model, market.ItemId);
 
         if (!ModelState.IsValid)
         {
-            return View(await PopulateAsync(model, market.ItemId));
+            return View(model);
         }
 
         Apply(model, market);

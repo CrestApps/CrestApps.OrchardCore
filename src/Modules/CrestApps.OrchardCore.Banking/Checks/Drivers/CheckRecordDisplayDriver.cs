@@ -86,7 +86,7 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
         // A new check is dated today in the site's time zone, never the UTC date.
         var today = DateOnly.FromDateTime((await _localClock.GetLocalNowAsync()).DateTime);
 
-        return Initialize<CheckRecordViewModel>("CheckRecordFields_Edit", model =>
+        void Populate(CheckRecordViewModel model)
         {
             model.IsNew = isNew;
             model.BankAccountId = check.BankAccountId;
@@ -110,7 +110,13 @@ internal sealed class CheckRecordDisplayDriver : DisplayDriver<CheckRecord>
             model.BankAccountOptions = accounts
                 .Select(account => new SelectListItem($"{account.Name} ({BankAccountNumbers.Masked(account)})", account.ItemId, account.ItemId == check.BankAccountId))
                 .ToList();
-        }).Location("Content:1");
+        }
+
+        return Combine(
+            Initialize<CheckRecordViewModel>("CheckRecordFields_Edit", Populate)
+                .Location(l => l.Zone("Content", "1").Card(S["The Check"], "10")),
+            Initialize<CheckRecordViewModel>("CheckRecordPayee_Edit", Populate)
+                .Location(l => l.Zone("Content", "2").Card(S["Payee's Address"], "20")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(CheckRecord check, UpdateEditorContext context)

@@ -11,6 +11,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.Extensions.Localization;
 using OrchardCore.Admin;
+using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 
@@ -32,6 +34,8 @@ public sealed class CalendarFeedsController : Controller
     private readonly INotifier _notifier;
     private readonly IDataProtectionProvider _dataProtectionProvider;
     private readonly IClock _clock;
+    private readonly IDisplayManager<CalendarFeedViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -46,6 +50,8 @@ public sealed class CalendarFeedsController : Controller
     /// <param name="notifier">The notifier.</param>
     /// <param name="dataProtectionProvider">The data protection provider, for the protected feed secret.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="displayManager">The display manager of the import editor.</param>
+    /// <param name="updateModelAccessor">The update model accessor.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     public CalendarFeedsController(
@@ -56,6 +62,8 @@ public sealed class CalendarFeedsController : Controller
         INotifier notifier,
         IDataProtectionProvider dataProtectionProvider,
         IClock clock,
+        IDisplayManager<CalendarFeedViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IHtmlLocalizer<CalendarFeedsController> htmlLocalizer,
         IStringLocalizer<CalendarFeedsController> stringLocalizer)
     {
@@ -66,6 +74,8 @@ public sealed class CalendarFeedsController : Controller
         _importer = importer;
         _notifier = notifier;
         _clock = clock;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -197,7 +207,11 @@ public sealed class CalendarFeedsController : Controller
             return Forbid();
         }
 
-        return View(new CalendarFeedViewModel { Id = calendar.ItemId, Name = calendar.Name });
+        var model = new CalendarFeedViewModel { Id = calendar.ItemId, Name = calendar.Name };
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     /// <summary>

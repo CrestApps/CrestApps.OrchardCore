@@ -11,6 +11,7 @@ using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
@@ -32,6 +33,8 @@ public sealed class VendorsAdminController : Controller
     private readonly IAuthorizationService _authorizationService;
     private readonly INotifier _notifier;
     private readonly IShapeFactory _shapeFactory;
+    private readonly IDisplayManager<VendorEditViewModel> _editorDisplayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
     private readonly IClock _clock;
 
     internal readonly IHtmlLocalizer H;
@@ -46,6 +49,8 @@ public sealed class VendorsAdminController : Controller
         IAuthorizationService authorizationService,
         INotifier notifier,
         IShapeFactory shapeFactory,
+        IDisplayManager<VendorEditViewModel> editorDisplayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IClock clock,
         IHtmlLocalizer<VendorsAdminController> htmlLocalizer,
         IStringLocalizer<VendorsAdminController> stringLocalizer)
@@ -58,6 +63,8 @@ public sealed class VendorsAdminController : Controller
         _authorizationService = authorizationService;
         _notifier = notifier;
         _shapeFactory = shapeFactory;
+        _editorDisplayManager = editorDisplayManager;
+        _updateModelAccessor = updateModelAccessor;
         _clock = clock;
         H = htmlLocalizer;
         S = stringLocalizer;
@@ -100,7 +107,11 @@ public sealed class VendorsAdminController : Controller
 
         ViewData["IsNew"] = true;
 
-        return View("Edit", new VendorEditViewModel());
+        var model = new VendorEditViewModel();
+
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     [HttpPost]
@@ -114,6 +125,8 @@ public sealed class VendorsAdminController : Controller
 
         var now = _clock.UtcNow;
         var vendor = new Vendor { ItemId = global::OrchardCore.IdGenerator.GenerateId(), CreatedUtc = now };
+
+        model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
 
         if (!await ApplyAsync(model, vendor))
         {
@@ -140,7 +153,7 @@ public sealed class VendorsAdminController : Controller
             return NotFound();
         }
 
-        return View(new VendorEditViewModel
+        var model = new VendorEditViewModel
         {
             Name = vendor.Name,
             Email = vendor.Email,
@@ -148,7 +161,11 @@ public sealed class VendorsAdminController : Controller
             CommissionPercent = vendor.CommissionPercent,
             Country = vendor.Country,
             Status = vendor.Status,
-        });
+        };
+
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     [HttpPost]
@@ -164,6 +181,8 @@ public sealed class VendorsAdminController : Controller
         {
             return NotFound();
         }
+
+        model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
 
         if (!await ApplyAsync(model, vendor))
         {

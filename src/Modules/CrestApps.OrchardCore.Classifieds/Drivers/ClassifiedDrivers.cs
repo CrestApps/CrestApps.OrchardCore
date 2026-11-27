@@ -130,6 +130,13 @@ internal sealed class ClassifiedPartDisplayDriver : ContentPartDisplayDriver<Cla
 /// </summary>
 internal sealed class ClassifiedPartSettingsDisplayDriver : ContentTypePartDefinitionDisplayDriver<ClassifiedPart>
 {
+    internal readonly IStringLocalizer S;
+
+    public ClassifiedPartSettingsDisplayDriver(IStringLocalizer<ClassifiedPartSettingsDisplayDriver> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
     public override IDisplayResult Edit(ContentTypePartDefinition contentTypePartDefinition, BuildEditorContext context)
         => Initialize<ClassifiedPartSettingsViewModel>("ClassifiedPartSettings_Edit", model =>
         {
@@ -137,7 +144,7 @@ internal sealed class ClassifiedPartSettingsDisplayDriver : ContentTypePartDefin
 
             model.TermDays = settings.TermDays;
             model.RequireApproval = settings.RequireApproval;
-        }).Location("Content");
+        }).Location(l => l.Zone("Content").Card(S["General"], "10"));
 
     public override async Task<IDisplayResult> UpdateAsync(ContentTypePartDefinition contentTypePartDefinition, UpdateTypePartEditorContext context)
     {

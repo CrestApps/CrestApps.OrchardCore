@@ -100,6 +100,12 @@ public class PayrollFilingDetailsViewModel
 
     [BindNever]
     public PayrollFiling Amends { get; set; }
+
+    /// <summary>
+    /// Gets or sets the label of each box of the form, by "person:" or "filing:" and its number.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyDictionary<string, string> BoxLabels { get; set; } = new Dictionary<string, string>();
 }
 
 /// <summary>
@@ -134,6 +140,12 @@ public class MyPayTaxFormViewModel
 
     [BindNever]
     public string EmployerName { get; set; }
+
+    /// <summary>
+    /// Gets or sets what the person's statement of the form is called, such as Form W-2 or T4 slip.
+    /// </summary>
+    [BindNever]
+    public string StatementName { get; set; }
 }
 
 /// <summary>

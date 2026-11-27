@@ -73,42 +73,42 @@ internal sealed class AIPersonaDisplayDriver : DisplayDriver<AIPersona>
     /// <inheritdoc />
     public override IDisplayResult Edit(AIPersona persona, BuildEditorContext context)
     {
-        return Initialize<AIPersonaViewModel>("AIPersonaFields_Edit", async model =>
-        {
-            model.Name = persona.Name;
-            model.DisplayText = persona.DisplayText;
-            model.Description = persona.Description;
-            model.Instructions = persona.Instructions;
-            model.AssistantName = persona.AssistantName;
-            model.Language = persona.Language;
-            model.VoiceDeploymentName = persona.VoiceDeploymentName;
-            model.VoiceName = persona.VoiceName;
-            model.AvatarUrl = persona.AvatarUrl;
-            model.IsNew = context.IsNew;
-            model.IsFromFile = !context.IsNew && await IsFromFileAsync(persona);
+        return Combine(
+            Initialize<AIPersonaViewModel>("AIPersonaFields_Edit", async model =>
+            {
+                PopulateGeneral(persona, context, model);
+                model.IsFromFile = !context.IsNew && await IsFromFileAsync(persona);
+            }).Location(l => l.Zone("Content", "1").Card(S["General"], "10")),
+            Initialize<AIPersonaViewModel>("AIPersonaInstructions_Edit", model => model.Instructions = persona.Instructions)
+                .Location(l => l.Zone("Content", "1").Card(S["Instructions"], "20")),
+            Initialize<AIPersonaViewModel>("AIPersonaVoice_Edit", async model =>
+            {
+                model.Language = persona.Language;
+                model.VoiceDeploymentName = persona.VoiceDeploymentName;
+                model.VoiceName = persona.VoiceName;
 
-            // A voice name only means something to the provider it came from, so the voice is picked from a
-            // deployment and that deployment is remembered with it.
-            var realtimeDeployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Realtime))
-                .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
-                .OrderBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
-                .ToList();
-            var speechDeployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.TextToSpeech))
-                .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
-                .OrderBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase);
+                // A voice name only means something to the provider it came from, so the voice is picked from a
+                // deployment and that deployment is remembered with it.
+                var realtimeDeployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.Realtime))
+                    .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
+                    .OrderBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                var speechDeployments = (await _deploymentManager.GetAllBySlotAsync(AIDeploymentSlotNames.TextToSpeech))
+                    .Where(deployment => !string.IsNullOrWhiteSpace(deployment.Name))
+                    .OrderBy(deployment => deployment.Name, StringComparer.OrdinalIgnoreCase);
 
-            var realtimeGroup = new SelectListGroup { Name = S["Realtime (speech-to-speech)"] };
-            var speechGroup = new SelectListGroup { Name = S["Text-to-speech"] };
+                var realtimeGroup = new SelectListGroup { Name = S["Realtime (speech-to-speech)"] };
+                var speechGroup = new SelectListGroup { Name = S["Text-to-speech"] };
 
-            model.VoiceDeployments = realtimeDeployments
-                .Select(deployment => new SelectListItem(deployment.Name, deployment.Name) { Group = realtimeGroup })
-                .Concat(speechDeployments.Select(deployment => new SelectListItem(deployment.Name, deployment.Name) { Group = speechGroup }))
-                .ToList();
+                model.VoiceDeployments = realtimeDeployments
+                    .Select(deployment => new SelectListItem(deployment.Name, deployment.Name) { Group = realtimeGroup })
+                    .Concat(speechDeployments.Select(deployment => new SelectListItem(deployment.Name, deployment.Name) { Group = speechGroup }))
+                    .ToList();
 
-            model.RealtimeDeploymentNames = realtimeDeployments
-                .Select(deployment => deployment.Name)
-                .ToArray();
-        }).Location("Content:1");
+                model.RealtimeDeploymentNames = realtimeDeployments
+                    .Select(deployment => deployment.Name)
+                    .ToArray();
+            }).Location(l => l.Zone("Content", "1").Card(S["Voice & Language"], "30")));
     }
 
     /// <inheritdoc />
@@ -165,5 +165,15 @@ internal sealed class AIPersonaDisplayDriver : DisplayDriver<AIPersona>
         return string.IsNullOrWhiteSpace(value)
             ? null
             : value.Trim();
+    }
+
+    private static void PopulateGeneral(AIPersona persona, BuildEditorContext context, AIPersonaViewModel model)
+    {
+        model.Name = persona.Name;
+        model.DisplayText = persona.DisplayText;
+        model.Description = persona.Description;
+        model.AssistantName = persona.AssistantName;
+        model.AvatarUrl = persona.AvatarUrl;
+        model.IsNew = context.IsNew;
     }
 }

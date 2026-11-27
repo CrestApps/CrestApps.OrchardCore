@@ -67,11 +67,9 @@ public sealed class PayrollWorkflowEventsTests
         await using var harness = await PayRunTests.CreateHarnessAsync(services =>
         {
             services.AddPayrollFilingsCore();
-            services.AddPayrollFilingForm<Form941>();
-            services.AddPayrollFilingForm<Form940>();
-            services.AddPayrollFilingForm<FormW2>();
             services.AddSingleton<IPayrollFilingObserver>(observer);
         });
+        await PayrollTaxFormRecipes.SeedAsync(harness, PayrollTaxFormRecipes.UnitedStates, UnitedStatesTaxForms.Form941, UnitedStatesTaxForms.Form940, UnitedStatesTaxForms.FormW2);
         var setup = await PayRunTests.SetUpAsync(harness);
         var filer = CalendarTestHarness.User("filer", PayrollPermissions.ManagePayrollFilings.Name);
 
@@ -79,7 +77,7 @@ public sealed class PayrollWorkflowEventsTests
         {
             var employer = await services.GetRequiredService<IEmployerManager>().FindByIdAsync(setup.EmployerId);
             var service = services.GetRequiredService<IPayrollFilingService>();
-            var draft = (await service.PrepareAsync(employer, Form941.FormName, 2026, 4, filer)).Filing;
+            var draft = (await service.PrepareAsync(employer, UnitedStatesTaxForms.Form941, 2026, 4, filer)).Filing;
 
             Assert.True((await service.MarkFiledAsync(draft, new DateOnly(2027, 1, 20), "CONF-1", filer)).Succeeded);
             Assert.True((await service.AmendAsync(draft, filer)).Succeeded);
@@ -97,7 +95,7 @@ public sealed class PayrollWorkflowEventsTests
             observer.Changes.Select(change => change.Kind));
         Assert.Equal(("CONF-1", PayrollFilingStatus.Filed), (observer.Changes[1].Filing.Reference, observer.Changes[1].Filing.Status));
         Assert.Equal(observer.Changes[0].Filing.ItemId, observer.Changes[2].Filing.AmendsId);
-        Assert.Equal(FormW2.FormName, observer.Changes[3].Filing.Form);
+        Assert.Equal(UnitedStatesTaxForms.FormW2, observer.Changes[3].Filing.Form);
         Assert.All(observer.Changes, change => Assert.Equal((setup.EmployerId, 2026, "filer"), (change.EmployerId, change.Year, change.Actor)));
         Assert.Null(observer.Changes[4].Filing);
     }

@@ -39,7 +39,7 @@ internal sealed class AIProfileAnalyticsDisplayDriver : DisplayDriver<AIProfile>
                 MaxScore = g.MaxScore,
             })
         .ToList();
-        }).Location("Content:15#Data Processing & Metrics;10")
+        }).Location(l => l.Zone("Content", "15").Tab(S["Data Processing & Metrics"], "10").Card(S["Analytics"], "15"))
         .RenderWhen(() => Task.FromResult(profile.Type == AIProfileType.Chat));
     }
 

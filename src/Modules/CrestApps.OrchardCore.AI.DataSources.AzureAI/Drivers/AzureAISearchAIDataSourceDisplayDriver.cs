@@ -77,7 +77,7 @@ internal sealed class AzureAISearchAIDataSourceDisplayDriver : DisplayDriver<AID
             model.IndexName = metadata.IndexName;
             model.IdentityClientId = metadata.IdentityClientId;
             model.HasApiKey = ProtectedSettingExtensions.HasSecret(metadata.ApiKey);
-        }).Location("Content:11");
+        }).Location(l => l.Zone("Content", "11").Card(S["Connection"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIDataSource dataSource, UpdateEditorContext context)

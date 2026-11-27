@@ -20,4 +20,16 @@ public sealed class TaxationPartSettings
     /// When disabled, only the default codes configured here are used.
     /// </summary>
     public bool AllowClassificationOverride { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether editors see the <b>Tax classification</b> field when they may override the
+    /// classification. A type that only needs a tax category turns it off; the item keeps the classification it has.
+    /// </summary>
+    public bool ShowClassification { get; set; } = true;
+
+    /// <summary>
+    /// Gets or sets a value indicating whether editors see the <b>External tax code</b> field. A type taxed only by the
+    /// site's own rules turns it off; the item keeps the code it has.
+    /// </summary>
+    public bool ShowExternalTaxCode { get; set; } = true;
 }

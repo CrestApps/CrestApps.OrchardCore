@@ -106,7 +106,7 @@ internal sealed class AIProfileCopilotDisplayDriver : DisplayDriver<AIProfile>
             {
                 model.AvailableModels = [];
             }
-        }).Location("Content:3.5%General;1");
+        }).Location(l => l.Zone("Content", "3.5").Card(S["General"], "1"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIProfile profile, UpdateEditorContext context)

@@ -6,6 +6,8 @@ using CrestApps.OrchardCore.Invoicing.Services;
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.Transactions.Services;
 using Microsoft.Extensions.Localization;
+using OrchardCore.DisplayManagement.Handlers;
+using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Workflows.Abstractions.Models;
 using OrchardCore.Workflows.Activities;
 using OrchardCore.Workflows.Display;
@@ -578,6 +580,22 @@ public sealed class InvoiceTaskDisplayDriver<TActivity> : ActivityDisplayDriver<
     where TActivity : InvoiceTaskActivityBase<TActivity>, ITask
 {
     private static readonly PropertyInfo[] _modelProperties = typeof(InvoiceTaskViewModel).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+    internal readonly IStringLocalizer S;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="InvoiceTaskDisplayDriver{TActivity}"/> class.
+    /// </summary>
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public InvoiceTaskDisplayDriver(IStringLocalizer<InvoiceTaskDisplayDriver<TActivity>> stringLocalizer)
+    {
+        S = stringLocalizer;
+    }
+
+    /// <inheritdoc />
+    public override IDisplayResult Edit(TActivity activity, BuildEditorContext context)
+        => Initialize<InvoiceTaskViewModel>($"{ActivityName}_Fields_Edit", model => EditActivityAsync(activity, model))
+            .Location(l => l.Zone("Content", "1").Card(S["Settings"], "10"));
 
     /// <inheritdoc />
     protected override void EditActivity(TActivity activity, InvoiceTaskViewModel model)

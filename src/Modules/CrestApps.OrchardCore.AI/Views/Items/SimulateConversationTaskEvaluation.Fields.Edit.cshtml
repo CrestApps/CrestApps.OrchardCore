@@ -1,0 +1,65 @@
+@using CrestApps.OrchardCore.AI.Workflows.ViewModels
+
+@model SimulateConversationTaskViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="Criteria">
+    <label class="ocat-label" asp-for="Criteria">@T["Criteria"]</label>
+    <div class="ocat-end">
+        <textarea class="form-control" asp-for="Criteria" rows="4" placeholder="@T["The assistant offered a morning slot next week"]"></textarea>
+        <span asp-validation-for="Criteria"></span>
+        <span class="hint">@T["One condition the conversation must meet per line."]</span>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="ocat-wrapper" asp-validation-class-for="MaxTurns">
+            <label class="ocat-label" asp-for="MaxTurns">@T["Most customer turns"]</label>
+            <div class="ocat-end">
+                <input type="number" class="form-control" asp-for="MaxTurns" min="1" max="50" />
+                <span asp-validation-for="MaxTurns"></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="ocat-wrapper" asp-validation-class-for="PassingScore">
+            <label class="ocat-label" asp-for="PassingScore">@T["Passing score"]</label>
+            <div class="ocat-end">
+                <input type="number" class="form-control" asp-for="PassingScore" min="0" max="100" />
+                <span asp-validation-for="PassingScore"></span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="ocat-wrapper">
+            <label class="ocat-label" asp-for="Label">@T["Label"]</label>
+            <div class="ocat-end">
+                <input type="text" class="form-control" asp-for="Label" placeholder="@T["Release tests"]" />
+            </div>
+        </div>
+    </div>
+</div>
+<div class="row">
+    <div class="col-md-6">
+        <div class="ocat-wrapper">
+            <label class="ocat-label" asp-for="CustomerDeploymentName">@T["Customer model"]</label>
+            <div class="ocat-end">
+                <select class="form-select" asp-for="CustomerDeploymentName" asp-items="Model.Deployments">
+                    <option value="">@T["Utility deployment"]</option>
+                </select>
+                <span class="hint">@T["The model that plays the customer."]</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="ocat-wrapper">
+            <label class="ocat-label" asp-for="JudgeDeploymentName">@T["Judge model"]</label>
+            <div class="ocat-end">
+                <select class="form-select" asp-for="JudgeDeploymentName" asp-items="Model.Deployments">
+                    <option value="">@T["Utility deployment"]</option>
+                </select>
+                <span class="hint">@T["The model that scores the conversation. The profile answers with its own deployment, so a different customer and judge give a fairer test."]</span>
+            </div>
+        </div>
+    </div>
+</div>

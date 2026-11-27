@@ -1,0 +1,50 @@
+@model PurchaseOrderEditViewModel
+@{
+    // A new order has no status yet, so every field is editable.
+    var order = Model.Order;
+    var readOnly = order is not null && (!Model.CanManage || order.Status is PurchaseOrderStatus.Received or PurchaseOrderStatus.Canceled);
+}
+
+<div class="ocat-wrapper" asp-validation-class-for="Supplier">
+    <label asp-for="Supplier" class="ocat-label ocat-label-required">@T["Supplier"]</label>
+    <div class="ocat-end">
+        <input asp-for="Supplier" class="form-control" list="purchase-order-suppliers" autocomplete="off" disabled="@readOnly" />
+        <datalist id="purchase-order-suppliers">
+            @foreach (var supplier in Model.Suppliers)
+            {
+                <option value="@supplier"></option>
+            }
+        </datalist>
+        <span asp-validation-for="Supplier"></span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="SupplierEmail" class="ocat-label">@T["Supplier's email"]</label>
+    <div class="ocat-end">
+        <input asp-for="SupplierEmail" type="email" class="form-control" autocomplete="off" disabled="@readOnly" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="LocationId" class="ocat-label">@T["Receive at"]</label>
+    <div class="ocat-end">
+        <select asp-for="LocationId" asp-items="Model.Locations" class="form-select" disabled="@(readOnly || Model.Order?.Received > 0)"></select>
+    </div>
+</div>
+<div class="ocat-limited-wrapper">
+    <label asp-for="Currency" class="ocat-label">@T["Costs in"]</label>
+    <div class="ocat-limited">
+        <select asp-for="Currency" asp-items="Model.Currencies" class="form-select" disabled="@readOnly"></select>
+    </div>
+</div>
+<div class="ocat-limited-wrapper">
+    <label asp-for="ExpectedDate" class="ocat-label">@T["Expected"]</label>
+    <div class="ocat-limited">
+        <input asp-for="ExpectedDate" type="date" class="form-control" asp-format="{0:yyyy-MM-dd}" disabled="@readOnly" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Note" class="ocat-label">@T["Note"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Note" rows="2" class="form-control" maxlength="2000" disabled="@readOnly"></textarea>
+    </div>
+</div>

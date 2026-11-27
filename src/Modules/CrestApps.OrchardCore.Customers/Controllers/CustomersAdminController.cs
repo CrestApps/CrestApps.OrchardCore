@@ -57,6 +57,8 @@ public sealed class CustomersAdminController : Controller
     private readonly IClock _clock;
     private readonly PagerOptions _pagerOptions;
     private readonly IDisplayManager<Customer> _customerDisplayManager;
+    private readonly IDisplayManager<CustomerEditViewModel> _editorDisplayManager;
+    private readonly IDisplayManager<CustomerAddressViewModel> _addressDisplayManager;
     private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IStringLocalizer S;
@@ -75,6 +77,8 @@ public sealed class CustomersAdminController : Controller
         IStringLocalizer<CustomersAdminController> stringLocalizer,
         IHtmlLocalizer<CustomersAdminController> htmlLocalizer,
         IDisplayManager<Customer> customerDisplayManager,
+        IDisplayManager<CustomerEditViewModel> editorDisplayManager,
+        IDisplayManager<CustomerAddressViewModel> addressDisplayManager,
         IUpdateModelAccessor updateModelAccessor)
     {
         _store = store;
@@ -87,6 +91,8 @@ public sealed class CustomersAdminController : Controller
         _clock = clock;
         _pagerOptions = pagerOptions.Value;
         _customerDisplayManager = customerDisplayManager;
+        _editorDisplayManager = editorDisplayManager;
+        _addressDisplayManager = addressDisplayManager;
         _updateModelAccessor = updateModelAccessor;
         S = stringLocalizer;
         H = htmlLocalizer;
@@ -190,7 +196,10 @@ public sealed class CustomersAdminController : Controller
             return Forbid();
         }
 
-        return View("Edit", await BuildEditorAsync(new CustomerEditViewModel { IsNew = true, CanManage = true }));
+        var model = await BuildEditorAsync(new CustomerEditViewModel { IsNew = true, CanManage = true });
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
+        return View("Edit", model);
     }
 
     [HttpPost]
@@ -211,14 +220,17 @@ public sealed class CustomersAdminController : Controller
             LastActivityUtc = now,
         };
 
+        model.IsNew = true;
+        model.CanManage = true;
+
+        await BuildEditorAsync(model);
+        model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: true);
+
         Validate(model, customer);
 
         if (!ModelState.IsValid)
         {
-            model.IsNew = true;
-            model.CanManage = true;
-
-            return View("Edit", await BuildEditorAsync(model));
+            return View("Edit", model);
         }
 
         Apply(model, customer, now);
@@ -251,8 +263,11 @@ public sealed class CustomersAdminController : Controller
             .BuildDisplayAsync(customer, _updateModelAccessor.ModelUpdater, "DetailAdmin");
 
         await AddHistoryAsync(model, customer);
+        await BuildEditorAsync(model);
 
-        return View(await BuildEditorAsync(model));
+        model.Editor = await _editorDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
+        return View(model);
     }
 
     // Recent orders, and the merges that joined guests to this customer or this guest to an account.
@@ -362,7 +377,12 @@ public sealed class CustomersAdminController : Controller
 
         var customer = await FindEditableAsync(customerId);
 
-        return customer is null ? NotFound() : View("AddressEdit", await _addressBook.BuildEditorAsync(customer, null));
+        if (customer is null)
+        {
+            return NotFound();
+        }
+
+        return View("AddressEdit", await BuildAddressEditorAsync(customer, null, input: null));
     }
 
     [HttpPost]
@@ -382,7 +402,7 @@ public sealed class CustomersAdminController : Controller
         var customer = await FindEditableAsync(customerId);
         var address = customer?.FindAddress(addressId);
 
-        return address is null ? NotFound() : View(await _addressBook.BuildEditorAsync(customer, address));
+        return address is null ? NotFound() : View(await BuildAddressEditorAsync(customer, address, input: null));
     }
 
     [HttpPost]
@@ -430,11 +450,14 @@ public sealed class CustomersAdminController : Controller
             return NotFound();
         }
 
+        // The fields of the page are read first, so what other modules add to the editor is validated with them.
+        await _addressDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: address is null);
+
         var value = await _addressBook.ValidateAsync(customer, model, address is null, ModelState);
 
         if (value is null)
         {
-            return View("AddressEdit", await _addressBook.BuildEditorAsync(customer, address, model));
+            return View("AddressEdit", await BuildAddressEditorAsync(customer, address, model));
         }
 
         CustomerAddressBook.Apply(customer, address, model, value);
@@ -496,6 +519,13 @@ public sealed class CustomersAdminController : Controller
             return RedirectToAction(nameof(Edit), new { customerId });
         }
 
+        // The shapes of the editor show what the customer record decides, such as an account's read-only email.
+        model.UserId = customer.UserId;
+        model.CanManage = true;
+
+        await BuildEditorAsync(model);
+        model.Editor = await _editorDisplayManager.UpdateEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: false);
+
         Validate(model, customer);
 
         if (!ModelState.IsValid)
@@ -504,6 +534,7 @@ public sealed class CustomersAdminController : Controller
             CopyInput(model, invalid);
             invalid.CanManage = true;
             invalid.Addresses = await _addressBook.SummarizeAsync(customer);
+            invalid.Editor = model.Editor;
 
             return View(await BuildEditorAsync(invalid));
         }
@@ -620,6 +651,16 @@ public sealed class CustomersAdminController : Controller
         {
             to.Email = from.Email;
         }
+    }
+
+    // The address page for an administrator: the address book's view model, with its editor built in cards.
+    private async Task<CustomerAddressViewModel> BuildAddressEditorAsync(Customer customer, CustomerAddress address, CustomerAddressViewModel input)
+    {
+        var model = await _addressBook.BuildEditorAsync(customer, address, input);
+
+        model.Editor = await _addressDisplayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, isNew: address is null);
+
+        return model;
     }
 
     private async Task<CustomerEditViewModel> BuildEditorAsync(CustomerEditViewModel model)

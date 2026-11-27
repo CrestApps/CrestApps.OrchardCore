@@ -36,7 +36,8 @@ internal sealed class ApprovalRequestsDeploymentStepDisplayDriver : DisplayDrive
 
     public override IDisplayResult Edit(ApprovalRequestsDeploymentStep step, BuildEditorContext context)
     {
-        return View("ApprovalRequestsDeploymentStep_Fields_Edit", step).Location("Content");
+        return View("ApprovalRequestsDeploymentStep_Fields_Edit", step)
+            .Location(l => l.Zone("Content", "1").Card(S["Approval Requests"], "10"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ApprovalRequestsDeploymentStep step, UpdateEditorContext context)

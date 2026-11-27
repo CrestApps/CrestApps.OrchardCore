@@ -55,7 +55,7 @@ public sealed class OmnichannelActivityExportDisplayDriver : DisplayDriver<Expor
                 .OrderBy(item => item.Text)
                 .ToArray();
             viewModel.ContactContentTypes = await _contentTypeProvider.GetContactContentTypesAsync();
-        }).Location("Content:20");
+        }).Location(l => l.Zone("Content", "20").Card(S["CRM Last Activity"], "20"));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(ExportRequest model, UpdateEditorContext context)

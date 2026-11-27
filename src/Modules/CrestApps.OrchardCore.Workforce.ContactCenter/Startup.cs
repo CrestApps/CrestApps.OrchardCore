@@ -97,6 +97,8 @@ public sealed class AdherenceStartup : StartupBase
 
         services.AddDisplayDriver<AdherenceRuleSet, AdherenceRuleSetRowDisplayDriver>();
         services.AddDisplayDriver<AdherenceExceptionRow, AdherenceExceptionRowDisplayDriver>();
+        services.AddDisplayDriver<AdherenceRuleSetEditViewModel, AdherenceRuleSetEditDisplayDriver>();
+        services.AddDisplayDriver<AdherenceExceptionEditViewModel, AdherenceExceptionEditDisplayDriver>();
 
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AdherenceAlertsBackgroundTask>());
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IBackgroundTask, AdherenceHistoryBackgroundTask>());
@@ -137,6 +139,10 @@ public sealed class ForecastingStartup : StartupBase
         services.AddDisplayDriver<ForecastEvent, ForecastEventRowDisplayDriver>();
         services.AddDisplayDriver<ForecastRow, ForecastRowDisplayDriver>();
         services.AddDisplayDriver<CapacityPlanRow, CapacityPlanRowDisplayDriver>();
+        services.AddDisplayDriver<PlanningGroupEditViewModel, PlanningGroupEditDisplayDriver>();
+        services.AddDisplayDriver<ForecastEventEditViewModel, ForecastEventEditDisplayDriver>();
+        services.AddDisplayDriver<ForecastCreateViewModel, ForecastCreateDisplayDriver>();
+        services.AddDisplayDriver<CapacityPlanEditViewModel, CapacityPlanEditDisplayDriver>();
         services.AddNavigationProvider<ForecastingAdminMenu>();
     }
 }
@@ -344,6 +350,7 @@ public sealed class ContactCenterTimeTrackerStartup : StartupBase
         services.AddWorkforceContactCenterTimeTracker();
         services.AddScoped<IContactCenterEventHandler, AgentStateTimeTrackerHandler>();
         services.AddDataMigration<ContactCenterTimeTrackerMigrations>();
+        services.AddDisplayDriver<ContactCenterTimeStagesViewModel, ContactCenterTimeStagesEditDisplayDriver>();
         services.AddNavigationProvider<ContactCenterTimeStagesAdminMenu>();
     }
 }

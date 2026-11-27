@@ -56,30 +56,11 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
             return null;
         }
 
-        return Initialize<HttpApiRequestToolInstanceViewModel>("HttpApiRequestToolInstance_Edit", model =>
-        {
-            var settings = instance.GetOrCreate<HttpApiRequestToolSettings>();
-
-            model.BaseUrl = settings.BaseUrl;
-            model.HttpMethod = string.IsNullOrEmpty(settings.HttpMethod) ? "GET" : settings.HttpMethod;
-            model.TimeoutSeconds = settings.TimeoutSeconds;
-            model.DefaultHeaders = SerializeHeaders(settings.DefaultHeaders);
-            model.AllowModelProvidedPath = settings.AllowModelProvidedPath;
-            model.AllowModelProvidedQuery = settings.AllowModelProvidedQuery;
-            model.AllowModelProvidedBody = settings.AllowModelProvidedBody;
-            model.AuthenticationType = settings.AuthenticationType;
-            model.ApiKeyHeaderName = string.IsNullOrEmpty(settings.ApiKeyHeaderName) ? "X-Api-Key" : settings.ApiKeyHeaderName;
-            model.Username = settings.Username;
-            model.TokenEndpoint = settings.TokenEndpoint;
-            model.ClientId = settings.ClientId;
-            model.Scope = settings.Scope;
-            model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
-            model.HasBearerToken = !string.IsNullOrEmpty(settings.BearerToken);
-            model.HasPassword = !string.IsNullOrEmpty(settings.Password);
-            model.HasClientSecret = !string.IsNullOrEmpty(settings.ClientSecret);
-            model.HttpMethods = GetHttpMethods();
-            model.AuthenticationTypes = GetAuthenticationTypes();
-        }).Location("Content:5");
+        return Combine(
+            Initialize<HttpApiRequestToolInstanceViewModel>("HttpApiRequestToolInstance_Edit", model => Populate(instance, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Request"], "20")),
+            Initialize<HttpApiRequestToolInstanceViewModel>("HttpApiRequestToolInstanceAuthentication_Edit", model => Populate(instance, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Authentication"], "30")));
     }
 
     public override async Task<IDisplayResult> UpdateAsync(AIToolInstance instance, UpdateEditorContext context)
@@ -270,4 +251,29 @@ internal sealed class HttpApiRequestToolInstanceDisplayDriver : DisplayDriver<AI
         new SelectListItem(S["Basic"], nameof(HttpApiRequestAuthenticationType.Basic)),
         new SelectListItem(S["OAuth 2.0"], nameof(HttpApiRequestAuthenticationType.OAuth2)),
     ];
+
+    private void Populate(AIToolInstance instance, HttpApiRequestToolInstanceViewModel model)
+    {
+        var settings = instance.GetOrCreate<HttpApiRequestToolSettings>();
+
+        model.BaseUrl = settings.BaseUrl;
+        model.HttpMethod = string.IsNullOrEmpty(settings.HttpMethod) ? "GET" : settings.HttpMethod;
+        model.TimeoutSeconds = settings.TimeoutSeconds;
+        model.DefaultHeaders = SerializeHeaders(settings.DefaultHeaders);
+        model.AllowModelProvidedPath = settings.AllowModelProvidedPath;
+        model.AllowModelProvidedQuery = settings.AllowModelProvidedQuery;
+        model.AllowModelProvidedBody = settings.AllowModelProvidedBody;
+        model.AuthenticationType = settings.AuthenticationType;
+        model.ApiKeyHeaderName = string.IsNullOrEmpty(settings.ApiKeyHeaderName) ? "X-Api-Key" : settings.ApiKeyHeaderName;
+        model.Username = settings.Username;
+        model.TokenEndpoint = settings.TokenEndpoint;
+        model.ClientId = settings.ClientId;
+        model.Scope = settings.Scope;
+        model.HasApiKey = !string.IsNullOrEmpty(settings.ApiKey);
+        model.HasBearerToken = !string.IsNullOrEmpty(settings.BearerToken);
+        model.HasPassword = !string.IsNullOrEmpty(settings.Password);
+        model.HasClientSecret = !string.IsNullOrEmpty(settings.ClientSecret);
+        model.HttpMethods = GetHttpMethods();
+        model.AuthenticationTypes = GetAuthenticationTypes();
+    }
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Workforce.ContactCenter.ViewModels;
 
@@ -23,6 +24,12 @@ public class ContactCenterTimeStagesViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> StageOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, built by the display drivers of this view model, whose fields are grouped in cards by their placement.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }
 
 /// <summary>

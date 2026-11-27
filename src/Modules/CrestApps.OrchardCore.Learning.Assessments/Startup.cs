@@ -98,6 +98,8 @@ public sealed class Startup : StartupBase
             .AddHandler<QuizCloseDateHandler>();
 
         services.AddDisplayDriver<GradingQueueRow, GradingQueueRowDisplayDriver>();
+        services.AddDisplayDriver<GradeScaleEditViewModel, GradeScaleEditDisplayDriver>();
+        services.AddDisplayDriver<QuizOverridesViewModel, QuizOverridesDisplayDriver>();
         services.AddPermissionProvider<AssessmentsPermissionsProvider>();
         services.AddNavigationProvider<AssessmentsAdminMenu>();
         services.AddSingleton<IBackgroundTask, AttemptDeadlineBackgroundTask>();

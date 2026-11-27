@@ -2,6 +2,7 @@
 using CrestApps.OrchardCore.Users.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
@@ -21,17 +22,22 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
     private readonly IAuthorizationService _authorizationService;
     private readonly IOptionsUpdateNotifier _optionsUpdateNotifier;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="UserAvatarOptionsDisplayDriver"/> class.
     /// </summary>
     /// <param name="httpContextAccessor">The http context accessor.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="optionsUpdateNotifier">The options update notifier.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public UserAvatarOptionsDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
         IAuthorizationService authorizationService,
-        IOptionsUpdateNotifier optionsUpdateNotifier)
+        IOptionsUpdateNotifier optionsUpdateNotifier,
+        IStringLocalizer<UserAvatarOptionsDisplayDriver> stringLocalizer)
     {
+        S = stringLocalizer;
         _httpContextAccessor = httpContextAccessor;
         _authorizationService = authorizationService;
         _optionsUpdateNotifier = optionsUpdateNotifier;
@@ -46,7 +52,7 @@ public sealed class UserAvatarOptionsDisplayDriver : SiteDisplayDriver<UserAvata
         {
             model.Required = settings.Required;
             model.UseDefaultStyle = settings.UseDefaultStyle;
-        }).Location("Content:5")
+        }).Location(l => l.Zone("Content", "5").Card(S["Avatar"], "10"))
         .OnGroup(SettingsGroupId)
         .RenderWhen(() => _authorizationService.AuthorizeAsync(_httpContextAccessor.HttpContext?.User, UserPermissions.ManageAvatarSettings));
     }

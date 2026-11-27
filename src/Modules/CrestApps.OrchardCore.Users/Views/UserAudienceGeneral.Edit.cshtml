@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.Users.Audiences
+@model UserAudienceEditViewModel
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="DisplayName">
+    <label asp-for="DisplayName" class="ocat-label">@T["Name"]</label>
+    <div class="ocat-limited">
+        <input asp-for="DisplayName" class="form-control" maxlength="200" autofocus />
+        <span asp-validation-for="DisplayName" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+    <div class="ocat-limited">
+        @if (Model.IsNew)
+        {
+            <input asp-for="Name" class="form-control" maxlength="100" pattern="[A-Za-z0-9._\-]+" required />
+            <span class="hint">@T["Other features keep this name to target the audience; it can't change later. Letters, digits, dots, dashes and underscores."]</span>
+        }
+        else
+        {
+            <input asp-for="Name" class="form-control" readonly />
+        }
+        <span asp-validation-for="Name" class="text-danger"></span>
+    </div>
+</div>
+
+<div class="ocat-limited-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+    <div class="ocat-limited">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+    </div>
+</div>

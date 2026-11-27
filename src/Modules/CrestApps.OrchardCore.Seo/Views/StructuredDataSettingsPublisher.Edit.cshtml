@@ -1,0 +1,33 @@
+@model StructuredDataSettingsViewModel
+
+<div class="ocat-wrapper" asp-validation-class-for="PublisherType">
+    <label asp-for="PublisherType" class="ocat-label">@T["Publisher"]</label>
+    <div class="ocat-end">
+        <select asp-for="PublisherType" asp-items="Model.PublisherTypes" class="form-select"></select>
+        <span class="hint">@T["Who publishes the site: an organization, such as a company, or one person."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PublisherName">
+    <label asp-for="PublisherName" class="ocat-label">@T["Publisher name"]</label>
+    <div class="ocat-end">
+        <input asp-for="PublisherName" class="form-control" />
+        <span class="hint">@T["Leave empty to use the site name."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="PublisherLogoUrl">
+    <label asp-for="PublisherLogoUrl" class="ocat-label">@T["Logo URL"]</label>
+    <div class="ocat-end">
+        <input asp-for="PublisherLogoUrl" class="form-control" placeholder="/media/logo.png" />
+        <span class="hint">@T["The URL of the organization's logo, or of the person's photo. A URL that starts with a slash is on this site."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper" asp-validation-class-for="SameAs">
+    <label asp-for="SameAs" class="ocat-label">@T["Profiles on other sites"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="SameAs" class="form-control" rows="3" placeholder="https://www.linkedin.com/company/example"></textarea>
+        <span class="hint">@T["One absolute URL per line, such as the publisher's social network pages."]</span>
+    </div>
+</div>

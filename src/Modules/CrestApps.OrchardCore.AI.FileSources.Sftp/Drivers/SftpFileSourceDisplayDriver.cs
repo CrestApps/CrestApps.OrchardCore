@@ -45,15 +45,27 @@ internal sealed class SftpFileSourceDisplayDriver : SftpConnectionDisplayDriverB
             return null;
         }
 
-        return Initialize<SftpFileSourceViewModel>("SftpFileSource_Edit", model =>
-        {
-            var folder = fileSource.GetOrCreate<RemoteFileSourceMetadata>();
-            model.RemoteRootPath = folder.RootPath;
-            model.RemoteRecursive = folder.Recursive;
-            model.RemoteMaxItems = folder.MaxItems;
+        return Combine(
+            Initialize<SftpFileSourceViewModel>("SftpFileSourceServer_Edit", model => Populate(fileSource, model))
+                .Location(l => l.Zone("Content", "5").Card(S["Server"], "40")),
+            Initialize<SftpFileSourceViewModel>("SftpFileSourceAuthentication_Edit", model => Populate(fileSource, model))
+                .Location(l => l.Zone("Content", "5.05").Card(S["Authentication"], "45")),
+            Initialize<SftpFileSourceViewModel>("SftpFileSourceFolder_Edit", model => Populate(fileSource, model))
+                .Location(l => l.Zone("Content", "5.1").Card(S["Folder"], "50")),
+            Initialize<SftpFileSourceViewModel>("SftpFileSourceConnection_Edit", model => Populate(fileSource, model))
+                .Location(l => l.Zone("Content", "5.2").Card(S["Connection Options"], "60")),
+            Initialize<SftpFileSourceViewModel>("SftpFileSourceProxy_Edit", model => Populate(fileSource, model))
+                .Location(l => l.Zone("Content", "5.3").Card(S["Proxy"], "70")));
+    }
 
-            PopulateConnectionFields(fileSource.GetOrCreate<SftpConnectionMetadata>(), model);
-        }).Location("Content:5");
+    private static void Populate(FileSource fileSource, SftpFileSourceViewModel model)
+    {
+        var folder = fileSource.GetOrCreate<RemoteFileSourceMetadata>();
+        model.RemoteRootPath = folder.RootPath;
+        model.RemoteRecursive = folder.Recursive;
+        model.RemoteMaxItems = folder.MaxItems;
+
+        PopulateConnectionFields(fileSource.GetOrCreate<SftpConnectionMetadata>(), model);
     }
 
     public override async Task<IDisplayResult> UpdateAsync(FileSource fileSource, UpdateEditorContext context)

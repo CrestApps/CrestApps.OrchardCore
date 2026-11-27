@@ -1,17 +1,12 @@
 @model EmployerFundingViewModel
 
-<div class="card mb-3">
-    <div class="card-header">@T["Funding account"]</div>
-    <div class="card-body">
-        <div class="ocat-wrapper" asp-validation-class-for="FundingBankAccountId">
-            <label asp-for="FundingBankAccountId" class="ocat-label">@T["Pay from"]</label>
-            <div class="ocat-end">
-                <select asp-for="FundingBankAccountId" asp-items="Model.Accounts" class="form-select" style="max-width: 24rem">
-                    <option value="">@T["Not chosen yet"]</option>
-                </select>
-                <span asp-validation-for="FundingBankAccountId" class="text-danger"></span>
-                <span class="hint">@T["One of the business's own bank accounts (added under Banking > Bank Accounts with no owner): deposits are sent and paychecks drawn from it. Set up its bank file under the account."]</span>
-            </div>
-        </div>
+<div class="ocat-wrapper" asp-validation-class-for="FundingBankAccountId">
+    <label asp-for="FundingBankAccountId" class="ocat-label">@T["Pay from"]</label>
+    <div class="ocat-end">
+        <select asp-for="FundingBankAccountId" asp-items="Model.Accounts" class="form-select" style="max-width: 24rem">
+            <option value="">@T["Not chosen yet"]</option>
+        </select>
+        <span asp-validation-for="FundingBankAccountId" class="text-danger"></span>
+        <span class="hint">@T["One of the business's own bank accounts (added under Banking > Bank Accounts with no owner): deposits are sent and paychecks drawn from it. Set up its bank file under the account."]</span>
     </div>
 </div>

@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Banking.Models;
 using CrestApps.OrchardCore.Banking.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement;
+using OrchardCore.DisplayManagement.ModelBinding;
 
 namespace CrestApps.OrchardCore.Banking.Services;
 
@@ -15,6 +16,8 @@ public sealed class BankAccountLinkFlow
     private readonly IBankAccountService _bankAccountService;
     private readonly IBankAccountManager _manager;
     private readonly IShapeFactory _shapeFactory;
+    private readonly IDisplayManager<BankAccountLinkViewModel> _displayManager;
+    private readonly IUpdateModelAccessor _updateModelAccessor;
 
     internal readonly IStringLocalizer S;
 
@@ -22,11 +25,15 @@ public sealed class BankAccountLinkFlow
         IBankAccountService bankAccountService,
         IBankAccountManager manager,
         IShapeFactory shapeFactory,
+        IDisplayManager<BankAccountLinkViewModel> displayManager,
+        IUpdateModelAccessor updateModelAccessor,
         IStringLocalizer<BankAccountLinkFlow> stringLocalizer)
     {
         _bankAccountService = bankAccountService;
         _manager = manager;
         _shapeFactory = shapeFactory;
+        _displayManager = displayManager;
+        _updateModelAccessor = updateModelAccessor;
         S = stringLocalizer;
     }
 
@@ -89,7 +96,7 @@ public sealed class BankAccountLinkFlow
             ProviderName = provider.Name,
         }));
 
-        return (new BankAccountLinkViewModel
+        var model = new BankAccountLinkViewModel
         {
             ProviderName = provider.Name,
             ProviderDisplayName = provider.DisplayName,
@@ -97,7 +104,11 @@ public sealed class BankAccountLinkFlow
             AccountName = context.IsNew ? null : context.Account.Name,
             MaskedNumber = context.IsNew ? null : BankAccountNumbers.Masked(context.Account),
             LinkShape = shape,
-        }, null);
+        };
+
+        model.Editor = await _displayManager.BuildEditorAsync(model, _updateModelAccessor.ModelUpdater, model.IsNew);
+
+        return (model, null);
     }
 
     /// <summary>

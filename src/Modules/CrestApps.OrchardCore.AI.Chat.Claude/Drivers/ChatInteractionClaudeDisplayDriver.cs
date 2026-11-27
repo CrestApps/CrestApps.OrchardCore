@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.AI.Chat.Claude.Services;
 using CrestApps.OrchardCore.AI.Chat.Claude.Settings;
 using CrestApps.OrchardCore.AI.Chat.Claude.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Localization;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
@@ -17,17 +18,22 @@ internal sealed class ChatInteractionClaudeDisplayDriver : DisplayDriver<ChatInt
     private readonly ClaudeClientService _claudeClientService;
     private readonly ISiteService _siteService;
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="ChatInteractionClaudeDisplayDriver"/> class.
     /// </summary>
     /// <param name="claudeClientService">The claude client service.</param>
     /// <param name="siteService">The site service.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ChatInteractionClaudeDisplayDriver(
         ClaudeClientService claudeClientService,
-        ISiteService siteService)
+        ISiteService siteService,
+        IStringLocalizer<ChatInteractionClaudeDisplayDriver> stringLocalizer)
     {
         _claudeClientService = claudeClientService;
         _siteService = siteService;
+        S = stringLocalizer;
     }
 
     public override IDisplayResult Edit(ChatInteraction interaction, BuildEditorContext context)
@@ -42,7 +48,7 @@ internal sealed class ChatInteractionClaudeDisplayDriver : DisplayDriver<ChatInt
             var siteSettings = await _siteService.GetSettingsAsync<ClaudeSettings>();
             model.IsClaudeConfigured = siteSettings.IsConfigured();
             model.AvailableModels = await LoadModelsAsync(siteSettings, model.ClaudeModel);
-        }).Location("Parameters:5#Settings;1");
+        }).Location(l => l.Zone("Parameters", "5").Tab(S["Settings"], "1").Card(S["General"], "1"));
     }
 
     private async Task<IList<SelectListItem>> LoadModelsAsync(ClaudeSettings siteSettings, string selectedModel)

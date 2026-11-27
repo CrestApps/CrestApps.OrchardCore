@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using OrchardCore.DisplayManagement;
 
 namespace CrestApps.OrchardCore.Workforce.ViewModels;
 
@@ -69,4 +70,10 @@ public class ActivityCodeEditViewModel
     /// </summary>
     [BindNever]
     public IList<SelectListItem> KindOptions { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the editor, whose fields are grouped in cards by the placement of its shapes.
+    /// </summary>
+    [BindNever]
+    public IShape Editor { get; set; }
 }

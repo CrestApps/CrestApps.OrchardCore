@@ -32,7 +32,7 @@
 @if (Model.Value.FixedAmount.HasValue)
 {
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Amount"]">
-        <i class="fa-solid fa-money-bill text-secondary me-1" aria-hidden="true"></i>@Model.Value.FixedAmount.Value.ToString("N2")
+        <i class="fa-solid fa-money-bill text-secondary me-1" aria-hidden="true"></i>@Model.Value.FixedAmount.Value.ToString("#,0.00##")
     </span>
 }
 

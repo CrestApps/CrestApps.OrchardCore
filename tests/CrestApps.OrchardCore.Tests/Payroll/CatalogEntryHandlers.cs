@@ -31,6 +31,7 @@ internal static class CatalogEntryHandlers
         services.AddPaySetupHandlers();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Employer>, EmployerHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxDeposit>, TaxDepositHandler>());
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<CrestApps.OrchardCore.Taxation.Models.TaxForm>, CrestApps.OrchardCore.Taxation.Core.TaxForms.TaxFormHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<IncomeTaxRule>, IncomeTaxRuleHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<GarnishmentOrder>, GarnishmentOrderHandler>());
 

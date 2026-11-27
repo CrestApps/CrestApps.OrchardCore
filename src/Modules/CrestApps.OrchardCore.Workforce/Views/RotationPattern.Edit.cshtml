@@ -1,0 +1,52 @@
+@model RotationEditViewModel
+@{
+    var days = new[] { T["Mon"], T["Tue"], T["Wed"], T["Thu"], T["Fri"], T["Sat"], T["Sun"] };
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="WeekCount" class="ocat-label ocat-label-required">@T["Weeks"]</label>
+    <div class="ocat-end">
+        <input asp-for="WeekCount" type="number" min="1" max="12" class="form-control" style="max-width: 7rem" />
+        <span class="hint">@T["The pattern repeats after this many weeks."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <span class="ocat-label">@T["Pattern"]</span>
+    <div class="ocat-end">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th scope="col">@T["Week"]</th>
+                        @foreach (var day in days)
+                        {
+                            <th scope="col">@day</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var week = 0; week < 12; week++)
+                    {
+                        <tr data-week="@week" class="@(week >= Model.WeekCount ? "d-none" : null)">
+                            <th scope="row">@(week + 1)</th>
+                            @for (var day = 0; day < 7; day++)
+                            {
+                                var index = (week * 7) + day;
+                                var selected = Model.Slots != null && index < Model.Slots.Length ? Model.Slots[index] : null;
+                                <td>
+                                    <select name="Slots[@index]" class="form-select form-select-sm" aria-label="@T["Week {0}, {1}", week + 1, days[day]]">
+                                        <option value="">@T["Off"]</option>
+                                        @foreach (var option in Model.TemplateOptions)
+                                        {
+                                            <option value="@option.Value" selected="@(option.Value == selected)">@option.Text</option>
+                                        }
+                                    </select>
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -803,7 +803,7 @@ Bounded tag values:
 - `result` (AI turns): `replied`, `no_reply`, `not_owed`, `superseded`, `lock_timeout`, `completion_failed`, `empty_reply`, `send_failed`, `error`, `cancelled`.
 - `result` (AI handoff): `handed_off`, `failed`, `error`. `decision` (respond decision): `respond`, `skip`, `fallback` (no deployment, or the evaluation failed, so the agent replies by default).
 - `trigger` (routing): `inbound`, `handoff`, `reassignment`, `manual_transfer`; (assignment) those plus `claim`, `reply`, `assign`, `transfer`.
-- `router`: `auto_reply`, `reassignment`, `handoff_queue`, `existing_conversation`, `routed_queue`, `endpoint_route`, `fallback`, `none` (no router claimed it), `other` (a router another module adds).
+- `router`: `auto_reply`, `reassignment`, `handoff_queue`, `existing_conversation`, `routing_rules`, `routed_queue`, `endpoint_route`, `fallback`, `none` (no router claimed it), `other` (a router another module adds).
 - `status` (assignment): `unassigned`, `assigned`, `pooled`, `other`.
 - `result` (reassigned): `rerouted`, `pooled`, `unassigned`.
 - `sla` (first response): `met` (a target was running and not breached), `breached`, `none` (no target).
