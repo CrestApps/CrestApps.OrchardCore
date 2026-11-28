@@ -160,9 +160,25 @@ public sealed class LearningSurveyResultObserver : ISurveyResponseObserver
             result.AnonymousDayUtc = await StartOfTodayUtcAsync();
         }
 
-        var update = await _progress.RecordWithRetryAsync(enrollment, result);
+        // A grade, a regrade, a void or a delete is the course staff's (or a workflow's) change, not the learner's: it goes
+        // on the staff path, so the grade of work handed in on the last day of access still reaches the gradebook after the
+        // window ends. The learner's own completion stays on the learner path, with its access and release checks. An
+        // anonymous survey's result is its completion only, which the learner's own completion already recorded.
+        var byStaff = !byRespondent && !result.CompletionOnly;
+        var update = byStaff
+            ? await _progress.RecordStaffResultAsync(enrollment, result, context.ActorId)
+            : await _progress.RecordWithRetryAsync(enrollment, result);
 
-        if (update?.RefusedReason is not null && _logger.IsEnabled(LogLevel.Information))
+        if (update?.RefusedReason is null)
+        {
+            return;
+        }
+
+        if (byStaff && _logger.IsEnabled(LogLevel.Warning))
+        {
+            _logger.LogWarning("The staff result of item {ItemId} was not recorded on enrollment {EnrollmentId}: {Reason}.", item.ContentItemId, enrollment.ItemId, update.RefusedReason);
+        }
+        else if (!byStaff && _logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation("The result of item {ItemId} was not recorded on enrollment {EnrollmentId}: {Reason}.", item.ContentItemId, enrollment.ItemId, update.RefusedReason);
         }
