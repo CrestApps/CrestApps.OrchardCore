@@ -1,3 +1,4 @@
+using System.Text;
 using MimeKit;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
@@ -8,6 +9,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
 /// </summary>
 public static class MimeInboundEmailParser
 {
+    private static readonly ParserOptions _strictAddressOptions = CreateStrictAddressOptions();
+
     // The headers that say how and to whom an email was delivered, which name our address even when it was a Bcc or an
     // alias that forwarded to the mailbox.
     private static readonly string[] _deliveryHeaders = ["Delivered-To", "X-Original-To", "Envelope-To", "X-Envelope-To", "X-Forwarded-To"];
@@ -57,7 +60,7 @@ public static class MimeInboundEmailParser
 
         // The customer is who sent the email. Anybody can write any Reply-To, so it is only carried along: the receiver
         // lets it name the customer when the business itself sent the email (a form on its own site).
-        var sender = message.From.Mailboxes.FirstOrDefault() ?? message.Sender;
+        var sender = ReadSender(message);
         var replyTo = message.ReplyTo.Mailboxes.FirstOrDefault();
 
         var email = new InboundEmail
@@ -197,6 +200,100 @@ public static class MimeInboundEmailParser
             .Select(candidate => new InboundEmailAddress(candidate).Address)
             .Where(address => address is not null)
             .ToList();
+    }
+
+    /// <summary>
+    /// Reads the one mailbox an address header names, or <see langword="null"/> when it does not clearly name one.
+    /// </summary>
+    /// <remarks>
+    /// MimeKit's default parser repairs malformed headers: <c>jane@bigcorp.com@attacker.com</c> reads as
+    /// <c>jane@bigcorp.com</c>, and <c>&lt;jane@bigcorp.com&gt; &lt;x@attacker.com&gt;</c> as two mailboxes. A mail host
+    /// that took the last domain or the last address checked DMARC for <c>attacker.com</c>, so the repaired address
+    /// would be a customer's the sender never proved. The header is read strictly first; a header the strict parser
+    /// refuses is still taken from the lenient one (real mailers write sloppy display names), but only when it holds one
+    /// <c>@</c> and at most one <c>&lt;</c> outside quoted strings, so there is only one address it can mean.
+    /// </remarks>
+    /// <param name="value">The header value.</param>
+    /// <returns>The mailbox, or <see langword="null"/>.</returns>
+    public static MailboxAddress ParseSingleMailbox(string value)
+        => string.IsNullOrWhiteSpace(value)
+            ? null
+            : ParseSingleMailbox(Encoding.UTF8.GetBytes(value));
+
+    // The header as written, so a display name in an encoded word ("=?utf-8?q?Lee,_Ann?=") is not decoded into the
+    // commas and brackets it stands for before the address is read.
+    private static MailboxAddress ParseSingleMailbox(byte[] value)
+    {
+        if (InternetAddressList.TryParse(_strictAddressOptions, value, out var strict))
+        {
+            return SingleMailbox(strict);
+        }
+
+        var text = Encoding.Latin1.GetString(value);
+
+        if (CountUnquoted(text, '@') != 1 || CountUnquoted(text, '<') > 1)
+        {
+            return null;
+        }
+
+        return InternetAddressList.TryParse(value, out var lenient)
+            ? SingleMailbox(lenient)
+            : null;
+    }
+
+    // The sender: the From header's one mailbox, or the Sender header's when there is no From. A From that names several
+    // mailboxes, or none clearly, leaves the sender unknown.
+    private static MailboxAddress ReadSender(MimeMessage message)
+    {
+        var header = message.Headers.FirstOrDefault(candidate => candidate.Id == HeaderId.From) ??
+            message.Headers.FirstOrDefault(candidate => candidate.Id == HeaderId.Sender);
+
+        return header?.RawValue is { Length: > 0 } raw ? ParseSingleMailbox(raw) : null;
+    }
+
+    private static MailboxAddress SingleMailbox(InternetAddressList list)
+    {
+        var mailboxes = list.Mailboxes.Take(2).ToArray();
+
+        return mailboxes.Length == 1 ? mailboxes[0] : null;
+    }
+
+    // How often a character appears outside quoted strings, honoring backslash escapes in them.
+    private static int CountUnquoted(string value, char character)
+    {
+        var quoted = false;
+        var count = 0;
+
+        for (var i = 0; i < value.Length; i++)
+        {
+            var current = value[i];
+
+            if (quoted && current == '\\')
+            {
+                i++;
+
+                continue;
+            }
+
+            if (current == '"')
+            {
+                quoted = !quoted;
+            }
+            else if (!quoted && current == character)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static ParserOptions CreateStrictAddressOptions()
+    {
+        var options = ParserOptions.Default.Clone();
+        options.AddressParserComplianceMode = RfcComplianceMode.Strict;
+
+        return options;
     }
 
     private static InboundEmailAddress ToAddress(MailboxAddress mailbox)

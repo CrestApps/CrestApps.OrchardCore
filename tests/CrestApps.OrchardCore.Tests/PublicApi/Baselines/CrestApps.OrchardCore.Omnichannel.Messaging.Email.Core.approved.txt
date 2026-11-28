@@ -444,6 +444,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound
         public static System.Collections.Generic.IList<string> ParseAddressList(string value) { }
         public static System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.InboundEmail> ParseAsync(System.IO.Stream stream, System.Threading.CancellationToken cancellationToken = default) { }
         public static System.Collections.Generic.IList<string> ParseMessageIds(string value) { }
+        public static MimeKit.MailboxAddress ParseSingleMailbox(string value) { }
         public static string TrimMessageId(string messageId) { }
     }
 }
@@ -805,6 +806,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports
     public sealed class EmailConnectionNotSecureException : System.Exception
     {
         public EmailConnectionNotSecureException(string host) { }
+        public string Host { get; }
     }
     public static class EmailMimeBuilder
     {
@@ -823,6 +825,11 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports
         public static string ProtectPassword(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int defaultPort, int implicitTlsPort, string password) { }
         public static int ResolvePort(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int defaultPort, int implicitTlsPort) { }
         public static MailKit.Security.SecureSocketOptions ToSocketOptions(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailConnectionSecurity security) { }
+    }
+    public sealed class EmailStoredPasswordUnusableException : System.Exception
+    {
+        public EmailStoredPasswordUnusableException(string host) { }
+        public string Host { get; }
     }
     public sealed class EmailTransportAttachment
     {

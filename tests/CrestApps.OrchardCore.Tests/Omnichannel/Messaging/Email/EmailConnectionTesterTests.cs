@@ -132,7 +132,8 @@ public sealed class EmailConnectionTesterTests
             protector,
             TestContext.Current.CancellationToken);
 
-        // Assert: the password goes only to the account it was saved for; any other server is not even contacted.
+        // Assert: the password goes only to the account it was saved for; any other server is not even contacted, and
+        // the admin is told to type the password again rather than that the server refused it.
         if (expected)
         {
             await connecting;
@@ -140,7 +141,8 @@ public sealed class EmailConnectionTesterTests
         }
         else
         {
-            await Assert.ThrowsAsync<AuthenticationException>(() => connecting);
+            var failure = await Assert.ThrowsAsync<EmailStoredPasswordUnusableException>(() => connecting);
+            Assert.Equal(failure.Message, EmailServerConnection.DescribeFailure(failure));
             client.Verify(value => value.ConnectAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<SecureSocketOptions>(), It.IsAny<CancellationToken>()), Times.Never);
             client.Verify(value => value.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         }

@@ -226,6 +226,59 @@ public sealed class MimeInboundEmailParserTests
         Assert.Equal(expected, MimeInboundEmailParser.TrimMessageId(value));
     }
 
+    [Theory]
+    [InlineData("jane@bigcorp.com@attacker.com")]
+    [InlineData("Jane <jane@bigcorp.com@attacker.com>")]
+    [InlineData("<jane@bigcorp.com> <x@attacker.com>")]
+    [InlineData("jane@bigcorp.com, x@attacker.com")]
+    public async Task ParseAsync_AFromThatDoesNotClearlyNameOneMailbox_LeavesTheSenderUnknown(string from)
+    {
+        // Arrange: MimeKit's lenient parser reads each of these as jane@bigcorp.com, but a mail host may have checked
+        // DMARC for attacker.com.
+        var raw = $"""
+            From: {from}
+            To: support@contoso.com
+            Subject: Hello
+            MIME-Version: 1.0
+            Content-Type: text/plain; charset=utf-8
+
+            Please update our bank details.
+            """;
+
+        // Act
+        var email = await ParseAsync(raw);
+
+        // Assert
+        Assert.Null(email.From);
+    }
+
+    [Theory]
+    [InlineData("\"Ann Lee\" <ann@example.com>", "ann@example.com", "Ann Lee")]
+    [InlineData("Ann Q. Lee <ann@example.com>", "ann@example.com", "Ann Q. Lee")]
+    [InlineData("=?utf-8?q?Lee,_Ann?= <ann@example.com>", "ann@example.com", "Lee, Ann")]
+    [InlineData("\"ann@example.com\" <ann@example.com>", "ann@example.com", "ann@example.com")]
+    [InlineData("ann@example.com", "ann@example.com", "")]
+    public async Task ParseAsync_ACustomersUsualFrom_StillNamesTheSender(string from, string expectedAddress, string expectedName)
+    {
+        // Arrange
+        var raw = $"""
+            From: {from}
+            To: support@contoso.com
+            Subject: Hello
+            MIME-Version: 1.0
+            Content-Type: text/plain; charset=utf-8
+
+            Where is my order?
+            """;
+
+        // Act
+        var email = await ParseAsync(raw);
+
+        // Assert
+        Assert.Equal(expectedAddress, email.From?.Address);
+        Assert.Equal(expectedName, email.From?.Name ?? string.Empty);
+    }
+
     private static async Task<InboundEmail> ParseAsync(string raw)
     {
         var normalized = raw.Replace("\r\n", "\n", StringComparison.Ordinal).Replace("\n", "\r\n", StringComparison.Ordinal);

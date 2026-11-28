@@ -171,7 +171,7 @@ public sealed class AmazonSesInboundEmailParser : IInboundEmailWebhookParser
             from.ValueKind != JsonValueKind.Array ||
             from.GetArrayLength() == 0 ||
             from[0].ValueKind != JsonValueKind.String ||
-            !MimeKit.MailboxAddress.TryParse(from[0].GetString(), out var sesFrom))
+            MimeInboundEmailParser.ParseSingleMailbox(from[0].GetString()) is not { } sesFrom)
         {
             return false;
         }

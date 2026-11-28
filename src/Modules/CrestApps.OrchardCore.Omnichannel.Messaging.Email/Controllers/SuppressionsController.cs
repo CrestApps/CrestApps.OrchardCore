@@ -89,7 +89,7 @@ public sealed class SuppressionsController : Controller
 
         options.BulkActions =
         [
-            new SelectListItem(S["Remove from the list"], nameof(EmailSuppressionBulkAction.Remove)),
+            new SelectListItem(S["Remove From the List"], nameof(EmailSuppressionBulkAction.Remove)),
         ];
 
         // The admin-list tag builds a row per address, in the layout (List or Grid) the site or the user picked.

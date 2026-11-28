@@ -13,5 +13,11 @@ public sealed class EmailConnectionNotSecureException : Exception
     public EmailConnectionNotSecureException(string host)
         : base($"The mail server at '{host}' did not offer an encrypted connection, so the password was not sent. Choose STARTTLS or SSL/TLS, or None to send it unencrypted.")
     {
+        Host = host;
     }
+
+    /// <summary>
+    /// Gets the mail server's host.
+    /// </summary>
+    public string Host { get; }
 }

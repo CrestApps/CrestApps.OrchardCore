@@ -167,7 +167,8 @@ public static class EmailServerConnection
     /// the settings.
     /// </summary>
     /// <remarks>
-    /// Only a refused sign-in and a server that offered no encryption are told apart. Every other failure gets the same
+    /// Only a refused sign-in, a server that offered no encryption and a stored password saved for other settings are
+    /// told apart. Every other failure gets the same
     /// words, because the exception's own message (connection refused, no such host, an unexpected greeting) would tell
     /// whether a host and port answer, which would turn the connection test into a probe of the site's own network. The
     /// exception belongs in the log.
@@ -179,6 +180,7 @@ public static class EmailServerConnection
         {
             AuthenticationException => RefusedSignInMessage,
             EmailConnectionNotSecureException notSecure => notSecure.Message,
+            EmailStoredPasswordUnusableException unusable => unusable.Message,
             _ => UnreachableMessage,
         };
 
@@ -211,7 +213,7 @@ public static class EmailServerConnection
 
         if (signsIn && password is null)
         {
-            throw new AuthenticationException("No password is stored for this server, port, security and user name.");
+            throw new EmailStoredPasswordUnusableException(server.Host.Trim());
         }
 
         await client.ConnectAsync(server.Host.Trim(), port, ToSocketOptions(server.Security), cancellationToken);

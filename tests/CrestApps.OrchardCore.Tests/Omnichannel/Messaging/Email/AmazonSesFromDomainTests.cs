@@ -11,6 +11,8 @@ public sealed class AmazonSesFromDomainTests
     [InlineData("\"Jane\" <jane@attacker.com>", "jane@bigcorp.com", false)]
     [InlineData("'jane@bigcorp.com'", "'jane@bigcorp.com'", false)]
     [InlineData("\"jane@bigcorp.com\"", "\"jane@bigcorp.com\"", false)]
+    [InlineData("support@contoso.com@attacker.com", "support@contoso.com", false)]
+    [InlineData("<support@contoso.com> <x@attacker.com>", "support@contoso.com", false)]
     public void IsSameFromDomain_TakesTheVerdictOnlyForTheDomainSesChecked(string sesFrom, string parsedFrom, bool expected)
     {
         // Arrange

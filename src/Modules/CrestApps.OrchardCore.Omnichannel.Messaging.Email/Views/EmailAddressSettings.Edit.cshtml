@@ -76,7 +76,7 @@
             <div class="ocat-end">
                 <div class="input-group">
                     <input asp-for="SmtpPassword" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasSmtpPassword ? T["Stored; leave empty to keep it"] : string.Empty)" data-email-smtp-password data-1p-ignore data-lpignore="true" data-bwignore="true" />
-                    <button type="button" class="btn btn-outline-secondary" data-email-test="smtp">@T["Test connection"]</button>
+                    <button type="button" class="btn btn-outline-secondary" data-email-test="smtp">@T["Test Connection"]</button>
                 </div>
                 <span asp-validation-for="SmtpPassword" class="text-danger"></span>
                 <span class="hint">@T["For Microsoft 365 or Google, use an app password, or a mailbox your administrator allows SMTP sign-in for."]</span>
@@ -327,7 +327,7 @@
             <div class="ocat-end">
                 <div class="input-group">
                     <input asp-for="ImapPassword" type="password" class="form-control" autocomplete="new-password" placeholder="@(Model.HasImapPassword ? T["Stored; leave empty to keep it"] : string.Empty)" data-email-imap-password data-1p-ignore data-lpignore="true" data-bwignore="true" />
-                    <button type="button" class="btn btn-outline-secondary" data-email-test="imap">@T["Test connection"]</button>
+                    <button type="button" class="btn btn-outline-secondary" data-email-test="imap">@T["Test Connection"]</button>
                 </div>
                 <span asp-validation-for="ImapPassword" class="text-danger"></span>
                 <div class="small mt-1" data-email-test-result="imap"></div>

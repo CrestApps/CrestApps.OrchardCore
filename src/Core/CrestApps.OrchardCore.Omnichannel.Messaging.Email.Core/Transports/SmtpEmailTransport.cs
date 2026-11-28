@@ -108,7 +108,13 @@ public sealed class SmtpEmailTransport : IEmailTransport
             // out on a later attempt once the security is fixed.
             _logger.LogWarning("The SMTP server {Host} offered no encrypted connection, so the address's password was not sent.", server.Host.SanitizeLogValue());
 
-            return MessageDispatchResult.Failed(ex.Message);
+            return MessageDispatchResult.Failed(S["The mail server at '{0}' did not offer an encrypted connection, so the password was not sent. Choose STARTTLS or SSL/TLS, or None to send it unencrypted.", ex.Host]);
+        }
+        catch (EmailStoredPasswordUnusableException ex)
+        {
+            _logger.LogWarning("The stored password of the SMTP server {Host} was saved for other settings, so it was not sent.", server.Host.SanitizeLogValue());
+
+            return MessageDispatchResult.Failed(S["The stored password for the mail server at '{0}' was saved for other settings, so it was not sent. Type the password again on the address.", ex.Host]);
         }
         catch (SmtpCommandException ex)
         {
