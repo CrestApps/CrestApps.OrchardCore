@@ -60,6 +60,18 @@ public sealed class SurveyAccessContext
     public string Password { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the respondent accepted the survey's statement (<see cref="SurveyAccessSettings.Statement"/>).
+    /// </summary>
+    public bool StatementAccepted { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the rules only check whether a start could be made, before the respondent typed anything:
+    /// what the respondent types on the start form (the password, the statement) is not asked for yet, so the rules after
+    /// it (limits, attempts left) still decide.
+    /// </summary>
+    public bool CheckOnly { get; set; }
+
+    /// <summary>
     /// Gets or sets the current time, in UTC.
     /// </summary>
     public DateTime UtcNow { get; set; }

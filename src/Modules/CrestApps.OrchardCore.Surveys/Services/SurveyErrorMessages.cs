@@ -50,6 +50,8 @@ public sealed class SurveyErrorMessages
             SurveyErrorCode.InvalidState => S["This response can no longer be changed."],
             SurveyErrorCode.InvalidDefinition => S["This survey has problems that must be fixed first."],
             SurveyErrorCode.HasResponses => S["This survey has responses and cannot be deleted. Archive it instead."],
+            SurveyErrorCode.StatementNotAccepted => S["Accept the statement to start."],
+            SurveyErrorCode.PasswordLockedOut => S["Too many wrong passwords. Wait 15 minutes, then try again."],
             SurveyErrorCode.CaptchaUnavailable => S["This survey asks for a CAPTCHA, which this site can't show right now. Sign in to respond, or ask the site administrator to turn on reCAPTCHA."],
             _ => S["Something went wrong."],
         };

@@ -92,6 +92,11 @@ public sealed class SurveyStartCheck : ISurveyStartCheck
             Context = request.Context,
             Override = overrides is null ? null : await overrides.FindEffectiveAsync(survey.ItemId, identity.UserId, request.Context, cancellationToken),
             Password = request.Password,
+            StatementAccepted = request.StatementAccepted,
+
+            // What the respondent types on the start form (the password, the statement) isn't asked for yet; the page
+            // that shows the check asks for it.
+            CheckOnly = true,
             UtcNow = _clock.UtcNow,
         };
 
@@ -102,6 +107,8 @@ public sealed class SurveyStartCheck : ISurveyStartCheck
         {
             Error = decision.Error,
             AttemptsLeft = limits is null ? null : await limits.GetAttemptsLeftAsync(context),
+            NeedsPassword = !string.IsNullOrEmpty(collector?.PasswordHash),
+            Statement = string.IsNullOrWhiteSpace(survey.Access?.Statement) ? null : survey.Access.Statement,
         };
     }
 }

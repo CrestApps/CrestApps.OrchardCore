@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Core.Telemetry;
 using CrestApps.OrchardCore.Learning.Models;
@@ -44,7 +45,7 @@ public static class LearningCoreServiceCollectionExtensions
         services.TryAddScoped<EnrollmentWriteGate>();
         services.TryAddScoped<CourseItemLearnerResolver>();
         services.TryAddScoped<LearningSecretStore>();
-        services.TryAddScoped<LearningSecretAttempts>();
+        services.TryAddScoped<SecretAttemptLimiter>();
         services.TryAddScoped<LearningSecretVerifier>();
         services.AddEnrollmentObserver<LearningTelemetryObserver>();
         services.AddOptions<LearningUpkeepOptions>();

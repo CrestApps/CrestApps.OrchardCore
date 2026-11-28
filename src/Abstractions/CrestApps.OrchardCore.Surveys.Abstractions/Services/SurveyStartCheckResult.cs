@@ -20,4 +20,14 @@ public sealed class SurveyStartCheckResult
     /// (started or completed responses), or <see langword="null"/> when no total limit applies.
     /// </summary>
     public int? AttemptsLeft { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the start asks for a password (an access code).
+    /// </summary>
+    public bool NeedsPassword { get; set; }
+
+    /// <summary>
+    /// Gets or sets the statement the respondent must accept before starting, or <see langword="null"/>.
+    /// </summary>
+    public string Statement { get; set; }
 }

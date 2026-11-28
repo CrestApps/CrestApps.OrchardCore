@@ -130,4 +130,15 @@ public enum SurveyErrorCode
     /// start it.
     /// </summary>
     CaptchaUnavailable,
+
+    /// <summary>
+    /// The survey asks the respondent to accept a statement (such as an honor statement) before starting, and the start
+    /// didn't accept it.
+    /// </summary>
+    StatementNotAccepted,
+
+    /// <summary>
+    /// Too many wrong passwords were entered; the respondent waits before trying again.
+    /// </summary>
+    PasswordLockedOut,
 }

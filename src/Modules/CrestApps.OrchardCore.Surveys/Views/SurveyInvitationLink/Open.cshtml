@@ -17,8 +17,22 @@
             <div class="alert alert-warning" role="alert">@Model.Message</div>
         }
 
-        <form action="@Url.Content("~/s/i/" + Uri.EscapeDataString(Model.Token))" method="post" class="no-multisubmit" data-survey-autostart="@(Model.NeedsCaptcha ? null : "true")">
+        @{
+            var autoStart = !Model.NeedsCaptcha && string.IsNullOrEmpty(Model.Statement);
+        }
+        <form action="@Url.Content("~/s/i/" + Uri.EscapeDataString(Model.Token))" method="post" class="no-multisubmit" data-survey-autostart="@(autoStart ? "true" : null)">
             @Html.AntiForgeryToken()
+
+            @if (!string.IsNullOrEmpty(Model.Statement))
+            {
+                <div class="mb-3 survey-statement">
+                    <p class="mb-2" id="survey-statement-text">@Model.Statement</p>
+                    <div class="form-check">
+                        <input type="checkbox" id="survey-accept-statement" name="acceptStatement" value="true" class="form-check-input" required aria-required="true" aria-describedby="survey-statement-text" />
+                        <label for="survey-accept-statement" class="form-check-label">@T["I accept this statement"]</label>
+                    </div>
+                </div>
+            }
 
             @if (Model.NeedsCaptcha)
             {
@@ -30,7 +44,7 @@
             <button type="submit" class="btn btn-primary">@T["Start"]</button>
         </form>
 
-        @if (!Model.NeedsCaptcha)
+        @if (autoStart)
         {
             <script at="Foot">
                 (function () {

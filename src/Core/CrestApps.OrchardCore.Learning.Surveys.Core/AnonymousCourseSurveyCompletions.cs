@@ -14,8 +14,8 @@ using OrchardCore.Settings;
 namespace CrestApps.OrchardCore.Learning.Surveys.Core;
 
 /// <summary>
-/// Records, on the learner's next visit, an anonymous course survey that was submitted without the learner's request
-/// (at its deadline, or when the survey closed). The response names nobody, so <see cref="LearningSurveyResultObserver"/>
+/// Records, on the learner's next visit, an anonymous course survey or quiz that was submitted without the learner's
+/// request (at its deadline, or when the survey closed). The response names nobody, so <see cref="LearningSurveyResultObserver"/>
 /// can't tell whose progress it completes; the learner's own visit can: the survey's participation record, kept under a
 /// pseudonymous key of the learner (the same key the survey's limits count), says they completed a response, and the item
 /// is recorded as submitted by the day only, as an anonymous completion always is. Nothing links the learner to the
@@ -94,14 +94,19 @@ public sealed class AnonymousCourseSurveyCompletions
             return false;
         }
 
+        // What the observer records for an anonymous response the learner completed themselves: the completion only, as
+        // handed in and graded (a later grade of an anonymous response reaches nobody), so a quiz completes like a survey.
         var site = await _siteService.GetSiteSettingsAsync();
-        var update = await _progress.RecordWithRetryAsync(enrollment, new CourseItemResult
+        var result = LearningSurveyResultObserver.CompletionOnly(new CourseItemResult
         {
             ItemId = itemId,
             Submitted = true,
-            CompletionOnly = true,
-            AnonymousDayUtc = LearningSurveyResultObserver.StartOfDayUtc(_clock.UtcNow, site?.TimeZoneId),
-        }, cancellationToken);
+            Attempts = counts.Completed.Total,
+        });
+
+        result.AnonymousDayUtc = LearningSurveyResultObserver.StartOfDayUtc(_clock.UtcNow, site?.TimeZoneId);
+
+        var update = await _progress.RecordWithRetryAsync(enrollment, result, cancellationToken);
 
         return update?.RefusedReason is null;
     }

@@ -23,6 +23,11 @@ public class SurveyInvitationOpenViewModel
     public bool NeedsCaptcha { get; set; }
 
     /// <summary>
+    /// Gets or sets the statement the respondent accepts before starting, or <see langword="null"/>.
+    /// </summary>
+    public string Statement { get; set; }
+
+    /// <summary>
     /// Gets or sets the message to show, or <see langword="null"/>.
     /// </summary>
     public string Message { get; set; }

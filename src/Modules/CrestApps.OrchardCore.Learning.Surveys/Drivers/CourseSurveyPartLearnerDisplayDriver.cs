@@ -109,8 +109,13 @@ internal sealed class CourseSurveyPartLearnerDisplayDriver : ContentPartDisplayD
                 canChange = version?.Definition?.Navigation?.AllowEditAfterSubmit == true;
             }
 
-            model.CanAnswer = model.Response is null
-                || model.Response.Status == SurveyResponseStatus.InProgress
-                || canChange;
+            model.CanAnswer = model.Response?.Status == SurveyResponseStatus.InProgress || canChange;
+
+            // A new response is offered only while a start could be made: an anonymous survey's answered response names
+            // nobody, so the start's own rules (one completed response per learner) decide.
+            if (!model.CanAnswer && model.Response is null)
+            {
+                model.CanAnswer = (await _learningSurveys.CheckStartAsync(user, part.ContentItem, model.Survey.ItemId)).CanStart;
+            }
         }).Location("Detail", "Content:5");
 }

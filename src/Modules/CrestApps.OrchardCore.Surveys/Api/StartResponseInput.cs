@@ -26,6 +26,16 @@ public sealed class StartResponseInput
     public Dictionary<string, string> Variables { get; set; } = [];
 
     /// <summary>
+    /// Gets or sets the collector's password (an access code), or <see langword="null"/>.
+    /// </summary>
+    public string Password { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the respondent accepted the survey's statement.
+    /// </summary>
+    public bool StatementAccepted { get; set; }
+
+    /// <summary>
     /// Gets or sets the culture, or <see langword="null"/>.
     /// </summary>
     public string Culture { get; set; }

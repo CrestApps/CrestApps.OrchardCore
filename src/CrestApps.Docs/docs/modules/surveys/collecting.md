@@ -18,7 +18,7 @@ A GET never starts a response or uses up an invitation, so link previews (chat a
 
 | Route | Does |
 | --- | --- |
-| `GET /s/{token}` | The start page (password or CAPTCHA when needed). When the survey skips it, or the address asks for it with `?autostart=1` on a navigation from a page of the same site (the Start button of an embedded survey, told by the browser's `Sec-Fetch-Site: same-origin`), the page posts its start form at once. `?autostart=1` from another site, an e-mail, a bookmark or a typed address shows the start page, its introduction and its Start button |
+| `GET /s/{token}` | The start page (password, statement or CAPTCHA when needed; a survey with a statement never starts at once). When the survey skips it, or the address asks for it with `?autostart=1` on a navigation from a page of the same site (the Start button of an embedded survey, told by the browser's `Sec-Fetch-Site: same-origin`), the page posts its start form at once. `?autostart=1` from another site, an e-mail, a bookmark or a typed address shows the start page, its introduction and its Start button |
 | `POST /s/{token}/start` | Starts a response, or resumes the browser's response in progress |
 | `GET`/`POST /s/r/{responseId}` | The current page; posts Next, Back or Finish |
 | `POST /s/r/{responseId}/save` | Autosave without checks |
@@ -70,8 +70,9 @@ A personal invitation link resumes only a response of that invitation: a respons
 | 200 | `AvailabilityWindow` | The survey's and the collector's opening and closing times, and accommodations' windows, to start and to complete |
 | 300 | `WeeklySchedule` | The days and hours of the weekly schedule, in the site time zone |
 | 400 | `Audience` | Anyone, signed-in users with Respond to surveys, members of user audiences, or invited people only |
-| 500 | `Password` | The collector's password |
-| 600 | `Captcha` | A CAPTCHA for respondents who are not signed in and not invited (reCAPTCHA feature). Only an invitation sent to someone (a user, party, e-mail address or phone number) skips it; a bare personal link made for no one asks for it on its start page. It fails closed: with the reCAPTCHA feature off, a survey that requires a CAPTCHA refuses such respondents with a message, and the access page refuses to turn the requirement on |
+| 450 | `Captcha` | A CAPTCHA for respondents who are not signed in and not invited (reCAPTCHA feature). Only an invitation sent to someone (a user, party, e-mail address or phone number) skips it; a bare personal link made for no one asks for it on its start page. It fails closed: with the reCAPTCHA feature off, a survey that requires a CAPTCHA refuses such respondents with a message, and the access page refuses to turn the requirement on. It runs before the password, so a password can't be guessed without solving it |
+| 475 | `Statement` | The survey's statement (`SurveyAccessSettings.Statement`, such as an honor statement or a consent): the start must accept it (`StartResponseRequest.StatementAccepted`), or it is refused with `StatementNotAccepted`. An identified response keeps when it was accepted (`SurveyResponse.StatementAcceptedUtc`); an anonymous one keeps no such time |
+| 500 | `Password` | The collector's password (an access code). After five wrong passwords within fifteen minutes, the respondent (the signed-in user, or a visitor's IP address) is refused with `PasswordLockedOut` for fifteen minutes; a right password clears the count. The count is kept in the distributed cache by `SecretAttemptLimiter` (`CrestApps.OrchardCore.Core`), the limit Learning's enrollment keys use too |
 | 700 | `Invitation` | One response per invitation |
 | 800 | `RespondentLimits` | Total, per day, per week (from the site's first day of the week), per month, and the wait between responses; accommodations add attempts |
 | 900 | `MaxResponses` | The survey's and the collector's most completed responses |

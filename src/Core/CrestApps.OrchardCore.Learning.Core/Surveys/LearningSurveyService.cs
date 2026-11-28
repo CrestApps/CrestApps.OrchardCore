@@ -179,7 +179,11 @@ public sealed class LearningSurveyService : ILearningSurveyService
     }
 
     /// <inheritdoc />
-    public async Task<SurveyStartResult> StartAsync(ClaimsPrincipal user, ContentItem item, string surveyId, string returnUrl, CancellationToken cancellationToken = default)
+    public Task<SurveyStartResult> StartAsync(ClaimsPrincipal user, ContentItem item, string surveyId, string returnUrl, CancellationToken cancellationToken = default)
+        => StartAsync(user, item, surveyId, returnUrl, password: null, statementAccepted: false, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<SurveyStartResult> StartAsync(ClaimsPrincipal user, ContentItem item, string surveyId, string returnUrl, string password, bool statementAccepted, CancellationToken cancellationToken = default)
     {
         var (request, error) = await BuildStartRequestAsync(user, item, surveyId, returnUrl, cancellationToken);
 
@@ -188,7 +192,64 @@ public sealed class LearningSurveyService : ILearningSurveyService
             return new SurveyStartResult { Error = error };
         }
 
-        return await _serviceProvider.GetRequiredService<ISurveyResponseService>().StartAsync(request, cancellationToken);
+        var responses = _serviceProvider.GetRequiredService<ISurveyResponseService>();
+
+        // "Change your answers": a course survey takes one completed response per learner, so a learner whose version
+        // allows changing a submitted response reopens it instead of starting another.
+        if (await ReopenableResponseAsync(request, cancellationToken) is { } completed)
+        {
+            var reopened = await responses.ReopenAsync(completed.ItemId, request.Identity, cancellationToken);
+
+            if (reopened.Succeeded)
+            {
+                return new SurveyStartResult { Response = reopened.Response, Resumed = true };
+            }
+        }
+
+        request.Password = password;
+        request.StatementAccepted = statementAccepted;
+
+        return await responses.StartAsync(request, cancellationToken);
+    }
+
+    // The learner's completed response of a course survey (not a quiz, whose attempts are separate) that its version lets
+    // them change. An anonymous survey keeps no response that names the learner, so it has none.
+    private async Task<SurveyResponse> ReopenableResponseAsync(StartResponseRequest request, CancellationToken cancellationToken)
+    {
+        if (request.Context is not { } context
+            || !string.Equals(context.Kind, LearningSurveyContexts.EnrollmentKind, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var survey = await _surveyManager.FindByIdAsync(request.SurveyId, cancellationToken);
+
+        if (survey is null || string.Equals(survey.Kind, SurveyKinds.Quiz, StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var responses = await ListEnrollmentResponsesAsync(survey.ItemId, context.Id, cancellationToken);
+
+        // A response in progress is resumed by the start itself.
+        if (responses.Any(response => response.Status == SurveyResponseStatus.InProgress))
+        {
+            return null;
+        }
+
+        var completed = responses
+            .Where(response => response.Status == SurveyResponseStatus.Completed && !string.IsNullOrEmpty(response.SurveyVersionId))
+            .OrderByDescending(response => response.CompletedUtc ?? response.StartedUtc)
+            .FirstOrDefault();
+
+        if (completed is null)
+        {
+            return null;
+        }
+
+        var version = await _serviceProvider.GetRequiredService<ISurveyVersionCache>().GetAsync(completed.SurveyVersionId, cancellationToken);
+
+        return version?.Definition?.Navigation?.AllowEditAfterSubmit == true ? completed : null;
     }
 
     /// <inheritdoc />
@@ -369,6 +430,15 @@ public sealed class LearningSurveyService : ILearningSurveyService
         }
 
         survey.NoDefaultWebLink = true;
+
+        // A course survey or poll takes one completed response per learner, as the course records one completion;
+        // "Change your answers" reopens it when its version allows. A quiz's attempts are its own setting.
+        if (!string.Equals(survey.Kind, SurveyKinds.Quiz, StringComparison.Ordinal) && survey.Access.Limits?.Total is null)
+        {
+            survey.Access.Limits ??= new RespondentLimits();
+            survey.Access.Limits.Total = 1;
+            survey.Access.Limits.Counts = LimitCount.Completed;
+        }
     }
 
     private static T CopyOf<T>(T value)

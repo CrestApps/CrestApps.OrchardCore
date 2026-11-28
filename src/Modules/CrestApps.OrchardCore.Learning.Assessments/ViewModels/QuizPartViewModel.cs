@@ -40,4 +40,24 @@ public class QuizPartViewModel
     /// completion only and stays out of the course grade.
     /// </summary>
     public bool AnonymousGradable { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether the quiz has an access code.
+    /// </summary>
+    public bool HasAccessCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets a new access code, or empty to keep the current one.
+    /// </summary>
+    public string AccessCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to remove the access code.
+    /// </summary>
+    public bool RemoveAccessCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the honor statement learners accept before an attempt, or empty for none.
+    /// </summary>
+    public string HonorStatement { get; set; }
 }

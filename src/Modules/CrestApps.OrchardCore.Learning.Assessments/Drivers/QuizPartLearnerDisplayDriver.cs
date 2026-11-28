@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Learning.Surveys.Core;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -28,6 +29,7 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
     private readonly ICourseAccessService _courseAccess;
     private readonly ILearningSurveyService _learningSurveys;
     private readonly ISurveyReviewPolicy _reviewPolicy;
+    private readonly AnonymousCourseSurveyCompletions _anonymousCompletions;
     private readonly IClock _clock;
 
     /// <summary>
@@ -39,6 +41,7 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
     /// <param name="courseAccess">The course access service.</param>
     /// <param name="learningSurveys">The Learning survey service.</param>
     /// <param name="reviewPolicy">The review policy.</param>
+    /// <param name="anonymousCompletions">Records anonymous attempts submitted without the learner's request.</param>
     /// <param name="clock">The clock.</param>
     public QuizPartLearnerDisplayDriver(
         IHttpContextAccessor httpContextAccessor,
@@ -47,6 +50,7 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
         ICourseAccessService courseAccess,
         ILearningSurveyService learningSurveys,
         ISurveyReviewPolicy reviewPolicy,
+        AnonymousCourseSurveyCompletions anonymousCompletions,
         IClock clock)
     {
         _httpContextAccessor = httpContextAccessor;
@@ -55,6 +59,7 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
         _courseAccess = courseAccess;
         _learningSurveys = learningSurveys;
         _reviewPolicy = reviewPolicy;
+        _anonymousCompletions = anonymousCompletions;
         _clock = clock;
     }
 
@@ -82,6 +87,14 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
             }
 
             model.Enrolled = true;
+
+            // An anonymous attempt submitted without the learner's request (at its deadline) names nobody; the learner's
+            // own visit records it, by the day only, as the course survey panel does.
+            if (model.Survey.Access?.Anonymity == AnonymityMode.Anonymous)
+            {
+                await _anonymousCompletions.CatchUpAsync(model.Survey, access.Enrollment, part.ContentItem.ContentItemId);
+            }
+
             model.Attempts = await _learningSurveys.ListEnrollmentResponsesAsync(model.Survey.ItemId, access.Enrollment.ItemId);
             model.Open = model.Attempts.FirstOrDefault(attempt => attempt.Status == SurveyResponseStatus.InProgress);
 
@@ -107,5 +120,7 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
 
             model.CanStart = check.CanStart;
             model.AttemptsLeft = check.AttemptsLeft;
+            model.NeedsAccessCode = check.NeedsPassword;
+            model.Statement = check.Statement;
         }).Location("Detail", "Content:5");
 }

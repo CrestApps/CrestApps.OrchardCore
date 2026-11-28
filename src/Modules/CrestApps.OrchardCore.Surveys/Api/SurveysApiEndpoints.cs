@@ -241,6 +241,9 @@ internal static class SurveysApiEndpoints
                 Identity = identity,
                 RespondentKey = secrets is null ? null : await secrets.RespondentKeyAsync(survey, identity, null, httpContext.RequestAborted),
                 Override = overrides is null ? null : await overrides.FindEffectiveAsync(survey.ItemId, identity.UserId, null, httpContext.RequestAborted),
+
+                // Reading the questions is not a start: the statement is accepted when the response starts.
+                StatementAccepted = true,
                 UtcNow = clock.UtcNow,
             });
 
@@ -427,6 +430,8 @@ internal static class SurveysApiEndpoints
             // API variables are as untrusted as query string values: only hidden variables that accept a value from the
             // URL take them, and the collector's values are kept otherwise.
             QueryVariables = input.Variables ?? [],
+            Password = input.Password,
+            StatementAccepted = input.StatementAccepted,
             Culture = input.Culture,
         }, httpContext.RequestAborted);
 
@@ -525,7 +530,9 @@ internal static class SurveysApiEndpoints
             SurveyErrorCode.NotFound => StatusCodes.Status404NotFound,
             SurveyErrorCode.NotOwner or SurveyErrorCode.NotInAudience or SurveyErrorCode.SignInRequired
                 or SurveyErrorCode.PasswordRequired or SurveyErrorCode.PasswordInvalid or SurveyErrorCode.CaptchaRequired
+                or SurveyErrorCode.StatementNotAccepted
                 or SurveyErrorCode.InvitationInvalid or SurveyErrorCode.InvitationUsed => StatusCodes.Status403Forbidden,
+            SurveyErrorCode.PasswordLockedOut => StatusCodes.Status429TooManyRequests,
             SurveyErrorCode.Busy or SurveyErrorCode.AlreadyInProgress or SurveyErrorCode.InvalidState => StatusCodes.Status409Conflict,
             _ => StatusCodes.Status422UnprocessableEntity,
         };

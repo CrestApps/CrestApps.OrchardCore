@@ -108,6 +108,11 @@ public class SurveyAccessEditViewModel
     public bool RequireCaptcha { get; set; }
 
     /// <summary>
+    /// Gets or sets the statement respondents accept before they start, such as an honor statement, or empty for none.
+    /// </summary>
+    public string Statement { get; set; }
+
+    /// <summary>
     /// Gets or sets after how many idle hours an unfinished response is abandoned.
     /// </summary>
     public int IncompleteExpiryHours { get; set; } = 168;

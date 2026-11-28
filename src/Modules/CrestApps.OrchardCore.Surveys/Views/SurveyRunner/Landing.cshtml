@@ -36,6 +36,17 @@
                     </div>
                 }
 
+                @if (!string.IsNullOrEmpty(Model.Statement))
+                {
+                    <div class="mb-3 survey-statement">
+                        <p class="mb-2" id="survey-statement-text">@Model.Statement</p>
+                        <div class="form-check">
+                            <input type="checkbox" id="survey-accept-statement" name="acceptStatement" value="true" class="form-check-input" required aria-required="true" aria-describedby="survey-statement-text" />
+                            <label for="survey-accept-statement" class="form-check-label">@T["I accept this statement"]</label>
+                        </div>
+                    </div>
+                }
+
                 @if (Model.NeedsCaptcha)
                 {
                     <div class="mb-3">

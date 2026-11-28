@@ -64,6 +64,11 @@ public sealed class StartResponseRequest
     public string Password { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the respondent accepted the survey's statement (<see cref="Models.SurveyAccessSettings.Statement"/>).
+    /// </summary>
+    public bool StatementAccepted { get; set; }
+
+    /// <summary>
     /// Gets or sets the culture, or <see langword="null"/>.
     /// </summary>
     public string Culture { get; set; }

@@ -123,6 +123,7 @@ internal sealed class RuntimeTestHarness : IAsyncDisposable
 
         services.AddSurveysStorage();
         services.AddSingleton<Microsoft.AspNetCore.DataProtection.IDataProtectionProvider>(new Microsoft.AspNetCore.DataProtection.EphemeralDataProtectionProvider());
+        services.AddDistributedMemoryCache();
         services.AddSurveysRuntime();
         services.RemoveAll<INumberSequence>();
         services.AddSingleton<INumberSequence, InMemoryNumberSequence>();

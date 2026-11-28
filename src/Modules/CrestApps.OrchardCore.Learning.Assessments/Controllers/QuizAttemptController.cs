@@ -53,10 +53,12 @@ public sealed class QuizAttemptController : Controller
     /// </summary>
     /// <param name="quizId">The quiz course item.</param>
     /// <param name="returnUrl">The page of the quiz to come back to.</param>
+    /// <param name="accessCode">The quiz's access code, when it has one.</param>
+    /// <param name="acceptStatement">Whether the learner accepted the quiz's honor statement.</param>
     /// <returns>A redirect to the attempt, or back with a message.</returns>
     [HttpPost("learning/quizzes/{quizId}/start")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Start(string quizId, string returnUrl)
+    public async Task<IActionResult> Start(string quizId, string returnUrl, string accessCode = null, bool acceptStatement = false)
     {
         var item = string.IsNullOrEmpty(quizId) ? null : await _contentManager.GetAsync(quizId, VersionOptions.Published);
         var part = item is not null && item.TryGet<QuizPart>(out var found) ? found : null;
@@ -71,7 +73,7 @@ public sealed class QuizAttemptController : Controller
 
         try
         {
-            result = await _learningSurveys.StartAsync(User, item, part.SurveyId, back, HttpContext.RequestAborted);
+            result = await _learningSurveys.StartAsync(User, item, part.SurveyId, back, accessCode, acceptStatement, HttpContext.RequestAborted);
         }
         catch (SurveyAnonymitySecretUnreadableException)
         {
@@ -88,6 +90,10 @@ public sealed class QuizAttemptController : Controller
                 SurveyErrorCode.LimitReached => H["You have no attempts left."],
                 SurveyErrorCode.CooldownActive => H["You must wait before your next attempt."],
                 SurveyErrorCode.Closed or SurveyErrorCode.NotOpen or SurveyErrorCode.NotAvailableNow => H["This quiz is not open now."],
+                SurveyErrorCode.PasswordRequired => H["Enter the quiz's access code."],
+                SurveyErrorCode.PasswordInvalid => H["The access code is not correct."],
+                SurveyErrorCode.PasswordLockedOut => H["Too many wrong access codes. Wait 15 minutes, then try again."],
+                SurveyErrorCode.StatementNotAccepted => H["Accept the honor statement to start the quiz."],
                 _ => H["You cannot attempt this quiz now."],
             });
 

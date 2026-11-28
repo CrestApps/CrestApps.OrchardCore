@@ -26,14 +26,20 @@ public static class SurveyAccessRuleOrder
     public const int Audience = 400;
 
     /// <summary>
-    /// The password rule.
+    /// The CAPTCHA rule. It runs before the statement and the password, so a password can't be guessed without solving
+    /// the CAPTCHA.
     /// </summary>
-    public const int Password = 500;
+    public const int Captcha = 450;
 
     /// <summary>
-    /// The CAPTCHA rule.
+    /// The statement rule (a statement such as an honor statement the respondent accepts before starting).
     /// </summary>
-    public const int Captcha = 600;
+    public const int Statement = 475;
+
+    /// <summary>
+    /// The password rule, with its limit on wrong tries.
+    /// </summary>
+    public const int Password = 500;
 
     /// <summary>
     /// The invitation rule.

@@ -43,6 +43,11 @@ public class SurveyLandingViewModel
     public string CssClass { get; set; }
 
     /// <summary>
+    /// Gets or sets the statement the respondent accepts before starting, or <see langword="null"/>.
+    /// </summary>
+    public string Statement { get; set; }
+
+    /// <summary>
     /// Gets or sets the error message, or <see langword="null"/>.
     /// </summary>
     public string Message { get; set; }

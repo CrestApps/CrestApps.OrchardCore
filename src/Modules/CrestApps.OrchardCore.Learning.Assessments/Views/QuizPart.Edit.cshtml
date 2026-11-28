@@ -67,6 +67,32 @@
             </div>
         }
 
+        @if (survey is not null)
+        {
+            <div class="ocat-wrapper" asp-validation-class-for="AccessCode">
+                <label asp-for="AccessCode" class="ocat-label">@T["Access code"]</label>
+                <div class="ocat-end">
+                    <input asp-for="AccessCode" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore value="" />
+                    <span class="hint">@(Model.HasAccessCode ? T["The quiz has an access code. Enter a new one to replace it, or leave this empty to keep it."] : T["A code learners enter to start an attempt, such as one given out in an exam room. After five wrong codes in fifteen minutes, a learner waits fifteen minutes."])</span>
+                    @if (Model.HasAccessCode)
+                    {
+                        <div class="form-check mt-2">
+                            <input asp-for="RemoveAccessCode" type="checkbox" class="form-check-input" />
+                            <label asp-for="RemoveAccessCode" class="form-check-label">@T["Remove the access code"]</label>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="ocat-wrapper" asp-validation-class-for="HonorStatement">
+                <label asp-for="HonorStatement" class="ocat-label">@T["Honor statement"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="HonorStatement" class="form-control" rows="3" maxlength="2000"></textarea>
+                    <span asp-validation-for="HonorStatement" class="text-danger"></span>
+                    <span class="hint">@T["A statement learners must accept before each attempt, such as \"I will take this quiz on my own.\" Leave it empty to ask for none. The time each learner accepted it is kept on their attempt."]</span>
+                </div>
+            </div>
+        }
+
         <div class="ocat-wrapper" asp-validation-class-for="GradingMethod">
             <label asp-for="GradingMethod" class="ocat-label">@T["The quiz grade is"]</label>
             <div class="ocat-end">

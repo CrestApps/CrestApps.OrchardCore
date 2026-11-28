@@ -151,7 +151,7 @@ public sealed class SurveyRunnerController : Controller
                 RefuseSignedInKiosk(model);
             }
         }
-        else if (model.CanStart && !model.NeedsPassword && !model.NeedsCaptcha
+        else if (model.CanStart && !model.NeedsPassword && !model.NeedsCaptcha && string.IsNullOrEmpty(model.Statement)
             && (model.SkipLanding || IsTrustedAutoStart(Request)))
         {
             model.AutoStart = true;
@@ -181,11 +181,12 @@ public sealed class SurveyRunnerController : Controller
     /// </summary>
     /// <param name="token">The collector token.</param>
     /// <param name="password">The collector password entered, or <see langword="null"/>.</param>
+    /// <param name="acceptStatement">Whether the respondent accepted the survey's statement.</param>
     /// <returns>A redirect to the first page, or the landing page with the reason.</returns>
     [HttpPost("s/{token}/start")]
     [ValidateAntiForgeryToken]
     [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
-    public async Task<IActionResult> Start(string token, string password)
+    public async Task<IActionResult> Start(string token, string password, bool acceptStatement = false)
     {
         var (survey, collector) = await FindByTokenAsync(token);
 
@@ -201,7 +202,7 @@ public sealed class SurveyRunnerController : Controller
             captchaPassed = await captcha.ValidateCaptchaAsync((_, _) => { });
         }
 
-        return await StartCoreAsync(token, survey, collector, password, captchaPassed);
+        return await StartCoreAsync(token, survey, collector, password, acceptStatement, captchaPassed);
     }
 
     /// <summary>
@@ -784,7 +785,7 @@ public sealed class SurveyRunnerController : Controller
         return View("My", model);
     }
 
-    private async Task<IActionResult> StartCoreAsync(string token, Survey survey, SurveyCollector collector, string password, bool captchaPassed)
+    private async Task<IActionResult> StartCoreAsync(string token, Survey survey, SurveyCollector collector, string password, bool statementAccepted, bool captchaPassed)
     {
         // A kiosk starts guest responses that no per-person limit counts, so a signed-in visitor (someone who opened the
         // kiosk address at home) is refused instead: answering as a guest there would bypass the survey's limits.
@@ -821,6 +822,7 @@ public sealed class SurveyRunnerController : Controller
             Identity = identity,
             QueryVariables = query,
             Password = password,
+            StatementAccepted = statementAccepted,
             Culture = RespondentCulture(collector),
         });
 
@@ -830,7 +832,8 @@ public sealed class SurveyRunnerController : Controller
             model.Message = _messages.For(result.Error);
             model.NeedsPassword |= result.Error is SurveyErrorCode.PasswordRequired or SurveyErrorCode.PasswordInvalid;
             model.NeedsCaptcha |= result.Error == SurveyErrorCode.CaptchaRequired;
-            model.CanStart = result.Error is SurveyErrorCode.PasswordRequired or SurveyErrorCode.PasswordInvalid or SurveyErrorCode.CaptchaRequired or SurveyErrorCode.Busy;
+            model.CanStart = result.Error is SurveyErrorCode.PasswordRequired or SurveyErrorCode.PasswordInvalid or SurveyErrorCode.CaptchaRequired
+                or SurveyErrorCode.StatementNotAccepted or SurveyErrorCode.Busy;
 
             return View("Landing", model);
         }
@@ -878,6 +881,7 @@ public sealed class SurveyRunnerController : Controller
             Introduction = SurveyDefinitionLocalizer.Translate(definition, culture, SurveyTextKeys.SurveyIntroduction, definition?.Introduction),
             CssClass = definition?.Presentation?.CssClass,
             NeedsPassword = !string.IsNullOrEmpty(collector?.PasswordHash),
+            Statement = string.IsNullOrWhiteSpace(survey.Access?.Statement) ? null : survey.Access.Statement,
             NeedsCaptcha = survey.Access?.RequireCaptcha == true && User?.Identity?.IsAuthenticated != true && _serviceProvider.GetService<ReCaptchaService>() is not null,
             CanStart = survey.Status == SurveyStatus.Open && definition is not null && collector?.Status != CollectorStatus.Closed,
             Message = survey.Status == SurveyStatus.Open ? null : _messages.For(survey.Status == SurveyStatus.Draft ? SurveyErrorCode.NotOpen : SurveyErrorCode.Closed),

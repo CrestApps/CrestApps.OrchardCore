@@ -48,3 +48,11 @@
         </div>
     </div>
 </div>
+<div class="ocat-wrapper">
+    <label asp-for="Statement" class="ocat-label">@T["Statement"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Statement" class="form-control" rows="3" maxlength="2000"></textarea>
+        <span asp-validation-for="Statement" class="text-danger"></span>
+        <span class="hint">@T["A statement respondents must accept before they start, such as an honor statement or a consent. Leave it empty to ask for none. The time each identified respondent accepted it is kept on their response."]</span>
+    </div>
+</div>

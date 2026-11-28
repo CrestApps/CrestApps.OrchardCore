@@ -26,7 +26,7 @@ namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 /// limit (with accommodations) decides, and an anonymous course survey's completion is recorded by the day only.
 /// </summary>
 [Collection(LearningSiteCollection.Name)]
-public sealed class QuizPanelRulesTests
+public sealed partial class QuizPanelRulesTests
 {
     private readonly LearningSiteFixture _fixture;
 

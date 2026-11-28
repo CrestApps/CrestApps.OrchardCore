@@ -102,6 +102,23 @@
             <form method="post" action="@Url.Content("~/learning/quizzes/" + Model.QuizId + "/start")">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
+                @if (Model.Open is null && Model.NeedsAccessCode)
+                {
+                    <div class="mb-3">
+                        <label for="quiz-access-code-@Model.QuizId" class="form-label">@T["Access code"]</label>
+                        <input type="password" id="quiz-access-code-@Model.QuizId" name="accessCode" class="form-control" autocomplete="off" data-1p-ignore data-lpignore="true" data-bwignore required aria-required="true" />
+                    </div>
+                }
+                @if (Model.Open is null && !string.IsNullOrEmpty(Model.Statement))
+                {
+                    <div class="mb-3">
+                        <p class="mb-2" id="quiz-statement-@Model.QuizId">@Model.Statement</p>
+                        <div class="form-check">
+                            <input type="checkbox" id="quiz-accept-statement-@Model.QuizId" name="acceptStatement" value="true" class="form-check-input" required aria-required="true" aria-describedby="quiz-statement-@Model.QuizId" />
+                            <label for="quiz-accept-statement-@Model.QuizId" class="form-check-label">@T["I accept this statement"]</label>
+                        </div>
+                    </div>
+                }
                 <button type="submit" class="btn btn-primary">@(Model.Open is not null ? T["Continue Your Attempt"] : Model.Attempts.Count > 0 ? T["Attempt Again"] : T["Start the Quiz"])</button>
             </form>
         }

@@ -113,12 +113,13 @@ public sealed class SurveyInvitationLinkController : Controller
     /// Starts the invited person's response, or resumes it when it is in progress.
     /// </summary>
     /// <param name="token">The invitation token.</param>
+    /// <param name="acceptStatement">Whether the respondent accepted the survey's statement.</param>
     /// <returns>A redirect to the response, or a page that says why the link does not work.</returns>
     [HttpPost("s/i/{token}")]
     [ActionName(nameof(Open))]
     [ValidateAntiForgeryToken]
     [RateLimitGroup(RespondRateLimitsStartup.RateLimitGroup)]
-    public async Task<IActionResult> Start(string token)
+    public async Task<IActionResult> Start(string token, bool acceptStatement = false)
     {
         var (invitation, survey, collector) = await FindAsync(token);
 
@@ -146,11 +147,12 @@ public sealed class SurveyInvitationLinkController : Controller
             InvitationToken = token,
             Identity = identity,
             Context = SurveyInvitationService.ContextOf(invitation),
+            StatementAccepted = acceptStatement,
             // The invitation collector's language, when set, as on a public link; otherwise the visitor's.
             Culture = !string.IsNullOrWhiteSpace(collector.Culture) ? collector.Culture : System.Globalization.CultureInfo.CurrentUICulture.Name,
         });
 
-        if (result.Error == SurveyErrorCode.CaptchaRequired)
+        if (result.Error is SurveyErrorCode.CaptchaRequired or SurveyErrorCode.StatementNotAccepted)
         {
             return View("Open", OpenModel(token, survey, invitation, _messages.For(result.Error)));
         }
@@ -174,6 +176,7 @@ public sealed class SurveyInvitationLinkController : Controller
             Token = token,
             Title = survey.Title,
             NeedsCaptcha = NeedsCaptcha(survey, invitation) && _serviceProvider.GetService<ReCaptchaService>() is not null,
+            Statement = string.IsNullOrWhiteSpace(survey.Access?.Statement) ? null : survey.Access.Statement,
             Message = message,
         };
 

@@ -54,6 +54,16 @@ public class QuizPanelViewModel
     public bool CanStart { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a new attempt asks for the quiz's access code.
+    /// </summary>
+    public bool NeedsAccessCode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the honor statement the learner accepts before a new attempt, or <see langword="null"/>.
+    /// </summary>
+    public string Statement { get; set; }
+
+    /// <summary>
     /// Gets or sets what the quiz's review settings let the learner see of each attempt now, by response id. The score
     /// and whether the attempt passed show only when it includes <see cref="ReviewShows.Score"/>.
     /// </summary>

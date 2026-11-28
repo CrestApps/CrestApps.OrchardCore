@@ -312,6 +312,7 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 Context = request.Context,
                 Override = surveyOverride,
                 Password = request.Password,
+                StatementAccepted = request.StatementAccepted,
                 UtcNow = now,
                 IsTest = isTest,
             };
@@ -359,6 +360,12 @@ public sealed partial class SurveyResponseService : ISurveyResponseService
                 if (survey.Access?.CollectIpAddress == true)
                 {
                     response.IpAddress = identity.IpAddress;
+                }
+
+                // When the respondent accepted the survey's statement; an anonymous response keeps no such time.
+                if (request.StatementAccepted && !isTest && !string.IsNullOrWhiteSpace(survey.Access?.Statement))
+                {
+                    response.StatementAcceptedUtc = now;
                 }
             }
 

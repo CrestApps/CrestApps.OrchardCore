@@ -85,6 +85,12 @@ public sealed class SurveyResponse : CatalogItem
     public DateTime StartedUtc { get; set; }
 
     /// <summary>
+    /// Gets or sets when the respondent accepted the survey's statement, in UTC, or <see langword="null"/> when the survey
+    /// asked for none (or the response is anonymous, which keeps no time that could name its respondent).
+    /// </summary>
+    public DateTime? StatementAcceptedUtc { get; set; }
+
+    /// <summary>
     /// Gets or sets when the respondent last saved, in UTC.
     /// </summary>
     public DateTime LastActivityUtc { get; set; }

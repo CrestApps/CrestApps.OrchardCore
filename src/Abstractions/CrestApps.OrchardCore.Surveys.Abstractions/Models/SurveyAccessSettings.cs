@@ -56,6 +56,13 @@ public sealed class SurveyAccessSettings
     public bool RequireCaptcha { get; set; }
 
     /// <summary>
+    /// Gets or sets a statement respondents must accept before they start, such as an honor statement or a consent, or
+    /// <see langword="null"/> for none. A start that doesn't accept it is refused with
+    /// <see cref="SurveyErrorCode.StatementNotAccepted"/>.
+    /// </summary>
+    public string Statement { get; set; }
+
+    /// <summary>
     /// Gets or sets after how many idle hours an unfinished response is abandoned.
     /// </summary>
     public int IncompleteExpiryHours { get; set; } = 168;

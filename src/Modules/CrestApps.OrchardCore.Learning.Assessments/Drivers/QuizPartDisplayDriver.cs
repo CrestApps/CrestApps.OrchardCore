@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
 using CrestApps.OrchardCore.Learning.Models;
@@ -11,6 +12,7 @@ using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
 using OrchardCore.DisplayManagement.Views;
+using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Drivers;
 
@@ -20,13 +22,18 @@ namespace CrestApps.OrchardCore.Learning.Assessments.Drivers;
 /// or the published version) leaves some score with no pass decision: no pass mark, and a score band that neither passes
 /// nor fails or no band at all for that score, so a graded attempt with that score completes it. It also warns when the
 /// quiz counts toward the course grade but its survey is anonymous: an anonymous quiz records the completion only, so it
-/// stays out of the course grade.
+/// stays out of the course grade. It edits the quiz's access code and honor statement, which Surveys enforces on the
+/// start of an attempt (<see cref="QuizStartSettings"/>).
 /// </summary>
 internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
 {
     private readonly ISurveyManager _surveyManager;
     private readonly ISurveyVersionCache _versions;
     private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly QuizStartSettings _startSettings;
+
+    // The longest honor statement, as long as a survey's statement may be.
+    private const int MaxStatementLength = 2000;
 
     internal readonly IStringLocalizer S;
 
@@ -36,16 +43,19 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
     /// <param name="surveyManager">The survey manager.</param>
     /// <param name="versions">The survey versions, for the published one.</param>
     /// <param name="contentDefinitionManager">The content definition manager, for the quiz's default completion mode.</param>
+    /// <param name="startSettings">The access code and honor statement of quizzes.</param>
     /// <param name="stringLocalizer">The localizer.</param>
     public QuizPartDisplayDriver(
         ISurveyManager surveyManager,
         ISurveyVersionCache versions,
         IContentDefinitionManager contentDefinitionManager,
+        QuizStartSettings startSettings,
         IStringLocalizer<QuizPartDisplayDriver> stringLocalizer)
     {
         _surveyManager = surveyManager;
         _versions = versions;
         _contentDefinitionManager = contentDefinitionManager;
+        _startSettings = startSettings;
         S = stringLocalizer;
     }
 
@@ -56,6 +66,8 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
             model.Survey = string.IsNullOrEmpty(part.SurveyId) ? null : await _surveyManager.FindByIdAsync(part.SurveyId);
             model.QuestionCount = model.Survey?.Draft?.Pages.Sum(page => page.Questions.Count(question => string.IsNullOrEmpty(question.PoolId)) + page.Pools.Sum(pool => pool.DrawCount)) ?? 0;
             model.GradingMethod = part.GradingMethod;
+            model.HasAccessCode = await _startSettings.HasAccessCodeAsync(model.Survey);
+            model.HonorStatement = model.Survey?.Access?.Statement;
             model.NoPassDecision = model.Survey is { } survey
                 && string.Equals(await CompletionModeAsync(part), CompletionModes.Passed, StringComparison.Ordinal)
                 && (!DecidesPass(survey.Draft) || (await PublishedDefinitionAsync(survey) is { } published && !DecidesPass(published)));
@@ -116,9 +128,20 @@ internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
     {
         var model = new QuizPartViewModel();
 
-        await context.Updater.TryUpdateModelAsync(model, Prefix, item => item.GradingMethod);
+        await context.Updater.TryUpdateModelAsync(model, Prefix, item => item.GradingMethod, item => item.AccessCode, item => item.RemoveAccessCode, item => item.HonorStatement);
 
         part.GradingMethod = Enum.IsDefined(model.GradingMethod) ? model.GradingMethod : GradingMethod.Highest;
+
+        if (model.HonorStatement?.Trim().Length > MaxStatementLength)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.HonorStatement), S["The honor statement can't be longer than {0} characters.", MaxStatementLength]);
+        }
+        else if (!string.IsNullOrEmpty(part.SurveyId) && await _surveyManager.FindByIdAsync(part.SurveyId) is { } survey)
+        {
+            // The access code is the password of the survey's link a learner's start runs on; Surveys checks it, with its
+            // limit on wrong tries, and the honor statement before it.
+            await _startSettings.SaveAsync(survey, model.AccessCode, model.RemoveAccessCode, model.HonorStatement);
+        }
 
         return Edit(part, context);
     }

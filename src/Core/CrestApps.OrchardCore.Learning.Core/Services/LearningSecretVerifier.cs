@@ -1,3 +1,5 @@
+using CrestApps.OrchardCore.Core.Security;
+
 namespace CrestApps.OrchardCore.Learning.Core.Services;
 
 /// <summary>
@@ -22,14 +24,14 @@ public enum SecretCheck
 public sealed class LearningSecretVerifier
 {
     private readonly LearningSecretStore _store;
-    private readonly LearningSecretAttempts _attempts;
+    private readonly SecretAttemptLimiter _attempts;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="LearningSecretVerifier"/> class.
     /// </summary>
     /// <param name="store">The secrets.</param>
     /// <param name="attempts">The limit on wrong tries.</param>
-    public LearningSecretVerifier(LearningSecretStore store, LearningSecretAttempts attempts)
+    public LearningSecretVerifier(LearningSecretStore store, SecretAttemptLimiter attempts)
     {
         _store = store;
         _attempts = attempts;
@@ -64,20 +66,23 @@ public sealed class LearningSecretVerifier
             return SecretCheck.Accepted;
         }
 
-        if (await _attempts.IsLockedOutAsync(kind, userId, ownerId, cancellationToken))
+        if (await _attempts.IsLockedOutAsync(AttemptScope(kind), ownerId, userId, cancellationToken))
         {
             return SecretCheck.LockedOut;
         }
 
         if (!EnrollmentKeys.Verify(secret?.Trim(), stored.Hash))
         {
-            await _attempts.RecordFailureAsync(kind, userId, ownerId, cancellationToken);
+            await _attempts.RecordFailureAsync(AttemptScope(kind), ownerId, userId, cancellationToken);
 
             return SecretCheck.Rejected;
         }
 
-        await _attempts.ResetAsync(kind, userId, ownerId, cancellationToken);
+        await _attempts.ResetAsync(AttemptScope(kind), ownerId, userId, cancellationToken);
 
         return SecretCheck.Accepted;
     }
+
+    private static string AttemptScope(string kind)
+        => "Learning:" + kind;
 }

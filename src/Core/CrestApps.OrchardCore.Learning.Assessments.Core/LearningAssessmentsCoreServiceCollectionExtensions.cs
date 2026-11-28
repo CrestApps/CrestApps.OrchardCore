@@ -1,9 +1,8 @@
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
-using CrestApps.OrchardCore.Learning.Assessments.Core.Upgrades;
 using CrestApps.OrchardCore.Learning.Core.Surveys;
-using CrestApps.OrchardCore.YesSql.Core.Upgrades;
+using CrestApps.OrchardCore.Learning.Surveys.Core;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.Localization;
 
@@ -26,11 +25,12 @@ public static class LearningAssessmentsCoreServiceCollectionExtensions
         services.TryAddScoped<GradeScaleStore>();
         services.TryAddScoped<GradingScope>();
         services.TryAddScoped<GradingQueue>();
+        services.TryAddScoped<QuizStartSettings>();
+        services.TryAddScoped<AnonymousCourseSurveyCompletions>();
         services.AddGradingQueueSource<QuizResponseGradingQueueSource>();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ILearningSurveyItemResultProvider, QuizResultProvider>());
         services.AddSurveyAccessProvider<AssessmentsSurveyAccessProvider>();
         services.AddSurveyScoreChangeCheck<AssessmentsScoreChangeCheck>();
-        services.AddResumableStep<LegacyQuizUpgradeStep>();
 
         services.AddCourseItemKind(AssessmentsConstants.QuizKind, kind =>
         {

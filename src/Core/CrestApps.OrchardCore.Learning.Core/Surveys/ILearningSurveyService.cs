@@ -48,6 +48,22 @@ public interface ILearningSurveyService
     Task<SurveyStartResult> StartAsync(ClaimsPrincipal user, ContentItem item, string surveyId, string returnUrl, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Starts or resumes the learner's response to the survey of a course item with what the learner typed on the start
+    /// form: the access code (the password of the survey's link, which Surveys checks with its limit on wrong tries) and
+    /// whether they accepted the survey's statement, such as an honor statement. A completed response of a course survey
+    /// whose version allows changing answers is reopened instead of starting another.
+    /// </summary>
+    /// <param name="user">The learner.</param>
+    /// <param name="item">The course item.</param>
+    /// <param name="surveyId">The survey of the item.</param>
+    /// <param name="returnUrl">The local URL the ending links back to.</param>
+    /// <param name="password">The access code entered, or <see langword="null"/>.</param>
+    /// <param name="statementAccepted">Whether the learner accepted the survey's statement.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The result: the response and, for an anonymous survey, the resume token.</returns>
+    Task<SurveyStartResult> StartAsync(ClaimsPrincipal user, ContentItem item, string surveyId, string returnUrl, string password, bool statementAccepted, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Tells whether the learner may start a new response to the survey of a course item now, and how many attempts are
     /// left, with the access rules Surveys runs on a start (limits with their counting mode and accommodations
     /// included) and the same request <see cref="StartAsync"/> makes. Nothing is started.

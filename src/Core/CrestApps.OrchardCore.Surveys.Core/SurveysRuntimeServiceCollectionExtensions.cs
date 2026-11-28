@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Core.Security;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Formulas;
 using CrestApps.OrchardCore.Surveys.Core.Logic;
@@ -72,10 +73,12 @@ public static class SurveysRuntimeServiceCollectionExtensions
         services.AddHttpContextAccessor();
         services.TryAddScoped<SurveyResumeCookies>();
 
+        services.TryAddScoped<SecretAttemptLimiter>();
         services.AddSurveyAccessRule<SurveyStatusRule>()
             .AddSurveyAccessRule<AvailabilityWindowRule>()
             .AddSurveyAccessRule<WeeklyScheduleRule>()
             .AddSurveyAccessRule<AudienceRule>()
+            .AddSurveyAccessRule<StatementRule>()
             .AddSurveyAccessRule<PasswordRule>()
             .AddSurveyAccessRule<InvitationRule>()
             .AddSurveyAccessRule<RespondentLimitsRule>()

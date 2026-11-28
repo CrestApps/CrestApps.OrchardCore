@@ -26,6 +26,9 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
     private readonly ILocalClock _localClock;
     private readonly IServiceProvider _serviceProvider;
 
+    // The longest statement respondents are asked to accept.
+    private const int MaxStatementLength = 2000;
+
     internal readonly IStringLocalizer S;
 
     public SurveyAccessDisplayDriver(
@@ -145,6 +148,15 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
         }
 
         access.RequireCaptcha = model.RequireCaptcha;
+
+        var statement = model.Statement?.Trim();
+
+        if (statement?.Length > MaxStatementLength)
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Statement), S["The statement can't be longer than {0} characters.", MaxStatementLength]);
+        }
+
+        access.Statement = string.IsNullOrEmpty(statement) ? null : statement;
         access.IncompleteExpiryHours = Math.Max(1, model.IncompleteExpiryHours);
         var floor = await FloorAsync();
 
@@ -199,6 +211,7 @@ internal sealed class SurveyAccessDisplayDriver : DisplayDriver<Survey>
         model.Uniqueness = limits.Uniqueness;
         model.MaxResponses = access.MaxResponses;
         model.RequireCaptcha = access.RequireCaptcha;
+        model.Statement = access.Statement;
         model.IncompleteExpiryHours = access.IncompleteExpiryHours;
         model.MinimumGroupSizeFloor = await FloorAsync();
         model.MinimumGroupSize = Math.Max(access.MinimumGroupSize, model.MinimumGroupSizeFloor);

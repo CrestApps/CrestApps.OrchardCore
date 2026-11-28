@@ -1,9 +1,7 @@
 using CrestApps.OrchardCore.Learning.Assessments.Core.Indexes;
-using CrestApps.OrchardCore.Learning.Assessments.Core.Upgrades;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
-using CrestApps.OrchardCore.YesSql.Core.Upgrades;
 using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Metadata.Settings;
 using OrchardCore.Data.Migration;
@@ -13,29 +11,25 @@ using OrchardCore.Title.Models;
 namespace CrestApps.OrchardCore.Learning.Assessments.Migrations;
 
 /// <summary>
-/// Defines the quiz part and the quiz course item type, and the grade scale index. Version 4 upgrades a site from the
-/// first Learning release (version 3), where quizzes drew content item questions from question banks.
+/// Defines the quiz part and the quiz course item type, and the grade scale index. Learning is new in 3.0.0, so no
+/// stable release needs an upgrade: a site from a preview built before quizzes moved to Surveys is set up again.
 /// </summary>
 internal sealed class AssessmentsMigrations : DataMigration
 {
     private readonly IContentDefinitionManager _contentDefinitionManager;
     private readonly CourseListSynchronizer _courseListSynchronizer;
-    private readonly ResumableSteps _resumableSteps;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AssessmentsMigrations"/> class.
     /// </summary>
     /// <param name="contentDefinitionManager">The content definition manager.</param>
     /// <param name="courseListSynchronizer">The course list synchronizer.</param>
-    /// <param name="resumableSteps">The resumable steps, which finish an upgrade in the background.</param>
     public AssessmentsMigrations(
         IContentDefinitionManager contentDefinitionManager,
-        CourseListSynchronizer courseListSynchronizer,
-        ResumableSteps resumableSteps)
+        CourseListSynchronizer courseListSynchronizer)
     {
         _contentDefinitionManager = contentDefinitionManager;
         _courseListSynchronizer = courseListSynchronizer;
-        _resumableSteps = resumableSteps;
     }
 
     /// <summary>
@@ -67,47 +61,7 @@ internal sealed class AssessmentsMigrations : DataMigration
 
         await _courseListSynchronizer.SynchronizeAsync();
 
-        // Version 4 is the first one on Surveys: versions 1 to 3 were the first release, which UpdateFrom3Async upgrades.
-        return 4;
-    }
-
-    /// <summary>
-    /// Upgrades a site from the first Learning release: removes the question bank, the 13 question types, their parts,
-    /// questions and the attempt tables, and gives every quiz a scored survey with its pass mark, time limit, attempt
-    /// limit and window. The questions are not carried over: instructors add them again in each quiz's survey.
-    /// </summary>
-    /// <returns>The migration version.</returns>
-    public async Task<int> UpdateFrom3Async()
-    {
-        // The index tables of the first release's attempts, attempt items, overrides, question sources and attempt
-        // deadlines. Learning is new in 3.0.0, so no stable release created them.
-        await SchemaBuilder.DropTableAsync("Learning_AssessmentAttemptIndex");
-        await SchemaBuilder.DropTableAsync("Learning_AttemptItemIndex");
-        await SchemaBuilder.DropTableAsync("Learning_AssessmentOverrideIndex");
-        await SchemaBuilder.DropTableAsync("QuestionSourceIndex");
-        await SchemaBuilder.DropTableAsync("LearningAttemptDeadlines_LeasedWorkItemIndex");
-
-        // The items of the removed types are deleted, and the quizzes given their surveys, in the background a batch at a
-        // time (LegacyQuizUpgradeStep), so the migration never reads every item at once.
-        foreach (var type in LegacyQuizUpgrade.RemovedContentTypes)
-        {
-            if (await _contentDefinitionManager.GetTypeDefinitionAsync(type) is not null)
-            {
-                await _contentDefinitionManager.DeleteTypeDefinitionAsync(type);
-            }
-        }
-
-        foreach (var part in LegacyQuizUpgrade.RemovedContentParts)
-        {
-            if (await _contentDefinitionManager.GetPartDefinitionAsync(part) is not null)
-            {
-                await _contentDefinitionManager.DeletePartDefinitionAsync(part);
-            }
-        }
-
-        await DefineQuizPartAsync();
-        await _resumableSteps.RequestAsync(LegacyQuizUpgradeStep.StepName);
-
+        // Version 4 is the first one on Surveys: versions 1 to 3 were previews before quizzes moved to Surveys.
         return 4;
     }
 
