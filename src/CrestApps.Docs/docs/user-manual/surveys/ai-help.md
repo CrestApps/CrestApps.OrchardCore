@@ -25,7 +25,7 @@ The summary reads the latest answers and never names a respondent. Check it agai
 
 ## Translate with AI
 
-In the survey's menu, select **Translate with AI**, pick the language in **Translate into**, and select **Translate**. Tick **Replace existing translations** to translate every text again. Review the result on the **Translations** page (in the survey's side menu), then publish.
+In the survey's menu, select **Translate with AI**, pick the language in **Translate into**, and select **Translate**. Tick **Replace existing translations** to translate every text again. Review the result on the **Translations** page (in the survey's side menu), then publish. If someone else changes the survey while it is being translated, nothing is saved; select **Translate** again.
 
 ## Suggest a score
 
@@ -33,4 +33,4 @@ On a grading page, select **Suggest a score with AI** next to an answer. The poi
 
 ## Ask the assistant
 
-When your site has an AI assistant with the survey tools, you can ask it to list your surveys, sum up a survey's results, or draft a new survey for you to review. A drafted survey is never published by the assistant.
+When your site has an AI assistant with the survey tools, you can ask it to list your surveys, sum up a survey's results, or draft a new survey for you to review. Results cover the published version. An anonymous survey shows no response count until it has enough responses to keep people from being singled out. A drafted survey is never published by the assistant.

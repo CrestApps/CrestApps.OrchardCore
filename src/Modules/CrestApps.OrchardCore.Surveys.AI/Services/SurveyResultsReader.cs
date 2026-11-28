@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using OrchardCore.Settings;
@@ -99,7 +100,8 @@ public sealed class SurveyResultsReader
             return "The survey has not been published, so it has no results.";
         }
 
-        var filter = new SurveyAnswerFilter { SurveyId = survey.ItemId };
+        // Only the published version, as the results say: older versions may ask other questions.
+        var filter = new SurveyAnswerFilter { SurveyId = survey.ItemId, VersionNumbers = [version.Number] };
         var responses = await _aggregates.CountResponsesAsync(filter, cancellationToken);
 
         // The survey's minimum group size, never below the floor of the site settings.
@@ -133,7 +135,7 @@ public sealed class SurveyResultsReader
             }
 
             var summary = await analyzer.SummarizeAsync(question, context, cancellationToken);
-            var choices = (question.Choices ?? []).Where(choice => choice is not null).ToDictionary(choice => choice.Id ?? string.Empty, choice => choice.Text, StringComparer.Ordinal);
+            var choices = SurveyChoiceSource.GetChoices(question, version.Definition).Where(choice => choice is not null).ToDictionary(choice => choice.Id ?? string.Empty, choice => choice.Text, StringComparer.Ordinal);
             var samples = includeSamples
                 ? (summary.TextSamples ?? []).Select(SurveyRespondentText.Clean).Where(text => text.Length > 0).Take(MaxTextSamples).ToList()
                 : null;

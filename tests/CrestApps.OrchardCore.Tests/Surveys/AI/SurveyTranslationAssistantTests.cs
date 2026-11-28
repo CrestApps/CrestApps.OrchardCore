@@ -51,10 +51,10 @@ public sealed class SurveyTranslationAssistantTests
         var assistant = new SurveyTranslationAssistant(completer.Object, surveys.Object, authorization.Object, sanitizer.Object);
 
         // Act
-        var written = await assistant.TranslateAsync(new ClaimsPrincipal(new ClaimsIdentity("Test")), "s1", "fr", overwrite: false, TestContext.Current.CancellationToken);
+        var result = await assistant.TranslateAsync(new ClaimsPrincipal(new ClaimsIdentity("Test")), "s1", "fr", overwrite: false, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.True(written > 0);
+        Assert.True(result.Written > 0);
         Assert.Equal("Enquête existante", saved.Translations["fr"][SurveyTextKeys.SurveyTitle]);
         Assert.Equal("FR Yes", saved.Translations["fr"][SurveyTextKeys.Choice("q1", "c1")]);
         Assert.False(saved.Translations["fr"].ContainsKey("title:unknown"));
@@ -62,7 +62,68 @@ public sealed class SurveyTranslationAssistantTests
     }
 
     [Fact]
-    public async Task TranslateAsync_WhenTheUserMayNotManageTheSurvey_ReturnsNull()
+    public async Task TranslateAsync_WhenTheSurveyChangedWhileTheModelRan_SavesNothing()
+    {
+        // Arrange: round 12 M9. A co-author saves the draft while the model translates; the assistant reads the survey
+        // again before it saves, and the manager refuses a save whose expected stamp is no longer the survey's.
+        var loadedStamp = new DateTime(2026, 11, 27, 10, 0, 0, DateTimeKind.Utc);
+        var loaded = new Survey { ItemId = "s1", Name = "customer", Draft = TranslationsDefinitions.Create(), DraftModifiedUtc = loadedStamp };
+        var current = new Survey { ItemId = "s1", Name = "customer", Draft = TranslationsDefinitions.Create(), DraftModifiedUtc = loadedStamp.AddMinutes(2) };
+        current.Draft.Title = "Changed by a co-author";
+        var modelRan = false;
+
+        SurveyDefinition saved = null;
+        var surveys = new Mock<ISurveyManager>();
+        surveys.Setup(manager => manager.FindByIdAsync("s1", It.IsAny<CancellationToken>())).ReturnsAsync(() => modelRan ? current : loaded);
+        surveys.Setup(manager => manager.SaveDraftAsync(It.IsAny<Survey>(), It.IsAny<SurveyDefinition>(), It.IsAny<DateTime?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Survey survey, SurveyDefinition draft, DateTime? expected, CancellationToken _) =>
+            {
+                var stored = modelRan ? current : loaded;
+
+                if (expected is { } stamp && stored.DraftModifiedUtc != stamp)
+                {
+                    return SurveyErrorCode.Busy;
+                }
+
+                saved = draft;
+
+                return SurveyErrorCode.None;
+            });
+
+        var authorization = new Mock<ISurveyAuthorizationService>();
+        authorization.Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<Survey>(), SurveyOperation.Manage, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+
+        var completer = new Mock<ISurveysAICompleter>();
+        completer.Setup(service => service.CompleteAsync(It.IsAny<string>(), It.IsAny<IDictionary<string, object>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, IDictionary<string, object> _, string input, CancellationToken _) =>
+            {
+                modelRan = true;
+                var output = new JsonObject();
+
+                foreach (var (key, value) in JsonNode.Parse(input).AsObject())
+                {
+                    output[key] = "FR " + value.GetValue<string>();
+                }
+
+                return output.ToJsonString();
+            });
+
+        var sanitizer = new Mock<IHtmlSanitizerService>();
+        sanitizer.Setup(service => service.Sanitize(It.IsAny<string>())).Returns<string>(html => html);
+
+        var assistant = new SurveyTranslationAssistant(completer.Object, surveys.Object, authorization.Object, sanitizer.Object);
+
+        // Act
+        var result = await assistant.TranslateAsync(new ClaimsPrincipal(new ClaimsIdentity("Test")), "s1", "fr", overwrite: false, TestContext.Current.CancellationToken);
+
+        // Assert: nothing overwrote the co-author's draft, and the caller is told why.
+        Assert.Null(saved);
+        Assert.Equal(SurveyErrorCode.Busy, result.Error);
+        Assert.Equal("Changed by a co-author", current.Draft.Title);
+    }
+
+    [Fact]
+    public async Task TranslateAsync_WhenTheUserMayNotManageTheSurvey_ReturnsNotFound()
     {
         // Arrange
         var survey = new Survey { ItemId = "s1", Draft = TranslationsDefinitions.Create() };
@@ -72,9 +133,9 @@ public sealed class SurveyTranslationAssistantTests
         var assistant = new SurveyTranslationAssistant(new Mock<ISurveysAICompleter>().Object, surveys.Object, new Mock<ISurveyAuthorizationService>().Object, new Mock<IHtmlSanitizerService>().Object);
 
         // Act
-        var written = await assistant.TranslateAsync(new ClaimsPrincipal(), "s1", "fr", overwrite: true, TestContext.Current.CancellationToken);
+        var result = await assistant.TranslateAsync(new ClaimsPrincipal(), "s1", "fr", overwrite: true, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.Null(written);
+        Assert.Equal(SurveyErrorCode.NotFound, result.Error);
     }
 }

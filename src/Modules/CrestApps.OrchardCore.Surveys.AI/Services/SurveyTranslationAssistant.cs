@@ -4,13 +4,16 @@ using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Translations;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Infrastructure.Html;
 
 namespace CrestApps.OrchardCore.Surveys.AI.Services;
 
 /// <summary>
 /// Translates the texts of a survey's draft into a culture with AI and writes them into its translations, for an author
-/// to review on the translations page before publishing.
+/// to review on the translations page before publishing. The model can take minutes, so the survey is read again before
+/// the translations are saved, and they are saved only when nobody changed the draft in the meantime.
 /// </summary>
 public sealed class SurveyTranslationAssistant
 {
@@ -48,16 +51,18 @@ public sealed class SurveyTranslationAssistant
     /// <param name="culture">The culture.</param>
     /// <param name="overwrite">Whether existing translations are replaced; otherwise only missing ones are filled.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>How many texts were written, or <see langword="null"/> when the survey is not found, not allowed or no model is set up.</returns>
-    public async Task<int?> TranslateAsync(ClaimsPrincipal user, string surveyId, string culture, bool overwrite, CancellationToken cancellationToken)
+    /// <returns>How many texts were written, or why nothing was saved.</returns>
+    public async Task<SurveyTranslationResult> TranslateAsync(ClaimsPrincipal user, string surveyId, string culture, bool overwrite, CancellationToken cancellationToken)
     {
         var survey = string.IsNullOrEmpty(surveyId) ? null : await _surveys.FindByIdAsync(surveyId, cancellationToken);
 
         if (survey is null || string.IsNullOrWhiteSpace(culture) || !await _authorization.AuthorizeAsync(user, survey, SurveyOperation.Manage, cancellationToken))
         {
-            return null;
+            return new SurveyTranslationResult { Error = SurveyErrorCode.NotFound };
         }
 
+        // The draft the model translates: the translations are saved only against this version of it.
+        var stamp = survey.DraftModifiedUtc;
         var draft = SurveyDefinitionCloner.Clone(survey.Draft) ?? new SurveyDefinition();
         var existing = SurveyTranslations.Texts(draft, culture);
         var entries = SurveyTextCatalog.Describe(draft)
@@ -84,7 +89,7 @@ public sealed class SurveyTranslationAssistant
 
             if (output is null)
             {
-                return null;
+                return new SurveyTranslationResult { Error = SurveyErrorCode.NotAvailableNow };
             }
 
             foreach (var (key, value) in SurveysAIJson.ReadObject(output) ?? [])
@@ -98,13 +103,58 @@ public sealed class SurveyTranslationAssistant
             }
         }
 
-        var written = SurveyTranslations.Merge(draft, culture, translated, overwrite);
-
-        if (written > 0)
+        if (translated.Count == 0)
         {
-            await _surveys.SaveDraftAsync(survey, draft, cancellationToken: cancellationToken);
+            return new SurveyTranslationResult();
         }
 
-        return written;
+        return await SaveAsync(surveyId, stamp, culture, translated, overwrite, cancellationToken);
+    }
+
+    // Reads the survey again (in a child scope inside a shell, so the read sees what other requests saved while the model
+    // ran rather than this scope's copy), merges the translations into its current draft and saves them with the stamp
+    // of the draft that was translated: a co-author's edit, a publish or an access change made meanwhile is never
+    // overwritten, the caller is told to try again.
+    private async Task<SurveyTranslationResult> SaveAsync(string surveyId, DateTime? stamp, string culture, Dictionary<string, string> translated, bool overwrite, CancellationToken cancellationToken)
+    {
+        if (ShellScope.Current is null)
+        {
+            return await SaveAsync(_surveys, surveyId, stamp, culture, translated, overwrite, cancellationToken);
+        }
+
+        SurveyTranslationResult result = null;
+
+        await ShellScope.UsingChildScopeAsync(async scope =>
+            result = await SaveAsync(scope.ServiceProvider.GetRequiredService<ISurveyManager>(), surveyId, stamp, culture, translated, overwrite, cancellationToken));
+
+        return result;
+    }
+
+    private static async Task<SurveyTranslationResult> SaveAsync(ISurveyManager surveys, string surveyId, DateTime? stamp, string culture, Dictionary<string, string> translated, bool overwrite, CancellationToken cancellationToken)
+    {
+        var current = await surveys.FindByIdAsync(surveyId, cancellationToken);
+
+        if (current is null)
+        {
+            return new SurveyTranslationResult { Error = SurveyErrorCode.NotFound };
+        }
+
+        // A draft never saved has no stamp, and the manager has nothing to compare it with.
+        if (stamp is null && current.DraftModifiedUtc is not null)
+        {
+            return new SurveyTranslationResult { Error = SurveyErrorCode.Busy };
+        }
+
+        var draft = SurveyDefinitionCloner.Clone(current.Draft) ?? new SurveyDefinition();
+        var written = SurveyTranslations.Merge(draft, culture, translated, overwrite);
+
+        if (written == 0)
+        {
+            return new SurveyTranslationResult();
+        }
+
+        var error = await surveys.SaveDraftAsync(current, draft, stamp, cancellationToken);
+
+        return new SurveyTranslationResult { Error = error, Written = error == SurveyErrorCode.None ? written : 0 };
     }
 }

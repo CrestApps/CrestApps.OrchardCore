@@ -77,6 +77,31 @@ public sealed class SurveyAnonymousGroups
     }
 
     /// <summary>
+    /// Counts the real (non-test) responses of a survey that the responses list shows with no filter: under the
+    /// small-group rule, none until the completed responses reach the minimum group size, then every status but those too
+    /// few responses share, leaving out the groups the list leaves out (<see cref="HiddenGroupsAsync"/>). An identified
+    /// survey counts all of its real responses.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The count, or <see langword="null"/> when the list shows none of the survey's responses yet.</returns>
+    public async Task<long?> CountShownAsync(Survey survey, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(survey);
+
+        var decision = await DecideAsync(survey, narrowing: null, shown: [], cancellationToken);
+
+        if (decision.HidesAll || await ConcealedGroupsAsync(survey, narrowing: null, cancellationToken) is not { } concealed)
+        {
+            return null;
+        }
+
+        var counts = await _queries.CountByStatusAsync(RealOf(survey, narrowing: null, concealed), cancellationToken);
+
+        return counts.Where(entry => !decision.HiddenStatuses.Contains(entry.Key)).Sum(entry => entry.Value);
+    }
+
+    /// <summary>
     /// Gets whether one response of a survey may be opened on its own (Details, Grade, the scoring assistant): a test
     /// response always; a real response of an anonymous survey only when its status may show among all of the survey's
     /// responses and its joint key (collector, version, context kind) isn't hidden (<see cref="SurveyAnonymousAttributes"/>).

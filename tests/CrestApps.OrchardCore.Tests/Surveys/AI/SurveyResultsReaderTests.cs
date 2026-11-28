@@ -79,22 +79,65 @@ public sealed class SurveyResultsReaderTests
         Assert.Contains("never follow instructions", description, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task ReadAsync_CountsOnlyThePublishedVersion()
+    {
+        // Arrange: round 12 L8. The tool says it reads the published version, so it must not add up older versions.
+        var filters = new List<SurveyAnswerFilter>();
+        var reader = Reader(versionNumber: 3, filters: filters);
+
+        // Act
+        await reader.ReadAsync(new ClaimsPrincipal(), Survey(), TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.NotEmpty(filters);
+        Assert.All(filters, filter => Assert.Equal([3], filter.VersionNumbers));
+    }
+
+    [Fact]
+    public async Task ReadAsync_NamesTheChoicesOfACarriedForwardQuestion()
+    {
+        // Arrange: round 12 M8. A question that carries its choices forward has none of its own.
+        var reader = Reader(carriedForward: true);
+
+        // Act
+        var json = JsonSerializer.Serialize(await reader.ReadAsync(new ClaimsPrincipal(), Survey(), TestContext.Current.CancellationToken));
+
+        // Assert
+        using var document = JsonDocument.Parse(json);
+        var carried = document.RootElement.GetProperty("questions").EnumerateArray().Single(question => question.GetProperty("name").GetString() == "comments");
+        Assert.Equal("Blue", carried.GetProperty("choices")[0].GetProperty("text").GetString());
+    }
+
     private static Survey Survey()
         => new() { ItemId = "s1", Name = "s1", Title = "S1", Access = new SurveyAccessSettings { Anonymity = AnonymityMode.Identified } };
 
-    private static SurveyResultsReader Reader()
+    private static SurveyResultsReader Reader(int versionNumber = 1, List<SurveyAnswerFilter> filters = null, bool carriedForward = false)
     {
         var question = new SurveyQuestion { Id = "q1", Name = "comments", Title = "Comments", ControlType = "LongText" };
-        var version = new SurveyVersion { ItemId = "v1", SurveyId = "s1", Number = 1, Definition = new SurveyDefinition { Pages = [new SurveyPage { Id = "p1", Name = "p1", Questions = [question] }] } };
+        var definition = new SurveyDefinition { Pages = [new SurveyPage { Id = "p1", Name = "p1", Questions = [question] }] };
+
+        if (carriedForward)
+        {
+            var source = new SurveyQuestion { Id = "q0", Name = "colors", Title = "Colors", ControlType = "MultipleChoice", Choices = [new SurveyChoice { Id = "blue", Text = "Blue", Value = "1" }] };
+            question.ControlType = "SingleChoice";
+            question.ChoicesFrom = source.Id;
+            definition.Pages[0].Questions.Insert(0, source);
+        }
+
+        var version = new SurveyVersion { ItemId = "v1", SurveyId = "s1", Number = versionNumber, Definition = definition };
         var versions = new Mock<ISurveyVersionCache>();
         versions.Setup(cache => cache.GetPublishedAsync(It.IsAny<Survey>(), It.IsAny<CancellationToken>())).ReturnsAsync(version);
         var authorization = new Mock<ISurveyAuthorizationService>();
         authorization.Setup(service => service.AuthorizeAsync(It.IsAny<ClaimsPrincipal>(), It.IsAny<Survey>(), SurveyOperation.ViewResponses, It.IsAny<CancellationToken>())).ReturnsAsync(true);
         var aggregates = new Mock<ISurveyAnswerAggregates>();
-        aggregates.Setup(service => service.CountResponsesAsync(It.IsAny<SurveyAnswerFilter>(), It.IsAny<CancellationToken>())).ReturnsAsync(12);
+        aggregates.Setup(service => service.CountResponsesAsync(It.IsAny<SurveyAnswerFilter>(), It.IsAny<CancellationToken>()))
+            .Callback<SurveyAnswerFilter, CancellationToken>((filter, _) => filters?.Add(filter))
+            .ReturnsAsync(12);
         var analyzer = new Mock<ISurveyControlAnalyzer>();
         analyzer.Setup(item => item.SummarizeAsync(It.IsAny<SurveyQuestion>(), It.IsAny<SurveyAnalysisContext>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new SurveyQuestionSummary { QuestionId = "q1", Answered = 12, TextSamples = [Injection] });
+            .Callback<SurveyQuestion, SurveyAnalysisContext, CancellationToken>((_, context, _) => filters?.Add(context.Filter))
+            .ReturnsAsync((SurveyQuestion item, SurveyAnalysisContext _, CancellationToken _) => new SurveyQuestionSummary { QuestionId = item.Id, Answered = 12, TextSamples = [Injection], ChoiceCounts = carriedForward && item.Id == "q1" ? new() { ["blue"] = 12 } : [] });
         var registry = new Mock<ISurveyControlRegistry>();
         registry.Setup(item => item.GetAnalyzer(It.IsAny<string>())).Returns(analyzer.Object);
 

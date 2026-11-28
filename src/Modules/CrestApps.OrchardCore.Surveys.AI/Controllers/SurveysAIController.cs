@@ -185,16 +185,23 @@ public sealed class SurveysAIController : Controller
             return View(page);
         }
 
-        var written = await _translator.TranslateAsync(User, id, model.Culture, model.Overwrite, HttpContext.RequestAborted);
+        var result = await _translator.TranslateAsync(User, id, model.Culture, model.Overwrite, HttpContext.RequestAborted);
 
-        if (written is null)
+        if (result.Error == SurveyErrorCode.Busy)
+        {
+            await _notifier.ErrorAsync(H["Someone else changed this survey while it was being translated, so nothing was saved. Try again."]);
+
+            return View(page);
+        }
+
+        if (!result.Succeeded)
         {
             await _notifier.ErrorAsync(H["The survey could not be translated. Check that an AI model is set up."]);
 
             return View(page);
         }
 
-        await _notifier.SuccessAsync(H["{0} texts were translated into the draft. Review them, then publish the survey.", written.Value]);
+        await _notifier.SuccessAsync(H["{0} texts were translated into the draft. Review them, then publish the survey.", result.Written]);
 
         return RedirectToRoute("SurveysTranslations", new { id, culture = model.Culture });
     }
