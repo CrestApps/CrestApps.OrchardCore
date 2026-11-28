@@ -168,9 +168,13 @@ internal sealed class SurveyReportData
         return OwnAudiences(survey).Contains;
     }
 
-    // The audiences the survey is for: only while Who may respond is a list of audiences. The list is kept when the mode
-    // changes, and a survey now open to everyone must not still open the members of an audience it used to name.
-    private static HashSet<string> OwnAudiences(Survey survey)
+    /// <summary>
+    /// Gets the audiences a survey is for: only while Who may respond is a list of audiences. The list is kept when the
+    /// mode changes, and a survey now open to everyone must not still open the members of an audience it used to name.
+    /// </summary>
+    /// <param name="survey">The survey.</param>
+    /// <returns>The audience names.</returns>
+    internal static HashSet<string> OwnAudiences(Survey survey)
         => survey.Access is { Audience: SurveyAudienceMode.Audiences, AudienceIds: { } ids }
             ? new HashSet<string>(ids, StringComparer.Ordinal)
             : [];

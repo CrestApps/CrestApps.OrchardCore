@@ -297,6 +297,15 @@ public sealed class SurveyCollectorsController : Controller
         var collector = string.IsNullOrEmpty(collectorId) ? null : await _collectorStore.FindByIdAsync(collectorId);
         var survey = collector is null ? null : await AuthorizeSurveyAsync(collector.SurveyId);
 
+        // An invitation collector (its link, dates, password and status) is the invitations': changing it here takes the
+        // right to manage the survey's invitations too, as the invitations pages do.
+        if (survey is not null
+            && collector.Kind == SurveyCollectorKinds.Invitation
+            && !await _surveyAuthorization.AuthorizeAsync(User, survey, SurveyOperation.ManageInvitations, HttpContext.RequestAborted))
+        {
+            return (null, null);
+        }
+
         return survey is null ? (null, null) : (survey, collector);
     }
 

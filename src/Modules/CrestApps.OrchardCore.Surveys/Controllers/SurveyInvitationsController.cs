@@ -4,9 +4,12 @@ using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Invitations;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Reports;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Surveys.ViewModels;
 using CrestApps.OrchardCore.Users;
+using CrestApps.OrchardCore.Users.Core;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -35,6 +38,7 @@ public sealed class SurveyInvitationsController : Controller
     private readonly SurveyInvitationStore _invitationStore;
     private readonly SurveyInvitationService _invitations;
     private readonly ISurveyAuthorizationService _surveyAuthorization;
+    private readonly IAuthorizationService _authorizationService;
     private readonly UserManager<IUser> _userManager;
     private readonly IEnumerable<IUserAudienceService> _audiences;
     private readonly IEnumerable<ICohortService> _cohorts;
@@ -54,6 +58,7 @@ public sealed class SurveyInvitationsController : Controller
     /// <param name="invitationStore">The invitation store.</param>
     /// <param name="invitations">The invitation service.</param>
     /// <param name="surveyAuthorization">The survey authorization service.</param>
+    /// <param name="authorizationService">The authorization service, for the audiences and cohorts one may invite.</param>
     /// <param name="userManager">The user manager.</param>
     /// <param name="audiences">The user audience service, when audiences are on.</param>
     /// <param name="cohorts">The cohort service, when cohorts are on.</param>
@@ -69,6 +74,7 @@ public sealed class SurveyInvitationsController : Controller
         SurveyInvitationStore invitationStore,
         SurveyInvitationService invitations,
         ISurveyAuthorizationService surveyAuthorization,
+        IAuthorizationService authorizationService,
         UserManager<IUser> userManager,
         IEnumerable<IUserAudienceService> audiences,
         IEnumerable<ICohortService> cohorts,
@@ -84,6 +90,7 @@ public sealed class SurveyInvitationsController : Controller
         _invitationStore = invitationStore;
         _invitations = invitations;
         _surveyAuthorization = surveyAuthorization;
+        _authorizationService = authorizationService;
         _userManager = userManager;
         _audiences = audiences;
         _cohorts = cohorts;
@@ -324,7 +331,14 @@ public sealed class SurveyInvitationsController : Controller
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(model.Audience) && _audiences.FirstOrDefault() is { } audiences)
+        // Inviting an audience or a cohort opens its members (the invitation list names them), so only one the person
+        // may list anyway can be invited: the survey's own audiences, or any with Manage user audiences; a cohort with
+        // Manage cohorts.
+        if (!string.IsNullOrWhiteSpace(model.Audience) && !await CanInviteAudienceAsync(survey, model.Audience.Trim()))
+        {
+            ModelState.AddModelError(nameof(model.Audience), H["You cannot invite this audience."].Value);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.Audience) && _audiences.FirstOrDefault() is { } audiences)
         {
             var (_, members) = await audiences.GetMembersAsync(model.Audience, 0, MaxRecipients, HttpContext.RequestAborted);
 
@@ -334,7 +348,11 @@ public sealed class SurveyInvitationsController : Controller
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(model.CohortId) && _cohorts.FirstOrDefault() is { } cohorts)
+        if (!string.IsNullOrWhiteSpace(model.CohortId) && !await CanInviteCohortsAsync())
+        {
+            ModelState.AddModelError(nameof(model.CohortId), H["You cannot invite this cohort."].Value);
+        }
+        else if (!string.IsNullOrWhiteSpace(model.CohortId) && _cohorts.FirstOrDefault() is { } cohorts)
         {
             var (_, members) = await cohorts.PageMembersAsync(model.CohortId, 0, MaxRecipients, HttpContext.RequestAborted);
 
@@ -530,13 +548,16 @@ public sealed class SurveyInvitationsController : Controller
 
         if (_audiences.FirstOrDefault() is { } audiences)
         {
-            foreach (var audience in await audiences.ListAsync(HttpContext.RequestAborted))
+            var everyAudience = await CanListEveryAudienceAsync();
+            var own = SurveyReportData.OwnAudiences(survey);
+
+            foreach (var audience in (await audiences.ListAsync(HttpContext.RequestAborted)).Where(audience => everyAudience || own.Contains(audience.Name)))
             {
                 model.Audiences.Add(new SelectListItem(audience.DisplayName ?? audience.Name, audience.Name, audience.Name == model.Audience));
             }
         }
 
-        if (_cohorts.FirstOrDefault() is { } cohorts)
+        if (_cohorts.FirstOrDefault() is { } cohorts && await CanInviteCohortsAsync())
         {
             foreach (var cohort in await cohorts.ListAsync(cancellationToken: HttpContext.RequestAborted))
             {
@@ -574,6 +595,17 @@ public sealed class SurveyInvitationsController : Controller
             ReminderEveryDays = Math.Clamp(model.ReminderEveryDays, 1, 90),
         });
     }
+
+    // The audiences one may invite to a survey, by the rule of the participation report (SurveyReportData): the survey's
+    // own audiences, or any audience with Manage user audiences.
+    private async Task<bool> CanInviteAudienceAsync(Survey survey, string audienceName)
+        => SurveyReportData.OwnAudiences(survey).Contains(audienceName) || await CanListEveryAudienceAsync();
+
+    private Task<bool> CanListEveryAudienceAsync()
+        => _authorizationService.AuthorizeAsync(User, UserPermissions.ManageUserAudiences);
+
+    private Task<bool> CanInviteCohortsAsync()
+        => _authorizationService.AuthorizeAsync(User, UserPermissions.ManageCohorts);
 
     private static IEnumerable<string> Split(string value)
         => (value ?? string.Empty).Split([',', ';', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Distinct(StringComparer.OrdinalIgnoreCase);
