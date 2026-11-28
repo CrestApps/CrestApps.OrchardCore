@@ -2,7 +2,7 @@
 @model GiftCardsIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="GiftCards" title="@T["Gift cards"]" />
+    <breadcrumb name="GiftCards" title="@T["Gift Cards"]" />
 </zone>
 
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="gift-cards-filter" class="no-multisubmit">
@@ -18,7 +18,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary text-nowrap" asp-action="Create">@T["Issue gift card"]</a>
+                    <a class="btn btn-secondary text-nowrap" asp-action="Create">@T["Issue Gift Card"]</a>
                 </div>
             </div>
         </div>

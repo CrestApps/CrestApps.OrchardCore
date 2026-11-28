@@ -2,7 +2,7 @@
 @model UserAudienceMembersViewModel
 
 <zone Name="Title">
-    <breadcrumb name="UserAudiencesMembers" title="@T["People in the '{0}' audience", Model.DisplayName]">
+    <breadcrumb name="UserAudiencesMembers" title="@T["People in the '{0}' Audience", Model.DisplayName]">
         <breadcrumb-item id="UserAudiences" action="Index" controller="UserAudiences" area="CrestApps.OrchardCore.Users">@T["User Audiences"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -13,7 +13,7 @@
             <div class="col">@T.Plural(Model.Count, "1 person matches the rules today.", "{0} people match the rules today.")</div>
             @if (Model.IsDefined)
             {
-                <div class="col-auto"><a asp-action="Edit" asp-route-name="@Model.Name" class="btn btn-secondary">@T["Edit the rules"]</a></div>
+                <div class="col-auto"><a asp-action="Edit" asp-route-name="@Model.Name" class="btn btn-secondary">@T["Edit the Rules"]</a></div>
             }
         </div>
     </div>

@@ -2,7 +2,7 @@
 
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
-        <button class="btn btn-secondary" type="submit" formaction="@Url.Action("Test", "PlaidSettings", new { area = PlaidConstants.Features.Plaid })">@T["Test the connection"]</button>
+        <button class="btn btn-secondary" type="submit" formaction="@Url.Action("Test", "PlaidSettings", new { area = PlaidConstants.Features.Plaid })">@T["Test the Connection"]</button>
         <span class="hint">@(Model.HostSuppliesKeys ? T["Asks Plaid for a link token with the host's keys."] : T["Asks Plaid for a link token with the saved settings. Save your changes first."])</span>
     </div>
 </div>

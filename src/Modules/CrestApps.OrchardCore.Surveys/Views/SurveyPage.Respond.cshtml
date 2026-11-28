@@ -22,7 +22,7 @@
             </select>
             <button type="submit" class="btn btn-sm btn-secondary">@T["Go"]</button>
         </form>
-        <a class="btn btn-sm btn-outline-secondary" href="@(Url.Content("~/s/r/" + Model.Response.ItemId) + "?preview=true&hidden=" + (!Model.ShowHidden).ToString().ToLowerInvariant())">@(Model.ShowHidden ? T["Hide hidden questions"] : T["Show hidden questions"])</a>
+        <a class="btn btn-sm btn-outline-secondary" href="@(Url.Content("~/s/r/" + Model.Response.ItemId) + "?preview=true&hidden=" + (!Model.ShowHidden).ToString().ToLowerInvariant())">@(Model.ShowHidden ? T["Hide Hidden Questions"] : T["Show Hidden Questions"])</a>
     </div>
 }
 

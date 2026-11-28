@@ -1,6 +1,6 @@
 @model WorkOrderSubStatusEditViewModel
 
-<zone Name="Title"><breadcrumb name="WorkOrderSubStatusesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Sub-status"] : T["Edit {0}", Model.Name])" /></zone>
+<zone Name="Title"><breadcrumb name="WorkOrderSubStatusesEdit" title="@(string.IsNullOrEmpty(Model.Id) ? T["Add a Sub-Status"] : T["Edit {0}", Model.Name])" /></zone>
 
 <form asp-action="EditSubStatus" asp-route-id="@Model.Id" method="post" class="no-multisubmit">
     <div asp-validation-summary="All" class="text-danger"></div>

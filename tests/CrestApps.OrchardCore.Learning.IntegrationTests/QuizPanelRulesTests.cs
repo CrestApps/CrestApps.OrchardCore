@@ -107,9 +107,9 @@ public sealed class QuizPanelRulesTests
         // Assert
         Assert.Contains("data-learning-quiz-score-hidden", afterAttempt);
         Assert.DoesNotContain("text-bg-danger ms-1", afterAttempt);
-        Assert.DoesNotContain("Attempt again", afterAttempt);
+        Assert.DoesNotContain("Attempt Again", afterAttempt);
         Assert.Contains("0 attempts left", afterAttempt);
-        Assert.Contains("Attempt again", afterAccommodation);
+        Assert.Contains("Attempt Again", afterAccommodation);
         Assert.Contains("1 attempts left", afterAccommodation);
     }
 
@@ -280,7 +280,7 @@ public sealed class QuizPanelRulesTests
 
         // Assert
         Assert.Contains("You answered on", after);
-        Assert.DoesNotContain("Change your answers", after);
+        Assert.DoesNotContain("Change Your Answers", after);
     }
 
     [Fact]

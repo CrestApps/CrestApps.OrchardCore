@@ -91,7 +91,7 @@
     </div>
 
     <div class="action-bar-bottom">
-        <button class="btn btn-success" type="submit" disabled="@(!preview.CanPublish)">@T["Publish version {0}", survey.PublishedVersionNumber + 1]</button>
+        <button class="btn btn-success" type="submit" disabled="@(!preview.CanPublish)">@T["Publish Version {0}", survey.PublishedVersionNumber + 1]</button>
         <a class="btn btn-secondary cancel" role="button" asp-action="Design" asp-route-id="@survey.ItemId">@T["Back"]</a>
     </div>
 </form>

@@ -150,10 +150,10 @@
                         </div>
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             <button type="button" class="btn btn-primary" id="pb-send-regenerate" disabled title="@T["Rewrite the instructions, then generate this reply again with them"]">
-                                <i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Feedback & regenerate"]
+                                <i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Feedback & Regenerate"]
                             </button>
                             <button type="button" class="btn btn-outline-primary" id="pb-send-feedback" disabled title="@T["Rewrite the instructions and keep this reply"]">
-                                @T["Feedback only"]
+                                @T["Feedback Only"]
                             </button>
                         </div>
                         <div class="small mb-3" id="pb-status" role="status" aria-live="polite"></div>
@@ -219,9 +219,9 @@
                         </div>
                         <div class="d-flex flex-wrap gap-2 mb-2">
                             <button type="button" class="btn btn-primary" id="pb-sim-run">
-                                <i class="fa-solid fa-people-arrows me-1" aria-hidden="true"></i>@T["Run simulation"]
+                                <i class="fa-solid fa-people-arrows me-1" aria-hidden="true"></i>@T["Run Simulation"]
                             </button>
-                            <button type="button" class="btn btn-outline-secondary d-none" id="pb-sim-stop">@T["Stop after this round"]</button>
+                            <button type="button" class="btn btn-outline-secondary d-none" id="pb-sim-stop">@T["Stop After This Round"]</button>
                         </div>
                         <div class="small mb-3" id="pb-sim-status" role="status" aria-live="polite"></div>
                         <div id="pb-sim-results" class="d-flex flex-column gap-2 small"></div>
@@ -230,7 +230,7 @@
                     <div class="tab-pane fade" id="pb-pane-replay" role="tabpanel" aria-labelledby="pb-tab-replay">
                         <p class="small text-muted">@T["Replay answers every message you gave feedback on again with the current instructions, and checks each answer against that feedback. Tools are not used during a replay."]</p>
                         <button type="button" class="btn btn-primary mb-3" id="pb-replay">
-                            <i class="fa-solid fa-flask me-1" aria-hidden="true"></i>@T["Run replay"]
+                            <i class="fa-solid fa-flask me-1" aria-hidden="true"></i>@T["Run Replay"]
                         </button>
                         <div id="pb-replay-results" class="d-flex flex-column gap-2 small"></div>
                     </div>
@@ -240,7 +240,7 @@
                             <label for="pb-initial-prompt" class="form-label fw-semibold">@T["Opening message"]</label>
                             <textarea id="pb-initial-prompt" class="form-control" rows="3" placeholder="@T["Optional. What the assistant is told when it starts a conversation itself, such as an automated SMS or call."]">@Model.Session.InitialPrompt</textarea>
                             <div class="d-flex gap-2 mt-2">
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="pb-send-opening" title="@T["Send the opening message to see how the assistant opens a conversation"]">@T["Try the opening"]</button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="pb-send-opening" title="@T["Send the opening message to see how the assistant opens a conversation"]">@T["Try the Opening"]</button>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -261,7 +261,7 @@
                         <div class="fw-semibold mb-2">@T["Use the result"]</div>
                         <div class="d-flex flex-wrap gap-2 mb-3">
                             <button type="button" class="btn btn-outline-secondary btn-sm" id="pb-copy-system-message">
-                                <i class="fa-regular fa-copy me-1" aria-hidden="true"></i>@T["Copy system message"]
+                                <i class="fa-regular fa-copy me-1" aria-hidden="true"></i>@T["Copy System Message"]
                             </button>
                         </div>
 
@@ -269,7 +269,7 @@
                         {
                             <div class="border rounded p-2 mb-3">
                                 <div class="small mb-2">@T["This session is linked to the AI profile <strong>{0}</strong>.", linkedProfileTitle]</div>
-                                <button type="button" class="btn btn-primary btn-sm" id="pb-update-profile">@T["Update the AI profile"]</button>
+                                <button type="button" class="btn btn-primary btn-sm" id="pb-update-profile">@T["Update the AI Profile"]</button>
                             </div>
                         }
 
@@ -283,7 +283,7 @@
                                 <label for="pb-profile-name" class="form-label small ocat-label-required">@T["Technical name"]</label>
                                 <input id="pb-profile-name" class="form-control form-control-sm" />
                             </div>
-                            <button type="button" class="btn btn-primary btn-sm" id="pb-create-profile">@T["Create AI profile"]</button>
+                            <button type="button" class="btn btn-primary btn-sm" id="pb-create-profile">@T["Create AI Profile"]</button>
                         </div>
                         <div class="small mt-2" id="pb-finish-status" role="status" aria-live="polite"></div>
                     </div>

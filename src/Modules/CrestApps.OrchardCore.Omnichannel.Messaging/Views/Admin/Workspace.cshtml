@@ -72,7 +72,7 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li>
                             <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.All && !inbox.ShowFavorites ? "active" : string.Empty)" asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread">
-                                <span>@T["All conversations"]</span>
+                                <span>@T["All Conversations"]</span>
                                 <span class="badge rounded-pill text-bg-secondary">@inbox.AllCount</span>
                             </a>
                         </li>
@@ -80,7 +80,7 @@
                         {
                             <li>
                                 <a class="dropdown-item d-flex justify-content-between align-items-center gap-3 @(inbox.Filter == MessagingInboxFilter.Mine && !inbox.ShowFavorites ? "active" : string.Empty)" asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-show="mine" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@unread">
-                                    <span>@T["My conversations"]</span>
+                                    <span>@T["My Conversations"]</span>
                                     <span class="badge rounded-pill text-bg-secondary">@inbox.MineCount</span>
                                 </a>
                             </li>
@@ -102,7 +102,7 @@
                             <li><hr class="dropdown-divider" /></li>
                             <li><h6 class="dropdown-header">@T["Channel"]</h6></li>
                             <li>
-                                <a class="dropdown-item @(inbox.ChannelFilter is null ? "active" : string.Empty)" asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-show="@show" asp-route-unread="@unread">@T["Every channel"]</a>
+                                <a class="dropdown-item @(inbox.ChannelFilter is null ? "active" : string.Empty)" asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-show="@show" asp-route-unread="@unread">@T["Every Channel"]</a>
                             </li>
                             @foreach (var channel in inbox.Channels)
                             {
@@ -118,7 +118,7 @@
                             <li><hr class="dropdown-divider" /></li>
                             <li>
                                 <button class="dropdown-item" type="button" data-bs-toggle="collapse" data-bs-target="#messaging-inbox-narrowing" aria-controls="messaging-inbox-narrowing" aria-expanded="@(inbox.IsNarrowed ? "true" : "false")">
-                                    <i class="fa-solid fa-sliders me-2" aria-hidden="true"></i>@T["More filters"]
+                                    <i class="fa-solid fa-sliders me-2" aria-hidden="true"></i>@T["More Filters"]
                                 </button>
                             </li>
                         }
@@ -129,8 +129,8 @@
                     @* Narrows the open tab to the conversations nobody has read yet, and back. *@
                     <a class="btn btn-sm @(inbox.UnreadOnly ? "btn-primary" : "btn-outline-secondary")"
                        asp-all-route-data="@inbox.NarrowingRouteValues()" asp-route-action="Index" asp-route-show="@show" asp-route-channel="@inbox.ChannelFilter" asp-route-unread="@(inbox.UnreadOnly ? null : "true")"
-                       title="@(inbox.UnreadOnly ? T["Show all conversations"] : T["Show unread conversations only"])"
-                       aria-label="@T["Unread only"]" aria-pressed="@(inbox.UnreadOnly ? "true" : "false")" data-unread-toggle>
+                       title="@(inbox.UnreadOnly ? T["Show All Conversations"] : T["Show unread conversations only"])"
+                       aria-label="@T["Unread Only"]" aria-pressed="@(inbox.UnreadOnly ? "true" : "false")" data-unread-toggle>
                         <i class="@(inbox.UnreadOnly ? "fa-solid" : "fa-regular") fa-envelope" aria-hidden="true"></i>
                     </a>
                 }
@@ -139,12 +139,12 @@
                     @* One click to the agent's starred customers, and back to the conversations. *@
                     <a class="btn btn-sm @(inbox.ShowFavorites ? "btn-warning" : "btn-outline-secondary")"
                        asp-route-action="Index" asp-route-show="@(inbox.ShowFavorites ? null : "favorites")"
-                       title="@(inbox.ShowFavorites ? T["Back to conversations"] : T["Your favorite customers"])"
+                       title="@(inbox.ShowFavorites ? T["Back to Conversations"] : T["Your favorite customers"])"
                        aria-label="@T["Favorites"]" aria-pressed="@(inbox.ShowFavorites ? "true" : "false")" data-favorites-toggle>
                         <i class="@(inbox.ShowFavorites ? "fa-solid" : "fa-regular") fa-star" aria-hidden="true"></i>
                     </a>
                 }
-                <a class="btn btn-sm btn-primary" asp-route-action="New" title="@T["New conversation"]" aria-label="@T["New conversation"]">
+                <a class="btn btn-sm btn-primary" asp-route-action="New" title="@T["New Conversation"]" aria-label="@T["New Conversation"]">
                     <i class="fa-solid fa-pen-to-square" aria-hidden="true"></i>
                 </a>
             </div>

@@ -43,13 +43,13 @@ else
                 asp-route-returnUrl="@Model.ReturnUrl"
                 class="btn btn-danger"
                 data-url-af="RemoveUrl UnsafeUrl"
-                data-title="@T["Clear saved AI memory"]"
+                data-title="@T["Clear Saved AI Memory"]"
                 data-message="@(Model.IsOtherUser
                     ? T["Are you sure you want to permanently remove all saved AI memories for this user? This action cannot be undone."]
                     : T["Are you sure you want to permanently remove all saved AI memories for your account? This action cannot be undone."])"
                 data-ok-text="@T["Clear"]"
                 data-cancel-text="@T["Cancel"]">
-                @T["Clear saved AI memory"]
+                @T["Clear Saved AI Memory"]
             </a>
         </div>
     </div>

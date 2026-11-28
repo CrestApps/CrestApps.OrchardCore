@@ -14,7 +14,7 @@
                 @foreach (var tool in Model.Tools)
                 {
                     <a class="btn btn-sm btn-secondary" href="@Url.RouteUrl("LearningLtiDeepLinkingStart", new { courseId = Model.CourseId, toolId = tool.Value })">
-                        <i class="fa-solid fa-plug me-1" aria-hidden="true"></i>@T["Pick from {0}", tool.Text]
+                        <i class="fa-solid fa-plug me-1" aria-hidden="true"></i>@T["Pick From {0}", tool.Text]
                     </a>
                 }
             </div>

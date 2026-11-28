@@ -10,5 +10,5 @@
 }
 @if (Model.Level >= CalendarAccessLevel.Manage)
 {
-    <a class="dropdown-item" asp-controller="CalendarFeeds" asp-action="Feed" asp-route-id="@Model.Calendar.ItemId">@T["Subscription address"]</a>
+    <a class="dropdown-item" asp-controller="CalendarFeeds" asp-action="Feed" asp-route-id="@Model.Calendar.ItemId">@T["Subscription Address"]</a>
 }

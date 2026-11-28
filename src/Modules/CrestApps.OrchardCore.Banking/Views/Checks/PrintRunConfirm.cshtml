@@ -6,9 +6,9 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="ChecksPrintRunConfirm" title="@T["Print and confirm"]">
+    <breadcrumb name="ChecksPrintRunConfirm" title="@T["Print and Confirm"]">
         <breadcrumb-item id="Checks" action="Index" controller="Checks" area="CrestApps.OrchardCore.Banking" permission="@ChecksPermissions.ViewCheckRegister.Name">@T["Checks"]</breadcrumb-item>
-        <breadcrumb-item id="ChecksPrintRun" action="PrintRun" controller="Checks" area="CrestApps.OrchardCore.Banking" route-bankAccountId="@Model.BankAccountId">@T["Print queued checks"]</breadcrumb-item>
+        <breadcrumb-item id="ChecksPrintRun" action="PrintRun" controller="Checks" area="CrestApps.OrchardCore.Banking" route-bankAccountId="@Model.BankAccountId">@T["Print Queued Checks"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -45,8 +45,8 @@
     </div>
 
     <div class="action-bar-bottom">
-        <button class="btn btn-primary" type="submit">@T["Record as printed"]</button>
-        <button class="btn btn-secondary" type="submit" formaction="@Url.Action("PrintRunPdf", "Checks", new { area = "CrestApps.OrchardCore.Banking" })" formtarget="_blank">@T["Download the checks"]</button>
+        <button class="btn btn-primary" type="submit">@T["Record as Printed"]</button>
+        <button class="btn btn-secondary" type="submit" formaction="@Url.Action("PrintRunPdf", "Checks", new { area = "CrestApps.OrchardCore.Banking" })" formtarget="_blank">@T["Download the Checks"]</button>
         <a class="btn btn-secondary cancel" role="button" asp-route-action="PrintRun" asp-route-bankAccountId="@Model.BankAccountId">@T["Cancel"]</a>
     </div>
 </form>

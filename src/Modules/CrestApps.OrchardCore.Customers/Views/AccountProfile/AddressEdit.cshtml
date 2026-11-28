@@ -5,8 +5,8 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="@(address.IsNew ? "AccountAddressCreate" : "AccountAddressEdit")" title="@(address.IsNew ? T["Add address"] : T["Edit address"])">
-        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+    <breadcrumb name="@(address.IsNew ? "AccountAddressCreate" : "AccountAddressEdit")" title="@(address.IsNew ? T["Add Address"] : T["Edit Address"])">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your Account"]</breadcrumb-item>
         <breadcrumb-item id="AccountAddresses" url="@Url.RouteUrl("AccountAddresses")">@T["Addresses"]</breadcrumb-item>
     </breadcrumb>
 </zone>

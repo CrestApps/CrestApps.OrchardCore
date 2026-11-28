@@ -20,7 +20,7 @@
                     else if (Model.Options.Types.Count > 1)
                     {
                         <div class="dropdown">
-                            <button type="button" class="btn btn-secondary create dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["New ticket"]</button>
+                            <button type="button" class="btn btn-secondary create dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["New Ticket"]</button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 @foreach (var type in Model.Options.Types)
                                 {
@@ -31,7 +31,7 @@
                     }
                     else
                     {
-                        <a asp-action="Create" class="btn btn-secondary create">@T["New ticket"]</a>
+                        <a asp-action="Create" class="btn btn-secondary create">@T["New Ticket"]</a>
                     }
                 </div>
             </div>

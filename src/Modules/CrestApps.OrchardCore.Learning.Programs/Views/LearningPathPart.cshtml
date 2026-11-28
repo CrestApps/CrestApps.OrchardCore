@@ -19,7 +19,7 @@
         <form method="post" action="~/learning/paths/@Model.PathId/start" class="mb-3">
             @Html.AntiForgeryToken()
             <input type="hidden" name="returnUrl" value="@Context.Request.Path" />
-            <button type="submit" class="btn btn-primary">@T["Start this path"]</button>
+            <button type="submit" class="btn btn-primary">@T["Start This Path"]</button>
         </form>
     }
 

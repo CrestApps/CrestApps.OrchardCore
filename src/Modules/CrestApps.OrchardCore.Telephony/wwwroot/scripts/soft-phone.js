@@ -2608,10 +2608,10 @@
 		var action;
 		if (!merge.canMerge) {
 			summary = strings.mergeSelectHint || "Tick two or more calls to merge them.";
-			action = strings.mergeCalls || "Merge calls";
+			action = strings.mergeCalls || "Merge Calls";
 		} else if (merge.addsToConference) {
 			summary = format$4(strings.addToConferenceSummary || "Add {0} to the conference.", names);
-			action = strings.addToConference || "Add to conference";
+			action = strings.addToConference || "Add to Conference";
 		} else {
 			summary = format$4(strings.mergeSummary || "Join {0} in one conference.", names);
 			action = format$4(strings.mergeSelectedCalls || "Merge {0} calls", merge.selectedCount);
@@ -9179,13 +9179,13 @@
 					dom.keypadToggle.title = controls.keypad.pressed ? strings.hideKeypad || "Hide the keypad" : strings.showKeypad || "Show the keypad to send digits";
 				}
 				var leave = controls.hangup.kind === "leave";
-				var hangupText = leave ? strings.leaveConference || "Leave" : strings.hangup || "Hang up";
+				var hangupText = leave ? strings.leaveConference || "Leave" : strings.hangup || "Hang Up";
 				if (dom.hangup) {
 					dom.hangup.setAttribute("aria-label", hangupText);
 					dom.hangup.title = leave ? strings.leaveConferenceTitle || "Leave the conference. The others stay connected." : hangupText;
 				}
 				if (dom.hangupLabel) dom.hangupLabel.textContent = hangupText;
-				var endAllText = inConference ? strings.endForAll || "End for all" : strings.endAllCalls || "End all";
+				var endAllText = inConference ? strings.endForAll || "End for All" : strings.endAllCalls || "End All";
 				if (dom.hangupAll) {
 					dom.hangupAll.setAttribute("aria-label", endAllText);
 					dom.hangupAll.title = inConference ? strings.endForAllTitle || "End the conference for everyone in it" : strings.endAllCallsTitle || "Hang up every call";
@@ -9621,8 +9621,8 @@
 				var message = conference ? String(strings.endForAllConfirm || "End the call for everyone? All {0} participants will be disconnected.").replace("{0}", conference.partyCount) : String(strings.endAllCallsConfirm || "Hang up all {0} calls?").replace("{0}", calls.length);
 				return showInAppConfirm(dom.panel, {
 					message,
-					confirmLabel: conference ? strings.endForAll || "End for all" : strings.endAllCalls || "End all",
-					cancelLabel: strings.keepTalking || "Keep talking",
+					confirmLabel: conference ? strings.endForAll || "End for All" : strings.endAllCalls || "End All",
+					cancelLabel: strings.keepTalking || "Keep Talking",
 					before: dom.body,
 					focusCancel: true
 				}).then(function(confirmed) {

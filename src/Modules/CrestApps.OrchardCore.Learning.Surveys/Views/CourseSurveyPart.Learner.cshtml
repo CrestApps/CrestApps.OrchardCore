@@ -38,7 +38,7 @@
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
                 <button type="submit" class="btn btn-primary">
-                    @(response is null ? T["Answer the survey"] : response.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.InProgress ? T["Continue"] : T["Change your answers"])
+                    @(response is null ? T["Answer the Survey"] : response.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.InProgress ? T["Continue"] : T["Change Your Answers"])
                 </button>
             </form>
         }

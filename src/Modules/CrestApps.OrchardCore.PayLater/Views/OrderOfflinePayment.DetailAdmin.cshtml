@@ -20,6 +20,6 @@
     </div>
     @if (!string.IsNullOrEmpty(Model.TransactionId))
     {
-        <a class="btn btn-sm btn-primary text-nowrap" href="@Url.RouteUrl("TransactionsDetail", new { itemId = Model.TransactionId })">@T["Record payment"]</a>
+        <a class="btn btn-sm btn-primary text-nowrap" href="@Url.RouteUrl("TransactionsDetail", new { itemId = Model.TransactionId })">@T["Record Payment"]</a>
     }
 </div>

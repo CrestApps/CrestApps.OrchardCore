@@ -1,8 +1,8 @@
 @model InvoiceDocumentPageViewModel
 
 <zone Name="Title">
-    <breadcrumb name="InvoicingMyInvoice" title="@(Model.Source is Invoice { Kind: InvoiceKind.DebitNote } ? T["Debit note {0}", Model.Source.Number] : Model.Source is Invoice { Kind: InvoiceKind.Prepayment } ? T["Deposit invoice {0}", Model.Source.Number] : T["Invoice {0}", Model.Source.Number])">
-        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+    <breadcrumb name="InvoicingMyInvoice" title="@(Model.Source is Invoice { Kind: InvoiceKind.DebitNote } ? T["Debit Note {0}", Model.Source.Number] : Model.Source is Invoice { Kind: InvoiceKind.Prepayment } ? T["Deposit Invoice {0}", Model.Source.Number] : T["Invoice {0}", Model.Source.Number])">
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CrestApps.OrchardCore.Commerce.CommerceConstants.Account.HomeRouteName)">@T["Your Account"]</breadcrumb-item>
         <breadcrumb-item id="InvoicingMyInvoices" url="@Model.BackUrl">@T["Invoices"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -41,7 +41,7 @@
     {
         <form asp-action="Pay" asp-controller="MyInvoices" asp-area="@InvoicingConstants.Features.Area" method="post">
             <input type="hidden" name="itemIds" value="@invoice.ItemId" />
-            <button type="submit" class="btn btn-success">@T["Pay this invoice"]</button>
+            <button type="submit" class="btn btn-success">@T["Pay This Invoice"]</button>
         </form>
     }
     <a class="btn btn-outline-secondary" href="@Model.PdfUrl">@T["Download PDF"]</a>

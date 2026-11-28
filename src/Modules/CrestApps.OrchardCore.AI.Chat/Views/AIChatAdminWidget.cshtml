@@ -137,15 +137,15 @@
         <div class="ai-chat-widget-header">
             <span class="title">@(string.IsNullOrEmpty(profile.DisplayText) ? T["AI Assistant"] : profile.DisplayText)</span>
             <div class="ai-chat-widget-header-actions">
-                <button class="btn btn-link d-none" id="@restoreSizeBtnId" title="@T["Restore size"]">
+                <button class="btn btn-link d-none" id="@restoreSizeBtnId" title="@T["Restore Size"]">
                     <i class="fas fa-compress"></i>
                 </button>
-                <button class="btn btn-link" id="@newChatBtnId" title="@T["New chat"]">
+                <button class="btn btn-link" id="@newChatBtnId" title="@T["New Chat"]">
                     <i class="fas fa-plus"></i>
                 </button>
                 @if (showHistory)
                 {
-                    <button class="btn btn-link" id="@historyBtnId" title="@T["Chat history"]">
+                    <button class="btn btn-link" id="@historyBtnId" title="@T["Chat History"]">
                         <i class="fas fa-clock-rotate-left"></i>
                     </button>
                 }
@@ -198,7 +198,7 @@
             <button class="stt-mic-btn btn btn-outline-secondary btn-sm"
                     type="button"
                     id="@micBtnHtmlId"
-                    title="@T["Voice input"]"
+                    title="@T["Voice Input"]"
                     style="display: none;">
                 <i class="fa-solid fa-microphone"></i>
             </button>
@@ -209,9 +209,9 @@
                 <button class="btn btn-outline-dark btn-sm"
                         type="button"
                         id="@conversationBtnHtmlId"
-                        title="@(realtimeEnabled ? T["Start speaking"] : T["Start Conversation"])"
-                        aria-label="@(realtimeEnabled ? T["Start speaking"] : T["Start Conversation"])"
-                        data-start-title="@(realtimeEnabled ? T["Start speaking"] : T["Start Conversation"])"
+                        title="@(realtimeEnabled ? T["Start Speaking"] : T["Start Conversation"])"
+                        aria-label="@(realtimeEnabled ? T["Start Speaking"] : T["Start Conversation"])"
+                        data-start-title="@(realtimeEnabled ? T["Start Speaking"] : T["Start Conversation"])"
                         data-end-title="@T["End Conversation"]"
                         data-start-html="<i class='fa-solid fa-wave-square'></i>"
                         data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
@@ -424,10 +424,10 @@
                     <span class="message-buttons-container" v-if="!isIndicator(message)">
                         <template v-if="metricsEnabled && message.role === 'assistant'">
                             <span class="ai-chat-message-assistant-feedback" :data-message-id="message.id">
-                                <button type="button" class="btn btn-sm btn-link text-success p-0 me-2 rate-up-btn button-message-toolbox" @@click="rateMessage(message, true, $event)" title="@T["Thumbs up"]">
+                                <button type="button" class="btn btn-sm btn-link text-success p-0 me-2 rate-up-btn button-message-toolbox" @@click="rateMessage(message, true, $event)" title="@T["Thumbs Up"]">
                                     <i class="fa-regular fa-thumbs-up" style="font-size: 0.9rem;"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-link text-danger p-0 me-2 rate-down-btn button-message-toolbox" @@click="rateMessage(message, false, $event)" title="@T["Thumbs down"]">
+                                <button type="button" class="btn btn-sm btn-link text-danger p-0 me-2 rate-down-btn button-message-toolbox" @@click="rateMessage(message, false, $event)" title="@T["Thumbs Down"]">
                                     <i class="fa-regular fa-thumbs-down" style="font-size: 0.9rem;"></i>
                                 </button>
                             </span>

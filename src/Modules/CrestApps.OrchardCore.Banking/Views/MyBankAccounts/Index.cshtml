@@ -1,7 +1,7 @@
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<BankAccount>>
 
 <zone Name="Title">
-    <breadcrumb name="MyBankAccounts" title="@T["My bank accounts"]" />
+    <breadcrumb name="MyBankAccounts" title="@T["My Bank Accounts"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for the close actions. *@
@@ -13,7 +13,7 @@
                     <p class="mb-0 hint">@T["The accounts you are paid into. A new or changed account is checked before payments go to it."]</p>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add bank account"]</a>
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Bank Account"]</a>
                 </div>
             </div>
         </div>

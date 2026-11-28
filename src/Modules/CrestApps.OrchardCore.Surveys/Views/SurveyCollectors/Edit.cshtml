@@ -6,9 +6,9 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="SurveyCollectorsEdit" title="@(isNew ? T["New collector"] : T["Edit '{0}'", Model.Name])">
+    <breadcrumb name="SurveyCollectorsEdit" title="@(isNew ? T["New Collector"] : T["Edit '{0}'", Model.Name])">
         <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
-        <breadcrumb-item id="SurveyCollectorsIndex" action="Index" controller="SurveyCollectors" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@T["Collect responses"]</breadcrumb-item>
+        <breadcrumb-item id="SurveyCollectorsIndex" action="Index" controller="SurveyCollectors" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@T["Collect Responses"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 <survey-layout survey="Model.Survey">
@@ -28,7 +28,7 @@
                         <div class="input-group">
                             <input id="collector-link" class="form-control" value="@Model.Link" readonly />
                             <button type="button" class="btn btn-outline-secondary" data-survey-copy="@Model.Link">@T["Copy"]</button>
-                            <a class="btn btn-outline-secondary" asp-action="Qr" asp-route-collectorId="@Model.CollectorId">@T["QR code"]</a>
+                            <a class="btn btn-outline-secondary" asp-action="Qr" asp-route-collectorId="@Model.CollectorId">@T["QR Code"]</a>
                         </div>
                     </div>
                 </div>

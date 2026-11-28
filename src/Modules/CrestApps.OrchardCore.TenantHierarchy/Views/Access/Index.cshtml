@@ -99,7 +99,7 @@
                                 }
                                 else
                                 {
-                                    <a class="btn btn-sm btn-outline-danger" asp-action="Remove" asp-route-grantId="@grant.GrantId" asp-route-id="@childId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Remove access"]" data-message="@T["Remove this rule? Open sessions that depend on it end at their next check."]">@T["Remove"]</a>
+                                    <a class="btn btn-sm btn-outline-danger" asp-action="Remove" asp-route-grantId="@grant.GrantId" asp-route-id="@childId" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Remove Access"]" data-message="@T["Remove this rule? Open sessions that depend on it end at their next check."]">@T["Remove"]</a>
                                 }
                             </td>
                         </tr>
@@ -118,14 +118,14 @@
                 <span class="form-label d-block">@T["Who in {0}", Model.ParentName]</span>
                 <div class="btn-group" role="group">
                     <input type="radio" class="btn-check" asp-for="PrincipalType" value="@AccessGrantPrincipalType.Role" id="th-type-role" checked />
-                    <label class="btn btn-outline-secondary" for="th-type-role"><i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Everyone with a role"]</label>
+                    <label class="btn btn-outline-secondary" for="th-type-role"><i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Everyone With a Role"]</label>
                     <input type="radio" class="btn-check" asp-for="PrincipalType" value="@AccessGrantPrincipalType.User" id="th-type-user" />
-                    <label class="btn btn-outline-secondary" for="th-type-user"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>@T["One person"]</label>
+                    <label class="btn btn-outline-secondary" for="th-type-user"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>@T["One Person"]</label>
                 </div>
             </div>
 
             <div class="mb-3" data-th-for="Role">
-                <label asp-for="PrincipalRole" class="form-label ocat-label-required">@T["Their role in {0}", Model.ParentName]</label>
+                <label asp-for="PrincipalRole" class="form-label ocat-label-required">@T["Their Role in {0}", Model.ParentName]</label>
                 <select asp-for="PrincipalRole" class="form-select">
                     @foreach (var role in Model.ParentRoles)
                     {
@@ -161,7 +161,7 @@
                 <span class="hint">@T["These decide what they can see and do once they open the {0}. A role that does not exist in a {0} is ignored there.", labels.ChildLower]</span>
             </div>
 
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add rule"]</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add Rule"]</button>
         </form>
     </div>
 </div>

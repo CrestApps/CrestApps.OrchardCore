@@ -1,7 +1,7 @@
 @model RequiredLearningPeopleViewModel
 
 <zone Name="Title">
-    <breadcrumb name="RequiredLearningPeople" title="@T["People required to complete '{0}'", Model.Requirement.Name]">
+    <breadcrumb name="RequiredLearningPeople" title="@T["People Required to Complete '{0}'", Model.Requirement.Name]">
         <breadcrumb-item id="RequiredLearning" action="Index" controller="RequiredLearning" area="CrestApps.OrchardCore.Learning.Programs">@T["Required Learning"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -33,9 +33,9 @@
                 </form>
             </div>
             <div class="col-auto d-flex gap-2">
-                <a asp-action="Preview" asp-route-id="@Model.Requirement.ItemId" class="btn btn-secondary">@T["Who it covers"]</a>
+                <a asp-action="Preview" asp-route-id="@Model.Requirement.ItemId" class="btn btn-secondary">@T["Who It Covers"]</a>
                 <form method="post" asp-action="Run" asp-route-id="@Model.Requirement.ItemId">
-                    <button type="submit" class="btn btn-primary">@T["Run now"]</button>
+                    <button type="submit" class="btn btn-primary">@T["Run Now"]</button>
                 </form>
             </div>
         </div>

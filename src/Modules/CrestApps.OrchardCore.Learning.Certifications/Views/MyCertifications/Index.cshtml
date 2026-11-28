@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Html
 
 @{
-    ViewData["Title"] = T["My certifications"];
+    ViewData["Title"] = T["My Certifications"];
 }
 
 @{
@@ -60,7 +60,7 @@
                         {
                             <div class="d-flex gap-2 mt-2 flex-wrap">
                                 <a class="btn btn-sm btn-primary" asp-controller="CertificateVerification" asp-action="Pdf" asp-route-code="@entry.VerificationCode" asp-route-area="CrestApps.OrchardCore.Skills" target="_blank"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Certificate"]</a>
-                                <a class="btn btn-sm btn-outline-secondary" asp-controller="CertificateVerification" asp-action="Show" asp-route-code="@entry.VerificationCode" asp-route-area="CrestApps.OrchardCore.Skills" target="_blank">@T["Verification page"]</a>
+                                <a class="btn btn-sm btn-outline-secondary" asp-controller="CertificateVerification" asp-action="Show" asp-route-code="@entry.VerificationCode" asp-route-area="CrestApps.OrchardCore.Skills" target="_blank">@T["Verification Page"]</a>
                             </div>
                             <p class="small text-muted mt-2 mb-0">@T["Anyone you give the code {0} to can check this certificate.", entry.VerificationCode]</p>
                         }
@@ -75,8 +75,8 @@
 @if (accountUrl is not null)
 {
     <zone Name="Title">
-        <breadcrumb name="LearningMyCertifications" title="@T["My certifications"]">
-            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        <breadcrumb name="LearningMyCertifications" title="@T["My Certifications"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your Account"]</breadcrumb-item>
         </breadcrumb>
     </zone>
 
@@ -86,11 +86,11 @@ else
 {
     <div class="container my-4">
         <div class="product-breadcrumb">
-            <breadcrumb name="LearningMyCertifications" title="@T["My certifications"]">
+            <breadcrumb name="LearningMyCertifications" title="@T["My Certifications"]">
                 <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
             </breadcrumb>
         </div>
-        <h1 class="h3 mb-3">@T["My certifications"]</h1>
+        <h1 class="h3 mb-3">@T["My Certifications"]</h1>
         @content(null)
     </div>
 }

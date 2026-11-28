@@ -27,7 +27,7 @@
                     @if (Model.TypeOptions.Count > 0)
                     {
                         <div class="dropdown">
-                            <button type="button" class="btn btn-secondary create dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add asset"]</button>
+                            <button type="button" class="btn btn-secondary create dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add Asset"]</button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 @foreach (var type in Model.TypeOptions)
                                 {
@@ -38,7 +38,7 @@
                     }
                     else
                     {
-                        <a asp-controller="AssetTypes" asp-action="Edit" class="btn btn-secondary create">@T["Add an asset type first"]</a>
+                        <a asp-controller="AssetTypes" asp-action="Edit" class="btn btn-secondary create">@T["Add an Asset Type First"]</a>
                     }
                 </div>
             </div>

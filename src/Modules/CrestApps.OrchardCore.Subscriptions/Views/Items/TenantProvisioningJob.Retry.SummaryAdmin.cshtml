@@ -6,10 +6,10 @@
 <form asp-action="Retry" asp-route-itemId="@Model.Value.ItemId" method="post" class="d-inline">
     <button type="submit" class="btn btn-secondary btn-sm"
             data-url-af="RemoveUrl"
-            data-title="@T["Retry now"]"
+            data-title="@T["Retry Now"]"
             data-message="@T["Try to create the site {0} again now?", Model.Value.TenantName]"
-            data-ok-text="@T["Retry now"]"
+            data-ok-text="@T["Retry Now"]"
             data-cancel-text="@T["Cancel"]">
-        @T["Retry now"]
+        @T["Retry Now"]
     </button>
 </form>

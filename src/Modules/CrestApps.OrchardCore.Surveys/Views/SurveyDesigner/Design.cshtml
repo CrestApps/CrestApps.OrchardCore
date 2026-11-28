@@ -70,7 +70,7 @@
             <div class="card-header d-flex align-items-center">
                 <span class="me-auto">@T["Pages and questions"]</span>
                 <button type="button" class="btn btn-sm btn-secondary" data-survey-command="addPage">
-                    <i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add page"]
+                    <i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add Page"]
                 </button>
             </div>
             <div class="card-body" id="survey-outline">
@@ -146,15 +146,15 @@
     @* Save draft also saves the question or page open in the editor. Publish saves first, then opens the publish page.
        Preview sits in the survey header, so it is not repeated here. *@
     <div class="action-bar-bottom">
-        <button class="btn btn-primary" type="submit" title="@T["Saves the survey settings and the question or page open in the editor."]">@T["Save draft"]</button>
+        <button class="btn btn-primary" type="submit" title="@T["Saves the survey settings and the question or page open in the editor."]">@T["Save Draft"]</button>
         @if (survey.Status != SurveyStatus.Archived)
         {
-            <button class="btn btn-success" type="submit" name="submit.Publish" value="true" data-survey-publish="@Url.RouteUrl("SurveysPublish", new { id = survey.ItemId })">@T["Save and publish"]</button>
+            <button class="btn btn-success" type="submit" name="submit.Publish" value="true" data-survey-publish="@Url.RouteUrl("SurveysPublish", new { id = survey.ItemId })">@T["Save and Publish"]</button>
         }
         @if (!string.IsNullOrEmpty(survey.PublishedVersionId) && survey.HasUnpublishedChanges)
         {
             @* A link, not a formaction button: the admin theme's confirm posts the link's own URL, while a confirmed button would post the form to Save draft. *@
-            <a class="btn btn-danger action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysDraftDiscard", new { id = survey.ItemId, draft = CrestApps.OrchardCore.Surveys.Services.SurveyDraftStamp.From(survey.DraftModifiedUtc) })" data-survey-discard data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Discard draft"]" data-message="@T["Replace the draft with the published version? Your unpublished changes are lost."]">@T["Discard draft"]</a>
+            <a class="btn btn-danger action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysDraftDiscard", new { id = survey.ItemId, draft = CrestApps.OrchardCore.Surveys.Services.SurveyDraftStamp.From(survey.DraftModifiedUtc) })" data-survey-discard data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Discard Draft"]" data-message="@T["Replace the draft with the published version? Your unpublished changes are lost."]">@T["Discard Draft"]</a>
         }
         <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-controller="Surveys">@T["Back"]</a>
     </div>

@@ -8,7 +8,7 @@
     <h2 class="h5 mb-0">@T["Addresses"]</h2>
     @if (Model.CanManage)
     {
-        <a class="btn btn-sm btn-secondary" asp-controller="@controller" asp-action="AddressCreate" asp-route-customerId="@Model.CustomerId">@T["Add address"]</a>
+        <a class="btn btn-sm btn-secondary" asp-controller="@controller" asp-action="AddressCreate" asp-route-customerId="@Model.CustomerId">@T["Add Address"]</a>
     }
 </div>
 
@@ -54,7 +54,7 @@ else
                         <div class="card-footer d-flex gap-2">
                             <a class="btn btn-sm btn-primary" asp-controller="@controller" asp-action="AddressEdit" asp-route-customerId="@Model.CustomerId" asp-route-addressId="@address.AddressId">@T["Edit"]</a>
                             <form asp-controller="@controller" asp-action="AddressDelete" asp-route-customerId="@Model.CustomerId" asp-route-addressId="@address.AddressId" method="post" class="no-multisubmit">
-                                <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl" data-title="@T["Delete address"]" data-message="@T["Delete this address? Orders that used it keep their own copy."]">@T["Delete"]</button>
+                                <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl" data-title="@T["Delete Address"]" data-message="@T["Delete this address? Orders that used it keep their own copy."]">@T["Delete"]</button>
                             </form>
                         </div>
                     }

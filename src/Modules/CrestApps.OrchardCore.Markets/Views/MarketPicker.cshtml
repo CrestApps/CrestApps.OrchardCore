@@ -19,7 +19,7 @@
     <div class="dropdown-menu dropdown-menu-end" aria-labelledby="market-picker">
         <form asp-action="Choose" asp-controller="Market" asp-area="@MarketsConstants.Feature" method="post">
             <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-            <h2 class="dropdown-header h6">@T["Shop in"]</h2>
+            <h2 class="dropdown-header h6">@T["Shop In"]</h2>
             @foreach (var market in Model.Markets)
             {
                 var isCurrent = Model.Current?.ItemId == market.ItemId;
@@ -29,7 +29,7 @@
             }
             <div class="dropdown-divider"></div>
             <button type="submit" name="marketId" value="" class="dropdown-item@(Model.Current is null ? " active" : string.Empty)" aria-current="@(Model.Current is null ? "true" : null)">
-                @T["Everywhere else"] <span class="text-body-secondary">· @Model.StoreCurrency</span>
+                @T["Everywhere Else"] <span class="text-body-secondary">· @Model.StoreCurrency</span>
             </button>
         </form>
     </div>

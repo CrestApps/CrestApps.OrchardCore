@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Html
 
 @{
-    ViewData["Title"] = T["My education credits"];
+    ViewData["Title"] = T["My Education Credits"];
 }
 
 @{
@@ -34,7 +34,7 @@
 
     @if (Model.Entries.Count > 0)
     {
-        <h2 class="h5">@T["Credits earned"]</h2>
+        <h2 class="h5">@T["Credits Earned"]</h2>
         <div class="list-group mb-4">
             @foreach (var entry in Model.Entries)
             {
@@ -57,7 +57,7 @@
 
     @if (Model.Submissions.Count > 0 || Model.ExternalTypes.Count > 0)
     {
-        <h2 class="h5">@T["External learning"]</h2>
+        <h2 class="h5">@T["External Learning"]</h2>
     }
     @if (Model.Submissions.Count > 0)
     {
@@ -96,7 +96,7 @@
     {
         <div class="card">
             <div class="card-body">
-                <h3 class="h6">@T["Record external learning"]</h3>
+                <h3 class="h6">@T["Record External Learning"]</h3>
                 <form method="post" action="~/learning/credits" enctype="multipart/form-data">
                     @Html.AntiForgeryToken()
                     @Html.ValidationSummary()
@@ -138,8 +138,8 @@
 @if (accountUrl is not null)
 {
     <zone Name="Title">
-        <breadcrumb name="LearningMyCredits" title="@T["My education credits"]">
-            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        <breadcrumb name="LearningMyCredits" title="@T["My Education Credits"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your Account"]</breadcrumb-item>
         </breadcrumb>
     </zone>
 
@@ -149,11 +149,11 @@ else
 {
     <div class="container my-4">
         <div class="product-breadcrumb">
-            <breadcrumb name="LearningMyCredits" title="@T["My education credits"]">
+            <breadcrumb name="LearningMyCredits" title="@T["My Education Credits"]">
                 <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
             </breadcrumb>
         </div>
-        <h1 class="h3 mb-3">@T["My education credits"]</h1>
+        <h1 class="h3 mb-3">@T["My Education Credits"]</h1>
         @content(null)
     </div>
 }

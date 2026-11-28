@@ -14,7 +14,7 @@
 @if (listing.Paging != CrestApps.OrchardCore.Products.Core.Listing.ProductListingPaging.Pages && listing.NextPageUrl is not null)
 {
     <div class="product-listing-more text-center mt-4 d-none" data-product-listing-more="@(listing.Paging == CrestApps.OrchardCore.Products.Core.Listing.ProductListingPaging.InfiniteScroll ? "infinite" : "button")">
-        <a class="btn btn-outline-primary" href="@listing.NextPageUrl" rel="next" data-product-listing-next>@T["Load more"]</a>
+        <a class="btn btn-outline-primary" href="@listing.NextPageUrl" rel="next" data-product-listing-next>@T["Load More"]</a>
     </div>
 }
 

@@ -13,7 +13,7 @@
 {
     <form asp-action="Claim" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit d-inline-block">
         <input type="hidden" name="returnUrl" value="@returnUrl" />
-        <button type="submit" class="btn btn-primary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Claimed ? T["Take over"] : T["I'll handle this"])</button>
+        <button type="submit" class="btn btn-primary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Claimed ? T["Take Over"] : T["I'll Handle This"])</button>
     </form>
 }
 
@@ -21,7 +21,7 @@
 {
     <form asp-action="CallBack" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit d-inline-block">
         <input type="hidden" name="returnUrl" value="@returnUrl" />
-        <button type="submit" class="btn btn-success btn-sm" title="@T["Call the caller back now from your soft phone."]">@T["Call back"]</button>
+        <button type="submit" class="btn btn-success btn-sm" title="@T["Call the caller back now from your soft phone."]">@T["Call Back"]</button>
     </form>
 }
 
@@ -29,7 +29,7 @@
 {
     <form asp-action="Release" asp-route-id="@voicemail.ItemId" method="post" class="no-multisubmit d-inline-block">
         <input type="hidden" name="returnUrl" value="@returnUrl" />
-        <button type="submit" class="btn btn-secondary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Resolved ? T["Reopen"] : T["Return to queue"])</button>
+        <button type="submit" class="btn btn-secondary btn-sm">@(voicemail.Status == SharedVoicemailStatus.Resolved ? T["Reopen"] : T["Return to Queue"])</button>
     </form>
 }
 

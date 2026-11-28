@@ -8,7 +8,7 @@
 }
 
 <section id="reviews" class="product-reviews mt-5">
-    <h2 class="h4 mb-3">@T["Customer reviews"]</h2>
+    <h2 class="h4 mb-3">@T["Customer Reviews"]</h2>
 
     @if (Model.Rating.Count > 0)
     {
@@ -86,7 +86,7 @@
             }
             <form asp-route-area="@ReviewsConstants.Feature" asp-controller="Reviews" asp-action="Submit" asp-route-productId="@Model.ProductId" method="post" enctype="multipart/form-data">
                 <input type="hidden" name="ReturnUrl" value="@Model.ReturnUrl" />
-                <h3 class="h6">@(Model.Existing is null ? T["Write a review"] : T["Change your review"])</h3>
+                <h3 class="h6">@(Model.Existing is null ? T["Write a Review"] : T["Change Your Review"])</h3>
                 <div class="mb-2">
                     <label class="form-label ocat-label-required" for="review-rating">@T["Your rating"]</label>
                     <select id="review-rating" name="Rating" class="form-select w-auto" required>
@@ -117,7 +117,7 @@
                         <span class="form-text">@(Model.Existing?.Photos.Count > 0 ? T["Optional. Up to 3 JPEG, PNG or WebP images of up to 5 MB each; new ones replace the ones you added."] : T["Optional. Up to 3 JPEG, PNG or WebP images of up to 5 MB each."])</span>
                     </div>
                 }
-                <button type="submit" class="btn btn-primary">@T["Send review"]</button>
+                <button type="submit" class="btn btn-primary">@T["Send Review"]</button>
             </form>
         }
     </div>

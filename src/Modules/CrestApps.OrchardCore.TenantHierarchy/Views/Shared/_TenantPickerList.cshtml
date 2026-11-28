@@ -56,7 +56,7 @@
                         }
                         <form method="post" action="@Url.Content($"~/delegated-access/favorite/{entry.EntryId}")" class="m-0" data-th-favorite asp-antiforgery="true">
                             <input type="hidden" name="returnUrl" value="@($"{Context.Request.PathBase}{Context.Request.Path}{Context.Request.QueryString}")" />
-                            <button type="submit" class="btn btn-link p-1 @(item.IsFavorite ? "text-warning" : "text-muted")" title="@(item.IsFavorite ? T["Remove from favorites"] : T["Add to favorites"])" aria-pressed="@(item.IsFavorite ? "true" : "false")">
+                            <button type="submit" class="btn btn-link p-1 @(item.IsFavorite ? "text-warning" : "text-muted")" title="@(item.IsFavorite ? T["Remove From Favorites"] : T["Add to favorites"])" aria-pressed="@(item.IsFavorite ? "true" : "false")">
                                 <i class="@(item.IsFavorite ? "fa-solid" : "fa-regular") fa-star" aria-hidden="true"></i>
                                 <span class="visually-hidden">@T["Favorite"]</span>
                             </button>

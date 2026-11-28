@@ -38,7 +38,7 @@
             {
                 <div class="col-auto">
                     <form method="post" asp-action="Cancel" asp-route-id="@shift.ItemId" class="no-multisubmit">
-                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Stop offering"]</button>
+                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Stop Offering"]</button>
                     </form>
                 </div>
             }
@@ -69,8 +69,8 @@
                                 <option value="@option.Value">@option.Text</option>
                             }
                         </select>
-                        <button type="submit" class="btn btn-primary text-nowrap">@T["Give the shift"]</button>
-                        <button type="submit" formaction="@Url.Action("Claim", new { id = shift.ItemId })" class="btn btn-outline-secondary text-nowrap">@T["Record a claim"]</button>
+                        <button type="submit" class="btn btn-primary text-nowrap">@T["Give the Shift"]</button>
+                        <button type="submit" formaction="@Url.Action("Claim", new { id = shift.ItemId })" class="btn btn-outline-secondary text-nowrap">@T["Record a Claim"]</button>
                     </form>
                 </div>
                 <span class="hint">@T["Only the workers who can take it are listed. Recording a claim on someone's behalf follows the shift's policy."]</span>

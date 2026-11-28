@@ -3,8 +3,8 @@
 @model QuestionBankEditViewModel
 
 <zone Name="Title">
-    <breadcrumb name="@(Model.IsNew ? "SurveysQuestionBanksCreate" : "SurveysQuestionBanksEdit")" title="@(Model.IsNew ? T["Add question bank"] : T["Edit '{0}'", Model.Title])">
-        <breadcrumb-item id="SurveysQuestionBanks" action="Index" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ViewQuestionBanks.Name">@T["Question banks"]</breadcrumb-item>
+    <breadcrumb name="@(Model.IsNew ? "SurveysQuestionBanksCreate" : "SurveysQuestionBanksEdit")" title="@(Model.IsNew ? T["Add Question Bank"] : T["Edit '{0}'", Model.Title])">
+        <breadcrumb-item id="SurveysQuestionBanks" action="Index" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ViewQuestionBanks.Name">@T["Question Banks"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 

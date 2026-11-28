@@ -2,7 +2,7 @@
 @model SurveyInvitationSettingsViewModel
 
 <zone Name="Title">
-    <breadcrumb name="SurveyInvitationsSettings" title="@T["Invitation settings"]">
+    <breadcrumb name="SurveyInvitationsSettings" title="@T["Invitation Settings"]">
         <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
         <breadcrumb-item id="SurveysCollectors" action="Index" controller="SurveyCollectors" area="CrestApps.OrchardCore.Surveys" route-id="@Model.SurveyId">@Model.SurveyTitle</breadcrumb-item>
     </breadcrumb>

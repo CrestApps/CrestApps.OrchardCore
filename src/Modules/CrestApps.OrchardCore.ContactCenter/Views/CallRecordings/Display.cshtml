@@ -27,8 +27,8 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="ContactCenterCallRecordingsDisplay" title="@T["Call recording"]">
-        <breadcrumb-item id="ContactCenterCallRecordings" action="Index" controller="CallRecordings" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ListenToOwnCallRecordings.Name">@T["Call recordings"]</breadcrumb-item>
+    <breadcrumb name="ContactCenterCallRecordingsDisplay" title="@T["Call Recording"]">
+        <breadcrumb-item id="ContactCenterCallRecordings" action="Index" controller="CallRecordings" area="CrestApps.OrchardCore.ContactCenter" permission="@ContactCenterPermissions.ListenToOwnCallRecordings.Name">@T["Call Recordings"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -131,8 +131,8 @@
                                         class="btn btn-primary btn-sm rounded-circle d-inline-flex align-items-center justify-content-center p-0"
                                         style="width: 1.75rem; height: 1.75rem;"
                                         data-cc-play
-                                        title="@T["Play from {0}", time]"
-                                        aria-label="@T["Play from {0}", time]">
+                                        title="@T["Play From {0}", time]"
+                                        aria-label="@T["Play From {0}", time]">
                                     <i class="fa-solid fa-play" aria-hidden="true" style="font-size: .7rem;"></i>
                                 </button>
                                 <span class="badge rounded-pill text-bg-light border" title="@T["Silence before this line"]">@Seconds(phrase.SilenceBeforeSeconds ?? 0)</span>
@@ -147,7 +147,7 @@
     </div>
 
     <form asp-action="Share" asp-route-id="@recording.ItemId" method="post" class="no-multisubmit mb-3">
-        <button type="submit" class="btn btn-secondary btn-sm"><i class="fa-solid fa-link me-1" aria-hidden="true"></i>@T["Share link"]</button>
+        <button type="submit" class="btn btn-secondary btn-sm"><i class="fa-solid fa-link me-1" aria-hidden="true"></i>@T["Share Link"]</button>
         <span class="hint ms-2">@T["A link that plays this recording without signing in, for 24 hours. Making one needs the permission to listen to anyone's recordings."]</span>
     </form>
 

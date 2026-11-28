@@ -32,7 +32,7 @@ else if (plan.Status == InstallmentPlanStatus.Draft)
 {
     <div class="alert alert-info d-flex justify-content-between align-items-center" role="alert">
         <span>@T["Nothing is scheduled until the down payment is received."]</span>
-        <a class="btn btn-primary btn-sm" asp-action="Pay" asp-route-itemId="@plan.ItemId">@T["Take the down payment"]</a>
+        <a class="btn btn-primary btn-sm" asp-action="Pay" asp-route-itemId="@plan.ItemId">@T["Take the Down Payment"]</a>
     </div>
 }
 
@@ -214,12 +214,12 @@ else if (plan.Status == InstallmentPlanStatus.Draft)
                                             <input type="hidden" name="paymentNumber" value="@payment.Number" />
                                             <button type="submit" class="btn btn-primary btn-sm"
                                                     data-url-af="RemoveUrl"
-                                                    data-title="@T["Charge the customer's card"]"
+                                                    data-title="@T["Charge the Customer's Card"]"
                                                     data-message="@T["Charge {0} to {1} now for payment {2} of {3}? The customer is charged immediately.", Money(payment.Amount), plan.PaymentMethod.Describe(), payment.Number, plan.InstallmentCount]"
-                                                    data-ok-text="@T["Charge now"]"
-                                                    data-cancel-text="@T["Don't charge"]">
+                                                    data-ok-text="@T["Charge Now"]"
+                                                    data-cancel-text="@T["Don't Charge"]">
                                                 <i class="fa-solid fa-bolt" aria-hidden="true"></i>
-                                                @T["Charge now"]
+                                                @T["Charge Now"]
                                             </button>
                                         </form>
                                     }
@@ -263,11 +263,11 @@ else if (plan.Status == InstallmentPlanStatus.Draft)
                         <input type="text" class="form-control mb-2" name="reason" placeholder="@T["Reason (optional)"]" />
                         <button type="submit" class="btn btn-outline-danger w-100"
                                 data-url-af="RemoveUrl"
-                                data-title="@T["Cancel the plan"]"
+                                data-title="@T["Cancel the Plan"]"
                                 data-message="@T["Are you sure you want to cancel this plan? Payments not yet received will not be collected, and the customer is told the plan was canceled."]"
-                                data-ok-text="@T["Cancel the plan"]"
-                                data-cancel-text="@T["Keep the plan"]">
-                            @T["Cancel the plan"]
+                                data-ok-text="@T["Cancel the Plan"]"
+                                data-cancel-text="@T["Keep the Plan"]">
+                            @T["Cancel the Plan"]
                         </button>
                     </form>
                 </div>

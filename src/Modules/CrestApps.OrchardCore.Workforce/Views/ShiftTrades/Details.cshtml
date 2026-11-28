@@ -39,11 +39,11 @@
                     @if (trade.Status == ShiftTradeStatus.Offered && !string.IsNullOrEmpty(trade.TargetWorkerId))
                     {
                         <form method="post" asp-action="Reject" asp-route-id="@trade.ItemId" class="no-multisubmit">
-                            <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Turn down for {0}", row.TargetName]</button>
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Turn Down for {0}", row.TargetName]</button>
                         </form>
                     }
                     <form method="post" asp-action="Cancel" asp-route-id="@trade.ItemId" class="no-multisubmit">
-                        <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Take back for {0}", row.OfferedByName]</button>
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Take Back for {0}", row.OfferedByName]</button>
                     </form>
                     <form method="post" asp-action="Decline" asp-route-id="@trade.ItemId" class="no-multisubmit d-flex gap-1">
                         <input type="text" name="note" class="form-control form-control-sm" placeholder="@T["Why (optional)"]" aria-label="@T["Why"]" />

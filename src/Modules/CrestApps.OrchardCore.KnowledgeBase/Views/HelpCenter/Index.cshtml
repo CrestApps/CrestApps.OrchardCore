@@ -2,7 +2,7 @@
 @model HelpCenterViewModel
 
 <zone Name="Title">
-    <breadcrumb name="KnowledgeBaseHome" title="@T["Help center"]" />
+    <breadcrumb name="KnowledgeBaseHome" title="@T["Help Center"]" />
 </zone>
 
 @{
@@ -16,7 +16,7 @@
 }
 
 <div class="container my-4 knowledge-base-page" style="max-width: 960px;">
-    <h1 class="h3 mb-3">@(Model.CategoryName is null ? T["Help center"] : Model.CategoryName)</h1>
+    <h1 class="h3 mb-3">@(Model.CategoryName is null ? T["Help Center"] : Model.CategoryName)</h1>
 
     @if (top is not null)
     {
@@ -49,7 +49,7 @@
                             <a class="text-decoration-none" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = group.Id })">@group.Name</a>
                             @if (group.Count > group.Articles.Count)
                             {
-                                <a class="small fw-normal" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = group.Id })">@T["All {0} articles", group.Count]</a>
+                                <a class="small fw-normal" href="@Url.RouteUrl(KnowledgeBaseConstants.HomeRouteName, new { category = group.Id })">@T["All {0} Articles", group.Count]</a>
                             }
                         </h2>
                         <partial name="_KnowledgeBaseArticles" model="group.Articles" />
@@ -58,7 +58,7 @@
             }
             else
             {
-                <h2 class="h6 text-uppercase text-body-secondary">@(!string.IsNullOrWhiteSpace(Model.Query) ? T["Articles found"] : hasCategory ? T["Articles"] : T["Most helpful"])</h2>
+                <h2 class="h6 text-uppercase text-body-secondary">@(!string.IsNullOrWhiteSpace(Model.Query) ? T["Articles Found"] : hasCategory ? T["Articles"] : T["Most Helpful"])</h2>
                 @if (Model.Articles.Count == 0)
                 {
                     <p class="text-body-secondary">@(searching ? T["No article matches. Try other words."] : T["There are no articles yet."])</p>

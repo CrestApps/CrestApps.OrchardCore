@@ -10,20 +10,20 @@
         : null;
 }
 
-<a asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Collect responses"]</a>
+<a asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Collect Responses"]</a>
 <a href="@Url.RouteUrl("SurveysResponses", new { id = survey.ItemId })" class="dropdown-item">@T["Responses"]</a>
 @if (reportUrl is not null)
 {
     <a href="@(reportUrl + "?ReportFilter.SurveyId=" + Uri.EscapeDataString(survey.ItemId))" class="dropdown-item">@T["Results"]</a>
 }
 <a asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Versions"]</a>
-<a asp-action="Access" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Access and settings"]</a>
-<a asp-action="Logic" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Logic overview"]</a>
+<a asp-action="Access" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Access and Settings"]</a>
+<a asp-action="Logic" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Logic Overview"]</a>
 <a href="@Url.RouteUrl("SurveyOverridesIndex", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Accommodations"]</a>
-<a href="@Url.RouteUrl("SurveyGradingRegradeVersions", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Regrade versions"]</a>
+<a href="@Url.RouteUrl("SurveyGradingRegradeVersions", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Regrade Versions"]</a>
 <a href="@Url.RouteUrl("SurveyGradingIndex", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Grading"]</a>
-<a asp-action="Create" asp-controller="SurveyTemplates" asp-route-fromSurveyId="@survey.ItemId" class="dropdown-item">@T["Save as a template"]</a>
-<a asp-action="Duplicate" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Copy"]" data-message="@T["Create a draft copy of this survey?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Copy as a draft"]</a>
+<a asp-action="Create" asp-controller="SurveyTemplates" asp-route-fromSurveyId="@survey.ItemId" class="dropdown-item">@T["Save as a Template"]</a>
+<a asp-action="Duplicate" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Copy"]" data-message="@T["Create a draft copy of this survey?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Copy as a Draft"]</a>
 @if (survey.Status == SurveyStatus.Open)
 {
     <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Closed" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Close"]" data-message="@T["Stop collecting responses for this survey?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Close"]</a>

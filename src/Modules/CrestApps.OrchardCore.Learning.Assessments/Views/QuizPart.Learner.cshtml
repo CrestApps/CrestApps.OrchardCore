@@ -102,7 +102,7 @@
             <form method="post" action="@Url.Content("~/learning/quizzes/" + Model.QuizId + "/start")">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
-                <button type="submit" class="btn btn-primary">@(Model.Open is not null ? T["Continue your attempt"] : Model.Attempts.Count > 0 ? T["Attempt again"] : T["Start the quiz"])</button>
+                <button type="submit" class="btn btn-primary">@(Model.Open is not null ? T["Continue Your Attempt"] : Model.Attempts.Count > 0 ? T["Attempt Again"] : T["Start the Quiz"])</button>
             </form>
         }
     </div>

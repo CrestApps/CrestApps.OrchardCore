@@ -32,11 +32,11 @@
 
 <div class="transaction-invoice">
     <div class="d-flex flex-wrap gap-2 mb-3 no-print">
-        <button type="button" class="btn btn-primary" onclick="window.print();">@T["Print invoice"]</button>
+        <button type="button" class="btn btn-primary" onclick="window.print();">@T["Print Invoice"]</button>
 
         @if (!Model.IsAdministrator && !string.IsNullOrEmpty(Model.PayUrl))
         {
-            <a class="btn btn-success" href="@Model.PayUrl">@T["Pay now"]</a>
+            <a class="btn btn-success" href="@Model.PayUrl">@T["Pay Now"]</a>
         }
     </div>
 

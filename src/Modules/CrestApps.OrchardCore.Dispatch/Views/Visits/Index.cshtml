@@ -13,7 +13,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a asp-controller="DispatchBoard" asp-action="Index" class="btn btn-secondary">@T["Open the board"]</a>
+                    <a asp-controller="DispatchBoard" asp-action="Index" class="btn btn-secondary">@T["Open the Board"]</a>
                 </div>
             </div>
         </div>
@@ -24,7 +24,7 @@
     <div class="alert alert-info d-flex flex-wrap align-items-center gap-2">
         <span>@T["{0} open work orders have no visit yet, such as those made before Dispatch was on.", Model.WithoutVisits]</span>
         <form asp-action="MakeMissing" method="post" class="ms-auto">
-            <button type="submit" class="btn btn-sm btn-primary">@T["Make their visits"]</button>
+            <button type="submit" class="btn btn-sm btn-primary">@T["Make Their Visits"]</button>
         </form>
     </div>
 }

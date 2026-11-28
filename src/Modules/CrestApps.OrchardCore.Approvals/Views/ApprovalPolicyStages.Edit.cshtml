@@ -63,7 +63,7 @@
 
         builder.AppendHtml($"<div class=\"border rounded mb-3\" data-approval-stage=\"{stageKey}\"><input type=\"hidden\" name=\"{stagesName}.Index\" value=\"{stageKey}\" />");
         builder.AppendHtml("<div class=\"border-bottom bg-body-tertiary px-3 py-2 d-flex align-items-center\"><span class=\"flex-grow-1\" data-approval-stage-number>").AppendHtml(T["Stage {0}", number]).AppendHtml("</span>");
-        builder.AppendHtml("<button type=\"button\" class=\"btn btn-sm btn-outline-danger\" data-approval-stage-remove>").Append(T["Remove stage"].Value).AppendHtml("</button></div>");
+        builder.AppendHtml("<button type=\"button\" class=\"btn btn-sm btn-outline-danger\" data-approval-stage-remove>").Append(T["Remove Stage"].Value).AppendHtml("</button></div>");
         builder.AppendHtml("<div class=\"p-3\">");
         builder.AppendHtml($"<div class=\"ocat-wrapper\"><label class=\"ocat-label\" for=\"{stageId}_Title\">").Append(T["Title"].Value).AppendHtml("</label><div class=\"ocat-end\">");
         builder.AppendHtml($"<input id=\"{stageId}_Title\" name=\"{stageName}.Title\" class=\"form-control\" style=\"max-width: 24rem\" placeholder=\"").Append(T["Such as Manager or Finance"].Value).AppendHtml("\" value=\"").Append(stage.Title ?? string.Empty).AppendHtml("\" /></div></div>");
@@ -75,7 +75,7 @@
         }
 
         builder.AppendHtml("</div><div class=\"ocat-wrapper\"><div class=\"ocat-end-offset\">");
-        builder.AppendHtml("<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" data-approver-rule-add><i class=\"fa-solid fa-plus\" aria-hidden=\"true\"></i> ").Append(T["Add a rule"].Value).AppendHtml("</button></div></div>");
+        builder.AppendHtml("<button type=\"button\" class=\"btn btn-sm btn-outline-secondary\" data-approver-rule-add><i class=\"fa-solid fa-plus\" aria-hidden=\"true\"></i> ").Append(T["Add a Rule"].Value).AppendHtml("</button></div></div>");
         builder.AppendHtml($"<div class=\"ocat-wrapper\"><label class=\"ocat-label\" for=\"{stageId}_RequiredApprovals\">").Append(T["Approvals needed"].Value).AppendHtml("</label><div class=\"ocat-end ocat-limited-wrapper\">");
         builder.AppendHtml($"<input id=\"{stageId}_RequiredApprovals\" name=\"{stageName}.RequiredApprovals\" type=\"number\" min=\"1\" max=\"10\" class=\"form-control\" value=\"{stage.RequiredApprovals}\" />");
         builder.AppendHtml("<span class=\"hint\">").Append(T["How many different approvers must approve this stage."].Value).AppendHtml("</span></div></div>");
@@ -97,7 +97,7 @@
     </div>
 
     <div class="mb-3">
-        <button type="button" class="btn btn-outline-secondary" data-approval-stage-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a stage"]</button>
+        <button type="button" class="btn btn-outline-secondary" data-approval-stage-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a Stage"]</button>
     </div>
 
     <template data-approval-stage-template>@await StageAsync("__stage__", 0, new ApprovalStageViewModel { Approvers = [new ApproverRuleViewModel()] })</template>

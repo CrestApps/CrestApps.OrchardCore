@@ -52,7 +52,7 @@
                             <input id="published-start" name="start" type="time" class="form-control" style="max-width: 9rem" value="@Model.PublishedStart?.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)" aria-label="@T["Starts"]" />
                             <span>@T["to"]</span>
                             <input name="end" type="time" class="form-control" style="max-width: 9rem" value="@Model.PublishedEnd?.ToString("HH:mm", System.Globalization.CultureInfo.InvariantCulture)" aria-label="@T["Ends"]" />
-                            <button type="submit" name="operation" value="times" class="btn btn-primary">@T["Change the hours now"]</button>
+                            <button type="submit" name="operation" value="times" class="btn btn-primary">@T["Change the Hours Now"]</button>
                         </div>
                     </div>
                 </div>
@@ -61,13 +61,13 @@
                     <div class="ocat-end">
                         <div class="d-flex flex-wrap align-items-center gap-2">
                             <select id="published-worker" name="workerId" asp-items="Model.WorkerOptions" class="form-select" style="max-width: 24rem"></select>
-                            <button type="submit" name="operation" value="reassign" class="btn btn-secondary">@T["Give it to them now"]</button>
+                            <button type="submit" name="operation" value="reassign" class="btn btn-secondary">@T["Give It to Them Now"]</button>
                         </div>
                     </div>
                 </div>
                 <div class="ocat-wrapper">
                     <div class="ocat-end-offset">
-                        <button type="submit" name="operation" value="remove" class="btn btn-outline-danger" onclick="return confirm(this.dataset.confirm)" data-confirm="@T["Take this shift off the published schedule now?"]">@T["Take it off the schedule now"]</button>
+                        <button type="submit" name="operation" value="remove" class="btn btn-outline-danger" onclick="return confirm(this.dataset.confirm)" data-confirm="@T["Take this shift off the published schedule now?"]">@T["Take It Off the Schedule Now"]</button>
                     </div>
                 </div>
             </form>

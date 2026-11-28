@@ -26,7 +26,7 @@
         <hr class="my-4" />
 
         <form method="post" action="@Url.Content("~/delegated-access/sign-out-everywhere")" asp-antiforgery="true" class="d-flex flex-wrap align-items-center gap-2">
-            <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-right-from-bracket me-1" aria-hidden="true"></i>@T["Sign out of every {0}", labels.ChildLower]</button>
+            <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-right-from-bracket me-1" aria-hidden="true"></i>@T["Sign Out of Every {0}", labels.ChildLower]</button>
             <span class="small text-muted">@T["Ends every session you have open in your {0}, on every device.", labels.ChildrenLower]</span>
         </form>
     </div>

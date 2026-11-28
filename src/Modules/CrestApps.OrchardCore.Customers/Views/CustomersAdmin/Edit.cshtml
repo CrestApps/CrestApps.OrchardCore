@@ -12,7 +12,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="@(Model.IsNew ? "CustomersCreate" : "CustomersEdit")" title="@(Model.IsNew ? T["Add customer"] : T["Customer"])">
+    <breadcrumb name="@(Model.IsNew ? "CustomersCreate" : "CustomersEdit")" title="@(Model.IsNew ? T["Add Customer"] : T["Customer"])">
         <breadcrumb-item id="CustomersIndex" action="Index" controller="CustomersAdmin" area="CrestApps.OrchardCore.Customers" permission="@CustomerPermissions.ViewCustomers.Name">@T["Customers"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -109,7 +109,7 @@
 @if (Model.MergedCustomers.Count > 0)
 {
     <div class="mt-4">
-        <h2 class="h6">@T["Merged guest checkouts"]</h2>
+        <h2 class="h6">@T["Merged Guest Checkouts"]</h2>
         <ul class="list-unstyled small">
             @foreach (var merged in Model.MergedCustomers)
             {
@@ -139,9 +139,9 @@
         {
             <p class="text-muted small">@T["For an access request, download everything the store holds on this customer. For an erasure request, erase their name, email, phone, addresses and the personal details of their orders; the orders stay for your accounts, and an account itself is deleted under Users."]</p>
             <div class="d-flex gap-2">
-                <a class="btn btn-sm btn-secondary" asp-action="Export" asp-route-customerId="@Model.CustomerId">@T["Download data"]</a>
+                <a class="btn btn-sm btn-secondary" asp-action="Export" asp-route-customerId="@Model.CustomerId">@T["Download Data"]</a>
                 <form asp-action="Erase" asp-route-customerId="@Model.CustomerId" method="post" class="no-multisubmit">
-                    <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl" data-title="@T["Erase personal data"]" data-message="@T["Erase this customer's name, email, phone, addresses and the personal details of their orders? This cannot be undone."]">@T["Erase personal data"]</button>
+                    <button type="submit" class="btn btn-sm btn-danger" data-url-af="RemoveUrl" data-title="@T["Erase Personal Data"]" data-message="@T["Erase this customer's name, email, phone, addresses and the personal details of their orders? This cannot be undone."]">@T["Erase Personal Data"]</button>
                 </form>
             </div>
         }

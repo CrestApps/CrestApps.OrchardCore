@@ -7,7 +7,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="ApprovalRequestsDecide" title="@(string.IsNullOrEmpty(request.Title) ? T["Approval request"] : T["Request: {0}", request.Title])">
+    <breadcrumb name="ApprovalRequestsDecide" title="@(string.IsNullOrEmpty(request.Title) ? T["Approval Request"] : T["Request: {0}", request.Title])">
         <breadcrumb-item id="ApprovalRequests" action="Index" controller="ApprovalRequests" area="CrestApps.OrchardCore.Approvals">@T["Approvals"]</breadcrumb-item>
     </breadcrumb>
 </zone>

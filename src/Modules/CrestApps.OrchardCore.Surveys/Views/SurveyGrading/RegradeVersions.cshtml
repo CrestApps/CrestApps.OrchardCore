@@ -3,7 +3,7 @@
 @model RegradeVersionsViewModel
 
 <zone Name="Title">
-    <breadcrumb name="SurveyGradingRegradeVersions" title="@T["Score versions again: {0}", Model.SurveyTitle]">
+    <breadcrumb name="SurveyGradingRegradeVersions" title="@T["Score Versions Again: {0}", Model.SurveyTitle]">
         <breadcrumb-item id="SurveyGrading" action="Index" controller="SurveyGrading" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.GradeOwnSurveyResponses.Name">@T["Grading"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -43,7 +43,7 @@
     </div>
 
     <div class="action-bar-bottom">
-        <button type="submit" class="btn btn-primary">@T["Score again"]</button>
+        <button type="submit" class="btn btn-primary">@T["Score Again"]</button>
         <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-surveyId="@Model.SurveyId">@T["Cancel"]</a>
     </div>
 </form>

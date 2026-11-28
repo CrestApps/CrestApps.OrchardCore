@@ -4,7 +4,7 @@
 
 <zone Name="Title">
     <breadcrumb name="SurveysQuestionBank" title="@T["{0}", Model.Bank.Title]">
-        <breadcrumb-item id="SurveysQuestionBanks" action="Index" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ViewQuestionBanks.Name">@T["Question banks"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysQuestionBanks" action="Index" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ViewQuestionBanks.Name">@T["Question Banks"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -28,7 +28,7 @@
                 {
                     <div class="col-auto">
                         <div class="btn-group">
-                            <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add question"]</button>
+                            <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add Question"]</button>
                             <div class="dropdown-menu dropdown-menu-end">
                                 @foreach (var group in Model.Controls.GroupBy(control => control.Category))
                                 {
@@ -41,7 +41,7 @@
                             </div>
                         </div>
                         <a class="btn btn-secondary" role="button" asp-action="Import" asp-route-id="@Model.Bank.ItemId">@T["Import"]</a>
-                        <a class="btn btn-secondary" role="button" asp-action="Edit" asp-route-id="@Model.Bank.ItemId">@T["Edit bank"]</a>
+                        <a class="btn btn-secondary" role="button" asp-action="Edit" asp-route-id="@Model.Bank.ItemId">@T["Edit Bank"]</a>
                     </div>
                 }
             </div>
@@ -81,7 +81,7 @@
             }
             <admin-list-column name="Question" position="20" title="@T["Question"]" />
             <admin-list-column name="Type" position="30" title="@T["Type"]" width="auto" />
-            <admin-list-column name="Modified" position="40" title="@T["Last modified"]" width="auto" />
+            <admin-list-column name="Modified" position="40" title="@T["Last Modified"]" width="auto" />
             <admin-list-column type="Actions" title="@T["Actions"]" />
         </admin-list-grid>
     </admin-list>

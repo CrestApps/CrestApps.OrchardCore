@@ -14,7 +14,7 @@
         <div class="row gx-2">
             <div class="col"></div>
             <div class="col-auto">
-                <a class="btn btn-secondary create" role="button" asp-action="Grant" asp-route-surveyId="@Model.SurveyId">@T["Grant accommodation"]</a>
+                <a class="btn btn-secondary create" role="button" asp-action="Grant" asp-route-surveyId="@Model.SurveyId">@T["Grant Accommodation"]</a>
             </div>
         </div>
     </div>
@@ -25,7 +25,7 @@
             empty-message="@T["<strong>Nothing here!</strong> No accommodation has been granted for this survey."]">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
-        <admin-list-column name="Name" position="20" title="@T["Applies to"]" />
+        <admin-list-column name="Name" position="20" title="@T["Applies To"]" />
         <admin-list-column name="Terms" position="30" title="@T["Accommodation"]" width="auto" />
         <admin-list-column name="Granted" position="40" title="@T["Granted"]" width="auto" />
         <admin-list-column type="Actions" title="@T["Actions"]" />

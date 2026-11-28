@@ -101,7 +101,7 @@ public sealed class SoftPhoneConferenceFollowUpTests : SoftPhoneBrowserTest
         await page.ClickAsync($"[data-telephony-participant-hangup=\"{primary}\"]");
         await WaitForAsync(() => Server.Provider.HangupCommands.Contains($"{primary}:participant"));
         await page.WaitForFunctionAsync("() => document.querySelectorAll('[data-telephony-conference-participant]').length === 1");
-        Assert.Equal("Hang up", await page.Locator("[data-telephony-hangup]").GetAttributeAsync("aria-label"));
+        Assert.Equal("Hang Up", await page.Locator("[data-telephony-hangup]").GetAttributeAsync("aria-label"));
 
         // Act
         await page.ClickAsync("[data-telephony-hangup]");
@@ -120,7 +120,7 @@ public sealed class SoftPhoneConferenceFollowUpTests : SoftPhoneBrowserTest
         var (page, first, second) = await MergeTwoCallsAsync();
         var primary = (await LastMergeAsync(page)).GetProperty("callIds")[0].GetString();
         var endAll = page.Locator("[data-telephony-hangup-all]");
-        Assert.Equal("End for all", await endAll.GetAttributeAsync("aria-label"));
+        Assert.Equal("End for All", await endAll.GetAttributeAsync("aria-label"));
 
         // Act - asked, and kept.
         await endAll.ClickAsync();

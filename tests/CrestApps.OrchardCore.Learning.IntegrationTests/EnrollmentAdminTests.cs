@@ -77,6 +77,6 @@ public sealed class EnrollmentAdminTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Contains("Enroll a learner", html);
+        Assert.Contains("Enroll a Learner", html);
     }
 }

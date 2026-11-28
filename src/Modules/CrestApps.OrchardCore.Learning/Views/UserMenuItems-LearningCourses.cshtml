@@ -3,7 +3,7 @@
 @* My courses in the user menu: a link to My learning, then each active course, which opens the course player. *@
 <li>
     <a class="dropdown-item" href="@Url.RouteUrl("LearningMyLearning")">
-        <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> @T["My courses"]
+        <i class="fa-solid fa-graduation-cap" aria-hidden="true"></i> @T["My Courses"]
     </a>
 </li>
 @foreach (var course in Model.Courses)
@@ -15,6 +15,6 @@
 @if (Model.HasMore)
 {
     <li>
-        <a class="dropdown-item ps-5 small" href="@Url.RouteUrl("LearningMyLearning")">@T["See all"]</a>
+        <a class="dropdown-item ps-5 small" href="@Url.RouteUrl("LearningMyLearning")">@T["See All"]</a>
     </li>
 }

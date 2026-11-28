@@ -3,7 +3,7 @@
 @model GrantSurveyOverrideViewModel
 
 <zone Name="Title">
-    <breadcrumb name="SurveyOverridesGrant" title="@T["Grant accommodation"]">
+    <breadcrumb name="SurveyOverridesGrant" title="@T["Grant Accommodation"]">
         <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
         <breadcrumb-item id="SurveyOverrides" action="Index" controller="SurveyOverrides" area="CrestApps.OrchardCore.Surveys" route-surveyId="@Model.SurveyId">@T["Accommodations: {0}", Model.SurveyTitle]</breadcrumb-item>
     </breadcrumb>

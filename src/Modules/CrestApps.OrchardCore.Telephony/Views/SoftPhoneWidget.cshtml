@@ -194,11 +194,11 @@
             ["activeCalls"] = T["Active calls"].Value,
             ["selectCallsToMerge"] = T["Select at least two calls to conference."].Value,
             ["selectCall"] = T["Select {0}"].Value,
-            ["mergeCalls"] = T["Merge calls"].Value,
+            ["mergeCalls"] = T["Merge Calls"].Value,
             ["mergeSelectedCalls"] = T["Merge {0} calls"].Value,
             ["mergeSelectHint"] = T["Tick two or more calls to merge them."].Value,
             ["mergeSummary"] = T["Join {0} in one conference."].Value,
-            ["addToConference"] = T["Add to conference"].Value,
+            ["addToConference"] = T["Add to Conference"].Value,
             ["addToConferenceSummary"] = T["Add {0} to the conference."].Value,
             ["selectAllCalls"] = T["Select all"].Value,
             ["cannotMergeBrowserCall"] = T["A call dialed from this phone cannot be merged into a conference."].Value,
@@ -212,22 +212,22 @@
             ["unmute"] = T["Unmute"].Value,
             ["hold"] = T["Hold"].Value,
             ["resume"] = T["Resume"].Value,
-            ["hangup"] = T["Hang up"].Value,
+            ["hangup"] = T["Hang Up"].Value,
             ["leaveConference"] = T["Leave"].Value,
             ["leaveConferenceTitle"] = T["Leave the conference. The others stay connected."].Value,
             ["showKeypad"] = T["Show the keypad to send digits"].Value,
             ["hideKeypad"] = T["Hide the keypad"].Value,
-            ["addCall"] = T["Add call"].Value,
+            ["addCall"] = T["Add Call"].Value,
             ["addCallTitle"] = T["Put this call on hold and dial another number"].Value,
             ["addCallNeedsHold"] = T["This phone cannot hold the call, so another call cannot be added."].Value,
-            ["backToCall"] = T["Back to call"].Value,
-            ["endAllCalls"] = T["End all"].Value,
+            ["backToCall"] = T["Back to Call"].Value,
+            ["endAllCalls"] = T["End All"].Value,
             ["endAllCallsTitle"] = T["Hang up every call"].Value,
             ["endAllCallsConfirm"] = T["Hang up all {0} calls?"].Value,
-            ["endForAll"] = T["End for all"].Value,
+            ["endForAll"] = T["End for All"].Value,
             ["endForAllTitle"] = T["End the conference for everyone in it"].Value,
             ["endForAllConfirm"] = T["End the call for everyone? All {0} participants will be disconnected."].Value,
-            ["keepTalking"] = T["Keep talking"].Value,
+            ["keepTalking"] = T["Keep Talking"].Value,
             ["lineActive"] = T["Active"].Value,
             ["connectPrompt"] = T["Connect your account to the telephony provider to start making calls."].Value,
             ["connectUnavailable"] = T["The connection could not be started. Refresh the page and try again."].Value,
@@ -360,8 +360,8 @@
             <button type="button"
                     class="telephony-soft-phone__icon-btn"
                     data-telephony-disconnect
-                    title="@T["Disconnect provider"]"
-                    aria-label="@T["Disconnect provider"]"
+                    title="@T["Disconnect Provider"]"
+                    aria-label="@T["Disconnect Provider"]"
                     hidden>
                 <i class="fa-solid fa-link-slash"></i>
             </button>
@@ -374,7 +374,7 @@
             <p class="telephony-soft-phone__connect-text">@T["Connect your account to the telephony provider to start making calls."]</p>
             <div class="telephony-soft-phone__connect-error alert alert-danger" data-telephony-connect-error hidden></div>
             <button type="button" class="telephony-soft-phone__connect-btn btn btn-primary" data-telephony-connect>
-                <i class="fa-solid fa-link"></i> @T["Connect to provider"]
+                <i class="fa-solid fa-link"></i> @T["Connect to Provider"]
             </button>
         </div>
 
@@ -532,7 +532,7 @@
                             aria-pressed="false"
                             title="@T["Switch between dialing a phone number and an internal extension."]">
                         <i class="fa-solid fa-hashtag" aria-hidden="true"></i>
-                        <span data-telephony-dial-mode-label>@T["Dial extension"]</span>
+                        <span data-telephony-dial-mode-label>@T["Dial Extension"]</span>
                     </button>
                 </div>
                 <div class="telephony-soft-phone__extension-hint" data-telephony-extension-hint aria-live="polite" hidden></div>
@@ -545,7 +545,7 @@
                         class="telephony-soft-phone__mic-retry btn btn-sm btn-outline-primary"
                         data-telephony-mic-retry
                         hidden>
-                    <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> @T["Retry microphone"]
+                    <i class="fa-solid fa-rotate-right" aria-hidden="true"></i> @T["Retry Microphone"]
                 </button>
 
 
@@ -568,7 +568,7 @@
                    call over in a second, quieter one (see Assets/js/soft-phone/in-call-controls.js). *@
                 <div class="telephony-soft-phone__actions">
                     <div class="telephony-soft-phone__call-controls" data-telephony-call-controls role="group" aria-label="@T["Call controls"]" hidden>
-                        <button type="button" class="telephony-soft-phone__control" data-telephony-mute title="@T["Mute your microphone"]" hidden>
+                        <button type="button" class="telephony-soft-phone__control" data-telephony-mute title="@T["Mute Your Microphone"]" hidden>
                             <span class="telephony-soft-phone__control-icon"><i class="fa-solid fa-microphone-slash" aria-hidden="true"></i></span>
                             <span class="telephony-soft-phone__control-label">@T["Mute"]</span>
                         </button>
@@ -588,9 +588,9 @@
                             <span class="telephony-soft-phone__control-icon"><i class="fa-solid fa-grip" aria-hidden="true"></i></span>
                             <span class="telephony-soft-phone__control-label">@T["Keypad"]</span>
                         </button>
-                        <button type="button" class="telephony-soft-phone__control telephony-soft-phone__control--hangup" data-telephony-hangup title="@T["Hang up"]" aria-label="@T["Hang up"]" hidden>
+                        <button type="button" class="telephony-soft-phone__control telephony-soft-phone__control--hangup" data-telephony-hangup title="@T["Hang Up"]" aria-label="@T["Hang Up"]" hidden>
                             <span class="telephony-soft-phone__control-icon"><i class="fa-solid fa-phone-slash" aria-hidden="true"></i></span>
-                            <span class="telephony-soft-phone__control-label" data-telephony-hangup-label>@T["Hang up"]</span>
+                            <span class="telephony-soft-phone__control-label" data-telephony-hangup-label>@T["Hang Up"]</span>
                         </button>
                     </div>
 
@@ -601,11 +601,11 @@
                         </button>
                         <button type="button" class="telephony-soft-phone__option" data-telephony-add-call title="@T["Put this call on hold and dial another number"]" hidden>
                             <i class="fa-solid fa-user-plus" aria-hidden="true"></i>
-                            <span>@T["Add call"]</span>
+                            <span>@T["Add Call"]</span>
                         </button>
-                        <button type="button" class="telephony-soft-phone__option telephony-soft-phone__option--danger" data-telephony-hangup-all title="@T["Hang up every call"]" hidden>
+                        <button type="button" class="telephony-soft-phone__option telephony-soft-phone__option--danger" data-telephony-hangup-all title="@T["Hang Up Every Call"]" hidden>
                             <i class="fa-solid fa-phone-slash" aria-hidden="true"></i>
-                            <span data-telephony-hangup-all-label>@T["End all"]</span>
+                            <span data-telephony-hangup-all-label>@T["End All"]</span>
                         </button>
                     </div>
 
@@ -615,7 +615,7 @@
                         </button>
                         <button type="button" class="telephony-soft-phone__option" data-telephony-add-call-cancel title="@T["Take the held call off hold and go back to it"]" hidden>
                             <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
-                            <span>@T["Back to call"]</span>
+                            <span>@T["Back to Call"]</span>
                         </button>
                     </div>
                 </div>
@@ -668,7 +668,7 @@
                            placeholder="@T["Audio test destination (optional)"]"
                            aria-label="@T["Audio test destination"]" />
                     <div class="telephony-soft-phone__diag-actions">
-                        <button type="button" class="btn btn-sm btn-secondary" data-telephony-diag-run>@T["Run audio test"]</button>
+                        <button type="button" class="btn btn-sm btn-secondary" data-telephony-diag-run>@T["Run Audio Test"]</button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" data-telephony-diag-dump>@T["Dump SDP/stats"]</button>
                     </div>
                     <div class="telephony-soft-phone__diag-status" data-telephony-diag-status></div>
@@ -695,7 +695,7 @@
             <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="voicemail" aria-selected="false">
                 <i class="fa-solid fa-voicemail"></i>
                 <span>@T["Voicemail"]</span>
-                <span class="telephony-soft-phone__tab-badge" data-telephony-voicemail-badge hidden aria-label="@T["Unread voicemails"]"></span>
+                <span class="telephony-soft-phone__tab-badge" data-telephony-voicemail-badge hidden aria-label="@T["Unread Voicemails"]"></span>
             </button>
             <button type="button" class="telephony-soft-phone__tab" data-telephony-tab="diagnostics" data-telephony-diagnostics-tab aria-selected="false" hidden>
                 <i class="fa-solid fa-wave-square"></i>

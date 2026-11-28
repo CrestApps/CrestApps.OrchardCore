@@ -123,7 +123,7 @@ public sealed partial class LearningActivitiesTests
         Assert.Equal(HttpStatusCode.Redirect, signOff.StatusCode);
         Assert.Contains("coursework/submissions/", gradingUrl);
         Assert.Contains("A sign-off", grading);
-        Assert.DoesNotContain("Return for resubmission", grading);
+        Assert.DoesNotContain("Return for Resubmission", grading);
         Assert.Contains("your instructor signs this off", player);
         Assert.DoesNotContain("name=\"files\"", player);
     }

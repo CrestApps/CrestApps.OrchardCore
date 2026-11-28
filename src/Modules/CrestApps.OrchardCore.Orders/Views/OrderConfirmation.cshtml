@@ -27,7 +27,7 @@
 {
     <div class="card mb-4">
         <div class="card-body">
-            <h2 class="h6 mb-1">@T["Save your details for next time"]</h2>
+            <h2 class="h6 mb-1">@T["Save Your Details for Next Time"]</h2>
             <p class="small text-muted mb-3">@T["Choose a password to make an account with {0}. This order goes into it, and next time you check out faster.", Model.Email]</p>
             <form action="@Url.RouteUrl("OrderCreateAccount")" method="post" class="row g-2 align-items-end">
                 @Html.AntiForgeryToken()
@@ -43,7 +43,7 @@
                     <input id="order-account-confirm" name="ConfirmPassword" type="password" class="form-control" autocomplete="new-password" data-account-password required />
                 </div>
                 <div class="col-sm-auto">
-                    <button type="submit" class="btn btn-primary w-100 px-4">@T["Create account"]</button>
+                    <button type="submit" class="btn btn-primary w-100 px-4">@T["Create Account"]</button>
                 </div>
             </form>
         </div>

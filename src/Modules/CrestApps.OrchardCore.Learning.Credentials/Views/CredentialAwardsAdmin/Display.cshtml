@@ -22,8 +22,8 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="LearningCredentialAward" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(award.Achievement?.Name ?? T["Credential award"].Value))">
-        <breadcrumb-item id="LearningCredentialAwards" route-name="LearningCredentialAwards" permission="@LearningCredentialsPermissions.ViewCredentialAwards.Name">@T["Credential awards"]</breadcrumb-item>
+    <breadcrumb name="LearningCredentialAward" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(award.Achievement?.Name ?? T["Credential Award"].Value))">
+        <breadcrumb-item id="LearningCredentialAwards" route-name="LearningCredentialAwards" permission="@LearningCredentialsPermissions.ViewCredentialAwards.Name">@T["Credential Awards"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 

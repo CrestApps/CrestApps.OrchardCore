@@ -1,7 +1,7 @@
 @model DataSetRunsViewModel
 
 <zone Name="Title">
-    <breadcrumb name="ConnectedDataSetsHistory" title="@T["Refresh history: {0}", Model.DataSet.DisplayText]">
+    <breadcrumb name="ConnectedDataSetsHistory" title="@T["Refresh History: {0}", Model.DataSet.DisplayText]">
         <breadcrumb-item id="ConnectedDataSets" action="Index" controller="ConnectedDataSets" area="CrestApps.OrchardCore.DataConnectors" permission="@DataConnectorPermissions.ManageConnectedDataSets.Name">@T["Data Sets"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -21,7 +21,7 @@
                     }
                 </div>
                 <div class="col-auto">
-                    <button type="submit" class="btn btn-primary">@T["Refresh now"]</button>
+                    <button type="submit" class="btn btn-primary">@T["Refresh Now"]</button>
                     <a class="btn btn-secondary" asp-action="Preview" asp-route-id="@Model.DataSet.ItemId">@T["Preview"]</a>
                 </div>
             </div>

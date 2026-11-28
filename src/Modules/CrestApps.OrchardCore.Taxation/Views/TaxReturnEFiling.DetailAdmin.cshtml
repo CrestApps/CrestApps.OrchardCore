@@ -59,7 +59,7 @@
                                     @if (Model.CanFile && submission.Status == EFileSubmissionStatus.Submitted && !submission.IsManual)
                                     {
                                         <form asp-action="Check" asp-controller="EFiling" asp-route-id="@submission.ItemId" method="post" class="d-inline no-multisubmit">
-                                            <button type="submit" class="btn btn-sm btn-secondary">@T["Check the answer"]</button>
+                                            <button type="submit" class="btn btn-sm btn-secondary">@T["Check the Answer"]</button>
                                         </form>
                                     }
                                 </td>
@@ -100,7 +100,7 @@
                                             </div>
                                             <div class="ocat-wrapper">
                                                 <div class="ocat-end-offset">
-                                                    <button type="submit" class="btn btn-secondary">@T["Record the answer"]</button>
+                                                    <button type="submit" class="btn btn-secondary">@T["Record the Answer"]</button>
                                                 </div>
                                             </div>
                                         </form>
@@ -125,7 +125,7 @@
                 @await DisplayAsync(Model.SubmitEditor)
                 <div class="ocat-wrapper">
                     <div class="ocat-end-offset">
-                        <button type="submit" class="btn btn-secondary">@T["File electronically"]</button>
+                        <button type="submit" class="btn btn-secondary">@T["File Electronically"]</button>
                     </div>
                 </div>
             </form>

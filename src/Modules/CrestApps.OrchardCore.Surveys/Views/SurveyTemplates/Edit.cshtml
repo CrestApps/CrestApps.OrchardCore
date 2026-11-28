@@ -3,9 +3,9 @@
 @model SurveyTemplateEditViewModel
 
 <zone Name="Title">
-    <breadcrumb name="@(Model.IsNew ? "SurveyTemplatesCreate" : "SurveyTemplatesEdit")" title="@(Model.IsNew ? T["Add template"] : T["Edit '{0}'", Model.Title])">
+    <breadcrumb name="@(Model.IsNew ? "SurveyTemplatesCreate" : "SurveyTemplatesEdit")" title="@(Model.IsNew ? T["Add Template"] : T["Edit '{0}'", Model.Title])">
         <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
-        <breadcrumb-item id="SurveyTemplates" action="Index" controller="SurveyTemplates" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageSurveyTemplates.Name">@T["Survey templates"]</breadcrumb-item>
+        <breadcrumb-item id="SurveyTemplates" action="Index" controller="SurveyTemplates" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageSurveyTemplates.Name">@T["Survey Templates"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 

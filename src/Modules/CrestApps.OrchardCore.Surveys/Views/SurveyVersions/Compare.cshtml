@@ -2,7 +2,7 @@
 @model SurveyCompareViewModel
 
 <zone Name="Title">
-    <breadcrumb name="SurveyVersionsCompare" title="@T["{0} compared with {1}", Model.ToLabel, Model.FromLabel]">
+    <breadcrumb name="SurveyVersionsCompare" title="@T["{0} Compared With {1}", Model.ToLabel, Model.FromLabel]">
         <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
         <breadcrumb-item id="SurveyVersionsIndex" action="Index" controller="SurveyVersions" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@T["Versions"]</breadcrumb-item>
     </breadcrumb>

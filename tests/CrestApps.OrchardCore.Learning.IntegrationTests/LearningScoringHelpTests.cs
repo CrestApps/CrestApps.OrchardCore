@@ -39,7 +39,7 @@ public sealed class LearningScoringHelpTests
         var html = await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
-        Assert.Contains("Suggest a score", html, StringComparison.Ordinal);
+        Assert.Contains("Suggest a Score", html, StringComparison.Ordinal);
         Assert.Contains("name=\"AIAssisted\"", html, StringComparison.Ordinal);
     }
 

@@ -21,7 +21,7 @@
         <label class="ocat-label">@T["Signing secret"]</label>
         <div class="ocat-end">
             <span class="text-body-secondary">@(Model.HasWebhookSecret ? T["Set."] : T["Not set yet."])</span>
-            <button type="submit" class="btn btn-sm btn-secondary ms-2" formaction="@Url.Action("WebhookSecret", "AgentPlatforms", new { area = "CrestApps.OrchardCore.AgenticCommerce", id = Model.ItemId })">@T["New secret"]</button>
+            <button type="submit" class="btn btn-sm btn-secondary ms-2" formaction="@Url.Action("WebhookSecret", "AgentPlatforms", new { area = "CrestApps.OrchardCore.AgenticCommerce", id = Model.ItemId })">@T["New Secret"]</button>
             <span class="hint">@T["ACP order updates are signed with it (Merchant-Signature). UCP order updates are signed with the store's own keys instead."]</span>
         </div>
     </div>

@@ -52,12 +52,12 @@ public sealed class QuizScoreChangeTests
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, instructorPage.StatusCode);
-        Assert.DoesNotContain("Change score", instructorHtml);
-        Assert.DoesNotContain("Save grades", instructorHtml);
+        Assert.DoesNotContain("Change Score", instructorHtml);
+        Assert.DoesNotContain("Save Grades", instructorHtml);
         // Refused: the site answers a forbidden post with its access denied page, not the grading page a change returns to.
         Assert.NotEqual(HttpStatusCode.OK, changed.StatusCode);
         Assert.DoesNotContain($"surveys/grading/{responseId}", changed.Headers.Location?.OriginalString ?? string.Empty, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("Change score", adminHtml);
+        Assert.Contains("Change Score", adminHtml);
         Assert.Equal(1m, score);
     }
 

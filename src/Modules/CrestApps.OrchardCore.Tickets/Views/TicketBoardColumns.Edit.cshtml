@@ -22,7 +22,7 @@
         }
     </ol>
 
-    <button type="button" class="btn btn-sm btn-secondary" data-board-add-column><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add column"]</button>
+    <button type="button" class="btn btn-sm btn-secondary" data-board-add-column><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add Column"]</button>
 
     <template data-board-column-template>
         @{ await Column("__index__", new TicketBoardColumnViewModel()); }
@@ -41,7 +41,7 @@
                 <div class="btn-group btn-group-sm" role="group" aria-label="@T["Column actions"]">
                     <button type="button" class="btn btn-outline-secondary" data-board-move="-1" title="@T["Move up, one column to the left"]" aria-label="@T["Move up, one column to the left"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
                     <button type="button" class="btn btn-outline-secondary" data-board-move="1" title="@T["Move down, one column to the right"]" aria-label="@T["Move down, one column to the right"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
-                    <button type="button" class="btn btn-outline-danger" data-board-remove title="@T["Remove the column"]" aria-label="@T["Remove the column"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                    <button type="button" class="btn btn-outline-danger" data-board-remove title="@T["Remove the Column"]" aria-label="@T["Remove the Column"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
                 </div>
             </div>
             <div class="card-body">

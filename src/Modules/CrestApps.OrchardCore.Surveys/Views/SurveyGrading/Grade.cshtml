@@ -117,7 +117,7 @@
     <div class="action-bar-bottom">
         @if (Model.Response.Grading != GradingStatus.Graded || Model.CanChangeScores)
         {
-            <button type="submit" class="btn btn-primary">@T["Save grades"]</button>
+            <button type="submit" class="btn btn-primary">@T["Save Grades"]</button>
         }
         <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-surveyId="@Model.Response.SurveyId">@T["Back"]</a>
     </div>
@@ -145,7 +145,7 @@
                 </div>
                 <div class="ocat-wrapper">
                     <div class="ocat-end-offset">
-                        <button type="submit" class="btn btn-secondary">@T["Change score"]</button>
+                        <button type="submit" class="btn btn-secondary">@T["Change Score"]</button>
                     </div>
                 </div>
             </form>
@@ -160,7 +160,7 @@
                 </div>
                 <div class="ocat-wrapper">
                     <div class="ocat-end-offset">
-                        <button type="submit" class="btn btn-secondary">@T["Score again"]</button>
+                        <button type="submit" class="btn btn-secondary">@T["Score Again"]</button>
                     </div>
                 </div>
             </form>

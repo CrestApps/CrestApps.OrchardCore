@@ -34,7 +34,7 @@
                 @await Component.InvokeAsync("ItemSelector", new { id = coursesId, inputName = $"{Model.Prefix}[{Model.Index}].CourseIds", endpoint = Url.RouteUrl("LearningCourseSearch"), initialItemsJson = chosenJson, multiple = true, buttonText = T["Choose courses"].Value, searchPlaceholder = T["Search courses by title"].Value, emptyResultsText = T["No course has this title."].Value, smallButton = false })
             </div>
             <div class="col-auto">
-                <button type="button" class="btn btn-sm btn-outline-danger" data-path-remove title="@T["Remove the set"]" aria-label="@T["Remove the set"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger" data-path-remove title="@T["Remove the Set"]" aria-label="@T["Remove the Set"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
             </div>
         </div>
     </div>

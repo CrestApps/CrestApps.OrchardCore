@@ -4,7 +4,7 @@ import '../../../src/Modules/CrestApps.OrchardCore.Products/Assets/js/product-pr
 
 const editor = globalThis.CrestAppsProductPriceEditor;
 
-// "Add a price" clones the last row. MVC writes a hidden "false" after every checkbox; blanking it made the first
+// "Add a Price" clones the last row. MVC writes a hidden "false" after every checkbox; blanking it made the first
 // save of a product with an added row fail with "Invalid Boolean value" for each checkbox.
 describe('resetAction', () => {
     it('keeps the hidden false that MVC writes after a checkbox', () => {

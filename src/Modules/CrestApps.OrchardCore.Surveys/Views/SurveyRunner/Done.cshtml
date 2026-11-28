@@ -55,20 +55,20 @@
 
             @if (Model.CanReview)
             {
-                <a class="btn btn-secondary" href="@Url.Content("~/s/r/" + Model.Response.ItemId + "/review")">@T["Review your answers"]</a>
+                <a class="btn btn-secondary" href="@Url.Content("~/s/r/" + Model.Response.ItemId + "/review")">@T["Review Your Answers"]</a>
             }
 
             @if (Model.CanReopen)
             {
                 <form method="post" action="@Url.Content("~/s/r/" + Model.Response.ItemId + "/reopen")">
                     @Html.AntiForgeryToken()
-                    <button type="submit" class="btn btn-outline-secondary">@T["Change your answers"]</button>
+                    <button type="submit" class="btn btn-outline-secondary">@T["Change Your Answers"]</button>
                 </form>
             }
 
             @if (!string.IsNullOrEmpty(Model.ResultsUrl))
             {
-                <a class="btn btn-outline-secondary" href="@Model.ResultsUrl">@T["See the results"]</a>
+                <a class="btn btn-outline-secondary" href="@Model.ResultsUrl">@T["See the Results"]</a>
             }
         </div>
     </div>

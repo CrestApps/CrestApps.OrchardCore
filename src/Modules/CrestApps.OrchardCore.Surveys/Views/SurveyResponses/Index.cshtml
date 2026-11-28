@@ -48,11 +48,11 @@
             <span class="me-auto">@T.Plural(Model.UpkeepStoppedCount, "Background upkeep failed on 1 response {1} times in a row and stopped trying it. It is no longer abandoned, submitted at its deadline, or deleted or anonymized by retention.", "Background upkeep failed on {0} responses {1} times in a row and stopped trying them. They are no longer abandoned, submitted at their deadline, or deleted or anonymized by retention.", CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyMaintenanceService.MaxUpkeepFailures)</span>
             @if (!Model.UpkeepStopped)
             {
-                <a class="btn btn-sm btn-outline-secondary" href="@Url.RouteUrl("SurveysResponses", new { id = Model.Survey.ItemId, UpkeepStopped = true })">@T["Show them"]</a>
+                <a class="btn btn-sm btn-outline-secondary" href="@Url.RouteUrl("SurveysResponses", new { id = Model.Survey.ItemId, UpkeepStopped = true })">@T["Show Them"]</a>
             }
             @if (Model.CanRetryUpkeep)
             {
-                <button type="submit" class="btn btn-sm btn-warning" formaction="@Url.RouteUrl("SurveysResponsesRetryUpkeep", new { id = Model.Survey.ItemId })">@T["Try again"]</button>
+                <button type="submit" class="btn btn-sm btn-warning" formaction="@Url.RouteUrl("SurveysResponsesRetryUpkeep", new { id = Model.Survey.ItemId })">@T["Try Again"]</button>
             }
         </div>
     }

@@ -140,9 +140,9 @@
             <a class="btn btn-secondary cancel" role="button" href="@Url.RouteUrl("SurveysResponses", new { id = Model.Survey.ItemId })">@T["Back"]</a>
             @if (response.Status != SurveyResponseStatus.Voided)
             {
-                <a class="btn btn-warning action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysResponseVoid", new { id = response.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Void response"]" data-message="@T["Void this response?"]" data-ok-text="@T["Void"]" data-cancel-text="@T["Cancel"]">@T["Void"]</a>
+                <a class="btn btn-warning action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysResponseVoid", new { id = response.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Void Response"]" data-message="@T["Void this response?"]" data-ok-text="@T["Void"]" data-cancel-text="@T["Cancel"]">@T["Void"]</a>
             }
-            <a class="btn btn-danger action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysResponseDelete", new { id = response.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete response"]" data-message="@T["Delete this response? This cannot be undone."]">@T["Delete"]</a>
+            <a class="btn btn-danger action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysResponseDelete", new { id = response.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete Response"]" data-message="@T["Delete this response? This cannot be undone."]">@T["Delete"]</a>
         </div>
     </form>
 }

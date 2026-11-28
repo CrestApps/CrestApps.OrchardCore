@@ -12,7 +12,7 @@
                         <button type="submit" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
                     </div>
                 </div>
-                <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add certification type"]</a></div>
+                <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add Certification Type"]</a></div>
             </div>
         </div>
     </div>
@@ -21,7 +21,7 @@
 <admin-list name="Certifications" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> There are no certification types yet."]">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
-        <admin-list-column name="Name" position="20" title="@T["Certification type"]" />
+        <admin-list-column name="Name" position="20" title="@T["Certification Type"]" />
         <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>

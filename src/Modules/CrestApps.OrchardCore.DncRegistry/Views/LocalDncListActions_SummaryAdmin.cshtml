@@ -19,14 +19,14 @@
 @if (errorCount > 0)
 {
     <a asp-action="DownloadErrors" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" class="dropdown-item btn-sm">
-        <i class="fa-solid fa-file-csv text-danger" aria-hidden="true"></i> @T["Download errors ({0})", errorCount]
+        <i class="fa-solid fa-file-csv text-danger" aria-hidden="true"></i> @T["Download Errors ({0})", errorCount]
     </a>
 }
 
 @if (canProcess)
 {
     <a asp-action="ProcessNow" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" asp-route-returnUrl="@FullRequestPath" class="dropdown-item btn-sm">
-        <i class="fa-solid fa-play text-primary" aria-hidden="true"></i> @T["Process now"]
+        <i class="fa-solid fa-play text-primary" aria-hidden="true"></i> @T["Process Now"]
     </a>
 }
 
@@ -34,13 +34,13 @@
 {
     <a asp-action="PauseImport" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" asp-route-returnUrl="@FullRequestPath"
        data-url-af="UnsafeUrl RemoveUrl"
-       data-title="@T["Pause import"]"
+       data-title="@T["Pause Import"]"
        data-message="@T["Are you sure you want to pause this import?"]"
        data-ok-text="@T["Yes"]"
        data-cancel-text="@T["No"]"
        data-ok-class="btn-warning"
        class="dropdown-item btn-sm">
-        <i class="fa-solid fa-pause text-warning" aria-hidden="true"></i> @T["Pause import"]
+        <i class="fa-solid fa-pause text-warning" aria-hidden="true"></i> @T["Pause Import"]
     </a>
 }
 
@@ -49,7 +49,7 @@
     <a asp-action="Delete" asp-route-listId="@entry.ListId" asp-controller="LocalDncRegistryAdmin" asp-route-area="@DncRegistryConstants.Features.Area" asp-route-returnUrl="@FullRequestPath"
        class="dropdown-item btn-sm"
        data-url-af="UnsafeUrl RemoveUrl"
-       data-title="@T["Delete list"]"
+       data-title="@T["Delete List"]"
        data-message="@T["Are you sure you want to delete the list '{0}'? This will remove all {1} phone numbers.", entry.Name, entry.PhoneNumberCount]"
        data-ok-text="@T["Yes, delete"]"
        data-cancel-text="@T["Cancel"]"

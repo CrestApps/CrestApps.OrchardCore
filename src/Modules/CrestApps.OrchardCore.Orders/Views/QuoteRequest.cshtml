@@ -2,7 +2,7 @@
 
 @* A signed-in buyer's form to send their cart as a quote request. *@
 
-<h1 class="h3 mb-3">@T["Request a quote"]</h1>
+<h1 class="h3 mb-3">@T["Request a Quote"]</h1>
 <p class="text-body-secondary">@T["We'll price the items in your cart and email you a quote. Your cart is emptied; the quote shows under your orders, where you pay it or turn it down."]</p>
 
 @if (Model.Problems.Count > 0)
@@ -32,6 +32,6 @@
         <span class="hint">@T["Optional. Your reference for the order, printed on the invoice."]</span>
     </div>
 
-    <button type="submit" class="btn btn-primary">@T["Send the request"]</button>
-    <a href="@Url.RouteUrl("Cart")" class="btn btn-link">@T["Back to the cart"]</a>
+    <button type="submit" class="btn btn-primary">@T["Send the Request"]</button>
+    <a href="@Url.RouteUrl("Cart")" class="btn btn-link">@T["Back to the Cart"]</a>
 </form>

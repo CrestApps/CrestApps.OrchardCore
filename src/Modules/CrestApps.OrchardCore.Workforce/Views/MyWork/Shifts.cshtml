@@ -7,7 +7,7 @@
 <partial name="~/Areas/CrestApps.OrchardCore.Workforce/Views/Shared/_MyWorkAssets.cshtml" />
 
 
-<h2 class="h5">@T["Open shifts"]</h2>
+<h2 class="h5">@T["Open Shifts"]</h2>
 @if (Model.OpenShifts.Count == 0)
 {
     <p class="text-muted">@T["No open shifts on your teams right now."]</p>
@@ -39,7 +39,7 @@
     </div>
 }
 
-<h2 class="h5 mt-4">@T["Offered to me"]</h2>
+<h2 class="h5 mt-4">@T["Offered to Me"]</h2>
 @if (Model.OfferedToMe.Count == 0)
 {
     <p class="text-muted">@T["No shifts offered to you."]</p>
@@ -69,13 +69,13 @@
             <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/trades/" + row.Trade.ItemId + "/accept")"><button type="submit" class="btn btn-success btn-sm">@T["Accept"]</button></form>
             @if (row.Trade.TargetWorkerId is not null)
             {
-                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/trades/" + row.Trade.ItemId + "/reject")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Turn down"]</button></form>
+                <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/trades/" + row.Trade.ItemId + "/reject")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Turn Down"]</button></form>
             }
         </div>
     </div>
 }
 
-<h2 class="h5 mt-4">@T["My shifts"]</h2>
+<h2 class="h5 mt-4">@T["My Shifts"]</h2>
 @if (Model.MyShifts.Count == 0)
 {
     <p class="text-muted">@T["No upcoming shifts."]</p>
@@ -90,7 +90,7 @@
                 @if (offered is not null)
                 {
                     <span class="badge text-bg-warning fw-normal">@(offered.Trade.Status == ShiftTradeStatus.Accepted ? T["Accepted; waits for a manager"] : offered.ToName is null ? T["Offered to anyone"] : T["Offered to {0}", offered.ToName])</span>
-                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/trades/" + offered.Trade.ItemId + "/cancel")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Take back"]</button></form>
+                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/trades/" + offered.Trade.ItemId + "/cancel")"><button type="submit" class="btn btn-outline-secondary btn-sm">@T["Take Back"]</button></form>
                 }
                 else
                 {

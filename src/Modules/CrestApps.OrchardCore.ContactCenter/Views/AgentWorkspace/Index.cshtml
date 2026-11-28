@@ -90,7 +90,7 @@
 <script asp-name="contact-center-agent-workspace" at="Foot"></script>
 
 <zone Name="Title">
-    <breadcrumb name="ContactCenterAgentWorkspace" title="@T["My workspace"]" />
+    <breadcrumb name="ContactCenterAgentWorkspace" title="@T["My Workspace"]" />
 </zone>
 
 <div class="cc-workspace" data-cc-workspace data-config="@JsonSerializer.Serialize(config, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase })">
@@ -155,7 +155,7 @@
         {
             <div class="cc-topbar__end">
                 <a class="btn btn-sm btn-outline-secondary" href="@Model.SupervisorDashboardUrl">
-                    <i class="fa-solid fa-gauge-high" aria-hidden="true"></i> @T["Live dashboard"]
+                    <i class="fa-solid fa-gauge-high" aria-hidden="true"></i> @T["Live Dashboard"]
                 </a>
             </div>
         }

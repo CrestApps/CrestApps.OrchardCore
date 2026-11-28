@@ -45,8 +45,8 @@ public sealed partial class SurveyRespondingTests
         var stored = await ResponseOfPathAsync(responsePath);
 
         // Assert
-        Assert.Contains("Change your answers", openEnding, StringComparison.Ordinal);
-        Assert.DoesNotContain("Change your answers", closedEnding, StringComparison.Ordinal);
+        Assert.Contains("Change Your Answers", openEnding, StringComparison.Ordinal);
+        Assert.DoesNotContain("Change Your Answers", closedEnding, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.Redirect, reopen.StatusCode);
         Assert.Equal(SurveyResponseStatus.Completed, stored.Status);
         Assert.Equal("First answer", stored.Answers[questionId].Values.Single());

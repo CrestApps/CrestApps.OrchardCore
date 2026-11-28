@@ -179,7 +179,7 @@ The view keeps the form, its hidden inputs and the action bar, and renders the l
             <admin-list-column type="Select" />
             <admin-list-column name="Name" position="20" title="@T["Name"]" />
             <admin-list-column name="Type" position="30" title="@T["Type"]" width="auto" />
-            <admin-list-column name="Modified" position="40" title="@T["Last modified"]" width="auto" />
+            <admin-list-column name="Modified" position="40" title="@T["Last Modified"]" width="auto" />
             <admin-list-column type="Actions" title="@T["Actions"]" />
         </admin-list-grid>
     </admin-list>
@@ -224,7 +224,7 @@ The view keeps the form, its hidden inputs and the action bar, and renders the l
 | --- | --- |
 | `type` | `Select` (renders the `Select` zone at position 10) or `Actions` (renders `Actions` + `ActionsMenu` at `end`) |
 | `name` | Column and zone name, unique ignoring case. Required for a regular column |
-| `title` | Localized header, `@T["…"]` |
+| `title` | Localized header in Title Case, `@T["…"]` ("Last Modified") |
 | `position` | Placement syntax: `20`, `30`, … |
 | `width` | Any CSS width, or `auto` to hug the content. No width shares the remaining space |
 | `alignment`, `no-wrap`, `css-class`, `zones` | Cell presentation; `zones="A B"` renders several zones in one cell |

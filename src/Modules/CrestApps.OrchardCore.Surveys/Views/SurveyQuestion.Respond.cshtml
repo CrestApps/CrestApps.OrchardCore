@@ -65,7 +65,7 @@
 
     @if (Model.CanCheck && Model.Answerable)
     {
-        <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-survey-check="@question.Id">@T["Check answer"]</button>
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-survey-check="@question.Id">@T["Check Answer"]</button>
         <div class="survey-check-result mt-2 small" data-survey-check-result="@question.Id" aria-live="polite"></div>
     }
 </div>

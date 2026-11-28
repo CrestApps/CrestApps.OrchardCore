@@ -39,8 +39,8 @@
                 <form asp-action="CancelAutoCharge" method="post" class="mt-2">
                     <input type="hidden" name="itemId" value="@transaction.ItemId" />
                     <button type="submit" class="btn btn-outline-danger"
-                            data-url-af="UnsafeUrl" data-title="@T["Cancel the charge"]" data-message="@T["The card is not charged, and the owner pays the balance themselves."]" data-ok-text="@T["Cancel the charge"]" data-cancel-text="@T["Keep it"]">
-                        @T["Cancel the charge"]
+                            data-url-af="UnsafeUrl" data-title="@T["Cancel the Charge"]" data-message="@T["The card is not charged, and the owner pays the balance themselves."]" data-ok-text="@T["Cancel the Charge"]" data-cancel-text="@T["Keep It"]">
+                        @T["Cancel the Charge"]
                     </button>
                 </form>
             </div>
@@ -60,7 +60,7 @@
                 <form asp-action="PauseReminders" method="post">
                     <input type="hidden" name="itemId" value="@transaction.ItemId" />
                     <input type="hidden" name="paused" value="@(transaction.RemindersPaused ? "false" : "true")" />
-                    <button type="submit" class="btn btn-outline-secondary">@(transaction.RemindersPaused ? T["Resume reminders"] : T["Pause reminders"])</button>
+                    <button type="submit" class="btn btn-outline-secondary">@(transaction.RemindersPaused ? T["Resume Reminders"] : T["Pause Reminders"])</button>
                 </form>
             </div>
         </div>
@@ -75,8 +75,8 @@
                 <form asp-action="SendReminder" method="post">
                     <input type="hidden" name="itemId" value="@transaction.ItemId" />
                     <button type="submit" class="btn btn-primary" disabled="@(!canSendReminder)"
-                            data-url-af="RemoveUrl" data-title="@T["Send reminder"]" data-message="@T["Send the owner a reminder about the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send reminder"]" data-cancel-text="@T["Cancel"]">
-                        @T["Send reminder"]
+                            data-url-af="RemoveUrl" data-title="@T["Send Reminder"]" data-message="@T["Send the owner a reminder about the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send Reminder"]" data-cancel-text="@T["Cancel"]">
+                        @T["Send Reminder"]
                     </button>
                 </form>
             </div>
@@ -91,8 +91,8 @@
                     <form asp-action="SendInvoice" method="post">
                         <input type="hidden" name="itemId" value="@transaction.ItemId" />
                         <button type="submit" class="btn btn-primary" disabled="@(!canSendInvoice)"
-                                data-url-af="RemoveUrl" data-title="@T["Send invoice"]" data-message="@T["Send the owner the invoice for the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send invoice"]" data-cancel-text="@T["Cancel"]">
-                            @T["Send invoice"]
+                                data-url-af="RemoveUrl" data-title="@T["Send Invoice"]" data-message="@T["Send the owner the invoice for the {0} {1} still owed?", transaction.Currency, CurrencyScale.Format(transaction.OutstandingAmount, transaction.Currency)]" data-ok-text="@T["Send Invoice"]" data-cancel-text="@T["Cancel"]">
+                            @T["Send Invoice"]
                         </button>
                     </form>
                 </div>
@@ -144,8 +144,8 @@
                     </div>
                 }
                 <button type="submit" class="btn btn-success" disabled="@(!canRecordPayment)"
-                        data-url-af="RemoveUrl" data-title="@T["Record payment"]" data-message="@T["Record this payment against the transaction? It counts as received."]" data-ok-text="@T["Record payment"]" data-cancel-text="@T["Cancel"]">
-                    @T["Record payment"]
+                        data-url-af="RemoveUrl" data-title="@T["Record Payment"]" data-message="@T["Record this payment against the transaction? It counts as received."]" data-ok-text="@T["Record Payment"]" data-cancel-text="@T["Cancel"]">
+                    @T["Record Payment"]
                 </button>
             </form>
         </div>
@@ -170,8 +170,8 @@
                         <input type="text" class="form-control" id="CreditNote" name="Note" placeholder="@T["Anything else about the payment (optional)"]" disabled="@(!canRecordPayment)" />
                     </div>
                     <button type="submit" class="btn btn-success" disabled="@(!canRecordPayment)"
-                            data-url-af="RemoveUrl" data-title="@T["Apply credit"]" data-message="@T["Pay toward this transaction with the customer's credit?"]" data-ok-text="@T["Apply credit"]" data-cancel-text="@T["Cancel"]">
-                        @T["Apply credit"]
+                            data-url-af="RemoveUrl" data-title="@T["Apply Credit"]" data-message="@T["Pay toward this transaction with the customer's credit?"]" data-ok-text="@T["Apply Credit"]" data-cancel-text="@T["Cancel"]">
+                        @T["Apply Credit"]
                     </button>
                 </form>
             </div>
@@ -215,16 +215,16 @@
             <form asp-action="MarkPaid" method="post">
                 <input type="hidden" name="itemId" value="@transaction.ItemId" />
                 <button type="submit" class="btn btn-outline-success w-100" disabled="@(!canMarkPaid)"
-                        data-url-af="RemoveUrl" data-title="@T["Mark as paid"]" data-message="@T["Are you sure you want to mark this transaction as fully paid?"]" data-ok-text="@T["Mark as paid"]" data-cancel-text="@T["Cancel"]">
-                    @T["Mark as paid"]
+                        data-url-af="RemoveUrl" data-title="@T["Mark as Paid"]" data-message="@T["Are you sure you want to mark this transaction as fully paid?"]" data-ok-text="@T["Mark as Paid"]" data-cancel-text="@T["Cancel"]">
+                    @T["Mark as Paid"]
                 </button>
             </form>
             <form asp-action="Cancel" method="post">
                 <input type="hidden" name="itemId" value="@transaction.ItemId" />
                 <input type="text" class="form-control mb-2" name="note" placeholder="@T["Cancellation reason (optional)"]" disabled="@(!canCancel)" />
                 <button type="submit" class="btn btn-outline-danger w-100" disabled="@(!canCancel)"
-                        data-url-af="RemoveUrl" data-title="@T["Cancel transaction"]" data-message="@T["Are you sure you want to cancel this transaction? Nothing more will be collected for it."]" data-ok-text="@T["Cancel transaction"]" data-cancel-text="@T["Keep it"]">
-                    @T["Cancel transaction"]
+                        data-url-af="RemoveUrl" data-title="@T["Cancel Transaction"]" data-message="@T["Are you sure you want to cancel this transaction? Nothing more will be collected for it."]" data-ok-text="@T["Cancel Transaction"]" data-cancel-text="@T["Keep It"]">
+                    @T["Cancel Transaction"]
                 </button>
             </form>
         </div>
@@ -236,7 +236,7 @@
             <form asp-action="AddNote" method="post">
                 <input type="hidden" name="itemId" value="@transaction.ItemId" />
                 <textarea class="form-control mb-2" name="note" rows="2" placeholder="@T["Internal note"]"></textarea>
-                <button type="submit" class="btn btn-secondary">@T["Add note"]</button>
+                <button type="submit" class="btn btn-secondary">@T["Add Note"]</button>
             </form>
         </div>
     </div>

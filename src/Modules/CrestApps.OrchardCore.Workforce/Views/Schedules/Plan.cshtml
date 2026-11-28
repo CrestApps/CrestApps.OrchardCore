@@ -51,10 +51,10 @@
             </div>
             <div class="col-auto d-flex flex-wrap gap-2">
                 <form method="post" asp-action="AutoSchedule" asp-route-id="@period.ItemId" class="no-multisubmit">
-                    <button type="submit" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" title="@T["Add shifts from the templates to cover the team's coverage requirements. The shifts already here stay."]"><i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i>@T["Auto-schedule"]</button>
+                    <button type="submit" class="btn btn-outline-secondary btn-sm" data-bs-toggle="tooltip" title="@T["Add shifts from the templates to cover the team's coverage requirements. The shifts already here stay."]"><i class="fa-solid fa-wand-magic-sparkles me-1" aria-hidden="true"></i>@T["Auto-Schedule"]</button>
                 </form>
                 <form method="post" asp-action="ApplyRotations" asp-route-id="@period.ItemId" class="no-multisubmit">
-                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Apply rotations"]</button>
+                    <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-rotate me-1" aria-hidden="true"></i>@T["Apply Rotations"]</button>
                 </form>
                 @if (Model.CopySourceOptions.Count > 0)
                 {
@@ -70,16 +70,16 @@
                 }
                 @if (period.PublishedVersion > 0)
                 {
-                    <a asp-action="Changes" asp-route-id="@period.ItemId" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-clock-rotate-left me-1" aria-hidden="true"></i>@T["Change log"]</a>
+                    <a asp-action="Changes" asp-route-id="@period.ItemId" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-clock-rotate-left me-1" aria-hidden="true"></i>@T["Change Log"]</a>
                 }
                 @if (!string.IsNullOrEmpty(Model.CalendarId))
                 {
-                    <a href="@Url.Content("~/Admin/calendar?view=week&calendars=" + Model.CalendarId)" class="btn btn-outline-secondary btn-sm"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Team calendar"]</a>
+                    <a href="@Url.Content("~/Admin/calendar?view=week&calendars=" + Model.CalendarId)" class="btn btn-outline-secondary btn-sm"><i class="fa-regular fa-calendar me-1" aria-hidden="true"></i>@T["Team Calendar"]</a>
                 }
                 @if (Model.CanPublish && !Model.Violations.Any(violation => violation.Enforcement == LaborRuleEnforcement.Block))
                 {
                     <form method="post" asp-action="Publish" asp-route-id="@period.ItemId" class="no-multisubmit">
-                        <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(period.PublishedVersion > 0 ? T["Publish changes"] : T["Publish"])</button>
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(period.PublishedVersion > 0 ? T["Publish Changes"] : T["Publish"])</button>
                     </form>
                 }
             </div>
@@ -105,7 +105,7 @@
                 {
                     <form method="post" asp-action="Publish" asp-route-id="@Model.Period.ItemId" class="no-multisubmit d-flex flex-wrap gap-2 align-items-center mt-2">
                         <input type="text" name="overrideReason" class="form-control" style="max-width: 28rem" placeholder="@T["Why it should go ahead"]" aria-label="@T["Why it should go ahead"]" required />
-                        <button type="submit" class="btn btn-warning">@T["Publish with an override"]</button>
+                        <button type="submit" class="btn btn-warning">@T["Publish With an Override"]</button>
                     </form>
                     <span class="hint">@T["The reason is recorded with each rule gone ahead with, under Rule Overrides."]</span>
                 }
@@ -123,12 +123,12 @@
     <nav class="d-flex align-items-center justify-content-center gap-3 mb-2" aria-label="@T["Weeks"]">
         @if (Model.Week > 0)
         {
-            <a asp-action="Plan" asp-route-id="@period.ItemId" asp-route-week="@(Model.Week - 1)" class="btn btn-sm btn-outline-secondary" aria-label="@T["Previous week"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
+            <a asp-action="Plan" asp-route-id="@period.ItemId" asp-route-week="@(Model.Week - 1)" class="btn btn-sm btn-outline-secondary" aria-label="@T["Previous Week"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
         }
         <span class="fw-semibold">@T["Week {0} of {1}", Model.Week + 1, Model.WeekCount]</span>
         @if (Model.Week < Model.WeekCount - 1)
         {
-            <a asp-action="Plan" asp-route-id="@period.ItemId" asp-route-week="@(Model.Week + 1)" class="btn btn-sm btn-outline-secondary" aria-label="@T["Next week"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+            <a asp-action="Plan" asp-route-id="@period.ItemId" asp-route-week="@(Model.Week + 1)" class="btn btn-sm btn-outline-secondary" aria-label="@T["Next Week"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
         }
     </nav>
 }

@@ -13,7 +13,7 @@
 
 <div class="card mb-3">
     <div class="card-body">
-        <h2 class="h6">@T["Work order"]</h2>
+        <h2 class="h6">@T["Work Order"]</h2>
         <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="Tickets" asp-action="CreateWorkOrder" asp-route-id="@Model.TicketId" method="post" id="@formId" class="no-multisubmit">
             <div class="mb-2">
                 <label for="@(formId)-type" class="form-label small mb-1">@T["Type"]</label>
@@ -34,7 +34,7 @@
                     }
                 </select>
             </div>
-            <button type="submit" class="btn btn-sm btn-secondary">@T["Create a work order"]</button>
+            <button type="submit" class="btn btn-sm btn-secondary">@T["Create a Work Order"]</button>
             <span class="hint d-block">@T["When someone has to go on site: the work order gets the ticket's subject, first message, account and requester, and shows in the links. The ticket hears when it is completed."]</span>
         </form>
     </div>

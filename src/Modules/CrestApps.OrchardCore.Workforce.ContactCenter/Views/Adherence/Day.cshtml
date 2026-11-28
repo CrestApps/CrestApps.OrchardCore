@@ -39,10 +39,10 @@
             @if (Model.CanManage && day is not null)
             {
                 <div class="col-auto d-flex gap-2">
-                    <a asp-controller="AdherenceExceptions" asp-action="Create" asp-route-workerId="@Model.Worker.ItemId" asp-route-date="@dateText" asp-route-returnUrl="@Url.Action("Day", new { workerId = Model.Worker.ItemId, date = dateText })" class="btn btn-sm btn-outline-secondary">@T["Add exception"]</a>
+                    <a asp-controller="AdherenceExceptions" asp-action="Create" asp-route-workerId="@Model.Worker.ItemId" asp-route-date="@dateText" asp-route-returnUrl="@Url.Action("Day", new { workerId = Model.Worker.ItemId, date = dateText })" class="btn btn-sm btn-outline-secondary">@T["Add Exception"]</a>
                     <form asp-action="SaveDay" asp-route-workerId="@Model.Worker.ItemId" method="post">
                         <input type="hidden" name="date" value="@dateText" />
-                        <button type="submit" class="btn btn-sm btn-primary">@(Model.Saved ? T["Compute again"] : T["Save"])</button>
+                        <button type="submit" class="btn btn-sm btn-primary">@(Model.Saved ? T["Compute Again"] : T["Save"])</button>
                     </form>
                 </div>
             }

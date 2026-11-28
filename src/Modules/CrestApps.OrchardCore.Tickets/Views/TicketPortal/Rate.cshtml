@@ -16,6 +16,6 @@
 
     <form method="post" asp-route="TicketPortalRatePost" asp-route-id="@Model.TicketId" class="no-multisubmit">
         <partial name="_TicketPortalRating" model="(Model.Score, Model.Comment)" />
-        <button type="submit" class="btn btn-primary">@(Model.Rated ? T["Update my rating"] : T["Send my rating"])</button>
+        <button type="submit" class="btn btn-primary">@(Model.Rated ? T["Update My Rating"] : T["Send My Rating"])</button>
     </form>
 </div>

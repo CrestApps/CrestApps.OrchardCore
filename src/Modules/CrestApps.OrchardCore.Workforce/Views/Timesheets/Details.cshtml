@@ -76,7 +76,7 @@
                             <input type="hidden" name="decision" value="Reject" />
                             <label class="form-label" for="reject-reason">@T["What to fix"]</label>
                             <textarea class="form-control mb-2" name="reason" id="reject-reason" rows="2" required></textarea>
-                            <button type="submit" class="btn btn-warning">@T["Send back"]</button>
+                            <button type="submit" class="btn btn-warning">@T["Send Back"]</button>
                         </form>
                     </details>
                 }
@@ -100,7 +100,7 @@
 {
     <div class="card mb-3 border-info">
         <div class="card-body">
-            <h2 class="h6">@T["Punches the worker asked for"]</h2>
+            <h2 class="h6">@T["Punches the Worker Asked For"]</h2>
             <ul class="list-unstyled mb-0">
                 @foreach (var correction in Model.Corrections)
                 {
@@ -110,7 +110,7 @@
                         <span class="text-muted small">“@correction.Reason”</span>
                         <form asp-action="DecideCorrection" asp-route-id="@timesheet.ItemId" method="post" class="d-inline ms-auto">
                             <input type="hidden" name="correctionId" value="@correction.ItemId" />
-                            <button type="submit" name="approve" value="true" class="btn btn-sm btn-success">@T["Add it"]</button>
+                            <button type="submit" name="approve" value="true" class="btn btn-sm btn-success">@T["Add It"]</button>
                             <button type="submit" name="approve" value="false" class="btn btn-sm btn-outline-secondary">@T["Decline"]</button>
                         </form>
                     </li>
@@ -235,7 +235,7 @@
             <div class="col-lg-6">
                 <div class="card text-bg-theme h-100">
                     <div class="card-body">
-                        <h2 class="h6">@T["Add a punch"]</h2>
+                        <h2 class="h6">@T["Add a Punch"]</h2>
                         <form asp-action="AddPunch" asp-route-id="@timesheet.ItemId" method="post">
                             <div class="row g-2">
                                 <div class="col-sm-4">
@@ -251,12 +251,12 @@
                                 <div class="col-sm-4"><input type="date" name="date" class="form-control" min="@timesheet.PeriodStart.ToString("yyyy-MM-dd")" max="@timesheet.PeriodEnd.ToString("yyyy-MM-dd")" value="@defaultDay" aria-label="@T["Day"]" required /></div>
                                 <div class="col-sm-4"><input type="time" name="time" class="form-control" aria-label="@T["Time"]" required /></div>
                                 <div class="col-12"><input type="text" name="reason" class="form-control" placeholder="@T["Why"]" aria-label="@T["Why"]" required /></div>
-                                <div class="col-12"><button type="submit" class="btn btn-secondary">@T["Add punch"]</button></div>
+                                <div class="col-12"><button type="submit" class="btn btn-secondary">@T["Add Punch"]</button></div>
                             </div>
                         </form>
                         @if (Model.Days.Any(day => day.Punches.Count > 0))
                         {
-                            <h2 class="h6 mt-4">@T["Change or remove a punch"]</h2>
+                            <h2 class="h6 mt-4">@T["Change or Remove a Punch"]</h2>
                             <ul class="list-unstyled mb-0">
                                 @foreach (var punch in Model.Days.SelectMany(day => day.Punches))
                                 {
@@ -296,7 +296,7 @@
         <div class="col-lg-6">
             <div class="card text-bg-theme h-100">
                 <div class="card-body">
-                    <h2 class="h6">@T["Add hours by hand"]</h2>
+                    <h2 class="h6">@T["Add Hours by Hand"]</h2>
                     <p class="text-muted small">@T["For hours with no punches, such as a holiday or being called back."]</p>
                     <form asp-action="AddLine" asp-route-id="@timesheet.ItemId" method="post">
                         <div class="row g-2">
@@ -311,7 +311,7 @@
                             </div>
                             <div class="col-sm-3"><input type="number" name="hours" step="0.25" min="0.25" max="24" class="form-control" placeholder="@T["Hours"]" aria-label="@T["Hours"]" required /></div>
                             <div class="col-12"><input type="text" name="note" class="form-control" placeholder="@T["Note (optional)"]" aria-label="@T["Note"]" /></div>
-                            <div class="col-12"><button type="submit" class="btn btn-secondary">@T["Add hours"]</button></div>
+                            <div class="col-12"><button type="submit" class="btn btn-secondary">@T["Add Hours"]</button></div>
                         </div>
                     </form>
                 </div>

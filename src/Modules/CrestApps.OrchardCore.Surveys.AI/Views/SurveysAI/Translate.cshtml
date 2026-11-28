@@ -1,7 +1,7 @@
 @model SurveyAITranslateViewModel
 
 <zone Name="Title">
-    <breadcrumb name="SurveysAITranslate" title="@T["Translate with AI"]">
+    <breadcrumb name="SurveysAITranslate" title="@T["Translate With AI"]">
         <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
         <breadcrumb-item id="SurveysDesign" action="Design" controller="SurveyDesigner" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@Model.Survey.Title</breadcrumb-item>
     </breadcrumb>

@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Html
 
 @{
-    ViewData["Title"] = T["My required learning"];
+    ViewData["Title"] = T["My Required Learning"];
 }
 
 @{
@@ -78,7 +78,7 @@
 
     @if (Model.Paths.Count > 0)
     {
-        <h2 class="h4 mb-3">@T["My learning paths"]</h2>
+        <h2 class="h4 mb-3">@T["My Learning Paths"]</h2>
         <div class="list-group">
             @foreach (var path in Model.Paths)
             {
@@ -117,8 +117,8 @@
 @if (accountUrl is not null)
 {
     <zone Name="Title">
-        <breadcrumb name="LearningMyRequiredLearning" title="@T["My required learning"]">
-            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        <breadcrumb name="LearningMyRequiredLearning" title="@T["My Required Learning"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your Account"]</breadcrumb-item>
         </breadcrumb>
     </zone>
 
@@ -128,11 +128,11 @@ else
 {
     <div class="container my-4">
         <div class="product-breadcrumb">
-            <breadcrumb name="LearningMyRequiredLearning" title="@T["My required learning"]">
+            <breadcrumb name="LearningMyRequiredLearning" title="@T["My Required Learning"]">
                 <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
             </breadcrumb>
         </div>
-        <h1 class="h3 mb-3">@T["My required learning"]</h1>
+        <h1 class="h3 mb-3">@T["My Required Learning"]</h1>
         @content(null)
     </div>
 }
