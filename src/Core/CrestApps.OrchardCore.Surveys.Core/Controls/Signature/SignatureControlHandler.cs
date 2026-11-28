@@ -125,4 +125,12 @@ public sealed class SignatureControlHandler : SurveyControlHandlerBase<Signature
     /// <inheritdoc />
     public override IEnumerable<SurveyAnswerIndexRow> GetIndexRows(SurveyQuestion question, SurveyAnswer answer)
         => [];
+
+    /// <inheritdoc />
+    /// <remarks>
+    /// The drawing (a file, or the data URL kept in the answer when no file store is on) is the person's own mark; without
+    /// it the answer holds nothing, so it goes.
+    /// </remarks>
+    public override SurveyAnswer RemovePersonalData(SurveyQuestion question, SurveyAnswer answer)
+        => null;
 }

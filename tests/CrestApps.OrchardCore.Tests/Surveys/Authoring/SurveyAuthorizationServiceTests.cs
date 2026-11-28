@@ -28,6 +28,23 @@ public sealed class SurveyAuthorizationServiceTests
         Assert.False(await service.AuthorizeAsync(TestSecurity.User("lee"), _ownSurvey, SurveyOperation.Manage, TestContext.Current.CancellationToken));
     }
 
+    [Fact]
+    public async Task AuthorizeAsync_OwnerWhoseTokenCarriesOnlyASubClaim_IsTheOwner()
+    {
+        // Arrange: R12-L13, an API token that names the user with "sub" only, as the API's caller id already reads it.
+        var service = new SurveyAuthorizationService(TestSecurity.Granting(SurveysPermissions.ManageOwnSurveys), []);
+        var owner = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "pat-id")], "Bearer"));
+        var other = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", "lee-id")], "Bearer"));
+
+        // Act
+        var ownerAllowed = await service.AuthorizeAsync(owner, _ownSurvey, SurveyOperation.Manage, TestContext.Current.CancellationToken);
+        var otherAllowed = await service.AuthorizeAsync(other, _ownSurvey, SurveyOperation.Manage, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(ownerAllowed);
+        Assert.False(otherAllowed);
+    }
+
     [Theory]
     [InlineData(SurveyOperation.ManageInvitations)]
     [InlineData(SurveyOperation.Publish)]

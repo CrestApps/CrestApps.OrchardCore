@@ -8,7 +8,7 @@ user_manual:
 
 ## Collectors
 
-A collector (`SurveyCollector`) is a way in: a **web link**, a **kiosk**, an **invitation** list, or a kind of a consumer's own. Each has its own token (the public URL `/s/{token}`), opening and closing times, most responses, password (stored as a hash), hidden variable values and culture. The first publish creates the survey's default web link. A collector's QR code is served as SVG at `admin/surveys/collectors/{id}/qr.svg`.
+A collector (`SurveyCollector`) is a way in: a **web link**, a **kiosk**, an **invitation** list, or a kind of a consumer's own. Each has its own token (the public URL `/s/{token}`), opening and closing times, most responses, password (stored as a hash), hidden variable values and culture. A response started through a collector runs in the language a `?culture=` on its link asks for, else the collector's culture when set, else the visitor's language; a personal invitation link starts in its invitation collector's culture the same way. The first publish creates the survey's default web link. A collector's QR code is served as SVG at `admin/surveys/collectors/{id}/qr.svg`.
 
 A **kiosk** shows the ending for a few seconds, then returns to the start for the next person; it clears the resume cookie (before an ending that redirects, too) and never resumes a response. Every kiosk response is a guest response that no per-person limit counts, so the next person can't resume it; give a kiosk's survey an audience that lets guests answer. A kiosk refuses to start while the visitor is signed in, and says to sign out: someone who opens the kiosk address at home, signed in, would otherwise answer as an uncounted guest and bypass the survey's limits. Keep the kiosk device signed out. A kiosk response can't be reviewed or reopened.
 
@@ -26,14 +26,14 @@ A GET never starts a response or uses up an invitation, so link previews (chat a
 | `POST /s/r/{responseId}/check/{questionId}` | Immediate feedback |
 | `GET /s/r/{responseId}/done` | The ending |
 | `GET /s/r/{responseId}/review` | The review, as the review settings allow. Hidden questions (values from the link, a consumer or a workflow) are left out; the admin Details page shows them |
-| `POST /s/r/{responseId}/reopen` | Reopens a finished response when changes are allowed |
+| `POST /s/r/{responseId}/reopen` | Reopens a finished response when changes are allowed; otherwise it goes back to the ending, which says why (changes aren't allowed, the survey closed, or the response is busy) |
 | `GET /s/i/{token}` | A personal invitation link: marks the invitation opened and shows a page that posts the start |
 | `POST /s/i/{token}` | Starts the invited person's response, or resumes it from any browser |
 | `GET /s/i/{token}/unsubscribe` | The unsubscribe page of an invitation e-mail; changes nothing |
 | `POST /s/i/{token}/unsubscribe` | Unsubscribes the invitation's address from survey invitations (no form token, for one-click unsubscribe) |
 | `GET /s/{token}/results` | Totals of all responses, when the survey shows them |
 | `GET /s/r/{responseId}/results` | The same totals for the respondent of that response, for a survey reached without a public link (a course item's survey) |
-| `GET /surveys/my` | The signed-in user's own responses |
+| `GET /surveys/my` | The signed-in user's own responses, titled as the version each one was answered on (never the unpublished draft) |
 
 Posts check the antiforgery token. When the Orchard Core **Rate Limits** feature is on, the routes are limited in two ways (fixed one-minute windows, `RespondRateLimitsStartup`):
 

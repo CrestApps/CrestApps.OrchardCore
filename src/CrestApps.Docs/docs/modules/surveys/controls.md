@@ -225,5 +225,6 @@ The runner raises `survey:page-loaded` when it inserts a new page, so a script c
 | `FormatAnswer(question, answer, context)` | Piping, exports, notifications, workflow inputs |
 | `DescribeColumns`, `WriteColumns` | Exports and the wide data set |
 | `GetIndexRows(question, answer)` | A response is completed; rows feed the SQL aggregates |
+| `RemovePersonalData(question, answer)` | A person's data is erased or retention anonymizes a response; return the answer to keep, or `null` to drop an answer that names the person. The default keeps the answer; Contact information, Signature and Hidden drop theirs |
 
 `ISurveyControlScorer` has `Score` (a result without points means a grader scores it), `MaxPoints`, `GetFeedback` and `AnswerKeyIsOrder` (`false` by default). A type whose answer key is an order of its choices, such as Ranking, returns `true`: its choices then always start shuffled in a respondent's plan, the API definition shuffles them and the public results page lists them by text. `ISurveyControlAnalyzer` has `SummarizeAsync` (aggregates from `ISurveyAnswerAggregates`) and `ToReportSections`; an analyzer hides groups smaller than `context.MinimumGroupSize`.

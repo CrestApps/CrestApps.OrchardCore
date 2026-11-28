@@ -146,7 +146,8 @@ public sealed class SurveyInvitationLinkController : Controller
             InvitationToken = token,
             Identity = identity,
             Context = SurveyInvitationService.ContextOf(invitation),
-            Culture = System.Globalization.CultureInfo.CurrentUICulture.Name,
+            // The invitation collector's language, when set, as on a public link; otherwise the visitor's.
+            Culture = !string.IsNullOrWhiteSpace(collector.Culture) ? collector.Culture : System.Globalization.CultureInfo.CurrentUICulture.Name,
         });
 
         if (result.Error == SurveyErrorCode.CaptchaRequired)

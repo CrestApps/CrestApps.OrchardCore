@@ -227,6 +227,10 @@ public abstract class SurveyControlHandlerBase<TSettings> : ISurveyControlHandle
     }
 
     /// <inheritdoc />
+    public virtual SurveyAnswer RemovePersonalData(SurveyQuestion question, SurveyAnswer answer)
+        => answer;
+
+    /// <inheritdoc />
     public virtual IEnumerable<SurveyAnswerIndexRow> GetIndexRows(SurveyQuestion question, SurveyAnswer answer)
     {
         if (answer is null)

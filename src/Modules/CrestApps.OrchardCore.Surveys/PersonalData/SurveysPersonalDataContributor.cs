@@ -16,8 +16,9 @@ namespace CrestApps.OrchardCore.Surveys.PersonalData;
 /// <summary>
 /// Exports a person's identified survey responses, with their answers, and their invitations (to their user account,
 /// or guest invitations to one of their e-mail addresses, with the responses linked to them); erasure removes who gave
-/// the responses and everything that could point back to them (context, variables and properties; the answers stay for
-/// results, and the key an in-progress response is counted under goes too), deletes the files they uploaded, their
+/// the responses and everything that could point back to them (context, variables and properties, and the answers that
+/// name them, as <see cref="SurveyMaintenanceService.Anonymize"/> does for retention; the other answers stay for results,
+/// and the key an in-progress response is counted under goes too), deletes the files they uploaded, their
 /// invitations, their accommodations (extra time or attempts, with the reason they were granted) and their participation
 /// counts. Accommodations a staff member granted to others keep that staff member as their actor: that is a record of
 /// staff work, not the staff member's personal data. Participation is exported and erased by the keys it is really
@@ -169,30 +170,11 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
                 context.Result.Count(FileKind, removedFiles);
             }
 
-            foreach (var answer in response.Answers.Values)
-            {
-                answer.AttachmentIds = [];
-            }
+            // The answers stay for results, but those that name the person don't; nothing else that names the person, or
+            // points back to them, stays either. Retention's Anonymize clears the same fields.
+            var version = await _versions.GetAsync(response.SurveyVersionId, cancellationToken);
 
-            // The answers stay for results; nothing that names the person, or points back to them, does (the site-wide
-            // number, in the order responses start, would point back to them next to their other responses' numbers).
-            response.Number = null;
-            response.UserId = null;
-            response.Respondent = null;
-            response.IpAddress = null;
-            response.InvitationId = null;
-            response.InvitationSeal = null;
-            response.ResumeTokenHash = null;
-
-            // The key the response is counted under names the person on an identified survey (u:{id} or i:{id}); left
-            // in place, a later deadline completion would count it again and write back the participation erased below.
-            response.RespondentKey = null;
-
-            // What the person's accommodation granted goes with the accommodation itself.
-            response.Accommodation = null;
-            response.Context = null;
-            response.Variables.Clear();
-            response.Properties.Clear();
+            SurveyMaintenanceService.Anonymize(response, version?.Definition, _registry);
             await _session.SaveAsync(response, collection: SurveysConstants.ResponsesCollectionName, cancellationToken: cancellationToken);
             context.Result.Count(ResponseKind);
         }
@@ -333,7 +315,8 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
     }
 
     // The person's responses: those given while signed in, and those linked to one of their invitations (a guest who
-    // answered an e-mail invitation on an identified survey).
+    // answered an e-mail invitation on an identified survey). A response linked to their invitation that another
+    // signed-in user gave (from a forwarded link) is that user's, not theirs.
     private async Task<IReadOnlyList<SurveyResponse>> ResponsesAsync(PersonalDataSubject subject, IReadOnlyList<SurveyInvitation> invitations, CancellationToken cancellationToken)
     {
         var found = new Dictionary<string, SurveyResponse>(StringComparer.Ordinal);
@@ -351,7 +334,10 @@ internal sealed class SurveysPersonalDataContributor : IPersonalDataContributor
         {
             foreach (var response in await _session.Query<SurveyResponse, SurveyResponseIndex>(index => index.InvitationId.IsIn(batch), collection: SurveysConstants.ResponsesCollectionName).ListAsync(cancellationToken))
             {
-                found.TryAdd(response.ItemId, response);
+                if (string.IsNullOrEmpty(response.UserId) || userIds.Contains(response.UserId, StringComparer.Ordinal))
+                {
+                    found.TryAdd(response.ItemId, response);
+                }
             }
         }
 

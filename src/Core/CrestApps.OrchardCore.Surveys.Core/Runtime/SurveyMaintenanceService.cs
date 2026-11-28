@@ -1,6 +1,7 @@
 using System.Data.Common;
 using System.Diagnostics;
 using System.Linq.Expressions;
+using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
@@ -201,17 +202,25 @@ public sealed class SurveyMaintenanceService
         };
 
     /// <summary>
-    /// Removes who responded from a response: user, respondent, IP address, invitation, site-wide number and the key its
-    /// participation was counted under, and the answers' references to files (the caller removes the files themselves, whose uploader
-    /// names the respondent).
+    /// Removes who responded, and everything that points back to them, from a response: user, respondent, IP address,
+    /// site-wide number, invitation and its seal, resume token hash, the key its participation was counted under, the
+    /// accommodation, context, variables and properties, the answers' references to files (the caller removes the files
+    /// themselves, whose uploader names the respondent), and the answers that name the person, which each question type
+    /// drops through <see cref="ISurveyControlHandler.RemovePersonalData"/>. Personal data erasure and retention's
+    /// Anonymize both use it, so they clear the same fields.
     /// </summary>
     /// <param name="response">The response.</param>
+    /// <param name="definition">The definition of the version the response was given on, or <see langword="null"/> when it can't be found (the answers are then left as they are).</param>
+    /// <param name="registry">The question type registry, or <see langword="null"/> to leave the answers as they are.</param>
     /// <returns><see langword="true"/> when something was removed.</returns>
-    public static bool Anonymize(SurveyResponse response)
+    public static bool Anonymize(SurveyResponse response, SurveyDefinition definition = null, ISurveyControlRegistry registry = null)
     {
         ArgumentNullException.ThrowIfNull(response);
 
-        var changed = response.UserId is not null || response.Respondent is not null || response.IpAddress is not null || response.InvitationId is not null || response.RespondentKey is not null || response.Accommodation is not null || response.Number is not null;
+        var changed = response.UserId is not null || response.Respondent is not null || response.IpAddress is not null
+            || response.InvitationId is not null || response.InvitationSeal is not null || response.ResumeTokenHash is not null
+            || response.RespondentKey is not null || response.Accommodation is not null || response.Number is not null
+            || response.Context is not null || response.Variables.Count > 0 || response.Properties.Count > 0;
 
         // The number comes from one sequence for the whole site, in the order responses start: next to a named
         // response's number it would still tell who gave this one.
@@ -220,14 +229,50 @@ public sealed class SurveyMaintenanceService
         response.Respondent = null;
         response.IpAddress = null;
         response.InvitationId = null;
+        response.InvitationSeal = null;
+        response.ResumeTokenHash = null;
+
+        // The key the response is counted under names the person on an identified survey (u:{id} or i:{id}); left in
+        // place, a later deadline completion would count it again and write their participation back.
         response.RespondentKey = null;
+
+        // What the person's accommodation granted goes with the accommodation itself.
         response.Accommodation = null;
+        response.Context = null;
+        response.Variables.Clear();
+        response.Properties.Clear();
 
         foreach (var answer in response.Answers.Values)
         {
             if (answer?.AttachmentIds is { Count: > 0 })
             {
                 answer.AttachmentIds = [];
+                changed = true;
+            }
+        }
+
+        IEnumerable<SurveyQuestion> questions = registry is null || definition is null ? [] : definition.Pages.SelectMany(page => page.Questions);
+
+        foreach (var question in questions)
+        {
+            if (question?.Id is null
+                || !response.Answers.TryGetValue(question.Id, out var answer)
+                || answer is null
+                || registry.GetHandler(question.ControlType) is not { } handler)
+            {
+                continue;
+            }
+
+            var kept = handler.RemovePersonalData(question, answer);
+
+            if (kept is null)
+            {
+                response.Answers.Remove(question.Id);
+                changed = true;
+            }
+            else if (!ReferenceEquals(kept, answer))
+            {
+                response.Answers[question.Id] = kept;
                 changed = true;
             }
         }
@@ -722,7 +767,9 @@ public sealed class SurveyMaintenanceService
             return true;
         }
 
-        Anonymize(response);
+        var version = await services.GetRequiredService<ISurveyVersionCache>().GetAsync(response.SurveyVersionId, cancellationToken);
+
+        Anonymize(response, version?.Definition, services.GetRequiredService<ISurveyControlRegistry>());
         response.AnonymizedUtc = now;
         response.ModifiedUtc = now;
 

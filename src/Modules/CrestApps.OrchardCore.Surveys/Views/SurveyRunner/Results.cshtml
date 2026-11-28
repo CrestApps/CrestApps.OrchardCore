@@ -1,4 +1,5 @@
 @model CrestApps.OrchardCore.Surveys.ViewModels.SurveyResultsViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyContentSanitizer HtmlSanitizer
 
 <zone Name="Title">
     <breadcrumb name="SurveyRunnerResults" title="@T["Results"]">
@@ -16,7 +17,7 @@
         @foreach (var question in Model.Questions)
         {
             <div class="card mb-3">
-                <div class="card-header">@question.Title</div>
+                <div class="card-header">@Html.Raw(HtmlSanitizer.Sanitize(question.Title))</div>
                 <div class="card-body">
                     @foreach (var choice in question.Choices)
                     {

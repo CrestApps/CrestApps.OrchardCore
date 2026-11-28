@@ -83,6 +83,36 @@ public sealed partial class SurveyAuthoringConflictTests
         Assert.NotNull(await _fixture.InTenantAsync(async services => await services.GetRequiredService<ISurveyManager>().FindByIdAsync(surveyId, cancellationToken)));
     }
 
+    [Fact]
+    public async Task DiscardDraft_WhenThePublishedVersionIsMissing_ReportsTheFailureAndKeepsTheUnpublishedChanges()
+    {
+        // Arrange: R12-L12, the survey points at a published version that can't be found any more.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var surveyId = await _fixture.InTenantAsync(async services =>
+        {
+            var manager = services.GetRequiredService<ISurveyManager>();
+            var survey = await manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Discard " + Guid.NewGuid().ToString("N")[..6] }, cancellationToken);
+
+            survey.PublishedVersionId = "missing-version";
+            survey.HasUnpublishedChanges = true;
+            await manager.UpdateAsync(survey, null, cancellationToken);
+
+            return survey.ItemId;
+        });
+        using var client = await _fixture.CreateClientAsync("admin");
+        var token = SurveysSiteFixture.Token(await client.GetStringAsync($"Admin/surveys/{surveyId}/design", cancellationToken));
+
+        // Act
+        var discarded = await client.PostAsync($"Admin/surveys/{surveyId}/draft/discard", new FormUrlEncodedContent(new Dictionary<string, string> { ["__RequestVerificationToken"] = token }), cancellationToken);
+        var page = await client.GetStringAsync(discarded.Headers.Location, cancellationToken);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Redirect, discarded.StatusCode);
+        Assert.DoesNotContain("The draft has been replaced with the published version.", page, StringComparison.Ordinal);
+        Assert.Contains("The published version could not be found", page, StringComparison.Ordinal);
+        Assert.True(await _fixture.InTenantAsync(async services => (await services.GetRequiredService<ISurveyManager>().FindByIdAsync(surveyId, cancellationToken)).HasUnpublishedChanges));
+    }
+
     private static Task<HttpResponseMessage> SendAsync(HttpClient client, string surveyId, string token, string version, CancellationToken cancellationToken)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, $"Admin/surveys/{surveyId}/draft/commands")

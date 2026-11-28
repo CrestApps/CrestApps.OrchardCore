@@ -1,6 +1,10 @@
 using CrestApps.OrchardCore.Attachments.Services;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Controls.ContactInfo;
+using CrestApps.OrchardCore.Surveys.Core.Controls.Hidden;
+using CrestApps.OrchardCore.Surveys.Core.Controls.Signature;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Scoring;
@@ -170,6 +174,66 @@ public sealed class SurveyMaintenanceTests
         Assert.Empty(anonymized.Answers["sig"].AttachmentIds);
         Assert.Equal("a", anonymized.Answers["q1"].Values.Single());
         Assert.Empty(files.Stored);
+    }
+
+    [Fact]
+    public async Task Run_AnonymizeRetention_RemovesPersonalAnswersAndEverythingThatPointsBackToTheRespondent()
+    {
+        // Arrange: R12-M2, a completed response with contact details, a signature kept in the answer, a hidden value
+        // copied from a variable, and the variables, properties, context, invitation seal and resume token hash.
+        await using var harness = await RuntimeTestHarness.CreateAsync(services =>
+        {
+            services.AddSurveyControl<ContactInfoControlHandler>(SurveyControlNames.ContactInfo, descriptor => descriptor.Capabilities = SurveyControlCapabilities.Answerable);
+            services.AddSurveyControl<SignatureControlHandler>(SurveyControlNames.Signature, descriptor => descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.StoresFiles);
+            services.AddSurveyControl<HiddenControlHandler>(SurveyControlNames.Hidden, descriptor => descriptor.Capabilities = SurveyControlCapabilities.Answerable);
+        });
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page(
+            "p1",
+            RuntimeSurveys.Text("q1"),
+            new SurveyQuestion { Id = "contact", Name = "contact", ControlType = SurveyControlNames.ContactInfo },
+            new SurveyQuestion { Id = "sign", Name = "sign", ControlType = SurveyControlNames.Signature },
+            new SurveyQuestion { Id = "hidden", Name = "email", ControlType = SurveyControlNames.Hidden }));
+        var survey = await harness.PublishAsync(definition, item => item.Retention = new SurveyRetentionSettings { Days = 30, Action = RetentionAction.Anonymize });
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        await harness.PostAsync(response, new SurveyRespondentIdentity { UserId = "u1" }, SurveyPageDirection.Finish, ("q1", "a"));
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyResponseStore>();
+            var stored = await store.FindByIdAsync(response.ItemId);
+            var signature = new SurveyAnswer();
+            signature.Extra[SignatureControlHandler.DataUrlKey] = "data:image/png;base64,iVBORw0KGgo=";
+
+            stored.Answers["contact"] = new SurveyAnswer { Rows = { ["email"] = ["pat@example.com"], ["name"] = ["Pat"] } };
+            stored.Answers["sign"] = signature;
+            stored.Answers["hidden"] = new SurveyAnswer { Values = ["pat@example.com"] };
+            stored.Variables["email"] = "pat@example.com";
+            stored.Properties["crm"] = "contact-1";
+            stored.Context = new CrestApps.OrchardCore.Records.RecordRef("Contact", "contact-1");
+            stored.InvitationSeal = "seal";
+            stored.ResumeTokenHash = "hash";
+            await store.UpdateAsync(stored);
+
+            return true;
+        });
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(40);
+        await RunMaintenanceAsync(harness);
+
+        // Assert
+        var anonymized = await harness.FindAsync(response.ItemId);
+
+        Assert.NotNull(anonymized.AnonymizedUtc);
+        Assert.Equal("a", anonymized.Answers["q1"].Values.Single());
+        Assert.False(anonymized.Answers.ContainsKey("contact"));
+        Assert.False(anonymized.Answers.ContainsKey("sign"));
+        Assert.False(anonymized.Answers.ContainsKey("hidden"));
+        Assert.Empty(anonymized.Variables);
+        Assert.Empty(anonymized.Properties);
+        Assert.Null(anonymized.Context);
+        Assert.Null(anonymized.InvitationSeal);
+        Assert.Null(anonymized.ResumeTokenHash);
     }
 
     [Fact]

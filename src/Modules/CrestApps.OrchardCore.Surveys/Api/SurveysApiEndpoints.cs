@@ -102,7 +102,7 @@ internal static class SurveysApiEndpoints
 
         if (!await authorizationService.AuthorizeAsync(user, SurveysPermissions.ManageSurveys))
         {
-            var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = SurveyUserIds.Of(user);
 
             if (string.IsNullOrEmpty(userId))
             {
@@ -570,5 +570,5 @@ internal static class SurveysApiEndpoints
     }
 
     private static string UserId(ClaimsPrincipal user)
-        => user?.FindFirstValue(ClaimTypes.NameIdentifier) ?? user?.FindFirstValue("sub");
+        => SurveyUserIds.Of(user);
 }

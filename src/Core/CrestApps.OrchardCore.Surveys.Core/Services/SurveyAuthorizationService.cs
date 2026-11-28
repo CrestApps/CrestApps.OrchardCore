@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -45,7 +46,7 @@ public sealed class SurveyAuthorizationService : ISurveyAuthorizationService
 
         if (own is not null
             && !string.IsNullOrEmpty(survey.OwnerId)
-            && string.Equals(survey.OwnerId, user.FindFirstValue(ClaimTypes.NameIdentifier), StringComparison.Ordinal)
+            && string.Equals(survey.OwnerId, SurveyUserIds.Of(user), StringComparison.Ordinal)
             && await _authorizationService.AuthorizeAsync(user, own))
         {
             return true;

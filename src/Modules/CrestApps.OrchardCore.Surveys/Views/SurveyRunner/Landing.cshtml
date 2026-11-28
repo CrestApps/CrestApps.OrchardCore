@@ -10,7 +10,7 @@
 <partial name="_SurveyRunnerStyles" />
 
 <div class="container survey-runner my-4">
-    <div class="survey-landing @Model.Survey.Draft?.Presentation?.CssClass">
+    <div class="survey-landing @Model.CssClass">
         <h1 class="h3 mb-3">@Model.Title</h1>
 
         @if (!Model.AutoStart && !string.IsNullOrWhiteSpace(Model.Introduction))

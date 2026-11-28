@@ -62,4 +62,9 @@ public class SurveyEndingViewModel
     /// Gets or sets the text of the link back, or <see langword="null"/> for the default text.
     /// </summary>
     public string ReturnText { get; set; }
+
+    /// <summary>
+    /// Gets or sets a message for the respondent, such as why the response couldn't be reopened, or <see langword="null"/>.
+    /// </summary>
+    public string Message { get; set; }
 }

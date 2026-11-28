@@ -18,11 +18,11 @@
     else
     {
         <div class="list-group">
-            @foreach (var (response, survey) in Model.Items)
+            @foreach (var (response, survey, title) in Model.Items)
             {
                 <div class="list-group-item d-flex flex-wrap align-items-center gap-2">
                     <div class="me-auto">
-                        <div class="fw-semibold">@(survey.Draft?.Title ?? survey.Title)</div>
+                        <div class="fw-semibold">@title</div>
                         <div class="small text-muted">
                             @response.Number &middot; @T["Started"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: "g"))
                         </div>

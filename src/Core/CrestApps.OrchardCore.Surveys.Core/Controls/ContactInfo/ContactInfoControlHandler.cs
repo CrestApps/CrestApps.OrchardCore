@@ -94,6 +94,11 @@ public sealed class ContactInfoControlHandler : SurveyControlHandlerBase<Contact
     }
 
     /// <inheritdoc />
+    /// <remarks>Contact details name the person, so the whole answer goes.</remarks>
+    public override SurveyAnswer RemovePersonalData(SurveyQuestion question, SurveyAnswer answer)
+        => null;
+
+    /// <inheritdoc />
     public override string FormatAnswer(SurveyQuestion question, SurveyAnswer answer, SurveyFormatContext context)
         => string.Join("; ", question.GetSettings<ContactInfoSettings>().Fields
             .Select(field => (field, Value: Value(answer, field.Kind)))

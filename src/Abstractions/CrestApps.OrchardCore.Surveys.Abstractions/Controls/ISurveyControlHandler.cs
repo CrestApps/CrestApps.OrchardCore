@@ -129,4 +129,14 @@ public interface ISurveyControlHandler
     /// <param name="answer">The answer.</param>
     /// <returns>The rows.</returns>
     IEnumerable<SurveyAnswerIndexRow> GetIndexRows(SurveyQuestion question, SurveyAnswer answer);
+
+    /// <summary>
+    /// Removes what names the respondent from an answer, when a person's data is erased or retention anonymizes a
+    /// response. The default keeps the answer, which results still count; a type whose answer names the person (contact
+    /// details, a drawn signature, a value copied from a variable) returns <see langword="null"/> to drop it.
+    /// </summary>
+    /// <param name="question">The question.</param>
+    /// <param name="answer">The answer.</param>
+    /// <returns>The answer to keep, or <see langword="null"/> to drop it.</returns>
+    SurveyAnswer RemovePersonalData(SurveyQuestion question, SurveyAnswer answer) => answer;
 }

@@ -1,4 +1,5 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyContentSanitizer HtmlSanitizer
 
 <div class="survey-answer">
     @if (string.IsNullOrWhiteSpace(Model.AnswerText))
@@ -28,15 +29,15 @@
         }
         @if (!string.IsNullOrWhiteSpace(feedback.Feedback))
         {
-            <div class="small">@feedback.Feedback</div>
+            <div class="small">@Html.Raw(HtmlSanitizer.Sanitize(feedback.Feedback))</div>
         }
         @foreach (var choiceFeedback in feedback.ChoiceFeedback)
         {
-            <div class="small">@choiceFeedback.Value</div>
+            <div class="small">@Html.Raw(HtmlSanitizer.Sanitize(choiceFeedback.Value))</div>
         }
         @if (!string.IsNullOrWhiteSpace(feedback.GeneralFeedback))
         {
-            <div class="small text-body-secondary">@feedback.GeneralFeedback</div>
+            <div class="small text-body-secondary">@Html.Raw(HtmlSanitizer.Sanitize(feedback.GeneralFeedback))</div>
         }
     </div>
 }

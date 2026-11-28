@@ -38,6 +38,11 @@ public class SurveyLandingViewModel
     public bool NeedsCaptcha { get; set; }
 
     /// <summary>
+    /// Gets or sets the CSS class of the published version, or <see langword="null"/>.
+    /// </summary>
+    public string CssClass { get; set; }
+
+    /// <summary>
     /// Gets or sets the error message, or <see langword="null"/>.
     /// </summary>
     public string Message { get; set; }

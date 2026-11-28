@@ -22,6 +22,11 @@
     <div class="survey-ending">
         <h1 class="h3 mb-3">@title</h1>
 
+        @if (!string.IsNullOrEmpty(Model.Message))
+        {
+            <div class="alert alert-warning" role="alert">@Model.Message</div>
+        }
+
         @if (!string.IsNullOrWhiteSpace(Model.Ending.MessageHtml))
         {
             <div class="survey-ending-message mb-3">@Html.Raw(HtmlSanitizer.Sanitize(Model.Ending.MessageHtml))</div>

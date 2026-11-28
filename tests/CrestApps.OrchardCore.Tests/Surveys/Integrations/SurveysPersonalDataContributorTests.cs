@@ -1,7 +1,11 @@
 using CrestApps.OrchardCore.Parties.Models;
 using CrestApps.OrchardCore.PersonalData;
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Access;
+using CrestApps.OrchardCore.Surveys.Core.Controls.ContactInfo;
+using CrestApps.OrchardCore.Surveys.Core.Controls.Hidden;
+using CrestApps.OrchardCore.Surveys.Core.Controls.Signature;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -9,6 +13,7 @@ using CrestApps.OrchardCore.Surveys.PersonalData;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using OrchardCore;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Integrations;
@@ -442,5 +447,127 @@ public sealed class SurveysPersonalDataContributorTests
         // An accommodation the person granted as staff is staff work and stays.
         var left = await harness.RunAsync(async services => await services.GetRequiredService<SurveyOverrideStore>().GetAllAsync());
         Assert.Equal([theirs], left.Select(entry => entry.ItemId));
+    }
+
+    [Fact]
+    public async Task Erasure_RemovesContactDetailsSignaturesAndHiddenValuesFromTheAnswers()
+    {
+        // Arrange: R12-M2, answers that name the person (contact details, a drawn signature kept in the answer when
+        // Attachments is off, a hidden value copied from a variable) next to an answer that doesn't.
+        var responseId = IdGenerator.GenerateId();
+        await using var harness = await IntegrationsTestHarness.CreateAsync(AddPersonalControls);
+        await harness.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyVersionStore>().CreateAsync(PersonalVersion());
+            await services.GetRequiredService<SurveyResponseStore>().CreateAsync(PersonalResponse(responseId, "user-learner1"));
+        });
+
+        // Act
+        await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataAnonymizeResult();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().AnonymizeAsync(new PersonalDataAnonymizeContext(new PersonalDataSubject("user-learner1"), "[removed]", result));
+
+            return result;
+        });
+
+        // Assert
+        var erased = await harness.RunAsync(async services => await services.GetRequiredService<SurveyResponseStore>().FindByIdAsync(responseId));
+        Assert.False(erased.Answers.ContainsKey("contact"));
+        Assert.False(erased.Answers.ContainsKey("sign"));
+        Assert.False(erased.Answers.ContainsKey("hidden"));
+        Assert.Equal(["c1"], erased.Answers["q1"].Values);
+        Assert.Null(erased.InvitationSeal);
+        Assert.Empty(erased.Variables);
+    }
+
+    [Fact]
+    public async Task ExportAndErasure_LeaveAnotherSignedInUsersResponseToAForwardedInvitation()
+    {
+        // Arrange: R12-M3, signed-in user B answered the link of A's invitation, so B's response carries A's invitation.
+        // A guest's response to A's invitation is A's.
+        var invitationId = IdGenerator.GenerateId();
+        var forwarded = IdGenerator.GenerateId();
+        var guest = IdGenerator.GenerateId();
+        await using var harness = await IntegrationsTestHarness.CreateAsync(services => services.AddScoped<SurveysPersonalDataContributor>());
+        await harness.RunAsync(async services =>
+        {
+            await services.GetRequiredService<SurveyInvitationStore>().CreateAsync(new SurveyInvitation { ItemId = invitationId, SurveyId = "s1", UserId = "user-learner1", Email = "learner@example.com" });
+
+            var responses = services.GetRequiredService<SurveyResponseStore>();
+            await responses.CreateAsync(new SurveyResponse { ItemId = forwarded, SurveyId = "s1", UserId = "user-other", InvitationId = invitationId, IpAddress = "10.0.0.2" });
+            await responses.CreateAsync(new SurveyResponse { ItemId = guest, SurveyId = "s1", InvitationId = invitationId, IpAddress = "10.0.0.3" });
+        });
+
+        // Act
+        var export = await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataExport();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().ExportAsync(new PersonalDataExportContext(new PersonalDataSubject("user-learner1"), result));
+
+            return result;
+        });
+
+        await harness.RunAsync(async services =>
+        {
+            var result = new PersonalDataAnonymizeResult();
+            await services.GetRequiredService<SurveysPersonalDataContributor>().AnonymizeAsync(new PersonalDataAnonymizeContext(new PersonalDataSubject("user-learner1"), "[removed]", result));
+
+            return result;
+        });
+
+        // Assert
+        Assert.DoesNotContain(export.Records, record => record.Id == forwarded);
+        Assert.Contains(export.Records, record => record.Kind == "SurveyResponse" && record.Id == guest);
+        var (others, guests) = await harness.RunAsync(async services => (
+            await services.GetRequiredService<SurveyResponseStore>().FindByIdAsync(forwarded),
+            await services.GetRequiredService<SurveyResponseStore>().FindByIdAsync(guest)));
+        Assert.Equal("user-other", others.UserId);
+        Assert.Equal("10.0.0.2", others.IpAddress);
+        Assert.Null(guests.IpAddress);
+    }
+
+    internal static void AddPersonalControls(IServiceCollection services)
+    {
+        services.AddScoped<SurveysPersonalDataContributor>();
+        services.AddSingleton(typeof(IStringLocalizer<>), typeof(RuntimeLocalizer<>));
+        services.AddSurveyControl<ContactInfoControlHandler>(SurveyControlNames.ContactInfo, descriptor => descriptor.Capabilities = SurveyControlCapabilities.Answerable);
+        services.AddSurveyControl<SignatureControlHandler>(SurveyControlNames.Signature, descriptor => descriptor.Capabilities = SurveyControlCapabilities.Answerable | SurveyControlCapabilities.StoresFiles);
+        services.AddSurveyControl<HiddenControlHandler>(SurveyControlNames.Hidden, descriptor => descriptor.Capabilities = SurveyControlCapabilities.Answerable);
+    }
+
+    internal static SurveyVersion PersonalVersion()
+    {
+        var definition = IntegrationsTestHarness.Definition("Personal");
+        definition.Pages[0].Questions.Add(new SurveyQuestion { Id = "contact", Name = "contact", ControlType = SurveyControlNames.ContactInfo });
+        definition.Pages[0].Questions.Add(new SurveyQuestion { Id = "sign", Name = "sign", ControlType = SurveyControlNames.Signature });
+        definition.Pages[0].Questions.Add(new SurveyQuestion { Id = "hidden", Name = "email", ControlType = SurveyControlNames.Hidden });
+
+        return new SurveyVersion { ItemId = "v-personal", SurveyId = "s1", Number = 1, Definition = definition };
+    }
+
+    internal static SurveyResponse PersonalResponse(string responseId, string userId)
+    {
+        var signature = new SurveyAnswer();
+        signature.Extra[SignatureControlHandler.DataUrlKey] = "data:image/png;base64,iVBORw0KGgo=";
+        var response = new SurveyResponse
+        {
+            ItemId = responseId,
+            SurveyId = "s1",
+            SurveyVersionId = "v-personal",
+            UserId = userId,
+            InvitationSeal = "seal",
+            Status = SurveyResponseStatus.Completed,
+            Answers =
+            {
+                ["q1"] = new SurveyAnswer { Values = ["c1"] },
+                ["contact"] = new SurveyAnswer { Rows = { ["email"] = ["learner@example.com"], ["name"] = ["Pat Learner"] } },
+                ["sign"] = signature,
+                ["hidden"] = new SurveyAnswer { Values = ["learner@example.com"] },
+            },
+        };
+        response.Variables["email"] = "learner@example.com";
+
+        return response;
     }
 }

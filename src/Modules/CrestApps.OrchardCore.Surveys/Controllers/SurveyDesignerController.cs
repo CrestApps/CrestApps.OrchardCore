@@ -492,13 +492,17 @@ public sealed class SurveyDesignerController : Controller
         {
             await _notifier.WarningAsync(H["The survey has never been published, so there is no version to go back to."]);
         }
-        else if (await _publisher.RestoreAsync(id, survey.PublishedVersionId, SurveyDraftStamp.ToUtc(draft), HttpContext.RequestAborted) == SurveyErrorCode.Busy)
+        else if (await _publisher.RestoreAsync(id, survey.PublishedVersionId, SurveyDraftStamp.ToUtc(draft), HttpContext.RequestAborted) is var error && error == SurveyErrorCode.Busy)
         {
             await _notifier.ErrorAsync(H["Someone else changed this survey. Reload the page and try again."]);
         }
+        else if (error != SurveyErrorCode.None)
+        {
+            // Nothing was replaced (the published version can't be found), so the draft keeps its unpublished changes.
+            await _notifier.ErrorAsync(H["The published version could not be found, so the draft was not replaced."]);
+        }
         else
         {
-
             var restored = await _manager.FindByIdAsync(id);
 
             if (restored is not null)

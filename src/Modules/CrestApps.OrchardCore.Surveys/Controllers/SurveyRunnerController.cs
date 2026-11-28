@@ -508,6 +508,7 @@ public sealed class SurveyRunnerController : Controller
             CanReopen = response.Status == SurveyResponseStatus.Completed && definition.Navigation?.AllowEditAfterSubmit == true && survey.Status == SurveyStatus.Open && !closed,
             ShowScore = definition.Scoring?.Enabled == true && definition.Scoring.ShowScoreToRespondent && (shows & ReviewShows.Score) != 0 && response.Grading == GradingStatus.Graded,
             ResultsUrl = ResultsLink(definition, collector, response),
+            Message = TempData["SurveyMessage"] as string,
         };
 
         // A consumer that started the response (a course item) may ask for a link back; only a local URL is followed.
@@ -550,7 +551,16 @@ public sealed class SurveyRunnerController : Controller
 
         var identity = _identities.Build(response.SurveyId);
 
-        await _responses.ReopenAsync(responseId, identity);
+        var reopened = await _responses.ReopenAsync(responseId, identity);
+
+        // A refused reopen (the survey doesn't allow changes after submitting, it closed, or the response is busy) says
+        // why on the page the respondent came from, instead of quietly showing the ending again.
+        if (reopened.Error != SurveyErrorCode.None)
+        {
+            TempData["SurveyMessage"] = _messages.For(reopened.Error);
+
+            return RedirectToAction(nameof(Done), new { responseId });
+        }
 
         // The ending shortened the resume cookie; a response in progress again gets its full life back.
         if (!string.IsNullOrEmpty(identity.ResumeToken))
@@ -764,7 +774,10 @@ public sealed class SurveyRunnerController : Controller
         {
             if (surveys.TryGetValue(response.SurveyId, out var survey))
             {
-                model.Items.Add((response, survey));
+                // The respondent sees the version they answered, never the author's unpublished draft.
+                var title = (await _versions.GetAsync(survey, response))?.Definition?.Title;
+
+                model.Items.Add((response, survey, string.IsNullOrWhiteSpace(title) ? survey.Title : title));
             }
         }
 
@@ -863,6 +876,7 @@ public sealed class SurveyRunnerController : Controller
             Survey = survey,
             Title = string.IsNullOrWhiteSpace(title) ? survey.Title : title,
             Introduction = SurveyDefinitionLocalizer.Translate(definition, culture, SurveyTextKeys.SurveyIntroduction, definition?.Introduction),
+            CssClass = definition?.Presentation?.CssClass,
             NeedsPassword = !string.IsNullOrEmpty(collector?.PasswordHash),
             NeedsCaptcha = survey.Access?.RequireCaptcha == true && User?.Identity?.IsAuthenticated != true && _serviceProvider.GetService<ReCaptchaService>() is not null,
             CanStart = survey.Status == SurveyStatus.Open && definition is not null && collector?.Status != CollectorStatus.Closed,
@@ -992,7 +1006,11 @@ public sealed class SurveyRunnerController : Controller
         var identity = _identities.Build(survey.ItemId);
         var responseId = SurveyResumeTokens.ResponseIdOf(identity.ResumeToken);
 
-        if (!string.IsNullOrEmpty(responseId) && await _responses.FindForRespondentAsync(responseId, identity) is { Status: SurveyResponseStatus.Completed })
+        // The resume cookie is named after the survey, but its value is the respondent's: a completed response of another
+        // survey, copied under this survey's name, opens nothing here.
+        if (!string.IsNullOrEmpty(responseId)
+            && await _responses.FindForRespondentAsync(responseId, identity) is { Status: SurveyResponseStatus.Completed } response
+            && string.Equals(response.SurveyId, survey.ItemId, StringComparison.Ordinal))
         {
             return true;
         }

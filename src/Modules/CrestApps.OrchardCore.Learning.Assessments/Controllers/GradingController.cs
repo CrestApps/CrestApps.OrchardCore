@@ -75,10 +75,4 @@ public sealed class GradingController : Controller
             },
         });
     }
-
-    /// <summary>
-    /// Shows an attempt with its answers, the key and the grader guidance.
-    /// </summary>
-    /// <param name="id">The attempt.</param>
-    /// <returns>The page.</returns>
 }

@@ -44,6 +44,11 @@ public sealed class HiddenControlHandler : SurveyControlHandlerBase<HiddenSettin
         => Task.CompletedTask;
 
     /// <inheritdoc />
+    /// <remarks>The value is a copy of a variable, which erasure and anonymization clear: it goes with them.</remarks>
+    public override SurveyAnswer RemovePersonalData(SurveyQuestion question, SurveyAnswer answer)
+        => null;
+
+    /// <inheritdoc />
     public override async Task ValidateDefinitionAsync(SurveyQuestion question, SurveyDefinitionValidationContext context)
     {
         await base.ValidateDefinitionAsync(question, context);
