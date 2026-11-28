@@ -68,6 +68,7 @@ public sealed class EmailPersonalDataContributorTests : IAsyncLifetime
             .Column<string>("MessageId", column => column.WithLength(EmailDeliveryLogIndex.MessageIdLength))
             .Column<string>("EventId", column => column.WithLength(EmailDeliveryLogIndex.EventIdLength))
             .Column<bool>("IsBulk")
+            .Column<bool>("IsUnconfirmed", column => column.NotNull().WithDefault(false))
             .Column<DateTime>("OccurredUtc", column => column.NotNull()),
             collection: DeliverabilityCollection);
 
