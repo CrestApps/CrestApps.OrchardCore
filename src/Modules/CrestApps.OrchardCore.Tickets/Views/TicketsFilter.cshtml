@@ -14,8 +14,8 @@
         .Select(pair => Uri.EscapeDataString(pair.Key) + "=" + Uri.EscapeDataString(pair.Value.ToString())));
     <input type="hidden" name="accountId" value="@filter.AccountId" form="@formId" />
     <div class="btn-group filter">
-        <a class="btn btn-sm btn-outline-secondary text-nowrap" href="@(Context.Request.PathBase + Context.Request.Path + (withoutAccount.Length > 0 ? "?" + withoutAccount : string.Empty))" title="@T["Show every account's tickets"]">
-            @T["Account: {0}", filter.AccountName ?? T["an account"].Value] <i class="fa-solid fa-xmark ms-1" aria-hidden="true"></i>
+        <a class="btn btn-sm btn-outline-secondary text-nowrap" href="@(Context.Request.PathBase + Context.Request.Path + (withoutAccount.Length > 0 ? "?" + withoutAccount : string.Empty))" title="@T["Show Every Account's Tickets"]">
+            @T["Account: {0}", filter.AccountName ?? T["An Account"].Value] <i class="fa-solid fa-xmark ms-1" aria-hidden="true"></i>
         </a>
     </div>
 }

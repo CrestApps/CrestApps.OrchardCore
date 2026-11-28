@@ -21,7 +21,7 @@
 }
 
 <div class="telephony-soft-phone__header-actions dropdown" data-contact-center-presence data-presence-labels="@JsonSerializer.Serialize(labels)">
-    <button type="button" class="telephony-soft-phone__icon-btn dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-contact-center-presence-toggle aria-expanded="false" title="@T["Contact Center presence"]">
+    <button type="button" class="telephony-soft-phone__icon-btn dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="outside" data-contact-center-presence-toggle aria-expanded="false" title="@T["Contact Center Presence"]">
         <i class="fa-solid fa-circle-user"></i>
         <span data-contact-center-presence-text>@presenceText</span>
         @if (!string.IsNullOrEmpty(pendingText))
@@ -78,10 +78,10 @@
             <form asp-action="SetPresence" asp-controller="AgentSoftPhone" asp-area="CrestApps.OrchardCore.ContactCenter" method="post" data-contact-center-presence-form>
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
                 <button type="submit" name="status" value="@AgentPresenceStatus.Away" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Away" data-presence-value="@((int)AgentPresenceStatus.Away)">@T["Away"]</button>
-                <button type="submit" name="status" value="@AgentPresenceStatus.DoNotDisturb" class="dropdown-item" data-presence-status="@AgentPresenceStatus.DoNotDisturb" data-presence-value="@((int)AgentPresenceStatus.DoNotDisturb)">@T["Do not disturb"]</button>
+                <button type="submit" name="status" value="@AgentPresenceStatus.DoNotDisturb" class="dropdown-item" data-presence-status="@AgentPresenceStatus.DoNotDisturb" data-presence-value="@((int)AgentPresenceStatus.DoNotDisturb)">@T["Do Not Disturb"]</button>
                 <button type="submit" name="status" value="@AgentPresenceStatus.Meeting" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Meeting" data-presence-value="@((int)AgentPresenceStatus.Meeting)">@T["Meeting"]</button>
                 <button type="submit" name="status" value="@AgentPresenceStatus.Training" class="dropdown-item" data-presence-status="@AgentPresenceStatus.Training" data-presence-value="@((int)AgentPresenceStatus.Training)">@T["Training"]</button>
-                <button type="submit" name="status" value="@AgentPresenceStatus.AfterHoursUnavailable" class="dropdown-item" data-presence-status="@AgentPresenceStatus.AfterHoursUnavailable" data-presence-value="@((int)AgentPresenceStatus.AfterHoursUnavailable)">@T["After-hours unavailable"]</button>
+                <button type="submit" name="status" value="@AgentPresenceStatus.AfterHoursUnavailable" class="dropdown-item" data-presence-status="@AgentPresenceStatus.AfterHoursUnavailable" data-presence-value="@((int)AgentPresenceStatus.AfterHoursUnavailable)">@T["After-Hours Unavailable"]</button>
             </form>
         }
 

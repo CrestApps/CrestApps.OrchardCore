@@ -111,7 +111,7 @@
     </ul>
 }
 
-<h2 class="h5">@(Model.Buyer.Role == AccountMemberRole.Admin ? T["The account's orders"] : T["Your orders for the account"])</h2>
+<h2 class="h5">@(Model.Buyer.Role == AccountMemberRole.Admin ? T["The Account's Orders"] : T["Your Orders for the Account"])</h2>
 @if (Model.Orders.Count == 0)
 {
     <p class="text-body-secondary">@T["No orders yet."]</p>

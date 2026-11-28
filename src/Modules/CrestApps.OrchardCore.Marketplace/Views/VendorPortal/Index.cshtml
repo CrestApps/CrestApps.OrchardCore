@@ -8,7 +8,7 @@
 
 <zone Name="Title">
     <breadcrumb name="VendorPortal" title="@T["Vendor"]">
-        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+        <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(CommerceConstants.Account.HomeRouteName)">@T["Your Account"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -17,7 +17,7 @@
         <span class="flex-grow-1">@T["Set up your payouts with Stripe to be paid for your sales."]</span>
         <form method="post" action="@Url.Action("SetUpPayouts", "VendorPortal", new { area = MarketplaceConstants.Feature })">
             @Html.AntiForgeryToken()
-            <button type="submit" class="btn btn-primary btn-sm">@T["Set up payouts"]</button>
+            <button type="submit" class="btn btn-primary btn-sm">@T["Set Up Payouts"]</button>
         </form>
     </div>;
 

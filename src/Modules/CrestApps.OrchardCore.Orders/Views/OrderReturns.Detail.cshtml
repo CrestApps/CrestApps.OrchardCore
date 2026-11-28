@@ -6,7 +6,7 @@
         <span>@T["Returns"]</span>
         @if (!string.IsNullOrEmpty(Model.RequestUrl))
         {
-            <a class="btn btn-outline-primary btn-sm" href="@Model.RequestUrl"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @T["Return items"]</a>
+            <a class="btn btn-outline-primary btn-sm" href="@Model.RequestUrl"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i> @T["Return Items"]</a>
         }
     </div>
     @if (Model.Returns.Count == 0)
@@ -31,7 +31,7 @@
                         <div class="small mt-1">@T["We'll email you once we've looked at it."]</div>
                         <form method="post" action="@Model.WithdrawUrlFormat.Replace("__id__", orderReturn.ItemId)" class="mt-1 no-multisubmit">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-link btn-sm p-0">@T["Withdraw this request"]</button>
+                            <button type="submit" class="btn btn-link btn-sm p-0">@T["Withdraw This Request"]</button>
                         </form>
                         break;
                     case OrderReturnStatus.Approved:

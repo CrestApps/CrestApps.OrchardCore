@@ -1,7 +1,7 @@
 @model DisbursementBatchesIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="DisbursementBatches" title="@T["Disbursement batches"]">
+    <breadcrumb name="DisbursementBatches" title="@T["Disbursement Batches"]">
         <breadcrumb-item id="Disbursements" action="Index" controller="Disbursements" area="CrestApps.OrchardCore.Banking" permission="@DisbursementsPermissions.ViewDisbursements.Name">@T["Disbursements"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -22,7 +22,7 @@
                 @if (Model.CanImportReturns)
                 {
                     <div class="col-auto">
-                        <a class="btn btn-secondary" role="button" asp-action="Returns">@T["Import a return file"]</a>
+                        <a class="btn btn-secondary" role="button" asp-action="Returns">@T["Import a Return File"]</a>
                     </div>
                 }
             </div>

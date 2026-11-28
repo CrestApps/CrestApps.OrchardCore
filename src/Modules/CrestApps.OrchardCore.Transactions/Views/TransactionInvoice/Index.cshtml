@@ -50,13 +50,13 @@
 </style>
 
 <div class="d-flex flex-wrap gap-2 mb-3 no-print">
-    <button type="button" class="btn btn-primary" onclick="window.print();">@T["Print invoice"]</button>
+    <button type="button" class="btn btn-primary" onclick="window.print();">@T["Print Invoice"]</button>
 
     @if (!Model.IsAdministrator && payable)
     {
         <form asp-action="Pay" asp-controller="Transaction" asp-area="CrestApps.OrchardCore.Transactions" method="post">
             <input type="hidden" name="itemId" value="@transaction.ItemId" />
-            <button type="submit" class="btn btn-success">@T["Pay now"]</button>
+            <button type="submit" class="btn btn-success">@T["Pay Now"]</button>
         </form>
     }
 </div>

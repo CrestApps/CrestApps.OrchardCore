@@ -79,29 +79,29 @@
                         @* The shipment's packing slip: its lines and number, printed from the order. *@
                         <a class="btn btn-sm btn-outline-secondary"
                            href="@Url.Action("PackingSlip", "OrdersAdmin", new { area = "CrestApps.OrchardCore.Orders", orderId = Model.Order.ItemId, shipment = shipment.Number, lines = string.Join(",", shipment.Lines.Select(line => line.LineId + ":" + line.Quantity)) })"
-                           title="@T["Packing slip"]">
-                            <i class="fa-solid fa-box" aria-hidden="true"></i><span class="visually-hidden">@T["Packing slip for shipment {0}", shipment.Number]</span>
+                           title="@T["Packing Slip"]">
+                            <i class="fa-solid fa-box" aria-hidden="true"></i><span class="visually-hidden">@T["Packing Slip for Shipment {0}", shipment.Number]</span>
                         </a>
                         @if (!string.IsNullOrEmpty(shipment.LabelUrl))
                         {
-                            <a class="btn btn-sm btn-outline-secondary" href="@shipment.LabelUrl" target="_blank" rel="noopener noreferrer" title="@T["Print label"]">
-                                <i class="fa-solid fa-print" aria-hidden="true"></i><span class="visually-hidden">@T["Print the label of shipment {0}", shipment.Number]</span>
+                            <a class="btn btn-sm btn-outline-secondary" href="@shipment.LabelUrl" target="_blank" rel="noopener noreferrer" title="@T["Print Label"]">
+                                <i class="fa-solid fa-print" aria-hidden="true"></i><span class="visually-hidden">@T["Print the Label of Shipment {0}", shipment.Number]</span>
                             </a>
                         }
                         @if (shipment.Status == ShipmentStatus.Pending && Model.CanBuyLabels && !isPickup)
                         {
-                            <a class="btn btn-sm btn-primary" asp-controller="ShipmentLabelsAdmin" asp-action="Label" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId">@T["Buy label"]</a>
+                            <a class="btn btn-sm btn-primary" asp-controller="ShipmentLabelsAdmin" asp-action="Label" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId">@T["Buy Label"]</a>
                         }
                         @if (shipment.Status == ShipmentStatus.Shipped)
                         {
                             <form asp-controller="ShipmentsAdmin" asp-action="Deliver" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId" method="post" class="no-multisubmit">
-                                <button type="submit" class="btn btn-sm btn-success">@(isPickup ? T["Picked up"] : T["Delivered"])</button>
+                                <button type="submit" class="btn btn-sm btn-success">@(isPickup ? T["Picked Up"] : T["Delivered"])</button>
                             </form>
                         }
                         @if (shipment.Status is ShipmentStatus.Shipped or ShipmentStatus.Delivered)
                         {
                             <form asp-controller="ShipmentsAdmin" asp-action="Return" asp-area="@ShippingConstants.Features.Shipping" asp-route-shipmentId="@shipment.ItemId" method="post" class="no-multisubmit">
-                                <button type="submit" class="btn btn-sm btn-secondary" data-title="@T["Returned"]" data-message="@T["Mark this shipment as returned? Its items can then be shipped again."]" data-ok-text="@T["Mark returned"]" data-ok-class="btn-primary" data-url-af="RemoveUrl">@T["Returned"]</button>
+                                <button type="submit" class="btn btn-sm btn-secondary" data-title="@T["Returned"]" data-message="@T["Mark this shipment as returned? Its items can then be shipped again."]" data-ok-text="@T["Mark Returned"]" data-ok-class="btn-primary" data-url-af="RemoveUrl">@T["Returned"]</button>
                             </form>
                         }
                         @if (shipment.Status == ShipmentStatus.Pending)
@@ -128,7 +128,7 @@
                         </div>
                         }
                         <div class="col-sm-4">
-                            <button type="submit" class="btn btn-sm btn-primary">@(isPickup ? T["Ready for pickup"] : T["Mark shipped"])</button>
+                            <button type="submit" class="btn btn-sm btn-primary">@(isPickup ? T["Ready for Pickup"] : T["Mark Shipped"])</button>
                         </div>
                     </form>
                 }
@@ -208,7 +208,7 @@
                     }
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-sm mt-2">@(isPickup ? T["Set aside"] : T["Create shipment"])</button>
+                <button type="submit" class="btn btn-primary btn-sm mt-2">@(isPickup ? T["Set Aside"] : T["Create Shipment"])</button>
             </form>
         </div>
     }

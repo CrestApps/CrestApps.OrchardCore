@@ -43,7 +43,7 @@ public sealed class CourseCompletedPanelTests
         Assert.Equal(HttpStatusCode.Redirect, done.StatusCode);
         Assert.EndsWith($"learning/courses/{courseId}/completed", done.Headers.Location!.OriginalString);
         Assert.Contains("data-learning-course-completed-panel", panel);
-        Assert.Contains("You completed this course", panel);
+        Assert.Contains("You Completed This Course", panel);
         Assert.Contains("/learning/transcript", panel);
         Assert.Contains("data-learning-course-completed-panel", coursePage);
     }

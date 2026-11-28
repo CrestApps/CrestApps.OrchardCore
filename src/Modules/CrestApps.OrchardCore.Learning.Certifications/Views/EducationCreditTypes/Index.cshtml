@@ -8,7 +8,7 @@
     <div class="card-body">
         <div class="row gx-2 align-items-center">
             <div class="col text-muted">@T["Credit types, such as CEU, CPD hours or PDU. Courses and learning paths award them, and certification paths can ask for them."]</div>
-            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add credit type"]</a></div>
+            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add Credit Type"]</a></div>
         </div>
     </div>
 </div>
@@ -16,7 +16,7 @@
 <admin-list name="LearningCreditTypes" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Add a credit type, then give courses credits on their editor."]">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
-        <admin-list-column name="Name" position="20" title="@T["Credit type"]" />
+        <admin-list-column name="Name" position="20" title="@T["Credit Type"]" />
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>
 </admin-list>

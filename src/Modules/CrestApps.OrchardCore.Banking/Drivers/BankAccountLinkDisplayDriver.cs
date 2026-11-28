@@ -22,7 +22,7 @@ internal sealed class BankAccountLinkDisplayDriver : DisplayDriver<BankAccountLi
     {
         return Combine(
             Initialize<BankAccountLinkViewModel>("BankAccountLinkProvider_Edit", model => Populate(model, source))
-                .Location(l => l.Zone("Content", "1").Card(S["Link Your Bank with {0}", source.ProviderDisplayName], "10")),
+                .Location(l => l.Zone("Content", "1").Card(S["Link Your Bank With {0}", source.ProviderDisplayName], "10")),
             Initialize<BankAccountLinkViewModel>("BankAccountLinkAccount_Edit", model => Populate(model, source))
                 .Location(l => l.Zone("Content", "2").Card(S["The Account"], "20"))
                 .RenderWhen(() => Task.FromResult(source.IsNew)));

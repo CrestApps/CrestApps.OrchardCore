@@ -23,9 +23,9 @@
                 <div class="col-auto">
                     @if (ReportOptions.Value.Reports.Any(report => report.Name == AIQualityReport.Name))
                     {
-                        <a class="btn btn-outline-secondary" href="@Url.Action("Display", "Reports", new { area = ReportsConstants.Feature, id = AIQualityReport.Name })">@T["QA dashboard"]</a>
+                        <a class="btn btn-outline-secondary" href="@Url.Action("Display", "Reports", new { area = ReportsConstants.Feature, id = AIQualityReport.Name })">@T["QA Dashboard"]</a>
                     }
-                    <a class="btn btn-secondary create" asp-action="Create">@T["Add cohort"]</a>
+                    <a class="btn btn-secondary create" asp-action="Create">@T["Add Cohort"]</a>
                 </div>
             </div>
         </div>

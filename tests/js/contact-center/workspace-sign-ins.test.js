@@ -73,7 +73,7 @@ describe('the workspace layout', () => {
     it('puts the Live dashboard link last in the top bar', () => {
         const topBar = view.slice(view.indexOf('<div class="cc-topbar">'), view.indexOf('<div class="cc-error"'));
 
-        expect(topBar.lastIndexOf('Live dashboard')).toBeGreaterThan(topBar.lastIndexOf('data-cc-connection'));
+        expect(topBar.lastIndexOf('Live Dashboard')).toBeGreaterThan(topBar.lastIndexOf('data-cc-connection'));
         expect(topBar).toContain('cc-topbar__end');
     });
 });

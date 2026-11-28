@@ -3,7 +3,7 @@
 @model AIVoiceLibraryViewModel
 
 <zone Name="Title">
-    <breadcrumb name="AIVoiceLibrary" title="@T["Voice library"]" />
+    <breadcrumb name="AIVoiceLibrary" title="@T["Voice Library"]" />
 </zone>
 
 <form method="get" asp-action="Index" class="card text-bg-theme mb-3 position-sticky action-bar">
@@ -42,7 +42,7 @@ else
 
     @if (!string.IsNullOrEmpty(Model.NextCursor))
     {
-        <a class="btn btn-secondary mt-2" asp-action="Index" asp-route-deploymentName="@Model.DeploymentName" asp-route-query="@Model.Query" asp-route-language="@Model.Language" asp-route-cursor="@Model.NextCursor">@T["More voices"]</a>
+        <a class="btn btn-secondary mt-2" asp-action="Index" asp-route-deploymentName="@Model.DeploymentName" asp-route-query="@Model.Query" asp-route-language="@Model.Language" asp-route-cursor="@Model.NextCursor">@T["More Voices"]</a>
     }
 
     @if (Model.SupportsCloning)

@@ -8448,7 +8448,7 @@ import {
 
             // In a conference the others stay in, Hang up is the agent leaving it.
             var leave = controls.hangup.kind === 'leave';
-            var hangupText = leave ? (strings.leaveConference || 'Leave') : (strings.hangup || 'Hang up');
+            var hangupText = leave ? (strings.leaveConference || 'Leave') : (strings.hangup || 'Hang Up');
 
             if (dom.hangup) {
                 dom.hangup.setAttribute('aria-label', hangupText);
@@ -8461,7 +8461,7 @@ import {
                 dom.hangupLabel.textContent = hangupText;
             }
 
-            var endAllText = inConference ? (strings.endForAll || 'End for all') : (strings.endAllCalls || 'End all');
+            var endAllText = inConference ? (strings.endForAll || 'End for All') : (strings.endAllCalls || 'End All');
 
             if (dom.hangupAll) {
                 dom.hangupAll.setAttribute('aria-label', endAllText);
@@ -9266,8 +9266,8 @@ import {
 
             return showInAppConfirm(dom.panel, {
                 message: message,
-                confirmLabel: conference ? (strings.endForAll || 'End for all') : (strings.endAllCalls || 'End all'),
-                cancelLabel: strings.keepTalking || 'Keep talking',
+                confirmLabel: conference ? (strings.endForAll || 'End for All') : (strings.endAllCalls || 'End All'),
+                cancelLabel: strings.keepTalking || 'Keep Talking',
                 before: dom.body,
                 focusCancel: true
             }).then(function (confirmed) {

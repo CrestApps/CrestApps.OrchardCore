@@ -20,11 +20,11 @@ else
     string Local(DateTime utc) => CalendarTime.ToLocal(utc, details.TimeZoneId).ToString("t");
 
     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
-        <a href="@Url.Content("~/Admin/my-work/timesheet?date=" + details.PreviousPeriod?.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Previous period"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
+        <a href="@Url.Content("~/Admin/my-work/timesheet?date=" + details.PreviousPeriod?.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Previous Period"]"><i class="fa-solid fa-chevron-left" aria-hidden="true"></i></a>
         <h2 class="h5 mb-0">@timesheet.PeriodStart.ToString("d MMM") – @timesheet.PeriodEnd.ToString("d MMM yyyy")</h2>
         @if (details.NextPeriod.HasValue)
         {
-            <a href="@Url.Content("~/Admin/my-work/timesheet?date=" + details.NextPeriod.Value.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Next period"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
+            <a href="@Url.Content("~/Admin/my-work/timesheet?date=" + details.NextPeriod.Value.ToString("yyyy-MM-dd"))" class="btn btn-outline-secondary btn-sm" aria-label="@T["Next Period"]"><i class="fa-solid fa-chevron-right" aria-hidden="true"></i></a>
         }
         <span class="badge text-bg-light border fw-normal">@(timesheet.Status switch
         {
@@ -93,7 +93,7 @@ else
 
     @if (details.Corrections.Count > 0)
     {
-        <h2 class="h6">@T["Punches you asked for"]</h2>
+        <h2 class="h6">@T["Punches You Asked For"]</h2>
         <ul class="small mb-3">
             @foreach (var correction in details.Corrections)
             {
@@ -121,7 +121,7 @@ else
                             <div class="col-6"><input type="date" name="date" class="form-control" min="@timesheet.PeriodStart.ToString("yyyy-MM-dd")" max="@timesheet.PeriodEnd.ToString("yyyy-MM-dd")" value="@(details.Days.LastOrDefault(day => day.Punches.Count > 0)?.Date.ToString("yyyy-MM-dd") ?? timesheet.PeriodStart.ToString("yyyy-MM-dd"))" aria-label="@T["Day"]" required /></div>
                             <div class="col-6"><input type="time" name="time" class="form-control" aria-label="@T["Time"]" required /></div>
                             <div class="col-12"><input type="text" name="reason" class="form-control" placeholder="@T["What happened"]" aria-label="@T["What happened"]" required /></div>
-                            <div class="col-12"><button type="submit" class="btn btn-outline-secondary">@T["Ask for the punch"]</button></div>
+                            <div class="col-12"><button type="submit" class="btn btn-outline-secondary">@T["Ask for the Punch"]</button></div>
                         </form>
                     </div>
                 </div>
@@ -129,7 +129,7 @@ else
             <div class="col-md-6">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h2 class="h6">@T["Submit your timesheet"]</h2>
+                        <h2 class="h6">@T["Submit Your Timesheet"]</h2>
                         @if (timesheet.OpenExceptions > 0)
                         {
                             <p class="small text-warning-emphasis">@T.Plural(timesheet.OpenExceptions, "Something looks off on 1 day. Ask for any punch you missed first.", "Something looks off on {0} days. Ask for any punch you missed first.")</p>

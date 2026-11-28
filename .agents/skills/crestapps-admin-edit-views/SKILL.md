@@ -43,6 +43,7 @@ in the `Content` zone without a card falls back into a card titled "Content", so
 ```
 
 - `S` is the driver's `IStringLocalizer`; card, tab and column names are Title Case ("Default Deployments").
+  Button labels (Save, Cancel, Delete...) are Title Case too: "Save & Continue", "Add Price List". See "Text Casing" in `AGENTS.md`.
   `.Tab(...)` goes before `.Card(...)`. Cards are ordered by their position; shapes in the same card share it.
 - A view holding several logical sections is split into one shape per card, each with its own view, bound to the
   same view model and prefix. A view holds only its rows: no heading row, the card title replaces it.

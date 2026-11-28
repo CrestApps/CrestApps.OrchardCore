@@ -1,7 +1,7 @@
 @model RegisterEditViewModel
 
 <zone Name="Title">
-    <breadcrumb name="PointOfSaleRegisterEdit" title="@(Model.IsNew ? T["Add register"] : T["Edit register"])">
+    <breadcrumb name="PointOfSaleRegisterEdit" title="@(Model.IsNew ? T["Add Register"] : T["Edit Register"])">
         <breadcrumb-item id="PointOfSaleRegisters" action="Index" controller="RegistersAdmin" area="CrestApps.OrchardCore.PointOfSale" permission="@PosPermissions.ManageRegisters.Name">@T["Registers"]</breadcrumb-item>
     </breadcrumb>
 </zone>

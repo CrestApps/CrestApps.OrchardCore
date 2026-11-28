@@ -26,7 +26,7 @@ else
         <div class="col-md-6">
             <div class="card h-100">
                 <div class="card-body">
-                    <h2 class="h6 text-muted text-uppercase">@T["Next shift"]</h2>
+                    <h2 class="h6 text-muted text-uppercase">@T["Next Shift"]</h2>
                     @if (Model.NextShift is null)
                     {
                         <p class="mb-0">@T["No shifts in the next four weeks."]</p>
@@ -68,7 +68,7 @@ else
                 <h2 class="h6 text-muted text-uppercase mb-0 me-auto">@T["Notifications"]</h2>
                 @if (Model.Nav.Unread > 0)
                 {
-                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/inbox/read")"><button type="submit" class="btn btn-link btn-sm p-0">@T["Mark all read"]</button></form>
+                    <form method="post" asp-antiforgery="true" action="@Url.Content("~/Admin/my-work/inbox/read")"><button type="submit" class="btn btn-link btn-sm p-0">@T["Mark All Read"]</button></form>
                 }
             </div>
             @if (Model.Inbox.Count == 0)

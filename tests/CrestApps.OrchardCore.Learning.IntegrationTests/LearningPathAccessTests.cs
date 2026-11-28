@@ -68,7 +68,7 @@ public sealed class LearningPathAccessTests
         var refused = await editor.GetAsync($"Admin/learning/paths/{pathId}/people", TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.DoesNotContain("Start this path", page);
+        Assert.DoesNotContain("Start This Path", page);
         Assert.Equal(HttpStatusCode.OK, people.StatusCode);
         Assert.NotEqual(HttpStatusCode.OK, refused.StatusCode);
     }

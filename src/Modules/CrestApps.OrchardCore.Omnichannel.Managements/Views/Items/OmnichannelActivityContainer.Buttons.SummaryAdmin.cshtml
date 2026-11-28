@@ -15,7 +15,7 @@
        asp-action="Index"
        asp-route-profileId="@Model.Value.Activity.AIProfileId"
        asp-route-sessionId="@Model.Value.Activity.AISessionId"
-       asp-route-resourceId="@Model.Value.Activity.ItemId">@T["Review AI conversation"]</a>
+       asp-route-resourceId="@Model.Value.Activity.ItemId">@T["Review AI Conversation"]</a>
 }
 
 @if (Model.Value.Contact is not null && await AuthorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.ListContactActivities, Model.Value.Contact))

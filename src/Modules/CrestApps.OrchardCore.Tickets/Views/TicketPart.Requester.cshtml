@@ -35,7 +35,7 @@
         }
         @if (Model.PreviousTickets.Count > 0)
         {
-            <h3 class="h6 small text-muted mt-3">@T["Their other tickets ({0})", Model.PreviousTotal]</h3>
+            <h3 class="h6 small text-muted mt-3">@T["Their Other Tickets ({0})", Model.PreviousTotal]</h3>
             <ul class="list-unstyled small mb-0">
                 @foreach (var other in Model.PreviousTickets)
                 {

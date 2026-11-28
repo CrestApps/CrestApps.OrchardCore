@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Html
 
 @{
-    ViewData["Title"] = T["My credentials"];
+    ViewData["Title"] = T["My Credentials"];
 }
 
 @{
@@ -54,10 +54,10 @@
                         {
                             <div class="d-flex flex-wrap gap-2 mt-3">
                                 <a class="btn btn-sm btn-primary" asp-action="Download" asp-route-id="@award.ItemId" asp-route-format="json"><i class="fa-solid fa-download" aria-hidden="true"></i> @T["Download (JSON)"]</a>
-                                <a class="btn btn-sm btn-outline-primary" asp-action="Download" asp-route-id="@award.ItemId" asp-route-format="jwt"><i class="fa-solid fa-signature" aria-hidden="true"></i> @T["Download signed (JWT)"]</a>
+                                <a class="btn btn-sm btn-outline-primary" asp-action="Download" asp-route-id="@award.ItemId" asp-route-format="jwt"><i class="fa-solid fa-signature" aria-hidden="true"></i> @T["Download Signed (JWT)"]</a>
                                 @if (!string.IsNullOrEmpty(entry.ShareUrl))
                                 {
-                                    <a class="btn btn-sm btn-outline-secondary" href="@entry.ShareUrl" target="_blank" rel="noopener">@T["Verification page"]</a>
+                                    <a class="btn btn-sm btn-outline-secondary" href="@entry.ShareUrl" target="_blank" rel="noopener">@T["Verification Page"]</a>
                                 }
                             </div>
                             @if (!string.IsNullOrEmpty(entry.ShareUrl))
@@ -68,7 +68,7 @@
                             <form method="post" asp-action="ShowName" asp-route-id="@award.ItemId" class="mt-3">
                                 <input type="hidden" name="showName" value="@(award.ShowName ? "false" : "true")" />
                                 <span class="small me-2">@(award.ShowName ? T["Your name shows on the verification page."] : T["Your name does not show on the verification page."])</span>
-                                <button type="submit" class="btn btn-sm btn-link p-0">@(award.ShowName ? T["Hide my name"] : T["Show my name"])</button>
+                                <button type="submit" class="btn btn-sm btn-link p-0">@(award.ShowName ? T["Hide My Name"] : T["Show My Name"])</button>
                             </form>
                         }
                     </div>
@@ -82,8 +82,8 @@
 @if (accountUrl is not null)
 {
     <zone Name="Title">
-        <breadcrumb name="LearningMyCredentials" title="@T["My credentials"]">
-            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        <breadcrumb name="LearningMyCredentials" title="@T["My Credentials"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your Account"]</breadcrumb-item>
         </breadcrumb>
     </zone>
 
@@ -93,11 +93,11 @@ else
 {
     <div class="container my-4">
         <div class="product-breadcrumb">
-            <breadcrumb name="LearningMyCredentials" title="@T["My credentials"]">
+            <breadcrumb name="LearningMyCredentials" title="@T["My Credentials"]">
                 <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
             </breadcrumb>
         </div>
-        <h1 class="h3 mb-3">@T["My credentials"]</h1>
+        <h1 class="h3 mb-3">@T["My Credentials"]</h1>
         @content(null)
     </div>
 }

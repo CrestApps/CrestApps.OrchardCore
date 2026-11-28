@@ -39,7 +39,7 @@ internal sealed class TwilioSmsWebhookSettingsDisplayDriver : DisplayDriver<ISit
             // Orchard Core places its Twilio editor at Content:5 in the Twilio provider card of the Twilio tab. This comes
             // before it, in the same card, and the view then moves the address to the top of that editor's collapsible
             // settings, as the Telnyx settings show it.
-            .Location(l => l.Zone("Content", "4").Tab(S["Twilio"]).Card(S["Twilio provider"], "10"))
+            .Location(l => l.Zone("Content", "4").Tab(S["Twilio"]).Card(S["Twilio Provider"], "10"))
             .OnGroup(SmsSettingsGroupId);
     }
 

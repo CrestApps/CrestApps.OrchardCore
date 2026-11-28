@@ -28,7 +28,7 @@ public sealed partial class LearnerMenuAndNotificationsTests
 
         var page = await learner.GetStringAsync("learning", TestContext.Current.CancellationToken);
 
-        Assert.Contains("My courses", page);
+        Assert.Contains("My Courses", page);
         Assert.Contains($"href=\"/learning/courses/{_fixture.CourseId}/play\"", page);
         Assert.Contains("Workplace Safety", page);
     }
@@ -40,7 +40,7 @@ public sealed partial class LearnerMenuAndNotificationsTests
 
         var page = await admin.GetStringAsync("Admin", TestContext.Current.CancellationToken);
 
-        Assert.Contains("My courses", page);
+        Assert.Contains("My Courses", page);
         Assert.Contains("href=\"/learning\"", page);
     }
 

@@ -29,7 +29,7 @@
             </div>
             @if (Model.Worker is not null)
             {
-                <div class="col-auto"><a asp-action="Worker" asp-route-workerId="@Model.Worker.ItemId" class="btn btn-outline-secondary btn-sm">@T["{0}'s time off", Model.Worker.DisplayName]</a></div>
+                <div class="col-auto"><a asp-action="Worker" asp-route-workerId="@Model.Worker.ItemId" class="btn btn-outline-secondary btn-sm">@T["{0}'s Time Off", Model.Worker.DisplayName]</a></div>
             }
         </div>
         @if (!string.IsNullOrEmpty(request.Reason))
@@ -65,7 +65,7 @@
                 }
                 else
                 {
-                    <button type="submit" formaction="@Url.Action("Cancel", new { id = request.ItemId })" class="btn btn-outline-danger">@T["Cancel the time off"]</button>
+                    <button type="submit" formaction="@Url.Action("Cancel", new { id = request.ItemId })" class="btn btn-outline-danger">@T["Cancel the Time Off"]</button>
                 }
             </form>
             <span class="hint">@(request.IsOpen

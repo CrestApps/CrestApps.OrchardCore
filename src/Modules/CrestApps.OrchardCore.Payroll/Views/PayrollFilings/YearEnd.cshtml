@@ -2,7 +2,7 @@
 @inject Microsoft.Extensions.Options.IOptions<PayrollEmployerOptions> EmployerOptions
 
 <zone Name="Title">
-    <breadcrumb name="PayrollYearEnd" title="@T["Year end"]" />
+    <breadcrumb name="PayrollYearEnd" title="@T["Year End"]" />
 </zone>
 
 <form method="get" class="card text-bg-theme mb-3 position-sticky action-bar">
@@ -56,11 +56,11 @@
         <div class="action-bar-bottom">
             @if (Model.Closed)
             {
-                <button type="submit" name="reopen" value="true" class="btn btn-secondary">@T["Reopen the year"]</button>
+                <button type="submit" name="reopen" value="true" class="btn btn-secondary">@T["Reopen the Year"]</button>
             }
             else
             {
-                <button type="submit" class="btn btn-primary" disabled="@(Model.Blockers.Count > 0)">@T["Close the year"]</button>
+                <button type="submit" class="btn btn-primary" disabled="@(Model.Blockers.Count > 0)">@T["Close the Year"]</button>
             }
         </div>
     </form>

@@ -18,7 +18,7 @@
                 <textarea name="@(name).Description" rows="2" class="form-control" maxlength="2000">@Model.Criterion.Description</textarea>
             </div>
             <div class="col-12 col-md-1 text-md-end">
-                <button type="button" class="btn btn-sm btn-outline-danger mt-md-4" data-rubric-remove-criterion title="@T["Remove the criterion"]" aria-label="@T["Remove the criterion"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-danger mt-md-4" data-rubric-remove-criterion title="@T["Remove the Criterion"]" aria-label="@T["Remove the Criterion"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
             </div>
         </div>
         <div class="mt-2" data-rubric-levels>
@@ -35,11 +35,11 @@
                         <input type="number" step="0.01" min="0" name="@(name).Levels[@j].Points" value="@(level.Points?.ToString(System.Globalization.CultureInfo.InvariantCulture))" class="form-control form-control-sm" aria-label="@T["Points"]" placeholder="@T["Points"]" />
                     </div>
                     <div class="col-auto">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" data-rubric-remove-level title="@T["Remove the level"]" aria-label="@T["Remove the level"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-rubric-remove-level title="@T["Remove the Level"]" aria-label="@T["Remove the Level"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
                     </div>
                 </div>
             }
         </div>
-        <button type="button" class="btn btn-sm btn-link px-0" data-rubric-add-level><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add a level"]</button>
+        <button type="button" class="btn btn-sm btn-link px-0" data-rubric-add-level><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add a Level"]</button>
     </div>
 </div>

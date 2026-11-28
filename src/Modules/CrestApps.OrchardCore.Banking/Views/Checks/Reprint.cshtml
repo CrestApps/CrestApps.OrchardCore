@@ -1,7 +1,7 @@
 @model CheckReprintViewModel
 
 <zone Name="Title">
-    <breadcrumb name="ChecksReprint" title="@T["Reprint check {0}", Model.Check.Number]">
+    <breadcrumb name="ChecksReprint" title="@T["Reprint Check {0}", Model.Check.Number]">
         <breadcrumb-item id="Checks" action="Index" controller="Checks" area="CrestApps.OrchardCore.Banking" permission="@ChecksPermissions.ViewCheckRegister.Name">@T["Checks"]</breadcrumb-item>
     </breadcrumb>
 </zone>

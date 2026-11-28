@@ -5,7 +5,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="@(isNew ? "EstimatesCreate" : "EstimatesEdit")" title="@(isNew ? T["New estimate"] : T["Edit draft estimate"])">
+    <breadcrumb name="@(isNew ? "EstimatesCreate" : "EstimatesEdit")" title="@(isNew ? T["New Estimate"] : T["Edit Draft Estimate"])">
         <breadcrumb-item id="EstimatesIndex" action="Index" controller="EstimatesAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Estimates"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -16,11 +16,11 @@
     @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
-        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
+        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save Draft"]</button>
         <button type="submit" name="submit" value="update" class="btn btn-secondary">@T["Update"]</button>
         @if (Model.CanSend)
         {
-            <button type="submit" name="submit" value="send" class="btn btn-success action-bar-secondary">@T["Save and send"]</button>
+            <button type="submit" name="submit" value="send" class="btn btn-success action-bar-secondary">@T["Save and Send"]</button>
         }
         <a class="btn btn-secondary cancel" role="button" href="@(isNew ? Url.Action("Index", "EstimatesAdmin") : Url.Action("Detail", "EstimatesAdmin", new { itemId = Model.ItemId }))">@T["Cancel"]</a>
     </div>

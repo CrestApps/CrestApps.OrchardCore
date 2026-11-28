@@ -2,7 +2,7 @@
 
 @if (Model.Period.PublishedVersion > 0)
 {
-    <a asp-controller="Schedules" asp-action="Changes" asp-route-id="@Model.Period.ItemId" class="dropdown-item">@T["Change log"]</a>
+    <a asp-controller="Schedules" asp-action="Changes" asp-route-id="@Model.Period.ItemId" class="dropdown-item">@T["Change Log"]</a>
 }
 else
 {

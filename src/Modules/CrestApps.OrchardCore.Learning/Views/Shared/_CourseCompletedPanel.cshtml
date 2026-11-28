@@ -18,7 +18,7 @@
                 <i class="fa-solid fa-trophy fa-lg"></i>
             </span>
             <div class="flex-grow-1">
-                <h2 class="h4 mb-1" id="learning-completed-@Model.CourseId">@T["You completed this course"]</h2>
+                <h2 class="h4 mb-1" id="learning-completed-@Model.CourseId">@T["You Completed This Course"]</h2>
                 <p class="mb-0 text-body-secondary">
                     @T["Completed on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completedUtc, DateTimeKind.Utc), Format: "D"))
                     @if (enrollment.Grade is { } grade)
@@ -52,14 +52,14 @@
         }
 
         <div class="d-flex flex-wrap gap-2 mt-3">
-            <a class="btn btn-success" href="@Url.RouteUrl("LearningTranscript")"><i class="fa-solid fa-scroll me-1" aria-hidden="true"></i>@T["My transcript"]</a>
+            <a class="btn btn-success" href="@Url.RouteUrl("LearningTranscript")"><i class="fa-solid fa-scroll me-1" aria-hidden="true"></i>@T["My Transcript"]</a>
             @if (Model.InPlayer)
             {
-                <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningMyLearning")">@T["Back to My learning"]</a>
+                <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningMyLearning")">@T["Back to My Learning"]</a>
             }
             else
             {
-                <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Review the course"]</a>
+                <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Review the Course"]</a>
             }
         </div>
     </div>

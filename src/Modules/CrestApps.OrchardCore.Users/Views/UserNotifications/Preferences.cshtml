@@ -9,8 +9,8 @@
 @if (Model.InAccount)
 {
     <zone Name="Title">
-        <breadcrumb name="UserNotificationPreferences" title="@T["Notification preferences"]">
-            <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(UsersConstants.Account.HomeRouteName)">@T["Your account"]</breadcrumb-item>
+        <breadcrumb name="UserNotificationPreferences" title="@T["Notification Preferences"]">
+            <breadcrumb-item id="CommerceAccount" url="@Url.RouteUrl(UsersConstants.Account.HomeRouteName)">@T["Your Account"]</breadcrumb-item>
             <breadcrumb-item id="UserNotifications" url="@Url.RouteUrl(UsersConstants.Notifications.RouteName)">@T["Notifications"]</breadcrumb-item>
         </breadcrumb>
     </zone>
@@ -21,12 +21,12 @@ else
 {
     <div class="container my-4">
         <div class="product-breadcrumb">
-            <breadcrumb name="UserNotificationPreferences" title="@T["Notification preferences"]">
+            <breadcrumb name="UserNotificationPreferences" title="@T["Notification Preferences"]">
                 <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
                 <breadcrumb-item id="UserNotifications" url="@Url.RouteUrl(UsersConstants.Notifications.RouteName)">@T["Notifications"]</breadcrumb-item>
             </breadcrumb>
         </div>
-        <h1 class="h3 mb-3">@T["Notification preferences"]</h1>
+        <h1 class="h3 mb-3">@T["Notification Preferences"]</h1>
         @await DisplayAsync(form)
     </div>
 }

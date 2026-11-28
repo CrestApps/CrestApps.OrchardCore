@@ -49,7 +49,7 @@ public sealed class LearningScoringHelpTests
         var attempt = await _site.InTenantAsync(async services => await services.GetRequiredService<AssessmentAttemptStore>().FindByIdAsync(setup.AttemptId));
 
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
-        Assert.Contains("Suggest a score", html, StringComparison.Ordinal);
+        Assert.Contains("Suggest a Score", html, StringComparison.Ordinal);
         Assert.Contains("name=\"aiAssisted0\"", html, StringComparison.Ordinal);
         Assert.Equal(HttpStatusCode.OK, suggestion.StatusCode);
         Assert.Contains("NoModel", json, StringComparison.Ordinal);
@@ -66,7 +66,7 @@ public sealed class LearningScoringHelpTests
         var html = await page.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
-        Assert.Contains("Suggest a score", html, StringComparison.Ordinal);
+        Assert.Contains("Suggest a Score", html, StringComparison.Ordinal);
         Assert.Contains("name=\"AIAssisted\"", html, StringComparison.Ordinal);
     }
 

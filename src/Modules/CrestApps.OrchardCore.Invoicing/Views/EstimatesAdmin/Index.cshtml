@@ -20,7 +20,7 @@
                 @if (Model.CanCreate)
                 {
                     <div class="col-auto">
-                        <a asp-action="Create" class="btn btn-secondary create">@T["New estimate"]</a>
+                        <a asp-action="Create" class="btn btn-secondary create">@T["New Estimate"]</a>
                     </div>
                 }
             </div>
@@ -35,7 +35,7 @@
     <admin-list-grid>
         <admin-list-column name="Number" position="20" title="@T["Estimate"]" />
         <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
-        <admin-list-column name="Amount" position="40" title="@T["Customer and total"]" width="auto" />
+        <admin-list-column name="Amount" position="40" title="@T["Customer and Total"]" width="auto" />
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>
 </admin-list>

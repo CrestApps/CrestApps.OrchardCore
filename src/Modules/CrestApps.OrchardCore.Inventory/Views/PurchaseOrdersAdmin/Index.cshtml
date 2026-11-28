@@ -1,7 +1,7 @@
 @model PurchaseOrderIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="PurchaseOrders" title="@T["Purchase orders"]" />
+    <breadcrumb name="PurchaseOrders" title="@T["Purchase Orders"]" />
 </zone>
 
 <form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" id="purchase-orders-filter" class="no-multisubmit">
@@ -19,7 +19,7 @@
                 @if (Model.CanManage)
                 {
                     <div class="col-auto">
-                        <a asp-action="Create" class="btn btn-secondary create">@T["Add purchase order"]</a>
+                        <a asp-action="Create" class="btn btn-secondary create">@T["Add Purchase Order"]</a>
                     </div>
                 }
             </div>
@@ -31,7 +31,7 @@
                 empty-message="@T["<strong>Nothing here!</strong> No purchase orders match the current filter. Add one to order stock from a supplier."]">
         <admin-list-list item-css-class="list-group-item" />
         <admin-list-grid>
-            <admin-list-column name="Name" position="20" title="@T["Purchase order"]" />
+            <admin-list-column name="Name" position="20" title="@T["Purchase Order"]" />
             <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
             <admin-list-column name="Items" position="40" title="@T["Received"]" width="auto" />
             <admin-list-column type="Actions" title="@T["Actions"]" />

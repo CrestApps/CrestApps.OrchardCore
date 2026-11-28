@@ -1,7 +1,7 @@
 @model RecurringPlansAdminIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="RecurringInvoicesIndex" title="@T["Recurring invoices"]" />
+    <breadcrumb name="RecurringInvoicesIndex" title="@T["Recurring Invoices"]" />
 </zone>
 
 @* The filters render in the list's toolbar, after this form, and name it with their form attribute. *@
@@ -20,7 +20,7 @@
                 @if (Model.CanCreate)
                 {
                     <div class="col-auto">
-                        <a asp-action="Create" class="btn btn-secondary create">@T["New recurring plan"]</a>
+                        <a asp-action="Create" class="btn btn-secondary create">@T["New Recurring Plan"]</a>
                     </div>
                 }
             </div>

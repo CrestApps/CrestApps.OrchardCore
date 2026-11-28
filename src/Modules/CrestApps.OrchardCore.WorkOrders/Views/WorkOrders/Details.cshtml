@@ -144,7 +144,7 @@
     </div>
     <div class="col-12 col-lg-6">
         <div class="card h-100"><div class="card-body">
-            <h2 class="h6">@T["Service level"]@(Model.Policy is null ? null : $": {Model.Policy.Name}")</h2>
+            <h2 class="h6">@T["Service Level"]@(Model.Policy is null ? null : $": {Model.Policy.Name}")</h2>
             @if (sla.RespondByUtc is null && sla.ResolveByUtc is null)
             {
                 <p class="small text-muted mb-0">@T["No targets."]</p>
@@ -317,7 +317,7 @@
 {
     var checklist = workOrder.Checklists[c];
     <div class="card mb-3" id="checklist-@c"><div class="card-body">
-        <h2 class="h6">@checklist.Name <span class="text-muted small">@T["{0} of {1} answered", checklist.Answers.Count, checklist.Questions.Count]</span></h2>
+        <h2 class="h6">@checklist.Name <span class="text-muted small">@T["{0} of {1} Answered", checklist.Answers.Count, checklist.Questions.Count]</span></h2>
         <form asp-action="Answers" asp-route-id="@workOrder.ItemId" asp-route-checklist="@c" method="post">
             @foreach (var group in checklist.Questions.GroupBy(question => question.Section ?? string.Empty))
             {
@@ -402,7 +402,7 @@
             }
             @if (Model.CanManage && open && checklist.Questions.Count > 0)
             {
-                <button type="submit" class="btn btn-secondary btn-sm">@T["Save answers"]</button>
+                <button type="submit" class="btn btn-secondary btn-sm">@T["Save Answers"]</button>
             }
         </form>
     </div></div>
@@ -411,7 +411,7 @@
 @if (workOrder.Attachments.Count > 0 || Model.Type?.RequiredPhotos > 0)
 {
     <div class="card mb-3"><div class="card-body">
-        <h2 class="h6">@T["Photos and documents"]@(Model.Type?.RequiredPhotos > 0 ? T[" ({0} photos needed)", Model.Type.RequiredPhotos] : null)</h2>
+        <h2 class="h6">@T["Photos and Documents"]@(Model.Type?.RequiredPhotos > 0 ? T[" ({0} photos needed)", Model.Type.RequiredPhotos] : null)</h2>
         @if (workOrder.Attachments.Count == 0)
         {
             <p class="small text-muted mb-0">@T["None yet. Technicians add photos from the Field page of My Work."]</p>
@@ -464,7 +464,7 @@
             {
                 <form asp-action="Sign" asp-route-id="@workOrder.ItemId" method="post" class="d-flex gap-2">
                     <input name="name" class="form-control form-control-sm" placeholder="@T["Name of who signed"]" aria-label="@T["Name of who signed"]" required />
-                    <button type="submit" class="btn btn-secondary btn-sm text-nowrap">@T["Record signature"]</button>
+                    <button type="submit" class="btn btn-secondary btn-sm text-nowrap">@T["Record Signature"]</button>
                 </form>
             }
         </div></div>
@@ -477,7 +477,7 @@
             {
                 <form asp-action="FollowUp" asp-route-id="@workOrder.ItemId" method="post" class="d-flex gap-2">
                     <input name="summary" class="form-control form-control-sm" placeholder="@T["What it is for"]" aria-label="@T["What it is for"]" />
-                    <button type="submit" class="btn btn-secondary btn-sm text-nowrap">@T["Create follow-up"]</button>
+                    <button type="submit" class="btn btn-secondary btn-sm text-nowrap">@T["Create Follow-up"]</button>
                 </form>
             }
         </div></div>

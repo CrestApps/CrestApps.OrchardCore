@@ -84,7 +84,7 @@
 
 <zone Name="Title">
     <breadcrumb name="PosWebRegisterTill" title="@Html.Raw(Html.Encode(register.Name))">
-        <breadcrumb-item id="PosWebRegisterIndex" action="Index" controller="WebRegister" area="CrestApps.OrchardCore.PointOfSale" permission="@PosPermissions.SellAtRegister.Name">@T["Web register"]</breadcrumb-item>
+        <breadcrumb-item id="PosWebRegisterIndex" action="Index" controller="WebRegister" area="CrestApps.OrchardCore.PointOfSale" permission="@PosPermissions.SellAtRegister.Name">@T["Web Register"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -111,9 +111,9 @@
         @* The d-flex utility would override the hidden attribute, so it goes on an inner element. *@
         <div class="ms-auto" data-shift-actions hidden>
             <div class="d-flex flex-wrap gap-2">
-                <button type="button" class="btn btn-secondary" data-action="cash"><i class="fa-solid fa-money-bill-transfer me-1" aria-hidden="true"></i>@T["Cash in or out"]</button>
-                <button type="button" class="btn btn-secondary" data-action="report"><i class="fa-solid fa-receipt me-1" aria-hidden="true"></i>@T["Shift report"]</button>
-                <button type="button" class="btn btn-danger" data-action="close"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Close shift"]</button>
+                <button type="button" class="btn btn-secondary" data-action="cash"><i class="fa-solid fa-money-bill-transfer me-1" aria-hidden="true"></i>@T["Cash In or Out"]</button>
+                <button type="button" class="btn btn-secondary" data-action="report"><i class="fa-solid fa-receipt me-1" aria-hidden="true"></i>@T["Shift Report"]</button>
+                <button type="button" class="btn btn-danger" data-action="close"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Close Shift"]</button>
             </div>
         </div>
     </div>
@@ -136,7 +136,7 @@
                 </div>
                 <div class="ocat-wrapper">
                     <div class="ocat-end-offset">
-                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-unlock me-1" aria-hidden="true"></i>@T["Open shift"]</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-unlock me-1" aria-hidden="true"></i>@T["Open Shift"]</button>
                     </div>
                 </div>
             </form>
@@ -158,11 +158,11 @@
                         <span class="ms-auto web-register-total" data-ticket-total></span>
                     </div>
                     <div class="d-flex gap-2 mt-3">
-                        <button type="button" class="btn btn-outline-danger flex-fill" data-action="void-line" disabled>@T["Void line"]</button>
-                        <button type="button" class="btn btn-outline-danger flex-fill" data-action="void-ticket" disabled>@T["Void ticket"]</button>
+                        <button type="button" class="btn btn-outline-danger flex-fill" data-action="void-line" disabled>@T["Void Line"]</button>
+                        <button type="button" class="btn btn-outline-danger flex-fill" data-action="void-ticket" disabled>@T["Void Ticket"]</button>
                     </div>
                     <div class="d-flex gap-2 mt-2">
-                        <button type="button" class="btn btn-success btn-lg flex-fill" data-action="pay" disabled><i class="fa-solid fa-money-bill-wave me-1" aria-hidden="true"></i>@T["Total and pay"]</button>
+                        <button type="button" class="btn btn-success btn-lg flex-fill" data-action="pay" disabled><i class="fa-solid fa-money-bill-wave me-1" aria-hidden="true"></i>@T["Total and Pay"]</button>
                     </div>
                 </div>
             </div>
@@ -178,7 +178,7 @@
                     <form class="input-group mt-3" data-sku-form>
                         <span class="input-group-text"><i class="fa-solid fa-barcode" aria-hidden="true"></i></span>
                         <input type="text" class="form-control" data-sku autocomplete="off" placeholder="@T["Scan or enter a SKU, then Enter"]" aria-label="@T["SKU"]" />
-                        <button type="submit" class="btn btn-secondary">@T["Add item"]</button>
+                        <button type="submit" class="btn btn-secondary">@T["Add Item"]</button>
                     </form>
                 </div>
             </div>
@@ -190,7 +190,7 @@
                         {
                             <button type="button" class="btn btn-light border" data-digit="@digit">@digit</button>
                         }
-                        <button type="button" class="btn btn-light border" data-key="back" title="@T["Remove the last digit"]"><i class="fa-solid fa-delete-left" aria-hidden="true"></i><span class="visually-hidden">@T["Remove the last digit"]</span></button>
+                        <button type="button" class="btn btn-light border" data-key="back" title="@T["Remove the Last Digit"]"><i class="fa-solid fa-delete-left" aria-hidden="true"></i><span class="visually-hidden">@T["Remove the Last Digit"]</span></button>
                         <button type="button" class="btn btn-warning" data-key="clear">@T["Clear"]</button>
                         <button type="button" class="btn btn-secondary" data-key="times" title="@T["Ring up several: key in how many, press ×, then the amount"]">×</button>
                     </div>
@@ -227,7 +227,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="web-register-pay-title">@T["Take payment"]</h5>
-                    <button type="button" class="btn-close" data-pay-dismiss aria-label="@T["Back to the ticket"]"></button>
+                    <button type="button" class="btn-close" data-pay-dismiss aria-label="@T["Back to the Ticket"]"></button>
                 </div>
                 <div class="modal-body">
                     <dl class="row mb-3 web-register-display">
@@ -242,7 +242,7 @@
                         <label for="web-register-cash" class="form-label">@T["Cash handed over"]</label>
                         <div class="input-group mb-2">
                             <input id="web-register-cash" type="number" min="0" step="0.01" class="form-control form-control-lg" />
-                            <button type="button" class="btn btn-success" data-action="take-cash">@T["Take cash"]</button>
+                            <button type="button" class="btn btn-success" data-action="take-cash">@T["Take Cash"]</button>
                         </div>
                         <div class="d-flex flex-wrap gap-2 mb-3" data-quick-cash></div>
 
@@ -251,7 +251,7 @@
                             <label for="web-register-approval" class="form-label">@T["Card on the counter terminal"]</label>
                             <div class="input-group">
                                 <input id="web-register-approval" type="text" class="form-control" maxlength="40" autocomplete="off" placeholder="@T["Approval code (optional)"]" />
-                                <button type="button" class="btn btn-primary" data-action="take-card">@T["Card paid"]</button>
+                                <button type="button" class="btn btn-primary" data-action="take-card">@T["Card Paid"]</button>
                             </div>
                             <span class="form-text">@T["Charge the card on the terminal first, then record it here."]</span>
                         }
@@ -265,9 +265,9 @@
                     <div class="alert alert-danger mt-3 mb-0" role="alert" data-pay-error hidden></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary me-auto" data-pay-dismiss>@T["Back to the ticket"]</button>
-                    <button type="button" class="btn btn-secondary" data-action="print" hidden><i class="fa-solid fa-print me-1" aria-hidden="true"></i>@T["Print receipt"]</button>
-                    <button type="button" class="btn btn-primary" data-action="new-sale" hidden>@T["New sale"]</button>
+                    <button type="button" class="btn btn-secondary me-auto" data-pay-dismiss>@T["Back to the Ticket"]</button>
+                    <button type="button" class="btn btn-secondary" data-action="print" hidden><i class="fa-solid fa-print me-1" aria-hidden="true"></i>@T["Print Receipt"]</button>
+                    <button type="button" class="btn btn-primary" data-action="new-sale" hidden>@T["New Sale"]</button>
                 </div>
             </div>
         </div>
@@ -284,9 +284,9 @@
                 <div class="modal-body">
                     <div class="btn-group w-100 mb-3" role="group" aria-label="@T["Cash in or out"]">
                         <input type="radio" class="btn-check" name="web-register-cash-direction" id="web-register-cash-in" value="in" checked />
-                        <label class="btn btn-outline-success" for="web-register-cash-in">@T["Put in"]</label>
+                        <label class="btn btn-outline-success" for="web-register-cash-in">@T["Put In"]</label>
                         <input type="radio" class="btn-check" name="web-register-cash-direction" id="web-register-cash-out" value="out" />
-                        <label class="btn btn-outline-danger" for="web-register-cash-out">@T["Take out"]</label>
+                        <label class="btn btn-outline-danger" for="web-register-cash-out">@T["Take Out"]</label>
                     </div>
                     <label for="web-register-cash-amount" class="form-label">@T["Amount"]</label>
                     <input id="web-register-cash-amount" type="number" min="0.01" step="0.01" class="form-control mb-3" required />
@@ -335,7 +335,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
-                    <button type="submit" class="btn btn-danger">@T["Close shift"]</button>
+                    <button type="submit" class="btn btn-danger">@T["Close Shift"]</button>
                 </div>
             </form>
         </div>

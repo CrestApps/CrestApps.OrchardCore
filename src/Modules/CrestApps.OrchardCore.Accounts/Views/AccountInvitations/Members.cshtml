@@ -25,7 +25,7 @@
     {
         @if (Model.Invitations.Count > 0)
         {
-            <h2 class="h5">@T["Waiting invitations"]</h2>
+            <h2 class="h5">@T["Waiting Invitations"]</h2>
             <div class="list-group mb-4">
                 @foreach (var invitation in Model.Invitations)
                 {
@@ -33,7 +33,7 @@
                         <span>@invitation.Email <span class="text-muted small ms-1">@(invitation.Role == AccountMemberRole.Admin ? T["Admin"] : T["Member"])</span></span>
                         <form method="post" action="~/account/members/invitations/@invitation.ItemId/revoke">
                             @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-outline-danger">@T["Take back"]</button>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">@T["Take Back"]</button>
                         </form>
                     </div>
                 }
@@ -42,7 +42,7 @@
 
         <div class="card">
             <div class="card-body">
-                <h2 class="h6">@T["Invite a person"]</h2>
+                <h2 class="h6">@T["Invite a Person"]</h2>
                 <form method="post" action="~/account/members/invite" class="row g-2">
                     @Html.AntiForgeryToken()
                     <div class="col-md-5">
@@ -61,7 +61,7 @@
                         <input class="form-control" id="invite-message" name="message" maxlength="500" />
                     </div>
                     <div class="col-12">
-                        <button type="submit" class="btn btn-primary">@T["Send the invitation"]</button>
+                        <button type="submit" class="btn btn-primary">@T["Send the Invitation"]</button>
                     </div>
                 </form>
             </div>
@@ -73,8 +73,8 @@
 @if (accountUrl is not null)
 {
     <zone Name="Title">
-        <breadcrumb name="AccountMembers" title="@T["Account members"]">
-            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        <breadcrumb name="AccountMembers" title="@T["Account Members"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your Account"]</breadcrumb-item>
         </breadcrumb>
     </zone>
 
@@ -84,11 +84,11 @@ else
 {
     <div class="container my-4">
         <div class="product-breadcrumb">
-            <breadcrumb name="AccountMembers" title="@T["Account members"]">
+            <breadcrumb name="AccountMembers" title="@T["Account Members"]">
                 <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
             </breadcrumb>
         </div>
-        <h1 class="h3 mb-3">@T["Account members"]</h1>
+        <h1 class="h3 mb-3">@T["Account Members"]</h1>
         @content(null)
     </div>
 }

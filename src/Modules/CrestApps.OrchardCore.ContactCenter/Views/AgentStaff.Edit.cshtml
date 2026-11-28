@@ -13,5 +13,5 @@ else
         <dt class="col-sm-4">@T["Calls at once"]</dt><dd class="col-sm-8">@Model.MaxConcurrentInteractions</dd>
         <dt class="col-sm-4">@T["Skills"]</dt><dd class="col-sm-8">@(Model.Skills.Count == 0 ? T["None"].Value : string.Join(", ", Model.Skills))</dd>
     </dl>
-    <a href="@Url.Content("~/Admin/contact-center/agent-entitlements/edit/" + Model.AgentId)" class="btn btn-sm btn-secondary">@T["Edit entitlements"]</a>
+    <a href="@Url.Content("~/Admin/contact-center/agent-entitlements/edit/" + Model.AgentId)" class="btn btn-sm btn-secondary">@T["Edit Entitlements"]</a>
 }

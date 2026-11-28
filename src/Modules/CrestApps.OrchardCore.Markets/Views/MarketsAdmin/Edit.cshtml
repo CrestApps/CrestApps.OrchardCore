@@ -1,7 +1,7 @@
 @model MarketEditViewModel
 
 <zone Name="Title">
-    <breadcrumb name="MarketEdit" title="@(Model.IsNew ? T["Add market"] : T["Edit market"])">
+    <breadcrumb name="MarketEdit" title="@(Model.IsNew ? T["Add Market"] : T["Edit Market"])">
         <breadcrumb-item id="Markets" action="Index" controller="MarketsAdmin" area="@MarketsConstants.Feature" permission="@MarketsPermissions.ManageMarkets.Name">@T["Markets"]</breadcrumb-item>
     </breadcrumb>
 </zone>

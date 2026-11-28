@@ -1,7 +1,7 @@
 @model CalendarFeedViewModel
 
 <zone Name="Title">
-    <breadcrumb name="CalendarsFeedAddress" title="@T["Subscription address of '{0}'", Model.Name]">
+    <breadcrumb name="CalendarsFeedAddress" title="@T["Subscription Address of '{0}'", Model.Name]">
         <breadcrumb-item id="CalendarsIndex" action="Index" controller="Calendars" area="CrestApps.OrchardCore.Calendars">@T["Calendars"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -22,10 +22,10 @@
         }
         <form method="post" asp-action="Feed" asp-route-id="@Model.Id">
             <div class="action-bar-bottom">
-                <button type="submit" class="btn btn-primary">@(string.IsNullOrEmpty(Model.FeedUrl) ? T["Make an address"] : T["Make a new address"])</button>
+                <button type="submit" class="btn btn-primary">@(string.IsNullOrEmpty(Model.FeedUrl) ? T["Make an Address"] : T["Make a New Address"])</button>
                 @if (!string.IsNullOrEmpty(Model.FeedUrl))
                 {
-                    <button type="submit" name="remove" value="true" class="btn btn-danger action-bar-secondary">@T["Remove the address"]</button>
+                    <button type="submit" name="remove" value="true" class="btn btn-danger action-bar-secondary">@T["Remove the Address"]</button>
                 }
                 <a class="btn btn-secondary" asp-controller="Calendars" asp-action="Index">@T["Back"]</a>
             </div>

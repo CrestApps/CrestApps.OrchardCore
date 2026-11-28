@@ -74,7 +74,7 @@ public sealed class RequiredLearningPagesTests
         Assert.Equal(1, run.Added);
         Assert.Equal(_fixture.SpareLearnerId, state.UserId);
         Assert.NotNull(state.DueUtc);
-        Assert.Contains("My required learning", page);
+        Assert.Contains("My Required Learning", page);
         Assert.Contains("Due", page);
         // Refused, not challenged: a signed-in person is sent to the access denied page.
         Assert.Equal(HttpStatusCode.Redirect, refused.StatusCode);

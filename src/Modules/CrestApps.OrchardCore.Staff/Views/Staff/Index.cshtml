@@ -14,7 +14,7 @@
                 </div>
                 @if (Model.CanCreate)
                 {
-                    <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add staff member"]</a></div>
+                    <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add Staff Member"]</a></div>
                 }
             </div>
         </div>
@@ -28,7 +28,7 @@
 <admin-list name="Staff" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> No staff members match."]">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
-        <admin-list-column name="Name" position="20" title="@T["Staff member"]" />
+        <admin-list-column name="Name" position="20" title="@T["Staff Member"]" />
         <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>

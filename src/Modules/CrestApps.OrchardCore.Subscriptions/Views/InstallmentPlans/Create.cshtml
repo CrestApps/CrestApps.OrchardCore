@@ -5,7 +5,7 @@
 @model CreateInstallmentPlanViewModel
 
 <zone Name="Title">
-    <breadcrumb name="SubscriptionsInstallmentPlansCreate" title="@T["New installment plan"]">
+    <breadcrumb name="SubscriptionsInstallmentPlansCreate" title="@T["New Installment Plan"]">
         <breadcrumb-item id="SubscriptionsInstallmentPlans" action="Index" controller="InstallmentPlans" area="CrestApps.OrchardCore.Subscriptions" permission="@SubscriptionPermissions.ManageInstallmentPlans.Name">@T["Installment Plans"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -16,7 +16,7 @@
     @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
-        <button type="submit" class="btn btn-primary">@T["Continue to the down payment"]</button>
+        <button type="submit" class="btn btn-primary">@T["Continue to the Down Payment"]</button>
         <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
     </div>
 </form>

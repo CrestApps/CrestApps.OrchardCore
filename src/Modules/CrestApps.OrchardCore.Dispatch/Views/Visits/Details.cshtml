@@ -42,7 +42,7 @@
                     @if (visit.Status is VisitStatus.Scheduled or VisitStatus.Dispatched)
                     {
                         <form asp-action="Unassign" asp-route-id="@visit.ItemId" method="post" class="d-inline">
-                            <button type="submit" class="btn btn-secondary" disabled="@visit.Pinned" title="@(visit.Pinned ? T["Unpin it first"].Value : null)">@T["Unschedule"]</button>
+                            <button type="submit" class="btn btn-secondary" disabled="@visit.Pinned" title="@(visit.Pinned ? T["Unpin It First"].Value : null)">@T["Unschedule"]</button>
                         </form>
                     }
                     @if (VisitStatusRules.IsOpen(visit.Status) && visit.StartUtc is not null)
@@ -62,7 +62,7 @@
 <div class="row g-3 mb-3">
     <div class="col-12 col-lg-6">
         <div class="card h-100"><div class="card-body">
-            <h2 class="h6">@T["When and who"]</h2>
+            <h2 class="h6">@T["When and Who"]</h2>
             @if (visit.StartUtc is null)
             {
                 <p class="small text-muted mb-0">@T["Not scheduled yet. It takes {0} minutes.", visit.DurationMinutes]</p>
@@ -124,7 +124,7 @@
     </div>
     <div class="col-12 col-lg-6">
         <div class="card h-100"><div class="card-body">
-            <h2 class="h6">@T["The job"]</h2>
+            <h2 class="h6">@T["The Job"]</h2>
             <dl class="row mb-0 small">
                 <dt class="col-4">@T["Summary"]</dt>
                 <dd class="col-8">@visit.Summary</dd>
@@ -160,7 +160,7 @@
 @if (Model.CanManage && visit.Status == VisitStatus.Unscheduled)
 {
     <div class="card mb-3"><div class="card-body">
-        <h2 class="h6">@T["Cancel it"]</h2>
+        <h2 class="h6">@T["Cancel It"]</h2>
         <form asp-action="Status" asp-route-id="@visit.ItemId" method="post" class="row gx-2 gy-2 align-items-end">
             <input type="hidden" name="status" value="@VisitStatus.Canceled" />
             <div class="col-12 col-md">
@@ -168,7 +168,7 @@
                 <input id="visit-note" name="note" class="form-control" required />
             </div>
             <div class="col-auto">
-                <button type="submit" class="btn btn-danger">@T["Cancel the visit"]</button>
+                <button type="submit" class="btn btn-danger">@T["Cancel the Visit"]</button>
             </div>
         </form>
     </div></div>
@@ -176,7 +176,7 @@
 else if (Model.CanManage && Model.NextStatuses.Count > 0)
 {
     <div class="card mb-3"><div class="card-body">
-        <h2 class="h6">@T["Move it along"]</h2>
+        <h2 class="h6">@T["Move It Along"]</h2>
         <form asp-action="Status" asp-route-id="@visit.ItemId" method="post" class="row gx-2 gy-2 align-items-end">
             <div class="col-12 col-md-3">
                 <label for="visit-status" class="form-label small">@T["To"]</label>
@@ -201,7 +201,7 @@ else if (Model.CanManage && Model.NextStatuses.Count > 0)
 @if (canAssign)
 {
     <div class="card mb-3"><div class="card-body">
-        <h2 class="h6">@(visit.StartUtc is null ? T["Schedule it"] : T["Move it"])</h2>
+        <h2 class="h6">@(visit.StartUtc is null ? T["Schedule It"] : T["Move It"])</h2>
         <form asp-action="Details" asp-route-id="@visit.ItemId" method="get" class="row gx-2 gy-2 align-items-end mb-3">
             <input type="hidden" name="find" value="true" />
             <div class="col-auto">
@@ -209,7 +209,7 @@ else if (Model.CanManage && Model.NextStatuses.Count > 0)
                 <input id="find-day" type="date" name="day" value="@Model.Day" class="form-control" />
             </div>
             <div class="col-auto">
-                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> @T["Find technicians"]</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> @T["Find Technicians"]</button>
             </div>
         </form>
 
@@ -328,7 +328,7 @@ else if (Model.CanManage && Model.NextStatuses.Count > 0)
     {
         <div class="col-12 col-lg-6">
             <div class="card h-100"><div class="card-body">
-                <h2 class="h6">@T["Told the customer"]</h2>
+                <h2 class="h6">@T["Told the Customer"]</h2>
                 <ul class="list-unstyled small mb-0">
                     @foreach (var notice in visit.Notices.AsEnumerable().Reverse())
                     {
@@ -342,7 +342,7 @@ else if (Model.CanManage && Model.NextStatuses.Count > 0)
     {
         <div class="col-12 col-lg-6">
             <div class="card h-100"><div class="card-body">
-                <h2 class="h6">@T["Other visits for this work order"]</h2>
+                <h2 class="h6">@T["Other Visits for This Work Order"]</h2>
                 <ul class="list-unstyled small mb-0">
                     @foreach (var other in Model.OtherVisits)
                     {

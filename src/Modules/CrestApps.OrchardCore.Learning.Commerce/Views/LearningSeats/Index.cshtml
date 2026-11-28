@@ -46,7 +46,7 @@
                             <form method="post" action="~/account/learning-seats/seats/@row.Seat.ItemId/remove">
                                 @Html.AntiForgeryToken()
                                 <input type="hidden" name="poolId" value="@pool.Pool.ItemId" />
-                                <button type="submit" class="btn btn-sm btn-outline-danger">@T["Take back"]</button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger">@T["Take Back"]</button>
                             </form>
                         }
                     </div>
@@ -67,7 +67,7 @@
                                         <option value="@member.UserId">@member.UserName</option>
                                     }
                                 </select>
-                                <button type="submit" class="btn btn-primary text-nowrap">@T["Give a seat"]</button>
+                                <button type="submit" class="btn btn-primary text-nowrap">@T["Give a Seat"]</button>
                             </div>
                         </form>
                     }
@@ -90,8 +90,8 @@
 @if (accountUrl is not null)
 {
     <zone Name="Title">
-        <breadcrumb name="LearningSeats" title="@T["Course seats"]">
-            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        <breadcrumb name="LearningSeats" title="@T["Course Seats"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your Account"]</breadcrumb-item>
         </breadcrumb>
     </zone>
 
@@ -101,11 +101,11 @@ else
 {
     <div class="container my-4">
         <div class="product-breadcrumb">
-            <breadcrumb name="LearningSeats" title="@T["Course seats"]">
+            <breadcrumb name="LearningSeats" title="@T["Course Seats"]">
                 <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
             </breadcrumb>
         </div>
-        <h1 class="h3 mb-3">@T["Course seats"]</h1>
+        <h1 class="h3 mb-3">@T["Course Seats"]</h1>
         @content(null)
     </div>
 }

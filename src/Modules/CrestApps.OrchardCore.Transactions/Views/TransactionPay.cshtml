@@ -71,7 +71,7 @@ else
                                step="@amountStep" />
                     </div>
                     <div class="col-12 col-sm-auto">
-                        <button type="submit" class="btn btn-outline-primary">@T["Pay this amount"]</button>
+                        <button type="submit" class="btn btn-outline-primary">@T["Pay This Amount"]</button>
                     </div>
                 </form>
                 @if (smallestPayment > 0m)
@@ -86,7 +86,7 @@ else
 @if (Model.Invoice is not null)
 {
     <div class="mb-2 no-print text-end">
-        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print();">@T["Print invoice"]</button>
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.print();">@T["Print Invoice"]</button>
     </div>
 
     @await DisplayAsync(await New.BusinessDocument(Document: Model.Invoice))

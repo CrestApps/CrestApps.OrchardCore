@@ -72,14 +72,14 @@
                     {
                         <input type="hidden" name="stop" value="true" />
                         <p class="small mb-2"><span class="badge text-bg-success fw-normal">@T["Working"]</span> @T["since"] @await DisplayAsync(await New.DateTime(Utc: since, Format: "t"))</p>
-                        <button type="submit" class="btn btn-sm btn-secondary">@T["Stop working on this ticket"]</button>
+                        <button type="submit" class="btn btn-sm btn-secondary">@T["Stop Working on This Ticket"]</button>
                     }
                     else
                     {
-                        <button type="submit" class="btn btn-sm btn-secondary">@T["Start working on this ticket"]</button>
+                        <button type="submit" class="btn btn-sm btn-secondary">@T["Start Working on This Ticket"]</button>
                     }
                 </form>
-                <button type="button" class="btn btn-sm btn-outline-secondary align-self-end" data-bs-toggle="collapse" data-bs-target="#@logId" aria-expanded="false" aria-controls="@logId">@T["Log time"]</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary align-self-end" data-bs-toggle="collapse" data-bs-target="#@logId" aria-expanded="false" aria-controls="@logId">@T["Log Time"]</button>
             </div>
             <form asp-area="CrestApps.OrchardCore.Tickets" asp-controller="TicketTime" asp-action="Log" asp-route-id="@Model.TicketId" method="post" class="collapse no-multisubmit border-top mt-3 pt-3" id="@logId">
                 <div class="mb-2">
@@ -104,7 +104,7 @@
                         <span class="hint dashed">@T["Clear it for time not billed to the customer."]</span>
                     </div>
                 }
-                <button type="submit" class="btn btn-sm btn-primary">@T["Log time"]</button>
+                <button type="submit" class="btn btn-sm btn-primary">@T["Log Time"]</button>
             </form>
         }
     </div>

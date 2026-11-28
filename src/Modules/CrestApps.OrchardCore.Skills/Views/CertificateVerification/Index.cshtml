@@ -2,13 +2,13 @@
 @model CertificateVerificationViewModel
 
 @{
-    ViewData["Title"] = T["Verify a certificate"];
+    ViewData["Title"] = T["Verify a Certificate"];
 }
 
 <meta name="robots" content="noindex, nofollow" />
 
 <div class="container my-5" style="max-width: 44rem">
-    <h1 class="h3 mb-4">@T["Verify a certificate"]</h1>
+    <h1 class="h3 mb-4">@T["Verify a Certificate"]</h1>
 
     <form method="get" asp-action="Index" class="mb-4" role="search">
         <label for="code" class="form-label">@T["Verification code"]</label>
@@ -71,7 +71,7 @@
                 }
                 @if (Model.State != CertificateVerificationState.Revoked)
                 {
-                    <a class="btn btn-outline-secondary mt-3" asp-action="Pdf" asp-route-code="@Model.Code" target="_blank"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["View the certificate"]</a>
+                    <a class="btn btn-outline-secondary mt-3" asp-action="Pdf" asp-route-code="@Model.Code" target="_blank"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["View the Certificate"]</a>
                 }
             </div>
         </div>

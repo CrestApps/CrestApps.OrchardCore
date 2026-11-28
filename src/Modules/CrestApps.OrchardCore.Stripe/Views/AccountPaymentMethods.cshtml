@@ -18,7 +18,7 @@ else
 {
     if (Model.KeptPaymentMethods.Count > 0)
     {
-        <h2 class="h5 mb-1">@T["Cards for automatic payments"]</h2>
+        <h2 class="h5 mb-1">@T["Cards for Automatic Payments"]</h2>
         <p class="small text-body-secondary mb-2">@T["These cards are charged for payments you agreed to, such as installments and renewals, without you having to pay at checkout. The default card is charged unless a payment names another."]</p>
         <ul class="list-group mb-4">
             @foreach (var kept in Model.KeptPaymentMethods)
@@ -46,7 +46,7 @@ else
                         {
                             <form method="post" action="@Url.RouteUrl("AccountKeptPaymentMethodDefault", new { id = kept.ItemId })">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-outline-secondary btn-sm" aria-label="@T["Make {0} your default card", method?.Describe()]">@T["Make default"]</button>
+                                <button type="submit" class="btn btn-outline-secondary btn-sm" aria-label="@T["Make {0} your default card", method?.Describe()]">@T["Make Default"]</button>
                             </form>
                         }
                         <form method="post" action="@Url.RouteUrl("AccountKeptPaymentMethodRemove", new { id = kept.ItemId })">
@@ -63,7 +63,7 @@ else
     {
         if (Model.KeptPaymentMethods.Count > 0)
         {
-            <h2 class="h5 mb-2">@T["Cards saved for checkout"]</h2>
+            <h2 class="h5 mb-2">@T["Cards Saved for Checkout"]</h2>
         }
         <ul class="list-group mb-3">
             @foreach (var card in Model.Cards)

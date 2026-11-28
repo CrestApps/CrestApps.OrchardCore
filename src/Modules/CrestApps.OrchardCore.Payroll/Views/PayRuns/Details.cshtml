@@ -26,7 +26,7 @@
 
 <zone Name="Title">
     <breadcrumb name="PayrollPayRunsDetails" title="@T["{0}", Names.Run(run)]">
-        <breadcrumb-item id="PayrollPayRuns" action="Index" controller="PayRuns" area="CrestApps.OrchardCore.Payroll">@T["Pay runs"]</breadcrumb-item>
+        <breadcrumb-item id="PayrollPayRuns" action="Index" controller="PayRuns" area="CrestApps.OrchardCore.Payroll">@T["Pay Runs"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -107,11 +107,11 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
                 <p class="mb-2">@T["Deposits wait to be batched into a bank file, and checks wait in the check register to be printed."]</p>
                 @if (disbursementsUrl is not null)
                 {
-                    <a class="btn btn-sm btn-outline-primary me-2" href="@disbursementsUrl"><i class="fa-solid fa-building-columns me-1" aria-hidden="true"></i>@T["Batch the deposits"]</a>
+                    <a class="btn btn-sm btn-outline-primary me-2" href="@disbursementsUrl"><i class="fa-solid fa-building-columns me-1" aria-hidden="true"></i>@T["Batch the Deposits"]</a>
                 }
                 @if (checksUrl is not null)
                 {
-                    <a class="btn btn-sm btn-outline-primary" href="@checksUrl"><i class="fa-solid fa-money-check me-1" aria-hidden="true"></i>@T["Print the checks"]</a>
+                    <a class="btn btn-sm btn-outline-primary" href="@checksUrl"><i class="fa-solid fa-money-check me-1" aria-hidden="true"></i>@T["Print the Checks"]</a>
                 }
             </div>
         </div>
@@ -270,14 +270,14 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
         <div class="action-bar-bottom">
             @if (canProcess)
             {
-                <a class="btn btn-success" href="@Url.Action("Process", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Process and pay"]" data-message="@T["Process the pay run? Its statements become final and net pay is paid: deposits go to the bank file and checks to the check register."]" data-ok-text="@T["Process and pay"]" data-ok-class="btn-primary">@(run.Status == PayRunStatus.Approved ? T["Process and pay"] : T["Pay what is left"])</a>
+                <a class="btn btn-success" href="@Url.Action("Process", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Process and Pay"]" data-message="@T["Process the pay run? Its statements become final and net pay is paid: deposits go to the bank file and checks to the check register."]" data-ok-text="@T["Process and Pay"]" data-ok-class="btn-primary">@(run.Status == PayRunStatus.Approved ? T["Process and Pay"] : T["Pay What Is Left"])</a>
             }
             @if (canWork)
             {
                 @if (run.Status is PayRunStatus.PendingApproval or PayRunStatus.Approved)
                 {
                     @* An approval is for one calculation: calculating again withdraws it, so it asks first. *@
-                    <a class="btn btn-secondary" href="@Url.Action("Calculate", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Calculate again"]" data-message="@T["Calculate the run again? Its approval is withdrawn, and the run must be submitted for approval again."]" data-ok-text="@T["Calculate again"]" data-ok-class="btn-primary">@T["Calculate again"]</a>
+                    <a class="btn btn-secondary" href="@Url.Action("Calculate", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Calculate Again"]" data-message="@T["Calculate the run again? Its approval is withdrawn, and the run must be submitted for approval again."]" data-ok-text="@T["Calculate Again"]" data-ok-class="btn-primary">@T["Calculate Again"]</a>
                 }
                 else
                 {
@@ -287,14 +287,14 @@ else if (!string.IsNullOrEmpty(Model.DecideRefusal))
                 {
                     @if (Model.Questions.Count > 0)
                     {
-                        <a class="btn btn-success@(blockers > 0 ? " disabled" : null)" aria-disabled="@(blockers > 0 ? "true" : null)" tabindex="@(blockers > 0 ? "-1" : null)" href="@Url.Action("Submit", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Submit for approval"]" data-message="@T.Plural(Model.Questions.Count, "An employee asked about their pay and it hasn't changed since. Submit the run anyway?", "{0} employees asked about their pay and it hasn't changed since. Submit the run anyway?")" data-ok-text="@T["Submit for approval"]" data-ok-class="btn-primary">@T["Submit for approval"]</a>
+                        <a class="btn btn-success@(blockers > 0 ? " disabled" : null)" aria-disabled="@(blockers > 0 ? "true" : null)" tabindex="@(blockers > 0 ? "-1" : null)" href="@Url.Action("Submit", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Submit for Approval"]" data-message="@T.Plural(Model.Questions.Count, "An employee asked about their pay and it hasn't changed since. Submit the run anyway?", "{0} employees asked about their pay and it hasn't changed since. Submit the run anyway?")" data-ok-text="@T["Submit for Approval"]" data-ok-class="btn-primary">@T["Submit for Approval"]</a>
                     }
                     else
                     {
-                        <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)">@T["Submit for approval"]</button>
+                        <button class="btn btn-success" type="submit" formaction="@Url.Action("Submit", new { id = run.ItemId })" disabled="@(blockers > 0)">@T["Submit for Approval"]</button>
                     }
                 }
-                <a class="btn btn-danger action-bar-secondary" href="@Url.Action("Cancel", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Cancel the run"]" data-message="@T["Cancel the pay run? Its draft statements are removed and it can't be calculated again."]" data-ok-text="@T["Cancel the run"]" data-cancel-text="@T["Keep it"]">@T["Cancel the run"]</a>
+                <a class="btn btn-danger action-bar-secondary" href="@Url.Action("Cancel", new { id = run.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Cancel the Run"]" data-message="@T["Cancel the pay run? Its draft statements are removed and it can't be calculated again."]" data-ok-text="@T["Cancel the Run"]" data-cancel-text="@T["Keep It"]">@T["Cancel the Run"]</a>
             }
         </div>
     </form>

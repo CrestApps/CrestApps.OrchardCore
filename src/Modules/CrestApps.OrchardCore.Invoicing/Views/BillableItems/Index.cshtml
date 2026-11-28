@@ -2,7 +2,7 @@
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<BillableItem>>
 
 <zone Name="Title">
-    <breadcrumb name="BillableItemsIndex" title="@T["Unbilled charges"]" />
+    <breadcrumb name="BillableItemsIndex" title="@T["Unbilled Charges"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for delete actions. *@
@@ -19,7 +19,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add a charge"]</a>
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add a Charge"]</a>
                 </div>
             </div>
         </div>

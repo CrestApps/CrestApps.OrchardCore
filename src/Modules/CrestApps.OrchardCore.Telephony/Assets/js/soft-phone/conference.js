@@ -189,10 +189,10 @@ function mergeBarHtml(merge, strings, escapeHtml) {
 
     if (!merge.canMerge) {
         summary = strings.mergeSelectHint || 'Tick two or more calls to merge them.';
-        action = strings.mergeCalls || 'Merge calls';
+        action = strings.mergeCalls || 'Merge Calls';
     } else if (merge.addsToConference) {
         summary = format(strings.addToConferenceSummary || 'Add {0} to the conference.', names);
-        action = strings.addToConference || 'Add to conference';
+        action = strings.addToConference || 'Add to Conference';
     } else {
         summary = format(strings.mergeSummary || 'Join {0} in one conference.', names);
         action = format(strings.mergeSelectedCalls || 'Merge {0} calls', merge.selectedCount);

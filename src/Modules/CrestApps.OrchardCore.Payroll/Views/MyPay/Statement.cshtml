@@ -9,7 +9,7 @@
 
 <zone Name="Title">
     <breadcrumb name="PayrollMyPayStatement" title="@T["Pay of {0}", statement.PayDate.ToString("d", CultureInfo.CurrentCulture)]">
-        <breadcrumb-item id="PayrollMyPay" action="Index" controller="MyPay" area="CrestApps.OrchardCore.Payroll">@T["My pay"]</breadcrumb-item>
+        <breadcrumb-item id="PayrollMyPay" action="Index" controller="MyPay" area="CrestApps.OrchardCore.Payroll">@T["My Pay"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -60,7 +60,7 @@
 }
 
 <div class="mb-3">
-    <a class="btn btn-secondary" asp-action="StatementPdf" asp-route-id="@statement.ItemId"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Download the stub"]</a>
+    <a class="btn btn-secondary" asp-action="StatementPdf" asp-route-id="@statement.ItemId"><i class="fa-solid fa-file-pdf" aria-hidden="true"></i> @T["Download the Stub"]</a>
     <button type="button" class="btn btn-secondary d-print-none" data-pay-statement-print><i class="fa-solid fa-print" aria-hidden="true"></i> @T["Print"]</button>
 </div>
 

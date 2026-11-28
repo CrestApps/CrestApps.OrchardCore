@@ -6,7 +6,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="LearningClassSessionsEdit" title="@(isNew ? T["New session"] : T["Edit session"])">
+    <breadcrumb name="LearningClassSessionsEdit" title="@(isNew ? T["New Session"] : T["Edit Session"])">
         <breadcrumb-item id="LearningClassItem" url="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = classItemId })">@Model.ClassItem.DisplayText</breadcrumb-item>
         <breadcrumb-item id="LearningClassSessions" action="Index" controller="ClassSessions" area="CrestApps.OrchardCore.Learning.Classes" route-classItemId="@classItemId">@T["Sessions"]</breadcrumb-item>
     </breadcrumb>

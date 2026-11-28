@@ -3,7 +3,7 @@
     var preview = Model.Preview;
 }
 <zone Name="Title">
-    <breadcrumb name="MyWorkTimeOff" title="@T["Time off"]">
+    <breadcrumb name="MyWorkTimeOff" title="@T["Time Off"]">
         <breadcrumb-item id="MyWork" action="Index" controller="MyWork" area="CrestApps.OrchardCore.Workforce">@T["My Work"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -65,12 +65,12 @@
                 </div></div></div>
             }
             <div class="action-bar-bottom">
-                <button type="submit" class="btn btn-success">@T["Send request"]</button>
-                <button type="submit" name="check" value="true" class="btn btn-outline-secondary">@T["Check first"]</button>
+                <button type="submit" class="btn btn-success">@T["Send Request"]</button>
+                <button type="submit" name="check" value="true" class="btn btn-outline-secondary">@T["Check First"]</button>
             </div>
 </form>
 
-<h2 class="h5">@T["My requests"]</h2>
+<h2 class="h5">@T["My Requests"]</h2>
 @if (Model.Requests.Count == 0)
 {
     <p class="text-muted">@T["No requests yet."]</p>

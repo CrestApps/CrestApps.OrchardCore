@@ -59,18 +59,18 @@
                 {
                     <button type="submit" class="btn btn-primary btn-sm"
                             data-url-af="RemoveUrl"
-                            data-title="@T["Send again"]"
+                            data-title="@T["Send Again"]"
                             data-message="@T["A partner may already have this order. Check its dashboard first, or the order may be made twice. Send again?"]"
-                            data-ok-text="@T["Send again"]"
+                            data-ok-text="@T["Send Again"]"
                             data-ok-class="btn-primary"
                             data-cancel-text="@T["Cancel"]">
-                        @T["Send again"]
+                        @T["Send Again"]
                     </button>
                 }
                 else
                 {
                     <button type="submit" class="btn btn-primary btn-sm">
-                        @(Model.Requests.Count == 0 ? T["Send to fulfillment partners"] : T["Send again"])
+                        @(Model.Requests.Count == 0 ? T["Send to Fulfillment Partners"] : T["Send Again"])
                     </button>
                 }
             </form>

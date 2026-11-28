@@ -24,7 +24,7 @@
 @if (entry.Direction == ContentTransferDirection.Import && hasErrorRecords)
 {
     <a asp-action="DownloadErrors" asp-controller="Admin" asp-route-area="@ContentTransferConstants.Feature.ModuleId" asp-route-entryId="@entry.EntryId" class="dropdown-item btn-sm">
-        <i class="fa-solid fa-file-excel text-danger" aria-hidden="true"></i> @T["Download errors ({0})", statsPart.Errors.Count]
+        <i class="fa-solid fa-file-excel text-danger" aria-hidden="true"></i> @T["Download Errors ({0})", statsPart.Errors.Count]
     </a>
 }
 
@@ -33,7 +33,7 @@
     && canResumeImport)
 {
     <a asp-action="ResumeImport" asp-controller="Admin" asp-route-area="@ContentTransferConstants.Feature.ModuleId" asp-route-entryId="@entry.EntryId" asp-route-returnUrl="@FullRequestPath" class="dropdown-item btn-sm">
-        <i class="fa-solid fa-play text-primary" aria-hidden="true"></i> @T["Resume import"]
+        <i class="fa-solid fa-play text-primary" aria-hidden="true"></i> @T["Resume Import"]
     </a>
 }
 
@@ -42,7 +42,7 @@
     && canPauseImport)
 {
     <a asp-action="PauseImport" asp-controller="Admin" asp-route-area="@ContentTransferConstants.Feature.ModuleId" asp-route-entryId="@entry.EntryId" asp-route-returnUrl="@FullRequestPath" data-url-af="UnsafeUrl RemoveUrl" data-title=@T["Pause import"] data-message=@T["Are you sure you want to pause this import?"] data-ok-text="@T["Yes"]" data-cancel-text="@T["No"]" data-ok-class="btn-warning" class="dropdown-item btn-sm">
-        <i class="fa-solid fa-pause text-warning" aria-hidden="true"></i> @T["Pause import"]
+        <i class="fa-solid fa-pause text-warning" aria-hidden="true"></i> @T["Pause Import"]
     </a>
 }
 

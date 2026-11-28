@@ -58,7 +58,7 @@ else
                 <form asp-action="Reforecast" method="post" class="mt-1">
                     <input type="hidden" name="planningGroupId" value="@Model.PlanningGroupId" />
                     <input type="hidden" name="date" value="@dateText" />
-                    <button type="submit" class="btn btn-sm btn-outline-primary">@T["Reforecast the rest of the day"]</button>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">@T["Reforecast the Rest of the Day"]</button>
                 </form>
             }
         </div></div></div>
@@ -102,7 +102,7 @@ else
         <div class="col-12 col-xl-6">
             <div class="card h-100">
                 <div class="card-body">
-                    <h2 class="h6">@T["Best times for a meeting or training"]</h2>
+                    <h2 class="h6">@T["Best Times for a Meeting or Training"]</h2>
                     <form asp-action="Index" method="get" class="row g-2 align-items-end mb-2">
                         <input type="hidden" name="PlanningGroupId" value="@Model.PlanningGroupId" />
                         <input type="hidden" name="Date" value="@dateText" />
@@ -129,7 +129,7 @@ else
         <div class="col-12 col-xl-6">
             <div class="card h-100">
                 <div class="card-body">
-                    <h2 class="h6">@T["Offer extra hours or time off"]</h2>
+                    <h2 class="h6">@T["Offer Extra Hours or Time Off"]</h2>
                     <form asp-action="Offer" method="post" class="row g-2 align-items-end">
                         <input type="hidden" name="PlanningGroupId" value="@Model.PlanningGroupId" />
                         <input type="hidden" name="Date" value="@dateText" />

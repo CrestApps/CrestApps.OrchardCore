@@ -10,7 +10,7 @@
             }
             @if (Model.CanManage)
             {
-                <a class="btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.Assets" asp-controller="Assets" asp-action="Edit" asp-route-ownerKind="@Model.OwnerKind" asp-route-ownerId="@Model.ContactId">@T["Add an asset"]</a>
+                <a class="btn btn-sm btn-primary" asp-area="CrestApps.OrchardCore.Assets" asp-controller="Assets" asp-action="Edit" asp-route-ownerKind="@Model.OwnerKind" asp-route-ownerId="@Model.ContactId">@T["Add an Asset"]</a>
             }
         </div>
         @if (Model.Assets.Count == 0)

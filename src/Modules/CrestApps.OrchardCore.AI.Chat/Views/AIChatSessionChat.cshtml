@@ -222,7 +222,7 @@
 
                 <div class="d-flex gap-2 align-items-center ms-auto">
 
-                    <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice input"]" style="display: none;">
+                    <button class="btn btn-outline-secondary rounded stt-mic-btn" type="button" id="@micBtnHtmlId" title="@T["Voice Input"]" style="display: none;">
                         <i class="fa-solid fa-microphone"></i>
                     </button>
 
@@ -241,7 +241,7 @@
 
                        Idle is the soundwave on its own; the title and aria-label carry the meaning. The end
                        state keeps its words because stopping a live conversation should be unmistakable. *@
-                    <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@(realtimeEnabled ? T["Start speaking"] : T["Start Conversation"])" aria-label="@(realtimeEnabled ? T["Start speaking"] : T["Start Conversation"])" data-start-title="@(realtimeEnabled ? T["Start speaking"] : T["Start Conversation"])" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square'></i>" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
+                    <button class="btn btn-dark rounded" type="button" id="@conversationBtnHtmlId" title="@(realtimeEnabled ? T["Start Speaking"] : T["Start Conversation"])" aria-label="@(realtimeEnabled ? T["Start Speaking"] : T["Start Conversation"])" data-start-title="@(realtimeEnabled ? T["Start Speaking"] : T["Start Conversation"])" data-end-title="@T["End Conversation"]" data-start-html="<i class='fa-solid fa-wave-square'></i>" data-end-html="<i class='fa-solid fa-stop me-1'></i> @T["End Conversation"]">
                         <i class="fa-solid fa-wave-square"></i>
                     </button>
                 }

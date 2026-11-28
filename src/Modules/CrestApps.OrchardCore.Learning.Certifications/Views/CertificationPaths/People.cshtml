@@ -1,7 +1,7 @@
 @model CertificationPathPeopleViewModel
 
 <zone Name="Title">
-    <breadcrumb name="LearningCertificationPathPeople" title="@T["People on the '{0}' path", Model.CertificationName ?? string.Empty]">
+    <breadcrumb name="LearningCertificationPathPeople" title="@T["People on the '{0}' Path", Model.CertificationName ?? string.Empty]">
         <breadcrumb-item id="Certifications" action="Index" controller="Certifications" area="CrestApps.OrchardCore.Skills">@T["Certification Types"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -19,7 +19,7 @@
             <div class="col-auto">
                 <form method="post" asp-action="Start" asp-route-id="@Model.Path.ItemId" class="d-flex gap-2">
                     <input name="userName" class="form-control" placeholder="@T["User name"]" aria-label="@T["User name"]" required />
-                    <button type="submit" class="btn btn-secondary text-nowrap">@T["Start on the path"]</button>
+                    <button type="submit" class="btn btn-secondary text-nowrap">@T["Start on the Path"]</button>
                 </form>
             </div>
         </div>

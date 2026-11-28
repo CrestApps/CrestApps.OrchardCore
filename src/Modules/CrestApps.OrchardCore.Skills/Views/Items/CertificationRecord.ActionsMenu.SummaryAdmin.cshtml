@@ -2,7 +2,7 @@
 
 @if (Model.Record.Status != CertificationStatus.Valid)
 {
-    <a asp-controller="CertificationRecords" asp-action="Verify" asp-route-id="@Model.Record.ItemId" class="dropdown-item" data-title="@T["Mark as checked"]" data-message="@T["Mark this certificate as checked and valid?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Mark as checked"]</a>
+    <a asp-controller="CertificationRecords" asp-action="Verify" asp-route-id="@Model.Record.ItemId" class="dropdown-item" data-title="@T["Mark as Checked"]" data-message="@T["Mark this certificate as checked and valid?"]" data-url-af="RemoveUrl UnsafeUrl">@T["Mark as Checked"]</a>
 }
 @if (Model.Record.Status == CertificationStatus.Valid)
 {

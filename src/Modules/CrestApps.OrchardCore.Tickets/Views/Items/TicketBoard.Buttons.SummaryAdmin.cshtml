@@ -6,7 +6,7 @@
 <a asp-controller="TicketBoards" asp-action="Pin" asp-route-id="@Model.Board.ItemId" asp-route-pinned="@(Model.IsPinned ? "false" : "true")" asp-route-returnUrl="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)"
    class="btn btn-outline-secondary btn-sm"
    data-url-af="UnsafeUrl"
-   title="@(Model.IsPinned ? T["Remove it from your menu"] : T["Show it in your menu, under Service Desk"])"><i class="fa-solid fa-thumbtack me-1" aria-hidden="true"></i>@(Model.IsPinned ? T["Unpin"] : T["Pin to menu"])</a>
+   title="@(Model.IsPinned ? T["Remove it from your menu"] : T["Show it in your menu, under Service Desk"])"><i class="fa-solid fa-thumbtack me-1" aria-hidden="true"></i>@(Model.IsPinned ? T["Unpin"] : T["Pin to Menu"])</a>
 
 @if (Model.CanManage)
 {
