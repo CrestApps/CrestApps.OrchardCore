@@ -241,6 +241,38 @@ public sealed class EmailAutomationTests
         Assert.Contains(context.Result.Errors, error => error.MemberNames.Contains("ProcessedFolder"));
     }
 
+    [Theory]
+    [InlineData("mx.google.com", true)]
+    [InlineData(null, true)]
+    [InlineData("mx.google.com; dmarc=pass", false)]
+    [InlineData("mx google com", false)]
+    [InlineData("spf=pass", false)]
+    public async Task AddressRule_TakesOnlyAServerNameAsTheTrustedAuthenticationServer(string serverId, bool expected)
+    {
+        // Arrange: a recipe or the API saves the settings without the editor, so the rule holds them to the same check.
+        var rule = new EmailAddressSettingsRule(new PassThroughStringLocalizer<EmailAddressSettingsRule>());
+        var address = new OmnichannelChannelEndpoint { Capabilities = [OmnichannelConstants.Channels.Email] };
+
+        address.Put(new EmailAddressSettings
+        {
+            InboundMode = EmailInboundMode.Mailbox,
+            Mailbox = new EmailMailboxSettings
+            {
+                Server = new EmailServerSettings { Host = "imap.contoso.com" },
+                TrustedAuthenticationServerId = serverId,
+            },
+        });
+
+        var context = new ValidatingContext<OmnichannelChannelEndpoint>(address);
+
+        // Act
+        await rule.ValidateAsync(context, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.Equal(expected, context.Result.Succeeded);
+        Assert.Equal(!expected, context.Result.Errors.Any(error => error.MemberNames.Contains("TrustedAuthenticationServerId")));
+    }
+
     [Fact]
     public async Task AddressRule_IgnoresAnAddressThatIsNotUsedForEmail()
     {

@@ -60,6 +60,14 @@ public sealed class EmailAddressSettingsRule : IChannelEndpointRule
             {
                 context.Result.Fail(new ValidationResult(S["Enter the folder received email is moved to."], ["ProcessedFolder"]));
             }
+
+            // Matched against the first word of the host's Authentication-Results header, so anything that is not one
+            // word would never match and no sender's domain would ever count as authenticated.
+            if (settings.Mailbox?.TrustedAuthenticationServerId is { Length: > 0 } serverId &&
+                serverId.Any(character => char.IsWhiteSpace(character) || character is ';' or '=' or '(' or ')'))
+            {
+                context.Result.Fail(new ValidationResult(S["Enter only the server name, such as mx.google.com: the first word of the mail host's Authentication-Results header."], ["TrustedAuthenticationServerId"]));
+            }
         }
 
         var limits = settings.Limits;

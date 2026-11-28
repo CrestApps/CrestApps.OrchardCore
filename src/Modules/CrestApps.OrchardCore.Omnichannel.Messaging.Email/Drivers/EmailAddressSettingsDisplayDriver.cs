@@ -205,11 +205,6 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         settings.Mailbox.InitialLookbackDays = Math.Clamp(model.InitialLookbackDays, 0, 30);
         settings.Mailbox.TrustedAuthenticationServerId = string.IsNullOrWhiteSpace(model.TrustedAuthenticationServerId) ? null : model.TrustedAuthenticationServerId.Trim();
 
-        if (settings.Mailbox.TrustedAuthenticationServerId is { } serverId && serverId.Any(character => char.IsWhiteSpace(character) || character is ';' or '=' or '(' or ')'))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TrustedAuthenticationServerId), S["Enter only the server name, such as mx.google.com: the first word of the mail host's Authentication-Results header."]);
-        }
-
         settings.Limits ??= new EmailSendingLimits();
 
         var limitsChanged =
