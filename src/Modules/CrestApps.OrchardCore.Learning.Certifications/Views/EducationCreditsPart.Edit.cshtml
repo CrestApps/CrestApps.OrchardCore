@@ -41,7 +41,7 @@
                                     }
                                 </select>
                             </td>
-                            <td><input name="@(prefix)[@i].Amount" value="@rows[i].Amount" type="number" min="0" step="0.25" class="form-control form-control-sm" aria-label="@T["Credits"]" /></td>
+                            <td><input name="@(prefix)[@i].Amount" value="@Convert.ToString(rows[i].Amount, System.Globalization.CultureInfo.InvariantCulture)" type="number" min="0" step="0.25" class="form-control form-control-sm" aria-label="@T["Credits"]" /></td>
                             <td><input name="@(prefix)[@i].ValidityMonths" value="@rows[i].ValidityMonths" type="number" min="0" class="form-control form-control-sm" aria-label="@T["Valid for (months)"]" /></td>
                         </tr>
                     }

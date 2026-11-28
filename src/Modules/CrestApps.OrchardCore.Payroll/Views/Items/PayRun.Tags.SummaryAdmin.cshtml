@@ -1,10 +1,8 @@
 @model ShapeViewModel<PayRun>
 @using System.Globalization
-@inject CrestApps.OrchardCore.Payroll.Services.IEmployerManager Employers
 
 @{
     var run = Model.Value;
-    var employer = await Employers.FindByIdAsync(run.EmployerId);
     string StatusText(PayRunStatus status) => status switch
     {
         PayRunStatus.Draft => T["Draft"].Value,
@@ -20,7 +18,7 @@
     };
 }
 
-<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Employer"]">@(employer?.Name ?? run.EmployerId)</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Run number"]">#@run.Number</span>
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Pay date"]"><i class="fa-solid fa-calendar-days text-secondary me-1" aria-hidden="true"></i>@run.PayDate.ToString("d", CultureInfo.CurrentCulture)</span>
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Type"]">@run.Type</span>
 <span class="badge @(run.Status is PayRunStatus.Approved or PayRunStatus.Paid ? "text-bg-success" : run.Status is PayRunStatus.Failed ? "text-bg-danger" : "ta-badge") fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">@StatusText(run.Status)</span>

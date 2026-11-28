@@ -12,7 +12,7 @@ Every team gets a **Workforce calendar** that holds its published shifts and app
 
 | | |
 | --- | --- |
-| **Menu** | **Staff** → **All Staff**, Teams, **Workforce** → **Activity Codes** |
+| **Menu** | **Staff** → **All Staff**, **Staff** → **Capabilities**, Teams, **Workforce** → **Activity Codes** |
 | **Permission** | View workers, Manage workers, Manage workforce teams, Manage activity codes, View sensitive worker details, Manage the whole workforce |
 | **Feature** | Workforce (it needs Calendars, Skills and Teams) |
 
@@ -96,6 +96,22 @@ People with an account are managed with their user too. With **Manage workers**,
 - Whenever the user is saved, their worker takes the user's name and email.
 
 The **Workers** list stays, for workers without an account (such as people who clock in only at a kiosk) and for HR records kept after an account is closed.
+
+## Capabilities
+
+A capability puts a person in a pool, such as **Contact Center agent**, **Technician**, **Cashier**, **Bookable** or **Instructor**: pickers, filters and settings then offer only the people who have it. Tick a person's capabilities on the staff editor. Some are set by themselves: signing in to a queue makes someone an agent, and opening a register makes them a cashier.
+
+**Staff** → **Capabilities** lists them, with a search box. The modules that rely on one add it; you can change its name, description and position, or turn it off, but not delete it. Choose **Add Capability** to add your own for your own lists and filters:
+
+| Field | What it does |
+| --- | --- |
+| **Technical name** | What is stored on staff members and used by filters and settings, such as Inspector: letters, digits, dots, dashes and underscores, starting with a letter. It can't be changed later. |
+| **Name** | How it is shown in the editor, filters and pickers. |
+| **Description** | Shown under its checkbox in the staff editor. |
+| **Position** | Lower comes first in the editor and filters. |
+| **Offered** | Untick to stop offering it in the editor, filters, pickers and settings. People who have it keep it. |
+
+A capability is a yes or no. How good someone is at something, from 1 to 5 with certifications, is a skill: see [Skills or capabilities?](./skills-and-certifications.md#skills-or-capabilities).
 
 ## Find workers
 

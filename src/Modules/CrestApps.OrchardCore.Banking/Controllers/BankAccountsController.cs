@@ -51,7 +51,7 @@ public sealed class BankAccountsController : CatalogAdminController<BankAccount>
         => S["Bank account"];
 
     protected override LocalizedString NewDisplayName
-        => S["New bank account"];
+        => S["New Bank Account"];
 
     protected override LocalizedHtmlString CreatedNotification
         => H["The bank account has been added. It can receive payments once it is verified."];

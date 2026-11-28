@@ -23,7 +23,7 @@
         {
             if (await provider.IsAvailableAsync())
             {
-                <a class="btn btn-secondary action-bar-secondary" role="button" href="@Url.Action("Link", new { provider = provider.Name, id })">@T["Link your bank with {0} instead", provider.DisplayName]</a>
+                <a class="btn btn-secondary action-bar-secondary" role="button" href="@Url.Action("Link", new { provider = provider.Name, id })">@T["Link your Bank instead"]</a>
             }
         }
         <a class="btn btn-secondary cancel" role="button" asp-route-action="Index">@T["Cancel"]</a>

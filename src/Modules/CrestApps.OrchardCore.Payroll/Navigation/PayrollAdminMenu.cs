@@ -1,12 +1,14 @@
+using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using OrchardCore.Navigation;
 
 namespace CrestApps.OrchardCore.Payroll.Navigation;
 
 /// <summary>
-/// Adds Payroll &gt; Setup to the admin menu: pay schedules and pay codes.
+/// Adds Payroll &gt; Management to the admin menu: pay schedules and pay codes.
 /// </summary>
 public sealed class PaySetupAdminMenu : AdminNavigationProvider
 {
@@ -29,8 +31,8 @@ public sealed class PaySetupAdminMenu : AdminNavigationProvider
             .AddClass("payroll")
             .AddClass("icon-class-fa-solid")
             .AddClass("icon-class-fa-money-check-dollar")
-            .Add(S["Setup"], S["Setup"].PrefixPosition("90"), setup => setup
-                .Id("payrollSetup")
+            .Add(S["Management"], S["Management"].PrefixPosition("90"), management => management
+                .Id("payrollManagement")
                 .Add(S["Pay Schedules"], S["Pay Schedules"].PrefixPosition("10"), schedules => schedules
                     .Id("paySchedules")
                     .Action("Index", "PaySchedules", PayrollConstants.Features.Payroll)
@@ -47,20 +49,27 @@ public sealed class PaySetupAdminMenu : AdminNavigationProvider
 }
 
 /// <summary>
-/// Payroll &gt; Pay Runs, Employees and Setup &gt; Employers, each shown only to users who hold its permission for at
-/// least one employer (globally or for that employer), and the payroll settings.
+/// Payroll &gt; Pay Runs, Liabilities and Filings, and Management &gt; Company (or Employers, with Multiple Employers
+/// on), each shown only to users who hold its permission for at least one employer (globally or for that employer), and
+/// the payroll settings.
 /// </summary>
 public sealed class PayrollAdminMenu : AdminNavigationProvider
 {
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IPayrollScopeService _scope;
+    private readonly PayrollEmployerOptions _employerOptions;
 
     internal readonly IStringLocalizer S;
 
-    public PayrollAdminMenu(IHttpContextAccessor httpContextAccessor, IPayrollScopeService scope, IStringLocalizer<PayrollAdminMenu> stringLocalizer)
+    public PayrollAdminMenu(
+        IHttpContextAccessor httpContextAccessor,
+        IPayrollScopeService scope,
+        IOptions<PayrollEmployerOptions> employerOptions,
+        IStringLocalizer<PayrollAdminMenu> stringLocalizer)
     {
         _httpContextAccessor = httpContextAccessor;
         _scope = scope;
+        _employerOptions = employerOptions.Value;
         S = stringLocalizer;
     }
 
@@ -107,12 +116,26 @@ public sealed class PayrollAdminMenu : AdminNavigationProvider
 
                 if (employers)
                 {
-                    payroll.Add(S["Setup"], S["Setup"].PrefixPosition("90"), setup => setup
-                        .Id("payrollSetup")
-                        .Add(S["Employers"], S["Employers"].PrefixPosition("5"), item => item
-                            .Id("payrollEmployers")
-                            .Action("Index", "Employers", PayrollConstants.Features.Payroll)
-                            .LocalNav()));
+                    // The company's own payroll edits the company; Multiple Employers lists every employer instead.
+                    payroll.Add(S["Management"], S["Management"].PrefixPosition("90"), management =>
+                    {
+                        management.Id("payrollManagement");
+
+                        if (_employerOptions.MultipleEmployers)
+                        {
+                            management.Add(S["Employers"], S["Employers"].PrefixPosition("5"), item => item
+                                .Id("payrollEmployers")
+                                .Action("Index", "Employers", PayrollConstants.Features.Payroll)
+                                .LocalNav());
+                        }
+                        else
+                        {
+                            management.Add(S["Company"], S["Company"].PrefixPosition("5"), item => item
+                                .Id("payrollCompany")
+                                .Action("Index", "Company", PayrollConstants.Features.Payroll)
+                                .LocalNav());
+                        }
+                    });
                 }
             });
         }

@@ -1,0 +1,6 @@
+@model ShapeViewModel<PayrollEmployerFilter>
+
+<div class="col-12 col-md-5">
+    <label for="employerId" class="form-label">@T["Employer"]</label>
+    <select id="employerId" name="employerId" asp-items="Model.Value.Employers" class="form-select"><option value="">@T["Choose…"]</option></select>
+</div>

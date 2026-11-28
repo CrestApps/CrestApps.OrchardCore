@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Options;
+using OrchardCore;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.ModelBinding;
@@ -29,6 +30,7 @@ public sealed class AssetsController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
     private readonly AssetManager _manager;
+    private readonly AssetStore _store;
     private readonly AssetTypeManager _typeManager;
     private readonly AssetService _service;
     private readonly ISession _session;
@@ -45,6 +47,7 @@ public sealed class AssetsController : Controller
     /// </summary>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="manager">The asset manager.</param>
+    /// <param name="store">The asset store.</param>
     /// <param name="typeManager">The asset type manager.</param>
     /// <param name="service">The asset service.</param>
     /// <param name="session">The session.</param>
@@ -57,6 +60,7 @@ public sealed class AssetsController : Controller
     public AssetsController(
         IAuthorizationService authorizationService,
         AssetManager manager,
+        AssetStore store,
         AssetTypeManager typeManager,
         AssetService service,
         ISession session,
@@ -69,6 +73,7 @@ public sealed class AssetsController : Controller
     {
         _authorizationService = authorizationService;
         _manager = manager;
+        _store = store;
         _typeManager = typeManager;
         _service = service;
         _session = session;
@@ -106,7 +111,15 @@ public sealed class AssetsController : Controller
             form.OwnerName = await _owners.GetNameAsync(parsedOwnerKind, form.OwnerId, HttpContext.RequestAborted) ?? form.OwnerId;
         }
 
-        var query = AssetListQuery.Build(_session, form.TypeId, status, ownerKind, form.OwnerId, form.Q);
+        // Without a type, a category keeps the assets of that category's types.
+        string[] categoryTypeIds = null;
+
+        if (string.IsNullOrEmpty(form.TypeId) && Enum.TryParse<AssetCategory>(form.Category, out var category))
+        {
+            categoryTypeIds = [.. types.Where(type => type.Category == category).Select(type => type.ItemId)];
+        }
+
+        var query = AssetListQuery.Build(_session, form.TypeId, status, ownerKind, form.OwnerId, form.Q, categoryTypeIds);
         var pager = new Pager(pagerParameters, pagerOptions.Value);
         var count = await query.CountAsync(HttpContext.RequestAborted);
         var page = await query.OrderBy(index => index.Name).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync(HttpContext.RequestAborted);
@@ -117,6 +130,7 @@ public sealed class AssetsController : Controller
         var today = DateOnly.FromDateTime(_clock.UtcNow);
 
         form.TypeOptions = [.. types.Select(type => new SelectListItem(type.Name, type.ItemId, type.ItemId == form.TypeId))];
+        form.CategoryOptions = [.. types.Select(type => type.Category).Distinct().Order().Select(value => new SelectListItem(value.ToString(), value.ToString(), value.ToString() == form.Category))];
         form.List = new AdminListContext<AssetRow>
         {
             Source = page.Select(asset => new AssetRow
@@ -333,6 +347,15 @@ public sealed class AssetsController : Controller
             return RedirectToAction(nameof(Details), new { id });
         }
 
+        var reasons = await _store.GetUsageReasonsAsync(item, HttpContext.RequestAborted);
+
+        if (reasons.Count > 0)
+        {
+            await _notifier.WarningAsync(H["{0} can't be deleted: {1} Set its state to Retired instead.", item.Name, string.Join(" ", reasons)]);
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         await _manager.DeleteAsync(item);
         await _notifier.SuccessAsync(H["The asset was deleted."]);
 
@@ -358,6 +381,9 @@ public sealed class AssetsController : Controller
             Today = DateOnly.FromDateTime(_clock.UtcNow),
             CanManage = await _authorizationService.AuthorizeAsync(User, AssetsPermissions.ManageAssets),
             OwnerName = asset.OwnerKind == AssetOwnerKind.Internal ? null : await _owners.GetNameAsync(asset.OwnerKind, asset.OwnerId, HttpContext.RequestAborted) ?? asset.OwnerId,
+
+            // What other modules show about the asset, from their display drivers of Asset for the DetailAdmin type.
+            Sections = await _displayManager.BuildDisplayAsync(asset, _updateModelAccessor.ModelUpdater, OrchardCoreConstants.DisplayType.DetailAdmin),
         };
     }
 }

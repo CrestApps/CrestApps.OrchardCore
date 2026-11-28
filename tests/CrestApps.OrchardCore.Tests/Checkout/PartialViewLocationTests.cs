@@ -24,14 +24,9 @@ public sealed partial class PartialViewLocationTests
 
         var missing = new List<string>();
 
-        foreach (var view in Directory.EnumerateFiles(moduleRoot, "*.cshtml", SearchOption.AllDirectories))
+        // Build output is skipped rather than walked and filtered, which made this one of the slowest tests.
+        foreach (var view in SourceTreeFiles.Enumerate(moduleRoot, "*.cshtml", SourceTreeFiles.IsBuildOutputDirectory))
         {
-            if (view.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal) ||
-                view.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
-            {
-                continue;
-            }
-
             var content = File.ReadAllText(view);
 
             foreach (Match match in PartialReference().Matches(content))

@@ -1,6 +1,12 @@
 [
   {
     "action": "vite",
+    "name": "product-price-editor.js",
+    "source": "Assets/js/product-price-editor.js",
+    "dest": "wwwroot/Scripts/product-price-editor.js"
+  },
+  {
+    "action": "vite",
     "name": "product-listing.js",
     "source": "Assets/js/product-listing.js",
     "dest": "wwwroot/Scripts/product-listing.js"

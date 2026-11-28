@@ -1,12 +1,13 @@
 using CrestApps.OrchardCore.Assets.Core.Indexes;
 using CrestApps.OrchardCore.Assets.Models;
 using YesSql;
+using YesSql.Services;
 using Asset = CrestApps.OrchardCore.Assets.Models.Asset;
 
 namespace CrestApps.OrchardCore.Assets.Services;
 
 /// <summary>
-/// The query of the Assets list: type, status, owner and a search on name, number or serial number, used by the list
+/// The query of the Assets list: type (or a category's types), status, owner and a search on name, number or serial number, used by the list
 /// page and the <c>listAssets</c> AI tool.
 /// </summary>
 internal static class AssetListQuery
@@ -20,8 +21,10 @@ internal static class AssetListQuery
     /// <param name="ownerKind">The owner's kind; applied with <paramref name="ownerId"/> only.</param>
     /// <param name="ownerId">The owner's id; applied with <paramref name="ownerKind"/> only.</param>
     /// <param name="search">Text in the name, number or serial number, or <see langword="null"/>.</param>
+    /// <param name="typeIds">Without <paramref name="typeId"/>, the asset types to keep, such as those of a category;
+    /// <see langword="null"/> for all.</param>
     /// <returns>The query.</returns>
-    public static IQuery<Asset, AssetIndex> Build(ISession session, string typeId, AssetStatus? status, AssetOwnerKind? ownerKind, string ownerId, string search)
+    public static IQuery<Asset, AssetIndex> Build(ISession session, string typeId, AssetStatus? status, AssetOwnerKind? ownerKind, string ownerId, string search, string[] typeIds = null)
     {
         ArgumentNullException.ThrowIfNull(session);
 
@@ -30,6 +33,10 @@ internal static class AssetListQuery
         if (!string.IsNullOrEmpty(typeId))
         {
             query = query.Where(index => index.AssetTypeId == typeId);
+        }
+        else if (typeIds is not null)
+        {
+            query = query.Where(index => index.AssetTypeId.IsIn(typeIds));
         }
 
         if (status is { } statusValue)

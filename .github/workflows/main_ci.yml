@@ -26,3 +26,4 @@ jobs:
     with:
       # Only pushes save the NuGet cache, so pull requests restore main's copy instead of evicting it with their own.
       save-nuget-cache: true
+      long-suites: true

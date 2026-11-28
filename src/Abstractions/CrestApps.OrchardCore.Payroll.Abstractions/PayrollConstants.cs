@@ -181,9 +181,16 @@ public static class PayrollConstants
         public const string PaySetup = "CrestApps.OrchardCore.Payroll.PaySetup";
 
         /// <summary>
-        /// Payroll: employers, pay profiles, pay runs, the engine and statements.
+        /// Payroll: the company's own payroll (the company, pay profiles, pay runs, the engine and statements).
         /// </summary>
         public const string Payroll = "CrestApps.OrchardCore.Payroll";
+
+        /// <summary>
+        /// Multiple Employers: payroll for more than one employer, such as the companies of a group or the clients of a
+        /// payroll service. Adds the employers list, an employer on pay runs and pay profiles, employer filters and
+        /// permissions per employer to the Payroll feature.
+        /// </summary>
+        public const string MultipleEmployers = "CrestApps.OrchardCore.Payroll.MultipleEmployers";
 
         /// <summary>
         /// My Pay: a person's own statements, tax elections and where their pay goes.

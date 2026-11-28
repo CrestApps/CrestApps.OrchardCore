@@ -1,0 +1,16 @@
+@model EditCatalogEntryViewModel
+
+<zone Name="Title">
+    <breadcrumb name="PayrollCompany" title="@T["Company"]" />
+</zone>
+
+<p class="hint">@T["The company that pays your staff: its name and tax ID printed on pay statements, checks and tax forms, its tax registrations and the bank account pay is sent from."]</p>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    @await DisplayAsync(Model.Editor)
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+    </div>
+</form>

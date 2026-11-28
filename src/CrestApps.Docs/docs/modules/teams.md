@@ -10,6 +10,8 @@ The **Teams** module keeps one team hierarchy for the site, so Workforce, Contac
 
 The admin screens are described in the User Manual: [Teams](../user-manual/workforce/teams.md).
 
+**Content** → **Teams** sits under Orchard's **Content** menu item (id `content`, `NavigationConstants.AdminMenuContentPosition`), so it merges with the Contents module's items; the module carries a copy of Orchard's `NavigationItemText-content.Id.cshtml`, so a site without the Contents feature still shows the menu's icon.
+
 | Feature ID | Name | Depends on |
 | --- | --- | --- |
 | `CrestApps.OrchardCore.Teams` | Teams | |

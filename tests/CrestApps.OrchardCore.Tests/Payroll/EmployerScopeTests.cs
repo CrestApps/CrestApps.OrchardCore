@@ -152,7 +152,7 @@ public sealed class EmployerScopeTests
     [Fact]
     public void RegistrationRows_OfTheSameAccount_AreOneRegistration_WithItsDatedRates()
     {
-        var driver = new EmployerDisplayDriver(null, null, null, RecipeRoundTrip.Localizer<EmployerDisplayDriver>());
+        var driver = new EmployerDisplayDriver(null, null, null, null, RecipeRoundTrip.Localizer<EmployerDisplayDriver>());
 
         var registrations = driver.ReadRegistrations(
         [
@@ -170,16 +170,20 @@ public sealed class EmployerScopeTests
     }
 
     [Fact]
-    public async Task PermissionProvider_ListsEachEmployersOwnPermissions()
+    public async Task PermissionProviders_ListTheGlobalPermissions_AndWithMultipleEmployersEachEmployersOwn()
     {
         await using var harness = await CreateHarnessAsync();
         var (contoso, _) = await AddEmployersAsync(harness);
 
-        var names = await harness.RunAsync(async services =>
+        var global = await harness.RunAsync(async services =>
             (await ActivatorUtilities.CreateInstance<PayrollPermissionProvider>(services).GetPermissionsAsync()).Select(permission => permission.Name).ToList(), commit: false);
+        var names = await harness.RunAsync(async services =>
+            (await ActivatorUtilities.CreateInstance<PayrollEmployerPermissionProvider>(services).GetPermissionsAsync()).Select(permission => permission.Name).ToList(), commit: false);
         var parsed = PayrollPermissionTemplates.Parse($"PreparePayRuns_{contoso.ItemId}");
 
-        Assert.Contains(PayrollPermissions.PreparePayRuns.Name, names);
+        // The company's own payroll lists no copy per employer; Multiple Employers lists them.
+        Assert.Contains(PayrollPermissions.PreparePayRuns.Name, global);
+        Assert.DoesNotContain($"PreparePayRuns_{contoso.ItemId}", global);
         Assert.Contains($"PreparePayRuns_{contoso.ItemId}", names);
         Assert.Contains($"ExportPayrollData_{contoso.ItemId}", names);
         Assert.Equal((PayrollPermissions.PreparePayRuns.Name, contoso.ItemId), (parsed.Value.Permission.Name, parsed.Value.EmployerId));

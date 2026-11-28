@@ -23,7 +23,11 @@ public sealed class SkillsAdminMenu : AdminNavigationProvider
     protected override ValueTask BuildAsync(NavigationBuilder builder)
     {
         // Skills are shared by Workforce, Contact Center and other modules, so they sit under Content rather than any one of them.
-        builder.Add(S["Content"], content => content
+        // The id and position are Orchard's Contents menu's, so the items merge with it; without the Contents feature, this
+        // module's NavigationItemText-content.Id view gives the menu Orchard's icon.
+        builder.Add(S["Content"], NavigationConstants.AdminMenuContentPosition, content => content
+            .AddClass("content")
+            .Id("content")
             .Add(S["Skills"], S["Skills"].PrefixPosition(), skills => skills
                 .Id("skills")
                 .Action("Index", "Skills", SkillsConstants.Features.Skills)

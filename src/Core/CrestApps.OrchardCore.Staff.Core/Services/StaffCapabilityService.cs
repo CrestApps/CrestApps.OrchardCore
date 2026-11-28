@@ -98,11 +98,11 @@ internal sealed partial class StaffCapabilityService : IStaffCapabilityService
 
         if (string.IsNullOrEmpty(name))
         {
-            errors.Add(S["The key is required."]);
+            errors.Add(S["The technical name is required."]);
         }
         else if (!KeyPattern().IsMatch(name))
         {
-            errors.Add(S["The key can only have letters, digits, dots, dashes and underscores, and starts with a letter."]);
+            errors.Add(S["The technical name can only have letters, digits, dots, dashes and underscores, and starts with a letter."]);
         }
 
         if (string.IsNullOrWhiteSpace(definition.DisplayName))
@@ -114,7 +114,7 @@ internal sealed partial class StaffCapabilityService : IStaffCapabilityService
 
         if (isNew && existing is not null)
         {
-            errors.Add(S["A capability with the key '{0}' already exists.", name]);
+            errors.Add(S["A capability with the technical name '{0}' already exists.", name]);
         }
         else if (!isNew && existing is null)
         {

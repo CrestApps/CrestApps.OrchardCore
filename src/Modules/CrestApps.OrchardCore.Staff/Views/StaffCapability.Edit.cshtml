@@ -1,11 +1,12 @@
 @model StaffCapabilityEditViewModel
 
-<div class="ocat-wrapper">
-    <label asp-for="Name" class="ocat-label ocat-label-required">@T["Key"]</label>
+<div class="ocat-wrapper" asp-validation-class-for="Name">
+    <label asp-for="Name" class="ocat-label@(Model.IsNew ? " ocat-label-required" : null)">@T["Technical name"]</label>
     <div class="ocat-end">
         @if (Model.IsNew)
         {
-            <input asp-for="Name" class="form-control" style="max-width: 18rem" />
+            <input asp-for="Name" class="form-control" />
+            <span asp-validation-for="Name" class="text-danger"></span>
             <span class="hint">@T["Stored on staff members and used by filters and settings, such as Inspector. It can't be changed later."]</span>
         }
         else
@@ -13,7 +14,7 @@
             <input class="form-control-plaintext" value="@Model.Name" readonly />
             @if (Model.IsBuiltIn)
             {
-                <span class="hint">@T["Built in: a module relies on this key, so it can't be renamed or deleted. You can change how it is shown or turn it off."]</span>
+                <span class="hint">@T["Built in: a module relies on this technical name, so it can't be renamed or deleted. You can change how it is shown or turn it off."]</span>
             }
         }
     </div>
@@ -29,10 +30,10 @@
         <span class="hint">@T["Shown under the checkbox in the staff editor."]</span>
     </div>
 </div>
-<div class="ocat-wrapper">
+<div class="ocat-limited-wrapper">
     <label asp-for="Position" class="ocat-label">@T["Position"]</label>
-    <div class="ocat-end">
-        <input asp-for="Position" type="number" class="form-control" style="max-width: 8rem" />
+    <div class="ocat-limited">
+        <input asp-for="Position" type="number" class="form-control" />
         <span class="hint">@T["Lower comes first in the editor and filters."]</span>
     </div>
 </div>
