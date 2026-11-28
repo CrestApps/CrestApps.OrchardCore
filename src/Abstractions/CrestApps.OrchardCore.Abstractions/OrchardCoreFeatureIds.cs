@@ -22,6 +22,8 @@ public static class OrchardCoreFeatureIds
 
     public const string AzureAI = "OrchardCore.AzureAI";
 
+    public const string BackgroundTasks = "OrchardCore.BackgroundTasks";
+
     public const string ContentFields = "OrchardCore.ContentFields";
 
     public const string ContentLocalization = "OrchardCore.ContentLocalization";
@@ -100,6 +102,8 @@ public static class OrchardCoreFeatureIds
 
     public const string Media = "OrchardCore.Media";
 
+    public const string MediaCache = "OrchardCore.Media.Cache";
+
     public const string Menu = "OrchardCore.Menu";
 
     public const string MicrosoftAuthenticationAzureAD = "OrchardCore.Microsoft.Authentication.AzureAD";
@@ -153,6 +157,10 @@ public static class OrchardCoreFeatureIds
     public const string Security = "OrchardCore.Security";
 
     public const string Seo = "OrchardCore.Seo";
+
+    public const string Settings = "OrchardCore.Settings";
+
+    public const string Shortcodes = "OrchardCore.Shortcodes";
 
     public const string ShortcodesTemplates = "OrchardCore.Shortcodes.Templates";
 

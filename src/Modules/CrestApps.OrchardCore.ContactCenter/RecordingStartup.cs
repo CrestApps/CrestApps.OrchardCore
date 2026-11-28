@@ -77,6 +77,7 @@ public sealed class RecordingStartup : StartupBase
             .AddResourceConfiguration<ContactCenterCallRecordingsResourceConfiguration>()
             .AddScoped<ICallRecordingTranscriptProvider, AIConversationCallRecordingTranscriptProvider>()
             .AddScoped<CallRecordingAccessEvaluator>()
+            .AddScoped<CallRecordingReader>()
             .AddScoped<CallRecordingAgentNameResolver>()
             .AddDisplayDriver<CallRecordingEntry, CallRecordingEntryDisplayDriver>();
 

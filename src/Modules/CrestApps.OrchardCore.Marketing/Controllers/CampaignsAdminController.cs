@@ -253,22 +253,19 @@ public sealed class CampaignsAdminController : Controller
         }
         else if (submit == "send")
         {
-            if (string.IsNullOrWhiteSpace((await _siteService.GetSiteSettingsAsync()).BaseUrl) || !await _campaignService.CanSendAsync())
+            switch (await _campaignService.QueueSendAsync(campaign, HttpContext.RequestAborted))
             {
-                await _notifier.ErrorAsync(H["Campaigns need the site's email set up and its base URL, for the unsubscribe link. It was saved as a draft."]);
-            }
-            else if (campaign.ScheduledUtc is { } scheduled && scheduled > _clock.UtcNow)
-            {
-                campaign.Status = CampaignStatus.Scheduled;
-                await _campaigns.UpdateAsync(campaign);
-                await _notifier.SuccessAsync(H["The campaign is scheduled. It starts sending at its time."]);
-            }
-            else
-            {
-                campaign.Status = CampaignStatus.Sending;
-                campaign.StartedUtc = _clock.UtcNow;
-                await _campaigns.UpdateAsync(campaign);
-                await _notifier.SuccessAsync(H["The campaign is sending. It goes out in batches over the next minutes."]);
+                case CampaignSendStart.NotConfigured:
+                    await _notifier.ErrorAsync(H["Campaigns need the site's email set up and its base URL, for the unsubscribe link. It was saved as a draft."]);
+                    break;
+
+                case CampaignSendStart.Scheduled:
+                    await _notifier.SuccessAsync(H["The campaign is scheduled. It starts sending at its time."]);
+                    break;
+
+                default:
+                    await _notifier.SuccessAsync(H["The campaign is sending. It goes out in batches over the next minutes."]);
+                    break;
             }
         }
         else

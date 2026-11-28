@@ -161,7 +161,7 @@ public sealed class ReportDefaultDateRangeTests
             DefaultDateRange = defaultRange,
         });
 
-        return new ReportDateRangeFilterDisplayDriver(clock.Object, localClock.Object, reportManager.Object);
+        return new ReportDateRangeFilterDisplayDriver(new ReportDateRangeResolver(clock.Object, localClock.Object, reportManager.Object), localClock.Object);
     }
 
     private sealed class PlainReport : IReport

@@ -22,7 +22,7 @@ namespace CrestApps.OrchardCore.Orders.Services;
 /// through the transaction commands. Either way the refund comes back through <see cref="OrderRefundRecorder"/>, which
 /// records it on the order with who gave it.
 /// </remarks>
-public sealed class OrderOperationsService : IOrderOperationsService
+public sealed class OrderOperationsService : IOrderOperationsService, IOrderRefundPlanner
 {
     private const string StoreCreditRefundPrefix = "store-credit:";
 
@@ -216,6 +216,93 @@ public sealed class OrderOperationsService : IOrderOperationsService
         result.Refunded = Money.Round((amount ?? money.Refundable) - left, order.Currency);
 
         return result;
+    }
+
+    /// <summary>
+    /// Plans where a refund would go, as <see cref="RefundAsync(Order, decimal?, string, bool, string, bool, CancellationToken)"/>
+    /// would refund it, without refunding or saving anything: store credit, or the online payments newest first (skipping
+    /// one whose refund waits to be settled by hand), then the order's transactions, then the balances the checkout used.
+    /// Keep it in step with <c>RefundAsync</c>, <c>RefundPaymentsAsync</c>, <c>RefundTransactionsAsync</c> and
+    /// <c>RefundTendersAsync</c>.
+    /// </summary>
+    async Task<OrderRefundPlan> IOrderRefundPlanner.PlanRefundAsync(Order order, decimal amount, bool asStoreCredit, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        var plan = new OrderRefundPlan();
+        var left = Money.Round(amount, order.Currency);
+
+        if (left <= 0m)
+        {
+            return plan;
+        }
+
+        if (asStoreCredit)
+        {
+            plan.Portions.Add(new OrderRefundPortion(OrderRefundPortionKind.StoreCredit, S["Store credit"], left, null, null));
+
+            return plan;
+        }
+
+        foreach (var (attempt, remaining) in await GetPaymentsAsync(order, cancellationToken))
+        {
+            if (left <= 0m)
+            {
+                break;
+            }
+
+            var provider = _paymentProviders.GetProvider(attempt.ProviderKey);
+            var description = string.IsNullOrWhiteSpace(provider?.DisplayName) ? attempt.ProviderKey : provider.DisplayName;
+            var refunds = await _refundStore.GetByOriginalTransactionAsync(attempt.TransactionId, cancellationToken);
+
+            if (refunds.Any(existing => existing.Status == RefundStatus.PendingManualReview))
+            {
+                plan.Skipped.Add(new OrderRefundPortion(OrderRefundPortionKind.Payment, description, remaining, attempt.CreatedUtc, provider?.Capabilities?.SupportsRefunds));
+
+                continue;
+            }
+
+            var portion = Math.Min(left, remaining);
+
+            plan.Portions.Add(new OrderRefundPortion(OrderRefundPortionKind.Payment, description, portion, attempt.CreatedUtc, provider?.Capabilities?.SupportsRefunds));
+            left = Money.Round(left - portion, order.Currency);
+        }
+
+        if (left > 0m && _serviceProvider.GetService<ITransactionCommandService>() is not null)
+        {
+            foreach (var transaction in await GetTransactionsAsync(order, cancellationToken))
+            {
+                var remaining = Math.Max(0m, transaction.AmountPaid - transaction.AmountRefunded);
+
+                if (left <= 0m || remaining <= 0m)
+                {
+                    continue;
+                }
+
+                var portion = Math.Min(left, remaining);
+                var description = string.IsNullOrWhiteSpace(transaction.SettlementMethod) ? transaction.Title : $"{transaction.Title} ({transaction.SettlementMethod})";
+
+                plan.Portions.Add(new OrderRefundPortion(OrderRefundPortionKind.Transaction, description, portion, transaction.SettledUtc ?? transaction.CreatedUtc, null));
+                left = Money.Round(left - portion, order.Currency);
+            }
+        }
+
+        if (left > 0m && !string.IsNullOrEmpty(order.CheckoutSessionId))
+        {
+            var holds = await _tenderLedger.GetRedeemedAsync(order.CheckoutSessionId, cancellationToken);
+            var onBalances = Math.Max(0m, holds.Sum(hold => hold.Amount - hold.ReturnedAmount));
+            var portion = Math.Min(left, onBalances);
+
+            if (portion > 0m)
+            {
+                plan.Portions.Add(new OrderRefundPortion(OrderRefundPortionKind.Balance, string.Join(", ", holds.Select(hold => hold.Description).Distinct()), portion, null, null));
+                left = Money.Round(left - portion, order.Currency);
+            }
+        }
+
+        plan.NotCovered = left;
+
+        return plan;
     }
 
     /// <summary>

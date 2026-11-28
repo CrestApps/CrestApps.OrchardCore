@@ -519,17 +519,7 @@ public sealed class AdminController : Controller
             return RedirectToAction(nameof(Detail), new { itemId });
         }
 
-        var now = _clock.UtcNow;
-
-        transaction.UpdatedUtc = now;
-        transaction.Events.Add(new TransactionEvent
-        {
-            CreatedUtc = now,
-            Type = TransactionEventType.Note,
-            Message = note,
-            ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier),
-            ActorName = await GetCurrentUserNameAsync(),
-        });
+        TransactionAdminActions.AddNote(transaction, note, _clock.UtcNow, User.FindFirstValue(ClaimTypes.NameIdentifier), await GetCurrentUserNameAsync());
 
         if (await TrySaveAsync(transaction))
         {

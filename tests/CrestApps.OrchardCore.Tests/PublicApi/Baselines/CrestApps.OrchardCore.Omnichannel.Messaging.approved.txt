@@ -15,45 +15,16 @@
 [assembly: OrchardCore.Modules.Manifest.Module(Author="The CrestApps Team", Category="Contact Center", Description=@"A human-operated, channel-agnostic messaging workspace: one inbox and one conversation view for every non-voice channel (SMS today; email, WhatsApp, Messenger and others as further channel features), routed to agents and queues by the inbound entry points that answer each number, built on the Omnichannel addresses and the channel-neutral Contact Center features.", Name="Omnichannel Messaging", Version="3.0.0", Website="https://crestapps.com")]
 [assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Omnichannel.Messaging", "Module")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
-namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks
-{
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Starts sending queued broadcasts through the outreach engine, each recipient in a" +
-        "n individual 1:1 thread.", LockExpiration=300000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Broadcast Fan-out")]
-    public sealed class MessagingBroadcastBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
-    {
-        public MessagingBroadcastBackgroundTask() { }
-        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
-    }
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Escalates conversations that missed their first-response target.", LockExpiration=55000, LockTimeout=3000, Schedule="* * * * *", Title="Messaging First Response SLA")]
-    public sealed class MessagingFirstResponseSlaBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
-    {
-        public MessagingFirstResponseSlaBackgroundTask() { }
-        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
-    }
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Retries outbound messages, on every channel, that a provider refused, on a wideni" +
-        "ng backoff schedule.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Outbound Outbox")]
-    public sealed class MessagingOutboxBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
-    {
-        public MessagingOutboxBackgroundTask() { }
-        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
-    }
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Returns unpicked routed conversations to their queue pool so another agent can ta" +
-        "ke them.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Routed Reassignment")]
-    public sealed class MessagingRoutedReassignmentBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
-    {
-        public MessagingRoutedReassignmentBackgroundTask() { }
-        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
-    }
-    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Assigns waiting messaging conversations nobody owns to agents through the routing" +
-        " rules.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Routing Rules")]
-    public sealed class MessagingRoutingRulesBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
-    {
-        public MessagingRoutingRulesBackgroundTask() { }
-        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
-    }
-}
 namespace CrestApps.OrchardCore.Omnichannel.Messaging
 {
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class AIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public AIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.AIToolsStartup> stringLocalizer) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Messaging")]
     public sealed class BroadcastsRecipesStartup : OrchardCore.Modules.StartupBase
     {
@@ -108,6 +79,43 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging
     {
         public WorkDistributionStartup() { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+}
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.BackgroundTasks
+{
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Starts sending queued broadcasts through the outreach engine, each recipient in a" +
+        "n individual 1:1 thread.", LockExpiration=300000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Broadcast Fan-out")]
+    public sealed class MessagingBroadcastBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public MessagingBroadcastBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
+    }
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Escalates conversations that missed their first-response target.", LockExpiration=55000, LockTimeout=3000, Schedule="* * * * *", Title="Messaging First Response SLA")]
+    public sealed class MessagingFirstResponseSlaBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public MessagingFirstResponseSlaBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
+    }
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Retries outbound messages, on every channel, that a provider refused, on a wideni" +
+        "ng backoff schedule.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Outbound Outbox")]
+    public sealed class MessagingOutboxBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public MessagingOutboxBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
+    }
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Returns unpicked routed conversations to their queue pool so another agent can ta" +
+        "ke them.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Routed Reassignment")]
+    public sealed class MessagingRoutedReassignmentBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public MessagingRoutedReassignmentBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
+    }
+    [OrchardCore.BackgroundTasks.BackgroundTask(Description="Assigns waiting messaging conversations nobody owns to agents through the routing" +
+        " rules.", LockExpiration=120000, LockTimeout=5000, Schedule="* * * * *", Title="Messaging Routing Rules")]
+    public sealed class MessagingRoutingRulesBackgroundTask : OrchardCore.BackgroundTasks.IBackgroundTask
+    {
+        public MessagingRoutingRulesBackgroundTask() { }
+        public System.Threading.Tasks.Task DoWorkAsync(System.IServiceProvider serviceProvider, System.Threading.CancellationToken cancellationToken) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Controllers

@@ -27,8 +27,6 @@ namespace CrestApps.OrchardCore.Orders.Controllers;
 /// </summary>
 public sealed class DraftOrdersAdminController : Controller
 {
-    private const int MaxLines = 100;
-
     private readonly IOrderStore _orderStore;
     private readonly DraftOrderService _drafts;
     private readonly IContentManager _contentManager;
@@ -236,13 +234,13 @@ public sealed class DraftOrdersAdminController : Controller
                 string.IsNullOrEmpty(line.LineId) ? UniqueId.GenerateId() : line.LineId,
                 line.ContentItemId,
                 line.VariantId,
-                Math.Clamp(line.Quantity, 0, 10_000),
+                Math.Clamp(line.Quantity, 0, DraftOrderInputRules.MaxQuantity),
                 ParsePrice(line.UnitPrice)))
             .ToList();
 
         foreach (var productId in (model.AddProductIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
         {
-            if (lines.Count < MaxLines)
+            if (lines.Count < DraftOrderInputRules.MaxLines)
             {
                 // An id now, so the line keeps it from one pricing to the next.
                 lines.Add(new DraftOrderLineInput(UniqueId.GenerateId(), productId, null, 1));
@@ -254,7 +252,7 @@ public sealed class DraftOrdersAdminController : Controller
             CustomerEmail = model.CustomerEmail,
             CustomerName = model.CustomerName,
             Note = model.Note,
-            DueUtc = model.DueDate is { } due ? DateTime.SpecifyKind(due.Date.AddHours(12), DateTimeKind.Utc) : null,
+            DueUtc = model.DueDate is { } due ? DraftOrderInputRules.ToDueUtc(due) : null,
             AddsToOrderId = model.AddsToOrderId,
             Lines = lines,
         };
@@ -271,7 +269,7 @@ public sealed class DraftOrdersAdminController : Controller
         })];
 
     private static decimal? ParsePrice(string value)
-        => decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var price) && price is >= 0 and < 100_000_000
+        => decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var price) && DraftOrderInputRules.IsAcceptedPrice(price)
             ? price
             : null;
 

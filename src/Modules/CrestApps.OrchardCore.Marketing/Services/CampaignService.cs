@@ -185,6 +185,40 @@ public sealed class CampaignService
     }
 
     /// <summary>
+    /// Sends a campaign, as its page's Send does: when the site's email or base URL (which the unsubscribe link needs) is
+    /// not set up nothing changes; a campaign whose send time is still to come is scheduled; otherwise it is marked as
+    /// sending, and the Marketing background task starts its outreach run, which skips opted-out addresses.
+    /// </summary>
+    /// <param name="campaign">The campaign, a draft or a scheduled one.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Whether the campaign was scheduled, queued for sending, or left as it was.</returns>
+    public async Task<CampaignSendStart> QueueSendAsync(Campaign campaign, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(campaign);
+
+        if (string.IsNullOrWhiteSpace((await _siteService.GetSiteSettingsAsync()).BaseUrl) || !await CanSendAsync())
+        {
+            return CampaignSendStart.NotConfigured;
+        }
+
+        var now = _clock.UtcNow;
+
+        if (campaign.ScheduledUtc is { } scheduled && scheduled > now)
+        {
+            campaign.Status = CampaignStatus.Scheduled;
+            await _campaigns.UpdateAsync(campaign, cancellationToken);
+
+            return CampaignSendStart.Scheduled;
+        }
+
+        campaign.Status = CampaignStatus.Sending;
+        campaign.StartedUtc = now;
+        await _campaigns.UpdateAsync(campaign, cancellationToken);
+
+        return CampaignSendStart.Sending;
+    }
+
+    /// <summary>
     /// Cancels a scheduled or sending campaign, and stops its outreach run so nothing more goes out.
     /// </summary>
     public async Task<bool> CancelAsync(Campaign campaign, CancellationToken cancellationToken = default)
@@ -252,6 +286,27 @@ public sealed class CampaignService
 
         return (null, null);
     }
+}
+
+/// <summary>
+/// What sending a campaign did.
+/// </summary>
+public enum CampaignSendStart
+{
+    /// <summary>
+    /// Nothing changed: the site's email or its base URL is not set up.
+    /// </summary>
+    NotConfigured,
+
+    /// <summary>
+    /// The campaign starts sending at its send time.
+    /// </summary>
+    Scheduled,
+
+    /// <summary>
+    /// The campaign is marked as sending; the background task starts its outreach run.
+    /// </summary>
+    Sending,
 }
 
 /// <summary>

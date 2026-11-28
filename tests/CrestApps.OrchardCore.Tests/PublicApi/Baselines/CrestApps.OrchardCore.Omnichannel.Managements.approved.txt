@@ -38,6 +38,120 @@
 [assembly: OrchardCore.Modules.Manifest.ModuleMarker("CrestApps.OrchardCore.Omnichannel.Managements", "Module")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.ContactCenter.DistributedTests")]
 [assembly: System.Runtime.CompilerServices.InternalsVisibleTo("CrestApps.OrchardCore.Tests")]
+namespace CrestApps.OrchardCore.Omnichannel.Managements.AI
+{
+    public sealed class CompleteOmnichannelActivityTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "completeOmnichannelActivity";
+        public CompleteOmnichannelActivityTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class DeleteActivityBatchTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "deleteActivityBatch";
+        public DeleteActivityBatchTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class DeleteOmnichannelRecordTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "deleteOmnichannelRecord";
+        public DeleteOmnichannelRecordTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class GetOmnichannelActivityTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "getOmnichannelActivity";
+        public GetOmnichannelActivityTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class ListActivityBatchesTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "listActivityBatches";
+        public ListActivityBatchesTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class ListOmnichannelActivitiesTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "listOmnichannelActivities";
+        public ListOmnichannelActivitiesTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class LoadActivityBatchTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "loadActivityBatch";
+        public LoadActivityBatchTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class PreviewActivityBatchTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "previewActivityBatch";
+        public PreviewActivityBatchTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class PurgeOmnichannelActivitiesTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const int MaxIds = 50;
+        public const string TheName = "purgeOmnichannelActivities";
+        public PurgeOmnichannelActivitiesTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class SaveActivityBatchTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "saveActivityBatch";
+        public SaveActivityBatchTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+    public sealed class SaveOmnichannelCadenceTool : Microsoft.Extensions.AI.AIFunction
+    {
+        public const string TheName = "saveOmnichannelCadence";
+        public SaveOmnichannelCadenceTool() { }
+        public override System.Collections.Generic.IReadOnlyDictionary<string, object> AdditionalProperties { get; }
+        public override string Description { get; }
+        public override System.Text.Json.JsonElement JsonSchema { get; }
+        public override string Name { get; }
+        protected override System.Threading.Tasks.ValueTask<object> InvokeCoreAsync(Microsoft.Extensions.AI.AIFunctionArguments arguments, System.Threading.CancellationToken cancellationToken) { }
+    }
+}
 namespace CrestApps.OrchardCore.Omnichannel.Managements
 {
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
@@ -65,12 +179,28 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
         public AISubjectFlowStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.AISubjectFlowStartup> stringLocalizer, OrchardCore.Environment.Shell.Configuration.IShellConfiguration shellConfiguration) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Managements")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class AIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public AIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.AIToolsStartup> stringLocalizer) { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Activities")]
     [OrchardCore.Modules.RequireFeatures(new string[] {
             "CrestApps.OrchardCore.Calendars"})]
     public sealed class CalendarStartup : OrchardCore.Modules.StartupBase
     {
         public CalendarStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class ChannelEndpointsAIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public ChannelEndpointsAIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.ChannelEndpointsAIToolsStartup> stringLocalizer) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.ChannelEndpoints")]
@@ -125,6 +255,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     public sealed class ContentTransferStartup : OrchardCore.Modules.StartupBase
     {
         public ContentTransferStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class CrmAIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public CrmAIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.CrmAIToolsStartup> stringLocalizer) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Crm")]
@@ -195,6 +333,14 @@ namespace CrestApps.OrchardCore.Omnichannel.Managements
     public sealed class FollowUpOwnerPoolStartup : OrchardCore.Modules.StartupBase
     {
         public FollowUpOwnerPoolStartup() { }
+        public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
+    }
+    [OrchardCore.Modules.Feature("CrestApps.OrchardCore.Omnichannel.Managements")]
+    [OrchardCore.Modules.RequireFeatures(new string[] {
+            "CrestApps.OrchardCore.AI"})]
+    public sealed class ManagementAIToolsStartup : OrchardCore.Modules.StartupBase
+    {
+        public ManagementAIToolsStartup(Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Managements.ManagementAIToolsStartup> stringLocalizer) { }
         public override void ConfigureServices(Microsoft.Extensions.DependencyInjection.IServiceCollection services) { }
     }
     [OrchardCore.Modules.RequireFeatures(new string[] {

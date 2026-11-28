@@ -1,5 +1,6 @@
 ﻿using CrestApps.OrchardCore.Users.Core.Models;
 using CrestApps.OrchardCore.Users.Core.ViewModels;
+using CrestApps.OrchardCore.Users.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -86,24 +87,23 @@ public sealed class UserFullNamePartDisplayDriver : SectionDisplayDriver<User, U
 
         var settings = await _siteService.GetSettingsAsync<DisplayNameSettings>();
 
-        if (settings.DisplayName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.DisplayName))
+        foreach (var missing in UserFullNameRules.GetMissingRequired(settings, model.DisplayName, model.FirstName, model.MiddleName, model.LastName))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayName), S["Display name is a required value."]);
-        }
-
-        if (settings.FirstName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.FirstName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.FirstName), S["First name is a required value."]);
-        }
-
-        if (settings.LastName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.LastName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.LastName), S["Last name is a required value."]);
-        }
-
-        if (settings.MiddleName == DisplayNamePropertyType.Required && string.IsNullOrWhiteSpace(model.MiddleName))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MiddleName), S["Middle name is a required value."]);
+            switch (missing)
+            {
+                case nameof(model.DisplayName):
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.DisplayName), S["Display name is a required value."]);
+                    break;
+                case nameof(model.FirstName):
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.FirstName), S["First name is a required value."]);
+                    break;
+                case nameof(model.LastName):
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.LastName), S["Last name is a required value."]);
+                    break;
+                case nameof(model.MiddleName):
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.MiddleName), S["Middle name is a required value."]);
+                    break;
+            }
         }
 
         part.DisplayName = model.DisplayName;

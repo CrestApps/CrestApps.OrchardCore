@@ -114,36 +114,6 @@ public sealed class AITestCaseDisplayDriver : DisplayDriver<AITestCase>
         var model = new AITestCaseViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The name is required."]);
-        }
-
-        if (string.IsNullOrWhiteSpace(model.ProfileId))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileId), S["Choose the AI profile to test."]);
-        }
-
-        if (string.IsNullOrWhiteSpace(model.Scenario))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Scenario), S["Describe the customer the AI talks to."]);
-        }
-
-        if (model.ProfileVersion is <= 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileVersion), S["The version must be a positive number, or empty for the current one."]);
-        }
-
-        if (model.MaxTurns is < 1 or > 50)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MaxTurns), S["The conversation must have between 1 and 50 customer turns."]);
-        }
-
-        if (model.PassingScore is < 0 or > 100)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PassingScore), S["The passing score must be between 0 and 100."]);
-        }
-
         testCase.Name = model.Name?.Trim();
         testCase.ProfileId = model.ProfileId;
         testCase.ProfileVersion = model.ProfileVersion;
@@ -155,6 +125,11 @@ public sealed class AITestCaseDisplayDriver : DisplayDriver<AITestCase>
         testCase.PassingScore = model.PassingScore;
         testCase.CustomerDeploymentName = string.IsNullOrWhiteSpace(model.CustomerDeploymentName) ? null : model.CustomerDeploymentName;
         testCase.JudgeDeploymentName = string.IsNullOrWhiteSpace(model.JudgeDeploymentName) ? null : model.JudgeDeploymentName;
+
+        foreach (var error in AITestCaseValidator.Validate(testCase, S))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, error.MemberNames.First(), error.ErrorMessage);
+        }
 
         return Edit(testCase, context);
     }

@@ -1,7 +1,7 @@
 using CrestApps.OrchardCore.ContactCenter.Core;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
-using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.Core.Controllers;
 using CrestApps.OrchardCore.Core.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -88,17 +88,12 @@ public sealed class DialerProfilesController : CatalogAdminController<DialerProf
     /// the copy outright.
     /// </remarks>
     protected override void InitializeClone(DialerProfile clone, DialerProfile source)
-    {
-        if (RequiresConnectWaitReset(source))
-        {
-            clone.ConnectWaitMilliseconds = 0;
-        }
-    }
+        => DialerProfileCloning.ResetMeasuredSettings(clone, source);
 
     /// <inheritdoc/>
     protected override async Task OnClonedAsync(DialerProfile clone, DialerProfile source)
     {
-        if (RequiresConnectWaitReset(source))
+        if (DialerProfileCloning.RequiresConnectWaitReset(source))
         {
             await Notifier.InformationAsync(H["The copy starts with no connect wait because it has not measured any connected calls yet. Set it again once the copy has dialed enough calls."]);
         }
@@ -190,7 +185,4 @@ public sealed class DialerProfilesController : CatalogAdminController<DialerProf
     [Admin("contact-center/dialers/clone/{id}", "ContactCenterDialersClone")]
     public Task<IActionResult> Clone(string id)
         => ClonePostAsync(id);
-
-    private static bool RequiresConnectWaitReset(DialerProfile source)
-        => source.Mode == DialerMode.Predictive && source.ConnectWaitMilliseconds > 0;
 }

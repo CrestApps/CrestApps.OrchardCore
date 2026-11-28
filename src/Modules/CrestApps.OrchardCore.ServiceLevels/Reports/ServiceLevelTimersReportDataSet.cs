@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using System.Security.Claims;
 using CrestApps.OrchardCore.Reports.Designer.DataSources;
 using CrestApps.OrchardCore.ServiceLevels.Core.Indexes;
 using CrestApps.OrchardCore.ServiceLevels.Models;
@@ -106,7 +105,7 @@ internal sealed class ServiceLevelTimersReportDataSet : IndexedReportDataSet<Ser
         };
 
     public override async Task<bool> CanReadAsync(DataSourceContext context, CancellationToken cancellationToken = default)
-        => context?.User is { } user && (_providers.Any() || await _authorizationService.AuthorizeAsync(user, ServiceLevelsPermissions.ManageServiceLevelPolicies));
+        => context?.User is { } user && (_providers.Any() || await ServiceLevelTimerVisibility.SeesEveryTimerAsync(_authorizationService, user));
 
     protected override async IAsyncEnumerable<ServiceLevelTimer> LoadAsync(DataSourceQuery query, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
@@ -115,7 +114,7 @@ internal sealed class ServiceLevelTimersReportDataSet : IndexedReportDataSet<Ser
             yield break;
         }
 
-        if (await _authorizationService.AuthorizeAsync(user, ServiceLevelsPermissions.ManageServiceLevelPolicies))
+        if (await ServiceLevelTimerVisibility.SeesEveryTimerAsync(_authorizationService, user))
         {
             await foreach (var timer in base.LoadAsync(query, cancellationToken))
             {
@@ -125,9 +124,7 @@ internal sealed class ServiceLevelTimersReportDataSet : IndexedReportDataSet<Ser
             yield break;
         }
 
-        var providers = _providers
-            .GroupBy(provider => provider.SubjectKind, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+        var providers = ServiceLevelTimerVisibility.ByKind(_providers);
         var known = new Dictionary<(string, string), bool>();
         var buffer = new List<ServiceLevelTimer>(BatchSize);
 
@@ -140,47 +137,15 @@ internal sealed class ServiceLevelTimersReportDataSet : IndexedReportDataSet<Ser
                 continue;
             }
 
-            foreach (var kept in await FlushAsync(user, providers, known, buffer, cancellationToken))
+            foreach (var kept in await ServiceLevelTimerVisibility.KeepVisibleAsync(user, providers, known, buffer, cancellationToken))
             {
                 yield return kept;
             }
         }
 
-        foreach (var kept in await FlushAsync(user, providers, known, buffer, cancellationToken))
+        foreach (var kept in await ServiceLevelTimerVisibility.KeepVisibleAsync(user, providers, known, buffer, cancellationToken))
         {
             yield return kept;
         }
-    }
-
-    private static async Task<List<ServiceLevelTimer>> FlushAsync(
-        ClaimsPrincipal user,
-        Dictionary<string, IServiceLevelTimerAccessProvider> providers,
-        Dictionary<(string, string), bool> known,
-        List<ServiceLevelTimer> buffer,
-        CancellationToken cancellationToken)
-    {
-        foreach (var kind in buffer.GroupBy(timer => timer.Subject.Kind ?? string.Empty, StringComparer.Ordinal))
-        {
-            var unknown = kind.Select(timer => timer.Subject.Id).Where(id => !string.IsNullOrEmpty(id) && !known.ContainsKey((kind.Key, id))).Distinct(StringComparer.Ordinal).ToList();
-
-            if (unknown.Count == 0)
-            {
-                continue;
-            }
-
-            var visible = providers.TryGetValue(kind.Key, out var provider)
-                ? await provider.GetVisibleAsync(user, unknown, cancellationToken)
-                : null;
-
-            foreach (var id in unknown)
-            {
-                known[(kind.Key, id)] = visible?.Contains(id) == true;
-            }
-        }
-
-        var kept = buffer.Where(timer => known.GetValueOrDefault((timer.Subject.Kind ?? string.Empty, timer.Subject.Id ?? string.Empty))).ToList();
-        buffer.Clear();
-
-        return kept;
     }
 }

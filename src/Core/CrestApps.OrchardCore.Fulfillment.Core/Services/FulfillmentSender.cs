@@ -150,6 +150,135 @@ public sealed class FulfillmentSender
     }
 
     /// <summary>
+    /// Puts an order in line for the background sender instead of sending it now: records a pending request for each
+    /// connected partner that has none, and makes due now every request of the order that is waiting, needs attention
+    /// or had nothing to send, which the order page's Send button would send. Requests sent, or being sent, are left as
+    /// they are, and so is a request the partner may already have (<see cref="FulfillmentReasons.MayAlreadyBeMade"/>)
+    /// unless a person checked with the partner. Each decision is made on the stored state, under the order's lock.
+    /// Nothing is sent here: the background task sends the due requests.
+    /// </summary>
+    /// <param name="order">The order. The caller checks that it is paid, as the order page does.</param>
+    /// <param name="checkedWithPartner">
+    /// Whether a person checked in the partner's dashboard that the partner does not have the order, as the page asks
+    /// them to confirm; only then is a request the partner may already have queued again.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// All the order's requests as stored: the queued ones are <see cref="FulfillmentRequestStatus.Pending"/>, the others
+    /// were left as they are. <see langword="null"/> when another worker holds the order's lock or changed one of its
+    /// requests at the same moment, so nothing was queued.
+    /// </returns>
+    public async Task<IReadOnlyList<FulfillmentRequest>> TryQueueAsync(Order order, bool checkedWithPartner, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(order);
+
+        if (_sessionUnusable)
+        {
+            return null;
+        }
+
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey(order.ItemId), _lockWait, LockExpiration);
+
+        if (!locked)
+        {
+            return null;
+        }
+
+        await using (locker)
+        {
+            try
+            {
+                var now = _clock.UtcNow;
+
+                // Decide on the stored state: the background task may have sent or settled a request since this session
+                // loaded it.
+                foreach (var loaded in await _store.ListByOrderAsync(order.ItemId, cancellationToken))
+                {
+                    if (await _store.FindCommittedAsync(loaded, cancellationToken) is { } current && MakeDue(current, now, checkedWithPartner))
+                    {
+                        await _store.UpdateAsync(current, cancellationToken);
+                    }
+                }
+
+                var requests = await RecordCoreAsync(order, cancellationToken);
+
+                await _store.CommitAsync(cancellationToken);
+
+                return requests;
+            }
+            catch (ConcurrencyException)
+            {
+                // YesSql cancels a session that lost a race, so nothing more is saved with it.
+                _sessionUnusable = true;
+
+                return null;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Puts one request in line for the background sender instead of sending it now: a request that is waiting, needs
+    /// attention or had nothing to send is made due now, which the Fulfillment requests page's Send again would send. A
+    /// request sent, or being sent, is left as it is, and so is a request the partner may already have
+    /// (<see cref="FulfillmentReasons.MayAlreadyBeMade"/>) unless a person checked with the partner. The decision is made
+    /// on the stored state, under the order's lock. Nothing is sent here: the background task sends the due requests.
+    /// </summary>
+    /// <param name="request">The request.</param>
+    /// <param name="checkedWithPartner">
+    /// Whether a person checked in the partner's dashboard that the partner does not have the order; only then is a
+    /// request the partner may already have queued again.
+    /// </param>
+    /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
+    /// <returns>
+    /// The request as stored: <see cref="FulfillmentRequestStatus.Pending"/> when it was queued, as it was otherwise. With
+    /// <see cref="FulfillmentSendResult.TakenByAnotherWorker"/>, the request as it was loaded when another worker holds
+    /// the order's lock or changed the request at the same moment, so it was not queued.
+    /// </returns>
+    public async Task<FulfillmentSendResult> TryQueueAsync(FulfillmentRequest request, bool checkedWithPartner, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (_sessionUnusable)
+        {
+            return new FulfillmentSendResult(request, TakenByAnotherWorker: true);
+        }
+
+        var (locker, locked) = await _distributedLock.TryAcquireLockAsync(LockKey(request.OrderId), _lockWait, LockExpiration);
+
+        if (!locked)
+        {
+            return new FulfillmentSendResult(request, TakenByAnotherWorker: true);
+        }
+
+        await using (locker)
+        {
+            try
+            {
+                var current = await _store.FindCommittedAsync(request, cancellationToken);
+
+                if (current is null)
+                {
+                    return new FulfillmentSendResult(request);
+                }
+
+                if (MakeDue(current, _clock.UtcNow, checkedWithPartner))
+                {
+                    await _store.UpdateAsync(current, cancellationToken);
+                    await _store.CommitAsync(cancellationToken);
+                }
+
+                return new FulfillmentSendResult(current);
+            }
+            catch (ConcurrencyException)
+            {
+                _sessionUnusable = true;
+
+                return new FulfillmentSendResult(request, TakenByAnotherWorker: true);
+            }
+        }
+    }
+
+    /// <summary>
     /// Sends one request now: assigns its lines, reserves them in a pending shipment, then calls the partner. A request
     /// already sent, or being sent, is left as it is.
     /// </summary>
@@ -345,6 +474,7 @@ public sealed class FulfillmentSender
         request.ShipmentId = shipment.ItemId;
         request.Lines = [.. shipment.Lines.Select(line => new FulfillmentRequestLine { LineId = line.LineId, Title = line.Title, Sku = line.Sku, Quantity = line.Quantity })];
         request.Status = FulfillmentRequestStatus.Sending;
+        request.QueuedFromStatus = null;
         request.Reason = null;
         request.ReasonArguments = [];
         request.Message = null;
@@ -534,9 +664,12 @@ public sealed class FulfillmentSender
 
     private async Task<FulfillmentRequest> SettleAsync(FulfillmentRequest request, FulfillmentRequestStatus status, string reason, string message, IReadOnlyList<string> arguments, CancellationToken cancellationToken)
     {
-        var previous = request.Status;
+        // A request a person queued again is judged by the status it was queued from, as if it had been sent from the
+        // page: one that needed attention and is stopped again before the partner is called tells nobody twice.
+        var previous = request.QueuedFromStatus ?? request.Status;
 
         request.Status = status;
+        request.QueuedFromStatus = null;
         request.Reason = reason;
         request.ReasonArguments = [.. arguments ?? []];
         request.Message = message;
@@ -592,6 +725,52 @@ public sealed class FulfillmentSender
         catch (ConcurrencyException)
         {
             _sessionUnusable = true;
+        }
+    }
+
+    /// <summary>
+    /// Makes a request due now for the background sender, unless it was sent or is being sent, or the partner may
+    /// already have it and nobody checked with the partner. A request waiting for its next attempt keeps its reason, so
+    /// one the partner asked to wait on still frees its units when the order can no longer be sent; any other request
+    /// goes back to waiting, keeping the partner's message, the shipment that reserves its units and the status it was
+    /// queued from.
+    /// </summary>
+    /// <param name="request">The request, as stored.</param>
+    /// <param name="now">The current time.</param>
+    /// <param name="checkedWithPartner">Whether a person checked with the partner that it does not have the order.</param>
+    /// <returns><see langword="true"/> when the request changed and must be saved.</returns>
+    private static bool MakeDue(FulfillmentRequest request, DateTime now, bool checkedWithPartner)
+    {
+        if (!checkedWithPartner && FulfillmentReasons.MayAlreadyBeMade(request))
+        {
+            return false;
+        }
+
+        switch (request.Status)
+        {
+            case FulfillmentRequestStatus.Sent or FulfillmentRequestStatus.Sending:
+                return false;
+
+            case FulfillmentRequestStatus.Pending:
+                if (request.NextAttemptUtc <= now)
+                {
+                    return false;
+                }
+
+                request.NextAttemptUtc = now;
+                request.ModifiedUtc = now;
+
+                return true;
+
+            default:
+                request.QueuedFromStatus = request.Status;
+                request.Status = FulfillmentRequestStatus.Pending;
+                request.Reason = FulfillmentReasons.Waiting;
+                request.ReasonArguments = [];
+                request.NextAttemptUtc = now;
+                request.ModifiedUtc = now;
+
+                return true;
         }
     }
 

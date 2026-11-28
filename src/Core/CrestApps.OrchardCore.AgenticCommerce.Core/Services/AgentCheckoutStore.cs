@@ -61,4 +61,33 @@ public sealed class AgentCheckoutStore : DocumentCatalog<AgentCheckout, AgentChe
         return Session.QueryIndex<AgentCheckoutIndex>(index => index.PlatformId == platformId && !index.IsTerminal, collection: AgenticCommerceStorage.CollectionName)
             .CountAsync(cancellationToken);
     }
+
+    public async Task<(int Count, IReadOnlyList<AgentCheckout> Checkouts)> PageAsync(AgentCheckoutQuery query, int skip, int take, CancellationToken cancellationToken = default)
+    {
+        var checkouts = Session.Query<AgentCheckout, AgentCheckoutIndex>(collection: AgenticCommerceStorage.CollectionName);
+
+        if (!string.IsNullOrEmpty(query?.PlatformId))
+        {
+            var platformId = query.PlatformId;
+
+            checkouts = checkouts.Where(index => index.PlatformId == platformId);
+        }
+
+        if (query?.Ended is { } ended)
+        {
+            checkouts = checkouts.Where(index => index.IsTerminal == ended);
+        }
+
+        if (query?.HasOrder is { } hasOrder)
+        {
+            checkouts = hasOrder
+                ? checkouts.Where(index => index.OrderId != null)
+                : checkouts.Where(index => index.OrderId == null);
+        }
+
+        var count = await checkouts.CountAsync(cancellationToken);
+        var page = await checkouts.OrderByDescending(index => index.Id).Skip(skip).Take(take).ListAsync(cancellationToken);
+
+        return (count, [.. page]);
+    }
 }

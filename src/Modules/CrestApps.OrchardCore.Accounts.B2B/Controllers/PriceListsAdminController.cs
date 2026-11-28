@@ -28,7 +28,7 @@ namespace CrestApps.OrchardCore.Accounts.B2B.Controllers;
 [Admin("b2b/price-lists/{action}/{itemId?}", "PriceLists{action}")]
 public sealed class PriceListsAdminController : Controller
 {
-    public const int MaxEntries = 5000;
+    public const int MaxEntries = PriceListRules.MaxEntries;
 
     private readonly IPriceListStore _priceLists;
     private readonly IB2BAccountStore _accounts;
@@ -194,13 +194,7 @@ public sealed class PriceListsAdminController : Controller
         }
 
         // The accounts on it go back to the store's prices.
-        foreach (var account in await _accounts.ListByPriceListAsync(list.ItemId, HttpContext.RequestAborted))
-        {
-            account.Part.PriceListId = null;
-            await _accounts.SaveAsync(account);
-        }
-
-        await _priceLists.DeleteAsync(list);
+        await PriceListRules.DeleteAsync(_priceLists, _accounts, list, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The price list was deleted. The accounts on it pay the store's prices."]);
 
         return RedirectToAction(nameof(Index));
@@ -241,17 +235,12 @@ public sealed class PriceListsAdminController : Controller
                 amount = amount.Replace(',', '.');
             }
 
-            if (string.IsNullOrEmpty(sku) || sku.Length > 100 ||
-                !decimal.TryParse(amount, NumberStyles.Number & ~NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var price) || price < 0m)
+            // A later line for the same SKU replaces the earlier one.
+            if (!decimal.TryParse(amount, NumberStyles.Number & ~NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out var price) ||
+                !PriceListRules.TryAddEntry(entries, sku, price))
             {
                 unread.Add(line);
-
-                continue;
             }
-
-            // A later line for the same SKU replaces the earlier one.
-            entries.RemoveAll(entry => string.Equals(entry.Sku, sku, StringComparison.OrdinalIgnoreCase));
-            entries.Add(new PriceListEntry { Sku = sku, UnitPrice = price });
         }
 
         return (entries, unread);
@@ -271,33 +260,25 @@ public sealed class PriceListsAdminController : Controller
 
     private async Task<bool> ApplyAsync(PriceListEditViewModel model, PriceList list)
     {
-        if (string.IsNullOrWhiteSpace(model.Name))
+        var (entries, unread) = ParseEntries(model.Prices);
+        var problems = PriceListRules.Check(model.Name, model.PercentOff, entries.Count, out var percentOff);
+
+        if (problems.Contains(PriceListProblem.NameRequired))
         {
             ModelState.AddModelError(nameof(model.Name), S["Name the price list."]);
         }
 
-        decimal? percentOff = null;
-
-        if (!string.IsNullOrWhiteSpace(model.PercentOff))
+        if (problems.Contains(PriceListProblem.PercentOffOutOfRange))
         {
-            if (!decimal.TryParse(model.PercentOff, NumberStyles.Number, CultureInfo.InvariantCulture, out var percent) || percent is < 0m or > 100m)
-            {
-                ModelState.AddModelError(nameof(model.PercentOff), S["Enter a percentage from 0 to 100, or leave it blank."]);
-            }
-            else if (percent > 0m)
-            {
-                percentOff = percent;
-            }
+            ModelState.AddModelError(nameof(model.PercentOff), S["Enter a percentage from 0 to 100, or leave it blank."]);
         }
-
-        var (entries, unread) = ParseEntries(model.Prices);
 
         if (unread.Count > 0)
         {
             ModelState.AddModelError(nameof(model.Prices), S["These lines aren't a SKU and a price: {0}", string.Join(" | ", unread.Take(5))]);
         }
 
-        if (entries.Count > MaxEntries)
+        if (problems.Contains(PriceListProblem.TooManyEntries))
         {
             ModelState.AddModelError(nameof(model.Prices), S["A price list has at most {0} prices.", MaxEntries]);
         }
@@ -307,10 +288,7 @@ public sealed class PriceListsAdminController : Controller
             return false;
         }
 
-        list.Name = model.Name.Trim();
-        list.PercentOff = percentOff;
-        list.Entries = entries;
-        list.Currency = (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency;
+        PriceListRules.Apply(list, model.Name, percentOff, entries, (await _siteService.GetSettingsAsync<CheckoutSettings>()).Currency);
 
         return true;
     }

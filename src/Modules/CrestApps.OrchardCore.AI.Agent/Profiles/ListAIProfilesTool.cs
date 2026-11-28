@@ -24,11 +24,12 @@ public sealed class ListAIProfilesTool : AIFunction
       "properties": {
         "type": {
           "type": "string",
-          "description": "Optional. Filter profiles by type: 'Chat', 'Utility', or 'Embedding'.",
+          "description": "Optional. Filter profiles by type: 'Chat', 'Utility', 'TemplatePrompt' or 'Agent'.",
           "enum": [
             "Chat",
             "Utility",
-            "Embedding"
+            "TemplatePrompt",
+            "Agent"
           ]
         },
         "onlyWithMetricsEnabled": {

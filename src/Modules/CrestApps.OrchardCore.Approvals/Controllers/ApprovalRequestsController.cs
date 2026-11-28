@@ -43,6 +43,7 @@ public sealed class ApprovalRequestsController : Controller
     private readonly IStringLocalizerFactory _localizerFactory;
     private readonly INotifier _notifier;
     private readonly ILocalClock _localClock;
+    private readonly ApprovalRequestAccess _requestAccess;
 
     internal readonly IHtmlLocalizer H;
     internal readonly IStringLocalizer S;
@@ -80,6 +81,7 @@ public sealed class ApprovalRequestsController : Controller
         _localizerFactory = localizerFactory;
         _notifier = notifier;
         _localClock = localClock;
+        _requestAccess = new ApprovalRequestAccess(approvalService, authorizationService, access);
         H = htmlLocalizer;
         S = stringLocalizer;
     }
@@ -243,7 +245,8 @@ public sealed class ApprovalRequestsController : Controller
     }
 
     // A request opens for those who may decide it, for its requester and those who decided it, and for those who see
-    // it through the permission and the subject type's access. Anyone else gets nothing, not even that it exists.
+    // it through the permission and the subject type's access (ApprovalRequestAccess, shared with the AI tools). Anyone
+    // else gets nothing, not even that it exists.
     private async Task<ApprovalRequest> FindAsync(string id, SourceAccessLevel level)
     {
         if (string.IsNullOrEmpty(id) || await _manager.FindByIdAsync(id) is not { } request)
@@ -251,31 +254,14 @@ public sealed class ApprovalRequestsController : Controller
             return null;
         }
 
-        var userId = UserId();
-
-        // Its requester, and whoever decided a stage of it, keep seeing it.
-        if (userId is not null && (request.RequesterUserId == userId || request.Decisions.Any(decision => decision.UserId == userId)))
-        {
-            return request;
-        }
-
-        if ((await _approvalService.GetEligibilityAsync(request, User, HttpContext.RequestAborted)).CanDecide)
-        {
-            return request;
-        }
-
-        return await _authorizationService.AuthorizeAsync(User, ApprovalsPermissions.ViewApprovalRequests)
-            && await _access.CanAccessAsync(User, request.SubjectKind, request.AccessScope, level, HttpContext.RequestAborted)
+        return await _requestAccess.CanSeeAsync(request, User, level, HttpContext.RequestAborted)
             ? request
             : null;
     }
 
     // The requester withdraws their own request; managers of requests withdraw any they may manage.
-    private async Task<bool> CanCancelAsync(ApprovalRequest request)
-        => request.Status == ApprovalStatus.Pending
-            && ((request.RequesterUserId is { } requester && requester == UserId())
-                || (await _authorizationService.AuthorizeAsync(User, ApprovalsPermissions.ManageApprovalRequests)
-                    && await _access.CanAccessAsync(User, request.SubjectKind, request.AccessScope, SourceAccessLevel.Manage, HttpContext.RequestAborted)));
+    private Task<bool> CanCancelAsync(ApprovalRequest request)
+        => _requestAccess.CanWithdrawAsync(request, User, HttpContext.RequestAborted);
 
     private async Task<ApprovalDecideViewModel> BuildAsync(ApprovalDecideViewModel model, ApprovalRequest request)
     {

@@ -104,26 +104,6 @@ public sealed class AIQACohortDisplayDriver : DisplayDriver<AIQACohort>
         var model = new AIQACohortViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The name is required."]);
-        }
-
-        if (model.ProfileIds is not { Length: > 0 })
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.ProfileIds), S["Choose at least one AI profile."]);
-        }
-
-        if (model.SamplePercent is < 1 or > 100)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SamplePercent), S["The sample must be between 1 and 100 percent."]);
-        }
-
-        if (model.PassingScore is < 0 or > 100)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.PassingScore), S["The passing score must be between 0 and 100."]);
-        }
-
         cohort.Name = model.Name?.Trim();
         cohort.Enabled = model.Enabled;
         cohort.ProfileIds = model.ProfileIds?.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToList() ?? [];
@@ -132,6 +112,11 @@ public sealed class AIQACohortDisplayDriver : DisplayDriver<AIQACohort>
         cohort.PassingScore = model.PassingScore;
         cohort.CheckKnowledge = model.CheckKnowledge;
         cohort.JudgeDeploymentName = string.IsNullOrWhiteSpace(model.JudgeDeploymentName) ? null : model.JudgeDeploymentName;
+
+        foreach (var error in AIQACohortValidator.Validate(cohort, S))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, error.MemberNames.First(), error.ErrorMessage);
+        }
 
         return Edit(cohort, context);
     }

@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Geo.Core.Indexes;
 using CrestApps.OrchardCore.Geo.Models;
 using CrestApps.OrchardCore.Geo.Services;
 using CrestApps.OrchardCore.Geo.ViewModels;
@@ -10,7 +9,6 @@ using OrchardCore.DisplayManagement.Entities;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Views;
 using OrchardCore.Settings;
-using YesSql;
 using ISession = YesSql.ISession;
 
 namespace CrestApps.OrchardCore.Geo.Drivers;
@@ -91,22 +89,12 @@ public sealed class GeoSettingsDisplayDriver : SiteDisplayDriver<GeoSettings>
 
     private async Task FillStatusAsync(GeoSettingsViewModel model)
     {
-            var requests = await _session.QueryIndex<GeocodeRequestIndex>(collection: GeoConstants.CollectionName).ListAsync();
+        var queue = await TerritoryCommands.GetQueueStatusAsync(_session);
 
-            model.Waiting = requests.Count(index => index.Status == nameof(GeocodeRequestStatus.Pending));
-            model.Done = requests.Count(index => index.Status == nameof(GeocodeRequestStatus.Done));
-            model.Failed = requests.Count(index => index.Status == nameof(GeocodeRequestStatus.Failed));
-
-            if (model.Waiting + model.Failed > 0)
-            {
-                var done = nameof(GeocodeRequestStatus.Done);
-                var troubled = await _session.Query<GeocodeRequest, GeocodeRequestIndex>(index => index.Status != done, collection: GeoConstants.CollectionName)
-                    .OrderByDescending(index => index.NextAttemptUtc)
-                    .Take(20)
-                    .ListAsync();
-
-                model.LastError = troubled.Select(request => request.LastError).FirstOrDefault(error => !string.IsNullOrEmpty(error));
-            }
+        model.Waiting = queue.Waiting;
+        model.Done = queue.Done;
+        model.Failed = queue.Failed;
+        model.LastError = queue.LastError;
     }
 
     private void FillValues(GeoSettingsViewModel model, GeoSettings settings)

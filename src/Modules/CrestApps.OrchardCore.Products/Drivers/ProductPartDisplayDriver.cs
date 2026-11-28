@@ -1,5 +1,6 @@
 using CrestApps.OrchardCore.Products.Core.Models;
 using CrestApps.OrchardCore.Products.Core.Services;
+using CrestApps.OrchardCore.Products.Services;
 using CrestApps.OrchardCore.Products.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -144,32 +145,31 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
 
         // A price is needed only when the product can be bought or its price is shown. A house listed by
         // inquiry has none, and inventing a zero would show "$0" the moment the type's display changes.
-        if (!model.Price.HasValue && part.RequiresPrice(settings) && model.ProductIds?.Exists(id => !string.IsNullOrWhiteSpace(id)) != true)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Price), S["Price is required"]);
-        }
-        else if (model.Price < 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Price), S["Price cannot be negative number."]);
-        }
+        var priceRequired = part.RequiresPrice(settings) && model.ProductIds?.Exists(id => !string.IsNullOrWhiteSpace(id)) != true;
 
-        if (model.CompareAtPrice < 0)
+        foreach (var problem in ProductPricingRules.Check(model.Price, priceRequired, model.CompareAtPrice, model.SalePrice, model.SaleStarts, model.SaleEnds))
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CompareAtPrice), S["The compare-at price cannot be a negative number."]);
-        }
-
-        if (model.SalePrice < 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SalePrice), S["The sale price cannot be a negative number."]);
-        }
-        else if (model.SalePrice.HasValue && model.Price.HasValue && model.SalePrice >= model.Price)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SalePrice), S["The sale price has to be lower than the price."]);
-        }
-
-        if (model.SaleStarts.HasValue && model.SaleEnds.HasValue && model.SaleEnds <= model.SaleStarts)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.SaleEnds), S["The sale has to end after it starts."]);
+            switch (problem)
+            {
+                case ProductPriceProblem.PriceRequired:
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.Price), S["Price is required"]);
+                    break;
+                case ProductPriceProblem.NegativePrice:
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.Price), S["Price cannot be negative number."]);
+                    break;
+                case ProductPriceProblem.NegativeCompareAtPrice:
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.CompareAtPrice), S["The compare-at price cannot be a negative number."]);
+                    break;
+                case ProductPriceProblem.NegativeSalePrice:
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.SalePrice), S["The sale price cannot be a negative number."]);
+                    break;
+                case ProductPriceProblem.SaleNotBelowPrice:
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.SalePrice), S["The sale price has to be lower than the price."]);
+                    break;
+                case ProductPriceProblem.SaleEndsBeforeStart:
+                    context.Updater.ModelState.AddModelError(Prefix, nameof(model.SaleEnds), S["The sale has to end after it starts."]);
+                    break;
+            }
         }
 
         part.Price = model.Price;
@@ -244,7 +244,7 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
             Required = addOn.Required,
         })];
 
-        var normalizedCurrency = NormalizeCurrencyCode(model.Currency);
+        var normalizedCurrency = ProductPricingRules.NormalizeCurrencyCode(model.Currency);
 
         if (!string.IsNullOrEmpty(normalizedCurrency) &&
             await _currencyProvider.FindByCodeAsync(normalizedCurrency) is null)
@@ -262,7 +262,7 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
 
     private async Task<IEnumerable<SelectListItem>> BuildCurrencyOptionsAsync(string selectedCurrency)
     {
-        var normalizedCurrency = NormalizeCurrencyCode(selectedCurrency);
+        var normalizedCurrency = ProductPricingRules.NormalizeCurrencyCode(selectedCurrency);
         var currencies = await _currencyProvider.GetCurrenciesAsync();
         var options = currencies
             .Select(currency => new SelectListItem($"{currency.DisplayName} ({currency.CurrencyCode})", currency.CurrencyCode)
@@ -280,9 +280,4 @@ public sealed class ProductPartDisplayDriver : ContentPartDisplayDriver<ProductP
 
         return options;
     }
-
-    private static string NormalizeCurrencyCode(string currencyCode)
-        => string.IsNullOrWhiteSpace(currencyCode)
-            ? null
-            : currencyCode.Trim().ToUpperInvariant();
 }

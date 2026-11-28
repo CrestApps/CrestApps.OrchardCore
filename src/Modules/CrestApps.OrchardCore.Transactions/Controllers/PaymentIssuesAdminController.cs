@@ -172,14 +172,8 @@ public sealed class PaymentIssuesAdminController : Controller
             return NotFound();
         }
 
-        if (issue.Status == PaymentIssueStatus.Open)
+        if (await TransactionAdminActions.ResolveIssueAsync(_issueStore, issue, note, User.Identity?.Name, _clock.UtcNow, HttpContext.RequestAborted))
         {
-            issue.Status = PaymentIssueStatus.Resolved;
-            issue.ResolvedUtc = _clock.UtcNow;
-            issue.ResolvedBy = User.Identity?.Name;
-            issue.ResolutionNote = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
-
-            await _issueStore.UpdateAsync(issue, HttpContext.RequestAborted);
             await _notifier.SuccessAsync(H["The payment issue was marked as resolved."]);
         }
 

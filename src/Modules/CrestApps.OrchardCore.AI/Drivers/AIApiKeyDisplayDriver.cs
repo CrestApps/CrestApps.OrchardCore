@@ -89,76 +89,30 @@ public sealed class AIApiKeyDisplayDriver : DisplayDriver<AIApiKey>
         var model = new AIApiKeyViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The name is required."]);
-        }
-
         // The kind is chosen once: a server key's secret cannot become public, nor the other way round.
         if (context.IsNew)
         {
             key.Kind = model.Kind;
         }
 
-        key.Name = model.Name?.Trim();
-        key.Enabled = model.Enabled;
-        key.ExpiresUtc = model.Expires is { } expires ? await _localClock.ToUtcLenientAsync(expires) : null;
-
-        if (key.Kind == AIApiKeyKind.Browser)
+        var errors = AIApiKeyValidator.Apply(key, new AIApiKeyValues
         {
-            var origins = (model.AllowedOrigins ?? string.Empty)
-                .Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select(origin => origin.TrimEnd('/'))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            Name = model.Name,
+            Enabled = model.Enabled,
+            ExpiresUtc = model.Expires is { } expires ? await _localClock.ToUtcLenientAsync(expires) : null,
+            AllowedOrigins = (model.AllowedOrigins ?? string.Empty).Split(['\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            AllowedProfileIds = model.AllowedProfileIds,
+            Scopes = model.Scopes,
+            Roles = model.Roles,
+        }, S);
 
-            if (origins.Count == 0 || origins.Any(origin => !IsOrigin(origin)))
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AllowedOrigins), S["Enter each web site as its origin, such as https://www.example.com."]);
-            }
-
-            var profiles = (model.AllowedProfileIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
-
-            if (profiles.Count == 0)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.AllowedProfileIds), S["Choose the profiles the key may chat with."]);
-            }
-
-            key.AllowedOrigins = origins;
-            key.AllowedProfileIds = profiles;
-            key.Scopes = [AIApiKeys.Scopes.Chat];
-            key.Roles = [];
-        }
-        else
+        foreach (var error in errors)
         {
-            var scopes = (model.Scopes ?? []).Where(AIApiKeys.Scopes.All.Contains).Distinct(StringComparer.Ordinal).ToList();
-
-            if (scopes.Count == 0)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Scopes), S["Choose at least one area the key may call."]);
-            }
-
-            var roles = (model.Roles ?? []).Where(role => !string.IsNullOrEmpty(role)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-
-            if (roles.Count == 0)
-            {
-                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Roles), S["Choose the roles whose permissions the key acts with."]);
-            }
-
-            key.Scopes = scopes;
-            key.Roles = roles;
-            key.AllowedOrigins = [];
-            key.AllowedProfileIds = [];
+            context.Updater.ModelState.AddModelError(Prefix, error.MemberNames.First(), error.ErrorMessage);
         }
 
         return Edit(key, context);
     }
-
-    private static bool IsOrigin(string value)
-        => Uri.TryCreate(value, UriKind.Absolute, out var uri) &&
-            (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp) &&
-            uri.AbsolutePath == "/" &&
-            string.IsNullOrEmpty(uri.Query);
 
     private static void Populate(AIApiKey key, BuildEditorContext context, AIApiKeyViewModel model)
     {

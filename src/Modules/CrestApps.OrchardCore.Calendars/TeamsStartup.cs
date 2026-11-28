@@ -19,6 +19,7 @@ public sealed class TeamsStartup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddNavigationProvider<TeamCalendarsAdminMenu>();
+        services.AddScoped<TeamAvailabilityService>();
 
         services.AddCalendarType(CalendarsConstants.Types.Team, type => type
             .WithDisplayName(LocalizationSource.Create<TeamsStartup>("Team"))

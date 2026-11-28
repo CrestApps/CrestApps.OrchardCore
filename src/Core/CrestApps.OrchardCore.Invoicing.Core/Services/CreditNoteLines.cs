@@ -12,6 +12,47 @@ namespace CrestApps.OrchardCore.Invoicing.Core.Services;
 public static class CreditNoteLines
 {
     /// <summary>
+    /// Returns the credit line that credits what is left of an invoice line: a line still creditable in full is copied as
+    /// it is; one partly credited already is credited by what is left, as a single amount (<see cref="ForPartOf"/>), which
+    /// staff can change on the draft.
+    /// </summary>
+    /// <param name="line">The invoice line credited.</param>
+    /// <param name="left">What is left to credit on it, tax included.</param>
+    /// <param name="currency">The currency, for rounding.</param>
+    public static DocumentLine ForLine(DocumentLine line, decimal left, string currency)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+
+        // Part of the line is left to credit: that part of its net, at its own taxes.
+        if (left < line.Total && line.Total > 0m)
+        {
+            return ForPartOf(line, line.Net * left / line.Total, currency);
+        }
+
+        return new DocumentLine
+        {
+            Id = IdGenerator.GenerateId(),
+            Kind = line.Kind,
+            ProductId = line.ProductId,
+            Sku = line.Sku,
+            Name = line.Name,
+            Description = line.Description,
+            Quantity = line.Quantity,
+            Unit = line.Unit,
+            UnitPrice = line.UnitPrice,
+            DiscountPercent = line.DiscountPercent,
+            DiscountAmount = line.DiscountAmount,
+            TaxCategoryCode = line.TaxCategoryCode,
+            Taxes = [.. line.Taxes],
+            TaxTreatment = line.TaxTreatment,
+            TaxTreatmentReason = line.TaxTreatmentReason,
+            ServiceStart = line.ServiceStart,
+            ServiceEnd = line.ServiceEnd,
+            CreditedLineId = line.Id,
+        };
+    }
+
+    /// <summary>
     /// Returns a credit line for part of an invoice line: one unit of <paramref name="amount"/>, at the line's taxes and
     /// tax treatment, crediting that line.
     /// </summary>

@@ -109,22 +109,16 @@ public sealed class DispatchBoardController : Controller
 
         var zone = await _timeZone.GetAsync();
         var date = ParseDay(day, zone);
-        var fromUtc = CalendarTime.ToUtc(date.ToDateTime(TimeOnly.MinValue), zone);
-        var toUtc = CalendarTime.ToUtc(date.AddDays(1).ToDateTime(TimeOnly.MinValue), zone);
-        var teamIds = string.IsNullOrEmpty(teamId) ? null : await _teams.GetSubtreeIdsAsync(teamId, HttpContext.RequestAborted);
-        var workers = (await _resources.ListWorkersAsync(Capabilities(capability), HttpContext.RequestAborted))
-            .Where(worker => teamIds is null || worker.MembershipsOn(date).Any(membership => teamIds.Contains(membership.TeamId)))
-            .OrderBy(worker => worker.DisplayName, StringComparer.CurrentCultureIgnoreCase)
-            .ToList();
+        var board = await DispatchBoardDayQuery.LoadAsync(_resources, _dispatch, _teams, date, zone, teamId, capability, HttpContext.RequestAborted);
+        var fromUtc = board.FromUtc;
+        var toUtc = board.ToUtc;
+        var workers = board.Rows.Select(row => row.Worker).ToList();
         var rows = new List<object>();
         var earliest = 24d;
         var latest = 0d;
 
-        foreach (var worker in workers)
+        foreach (var (worker, team, availability) in board.Rows)
         {
-            var availability = await _resources.GetAvailabilityAsync(worker, fromUtc, toUtc, null, HttpContext.RequestAborted);
-            var team = await _resources.FindTeamAsync(worker.PrimaryTeamId ?? worker.MembershipsOn(date).Select(membership => membership.TeamId).FirstOrDefault(), HttpContext.RequestAborted);
-
             foreach (var span in availability.Open)
             {
                 earliest = Math.Min(earliest, Hours(span.StartUtc, fromUtc));
@@ -142,8 +136,8 @@ public sealed class DispatchBoardController : Controller
             });
         }
 
-        var scheduled = await _dispatch.ListScheduledAsync(fromUtc, toUtc, teamIds is null ? null : workers.Select(worker => worker.ItemId).ToArray(), HttpContext.RequestAborted);
-        var unscheduled = await _dispatch.ListUnscheduledAsync(200, HttpContext.RequestAborted);
+        var scheduled = board.Scheduled;
+        var unscheduled = board.Unscheduled;
 
         foreach (var visit in scheduled)
         {

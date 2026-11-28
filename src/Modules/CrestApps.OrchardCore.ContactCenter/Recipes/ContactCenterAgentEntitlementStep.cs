@@ -104,17 +104,7 @@ internal sealed class ContactCenterAgentEntitlementStep : NamedRecipeStepHandler
                 continue;
             }
 
-            var agent = await _agentManager.NewAsync();
-            agent.UserId = userId;
-            agent.UserName = userName;
-            agent.Name = userId;
-            agent.DisplayName = configuration.DisplayName;
-            agent.MaxConcurrentInteractions = configuration.MaxConcurrentInteractions;
-            agent.AllowedQueueIds = AgentEntitlementUtilities.NormalizeIds(allowedQueueIds);
-            agent.AllowedCampaignIds = AgentEntitlementUtilities.NormalizeIds(allowedCampaignIds);
-            AgentEntitlementUtilities.ApplySkills(agent, entry.Skills, entry.SkillProficiencies);
-            agent.QueueMemberships = AgentEntitlementUtilities.NormalizeQueueMemberships(entry.QueueMemberships);
-            agent.CreatedUtc = _clock.UtcNow;
+            var agent = await AgentProfileFactory.NewAsync(_agentManager, userId, userName, configuration, _clock.UtcNow);
 
             var validationResult = await _agentManager.ValidateAsync(agent);
 

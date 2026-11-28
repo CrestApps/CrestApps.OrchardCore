@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using CrestApps.OrchardCore.Products.Core.Feeds;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -77,12 +76,10 @@ public sealed class ProductFeedSettingsDisplayDriver : SiteDisplayDriver<Product
             return;
         }
 
-        var request = _httpContextAccessor.HttpContext?.Request;
-        var baseUrl = site.BaseUrl?.TrimEnd('/') ?? (request is null ? null : $"{request.Scheme}://{request.Host}{request.PathBase}");
-        var query = string.IsNullOrEmpty(settings.Key) ? string.Empty : "?key=" + Uri.EscapeDataString(settings.Key);
+        var baseUrl = ProductFeedAddresses.GetBaseUrl(site, _httpContextAccessor.HttpContext?.Request);
 
-        model.XmlUrl = $"{baseUrl}/feeds/products.xml{query}";
-        model.CsvUrl = $"{baseUrl}/feeds/products.csv{query}";
+        model.XmlUrl = ProductFeedAddresses.Build(baseUrl, ProductFeedAddresses.XmlPath, settings.Key);
+        model.CsvUrl = ProductFeedAddresses.Build(baseUrl, ProductFeedAddresses.CsvPath, settings.Key);
         model.Feed = await _feeds.GetAsync(currency: null, fresh: true);
     }
 
@@ -106,7 +103,7 @@ public sealed class ProductFeedSettingsDisplayDriver : SiteDisplayDriver<Product
 
         if (model.KeyAction == "new")
         {
-            settings.Key = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+            settings.Key = ProductFeedAddresses.NewKey();
         }
         else if (model.KeyAction == "remove")
         {

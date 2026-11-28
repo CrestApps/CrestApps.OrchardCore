@@ -1,6 +1,6 @@
-using System.Text.RegularExpressions;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
+using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.Scheduling.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
@@ -14,7 +14,7 @@ namespace CrestApps.OrchardCore.Scheduling.Drivers;
 /// appointment, and the booking rules. Other modules add their own sections to the editor with drivers of their own for
 /// <see cref="AppointmentType"/>.
 /// </summary>
-internal sealed partial class AppointmentTypeFieldsDisplayDriver : DisplayDriver<AppointmentType>
+internal sealed class AppointmentTypeFieldsDisplayDriver : DisplayDriver<AppointmentType>
 {
     private readonly AppointmentTypeStore _typeStore;
     private readonly SchedulingResourceStore _resourceStore;
@@ -35,37 +35,7 @@ internal sealed partial class AppointmentTypeFieldsDisplayDriver : DisplayDriver
     {
         return Build(async model =>
         {
-            model.Name = type.Name;
-            model.Description = type.Description;
-            model.Slug = type.Slug;
-            model.DurationMinutes = type.DurationMinutes;
-            model.SlotIntervalMinutes = type.SlotIntervalMinutes;
-            model.BufferBeforeMinutes = type.BufferBeforeMinutes;
-            model.BufferAfterMinutes = type.BufferAfterMinutes;
-            model.MinimumNoticeMinutes = type.MinimumNoticeMinutes;
-            model.HorizonDays = type.HorizonDays;
-            model.MaxPerDay = type.MaxPerDay;
-            model.MaxPerWeek = type.MaxPerWeek;
-            model.MaxUpcomingPerCustomer = type.MaxUpcomingPerCustomer;
-            model.CancelNoticeMinutes = type.CancelNoticeMinutes;
-            model.RescheduleNoticeMinutes = type.RescheduleNoticeMinutes;
-            model.Capacity = type.Capacity;
-            model.Requirements = type.GetResourceRequirements()
-                .Where(requirement => requirement.ResourceIds.Count > 0)
-                .Select(requirement => new AppointmentResourceRequirementViewModel
-                {
-                    Name = requirement.Name,
-                    ResourceIds = requirement.ResourceIds.ToArray(),
-                    Assignment = requirement.Assignment.ToString(),
-                    Weights = requirement.ResourceIds.ToDictionary(id => id, requirement.GetWeight, StringComparer.Ordinal),
-                })
-                .ToList();
-            model.RequiresConfirmation = type.RequiresConfirmation;
-            model.HoldMinutes = type.HoldMinutes;
-            model.AllowSelfService = type.AllowSelfService;
-            model.Location = type.Location;
-            model.Color = type.Color ?? "#0b7285";
-            model.Enabled = type.Enabled;
+            AppointmentTypeEditorRules.Fill(model, type);
 
             await FillAsync(model);
         });
@@ -77,67 +47,10 @@ internal sealed partial class AppointmentTypeFieldsDisplayDriver : DisplayDriver
 
         await context.Updater.TryUpdateModelAsync(posted, Prefix);
 
-        if (string.IsNullOrWhiteSpace(posted.Name))
+        foreach (var error in await AppointmentTypeEditorRules.ApplyAsync(type, posted, _typeStore, S))
         {
-            context.Updater.ModelState.AddModelError(Key(nameof(posted.Name)), S["The name is required."]);
+            context.Updater.ModelState.AddModelError(Key(error.Key), error.Value);
         }
-
-        if (posted.DurationMinutes < 5 || posted.SlotIntervalMinutes < 5)
-        {
-            context.Updater.ModelState.AddModelError(Key(nameof(posted.DurationMinutes)), S["The length and the time between start times must be at least 5 minutes."]);
-        }
-
-        var slug = string.IsNullOrWhiteSpace(posted.Slug) ? null : SlugPattern().Replace(posted.Slug.Trim().ToLowerInvariant(), "-").Trim('-');
-        var requirements = ToRequirements(posted.Requirements);
-
-        if (requirements.SelectMany(requirement => requirement.ResourceIds).GroupBy(id => id, StringComparer.Ordinal).Any(group => group.Count() > 1))
-        {
-            context.Updater.ModelState.AddModelError(Key(nameof(posted.Requirements)), S["A resource can be in only one group."]);
-        }
-
-        if (slug is not null && await _typeStore.FindBySlugAsync(slug) is { } other && other.ItemId != type.ItemId)
-        {
-            context.Updater.ModelState.AddModelError(Key(nameof(posted.Slug)), S["Another appointment type uses this address."]);
-        }
-
-        type.Name = posted.Name?.Trim();
-        type.Description = posted.Description?.Trim();
-        type.Slug = slug;
-        type.DurationMinutes = posted.DurationMinutes;
-        type.SlotIntervalMinutes = posted.SlotIntervalMinutes;
-        type.BufferBeforeMinutes = Math.Max(0, posted.BufferBeforeMinutes);
-        type.BufferAfterMinutes = Math.Max(0, posted.BufferAfterMinutes);
-        type.MinimumNoticeMinutes = Math.Max(0, posted.MinimumNoticeMinutes);
-        type.HorizonDays = Math.Clamp(posted.HorizonDays, 1, 730);
-        type.MaxPerDay = Math.Max(0, posted.MaxPerDay);
-        type.MaxPerWeek = Math.Max(0, posted.MaxPerWeek);
-        type.MaxUpcomingPerCustomer = Math.Max(0, posted.MaxUpcomingPerCustomer);
-        type.CancelNoticeMinutes = Math.Max(0, posted.CancelNoticeMinutes);
-        type.RescheduleNoticeMinutes = Math.Max(0, posted.RescheduleNoticeMinutes);
-        type.Capacity = Math.Max(1, posted.Capacity);
-
-        // One unnamed group without weights is stored the simple way, as the type's resources and assignment, so it reads
-        // the same as before groups existed. Several groups are stored as requirements, with every resource in ResourceIds
-        // too.
-        if (requirements.Count <= 1 && requirements.All(requirement => string.IsNullOrEmpty(requirement.Name) && requirement.Weights.Count == 0))
-        {
-            type.ResourceIds = requirements.FirstOrDefault()?.ResourceIds ?? [];
-            type.Assignment = requirements.FirstOrDefault()?.Assignment ?? AppointmentAssignment.AnyAvailable;
-            type.ResourceRequirements = [];
-        }
-        else
-        {
-            type.ResourceRequirements = requirements;
-            type.ResourceIds = requirements.SelectMany(requirement => requirement.ResourceIds).Distinct(StringComparer.Ordinal).ToList();
-            type.Assignment = requirements[0].Assignment;
-        }
-
-        type.RequiresConfirmation = posted.RequiresConfirmation;
-        type.HoldMinutes = Math.Clamp(posted.HoldMinutes, 1, 1440);
-        type.AllowSelfService = posted.AllowSelfService;
-        type.Location = posted.Location?.Trim();
-        type.Color = posted.Color;
-        type.Enabled = posted.Enabled;
 
         // The form shows what was posted, as typed.
         return Build(async model =>
@@ -186,37 +99,6 @@ internal sealed partial class AppointmentTypeFieldsDisplayDriver : DisplayDriver
     private string Key(string name)
         => string.IsNullOrEmpty(Prefix) ? name : $"{Prefix}.{name}";
 
-    private static List<AppointmentResourceRequirement> ToRequirements(IEnumerable<AppointmentResourceRequirementViewModel> groups)
-    {
-        var requirements = new List<AppointmentResourceRequirement>();
-
-        foreach (var group in groups ?? [])
-        {
-            var resourceIds = (group?.ResourceIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
-
-            if (resourceIds.Count == 0)
-            {
-                continue;
-            }
-
-            var assignment = Enum.TryParse<AppointmentAssignment>(group.Assignment, out var parsed) ? parsed : AppointmentAssignment.AnyAvailable;
-
-            requirements.Add(new AppointmentResourceRequirement
-            {
-                Name = string.IsNullOrWhiteSpace(group.Name) ? null : group.Name.Trim(),
-                ResourceIds = resourceIds,
-                Assignment = assignment,
-
-                // Weights only matter for round robin, and 1 is the default, so only the higher ones are kept.
-                Weights = assignment == AppointmentAssignment.RoundRobin
-                    ? (group.Weights ?? []).Where(weight => resourceIds.Contains(weight.Key) && weight.Value > 1).ToDictionary(weight => weight.Key, weight => Math.Min(weight.Value, 100), StringComparer.Ordinal)
-                    : new Dictionary<string, int>(StringComparer.Ordinal),
-            });
-        }
-
-        return requirements;
-    }
-
     private async Task FillAsync(AppointmentTypeViewModel model)
     {
         // Show the groups in use, then a few empty ones the page reveals one at a time.
@@ -239,6 +121,4 @@ internal sealed partial class AppointmentTypeFieldsDisplayDriver : DisplayDriver
         ];
     }
 
-    [GeneratedRegex("[^a-z0-9]+")]
-    private static partial Regex SlugPattern();
 }

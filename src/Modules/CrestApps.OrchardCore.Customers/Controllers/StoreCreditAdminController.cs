@@ -59,19 +59,21 @@ public sealed class StoreCreditAdminController : Controller
 
         currency = currency?.Trim().ToUpperInvariant();
 
-        if (string.IsNullOrEmpty(customer.UserId))
+        var problem = CustomerBalanceRules.CheckStoreCredit(customer, amount, currency, reason);
+
+        if (problem == CustomerBalanceProblem.NoAccount)
         {
             await _notifier.ErrorAsync(H["Only customers with an account can be given store credit."]);
         }
-        else if (amount is null or 0m)
+        else if (problem == CustomerBalanceProblem.NoAmount)
         {
             await _notifier.ErrorAsync(H["Enter an amount to give, or a negative amount to take away."]);
         }
-        else if (currency?.Length != 3)
+        else if (problem == CustomerBalanceProblem.InvalidCurrency)
         {
             await _notifier.ErrorAsync(H["Enter the three-letter currency code, such as USD."]);
         }
-        else if (string.IsNullOrWhiteSpace(reason))
+        else if (problem == CustomerBalanceProblem.NoReason)
         {
             await _notifier.ErrorAsync(H["Say why the credit changes. It's kept with its activity."]);
         }

@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using CrestApps.Core.AI.Mcp.Models;
 using CrestApps.Core.Handlers;
 using CrestApps.Core.Models;
+using CrestApps.OrchardCore.AI.Mcp.Core;
 using CrestApps.OrchardCore.Core.Handlers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Localization;
@@ -143,41 +144,14 @@ internal sealed class McpResourceHandler : CatalogEntryAuditHandlerBase<McpResou
     /// Format: {source}://{itemId}/{path} or {source}://{itemId} when path is empty.
     /// </summary>
     internal static string BuildUri(string source, string itemId, string path)
-    {
-        if (string.IsNullOrEmpty(path))
-        {
-            return $"{source}://{itemId}";
-        }
-
-        // Strip any leading slash from user path.
-        path = path.TrimStart('/');
-
-        return $"{source}://{itemId}/{path}";
-    }
+        => McpResourceUris.Build(source, itemId, path);
 
     /// <summary>
     /// Extracts the user-provided path portion from a full resource URI.
     /// Given "file://abc123/docs/{fileName}", returns "docs/{fileName}".
     /// </summary>
     internal static string ExtractPath(string uri, string source, string itemId)
-    {
-        var prefix = $"{source}://{itemId}";
-
-        if (string.IsNullOrEmpty(uri) || !uri.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-        {
-            return uri;
-        }
-
-        var remainder = uri[prefix.Length..];
-
-        if (remainder.Length == 0)
-        {
-            return string.Empty;
-        }
-
-        // Strip the leading slash.
-        return remainder.TrimStart('/');
-    }
+        => McpResourceUris.ExtractPath(uri, source, itemId);
 
     private static bool IsFullUri(string value, string source)
         => Uri.TryCreate(value, UriKind.Absolute, out var uri) &&

@@ -26,6 +26,7 @@
     <PackageReference Include="OrchardCore.Rules.Core" />
     <PackageReference Include="OrchardCore.Deployment.Abstractions" />
     <PackageReference Include="OrchardCore.Admin.Abstractions" />
+    <PackageReference Include="CrestApps.Core.AI" />
     <PackageReference Include="OrchardCore.Settings.Core" />
     <PackageReference Include="OrchardCore.ContentManagement" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />

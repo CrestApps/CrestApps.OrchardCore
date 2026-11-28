@@ -34,6 +34,13 @@ public sealed class FulfillmentRequest : CatalogItem
     public FulfillmentRequestStatus Status { get; set; }
 
     /// <summary>
+    /// Gets or sets the status a request had when a person put it in line again for the background sender, until it is
+    /// sent or settled; <see langword="null"/> otherwise. It is judged by that status, as if it had been sent from the
+    /// page, so a request that needed attention and is stopped again before the partner is called tells nobody twice.
+    /// </summary>
+    public FulfillmentRequestStatus? QueuedFromStatus { get; set; }
+
+    /// <summary>
     /// Gets or sets the lines assigned to this partner, as they were sent.
     /// </summary>
     public List<FulfillmentRequestLine> Lines { get; set; } = [];

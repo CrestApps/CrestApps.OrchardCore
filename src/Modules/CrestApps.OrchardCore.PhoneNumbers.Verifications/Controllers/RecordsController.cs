@@ -1,5 +1,3 @@
-using CrestApps.OrchardCore.PhoneNumbers.Core.Indexes;
-using CrestApps.OrchardCore.PhoneNumbers.Core.Models;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Permissions;
 using CrestApps.OrchardCore.PhoneNumbers.Core.Services;
 using CrestApps.OrchardCore.PhoneNumbers.Verifications.Models;
@@ -10,20 +8,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using OrchardCore.Admin;
-using OrchardCore.ContentManagement;
-using OrchardCore.ContentManagement.Records;
 using OrchardCore.DisplayManagement;
 using OrchardCore.DisplayManagement.Notify;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Navigation;
 using OrchardCore.Routing;
-using OrchardCore.Settings;
-using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Controllers;
 
@@ -34,17 +25,14 @@ namespace CrestApps.OrchardCore.PhoneNumbers.Verifications.Controllers;
 [Admin]
 public sealed class RecordsController : Controller
 {
-    private const int RequeueBatchSize = 100;
-    private const int MaxRetryAllFailedRecords = 10_000;
     private const string RetryBulkAction = "Retry";
 
     private readonly IAuthorizationService _authorizationService;
-    private readonly ISession _session;
-    private readonly ISiteService _siteService;
     private readonly IShapeFactory _shapeFactory;
     private readonly PagerOptions _pagerOptions;
     private readonly INotifier _notifier;
     private readonly IPhoneNumberVerificationManager _verificationManager;
+    private readonly PhoneNumberVerificationRecordsService _recordsService;
 
     internal readonly IStringLocalizer S;
     internal readonly IHtmlLocalizer H;
@@ -53,32 +41,29 @@ public sealed class RecordsController : Controller
     /// Initializes a new instance of the <see cref="RecordsController"/> class.
     /// </summary>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="session">The YesSql session used to query the verification index.</param>
-    /// <param name="siteService">The site service used to read module settings.</param>
     /// <param name="shapeFactory">The shape factory used to build the pager shape.</param>
     /// <param name="pagerOptions">The pager options.</param>
     /// <param name="notifier">The notifier service.</param>
     /// <param name="verificationManager">The phone number verification manager used to check for enabled providers.</param>
+    /// <param name="recordsService">The records queue, which searches, counts and re-queues the records.</param>
     /// <param name="stringLocalizer">The string localizer.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public RecordsController(
         IAuthorizationService authorizationService,
-        ISession session,
-        ISiteService siteService,
         IShapeFactory shapeFactory,
         IOptions<PagerOptions> pagerOptions,
         INotifier notifier,
         IPhoneNumberVerificationManager verificationManager,
+        PhoneNumberVerificationRecordsService recordsService,
         IStringLocalizer<RecordsController> stringLocalizer,
         IHtmlLocalizer<RecordsController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
-        _session = session;
-        _siteService = siteService;
         _shapeFactory = shapeFactory;
         _pagerOptions = pagerOptions.Value;
         _notifier = notifier;
         _verificationManager = verificationManager;
+        _recordsService = recordsService;
         S = stringLocalizer;
         H = htmlLocalizer;
     }
@@ -102,23 +87,13 @@ public sealed class RecordsController : Controller
             return Forbid();
         }
 
-        var settings = await _siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
         var canVerifyPhoneNumbers = await _authorizationService.AuthorizeAsync(User, PhoneNumberVerificationsPermissions.VerifyPhoneNumbers);
-        var maxAttempts = settings.MaxVerificationAttempts > 0
-            ? settings.MaxVerificationAttempts
-            : PhoneNumberVerificationsSettings.DefaultMaxVerificationAttempts;
+        var maxAttempts = await _recordsService.GetMaxAttemptsAsync();
 
         var term = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
         var pager = new Pager(pagerParameters, _pagerOptions);
 
-        var query = ApplyStatusFilter(BuildBaseQuery(term), status, maxAttempts);
-
-        var totalCount = await query.CountAsync();
-
-        var contentItems = await ApplySort(query, sort)
-            .Skip(pager.GetStartIndex())
-            .Take(pager.PageSize)
-            .ListAsync();
+        var (totalCount, records) = await _recordsService.ListAsync(term, status, sort, pager.GetStartIndex(), pager.PageSize, maxAttempts);
 
         var routeData = new RouteData();
 
@@ -139,38 +114,6 @@ public sealed class RecordsController : Controller
 
         var pagerShape = await _shapeFactory.PagerAsync(pager, totalCount, routeData);
 
-        var records = new List<PhoneNumberVerificationRecord>();
-
-        foreach (var contentItem in contentItems)
-        {
-            if (!contentItem.TryGet<PhoneNumberVerificationPart>(out var part))
-            {
-                continue;
-            }
-
-            part.TryGetPhoneNumberVerificationResult(out var result);
-
-            records.Add(new PhoneNumberVerificationRecord
-            {
-                ContentItemId = contentItem.ContentItemId,
-                DisplayText = contentItem.DisplayText,
-                ContentType = contentItem.ContentType,
-                PhoneNumber = part.PhoneNumber,
-                NormalizedPhoneNumber = part.NormalizedPhoneNumber ?? part.PhoneNumber,
-                VerificationStatus = part.VerificationStatus,
-                VerificationProvider = part.VerificationProvider,
-                LastVerifiedUtc = part.LastVerifiedUtc,
-                LastAttemptUtc = part.LastAttemptUtc,
-                NextVerificationDueUtc = part.NextVerificationDueUtc,
-                VerificationAttemptCount = part.VerificationAttemptCount,
-                FailedAttemptCount = part.FailedAttemptCount,
-                LastError = part.LastError,
-                IsExhausted = part.HasReachedMaxVerificationAttempts(maxAttempts),
-                LineStatus = result?.LineStatus,
-                MinimumAge = result?.MinimumAge,
-            });
-        }
-
         var model = new PhoneNumberVerificationRecordsViewModel
         {
             Q = q,
@@ -179,14 +122,14 @@ public sealed class RecordsController : Controller
             CanVerifyPhoneNumbers = canVerifyPhoneNumbers,
             Pager = pagerShape,
             Sorts = BuildSortOptions(),
-            Counts = await BuildStatusCountsAsync(maxAttempts, term),
+            Counts = await _recordsService.CountByStatusAsync(maxAttempts, term),
 
             // The admin-list tag builds a row per record, in the layout (List or Grid) the site or the user picked.
             // The selected records are re-queued through the toolbar's bulk action, so only a user who can retry
             // verifications can select them.
             List = new AdminListContext<PhoneNumberVerificationRecord>
             {
-                Source = records,
+                Source = [.. records],
                 Pager = pagerShape,
                 ShowSelectAll = canVerifyPhoneNumbers,
                 BulkActions = canVerifyPhoneNumbers
@@ -274,9 +217,9 @@ public sealed class RecordsController : Controller
             return RedirectToReturnUrlOrIndex(returnUrl);
         }
 
-        var requeued = await RequeueContentItemsAsync([contentItemId]);
+        var requeued = await _recordsService.RequeueAsync([contentItemId], processAfterRequest: true);
 
-        if (requeued == 0)
+        if (requeued.Count == 0)
         {
             return NotFound();
         }
@@ -314,9 +257,9 @@ public sealed class RecordsController : Controller
             return RedirectToReturnUrlOrIndex(returnUrl);
         }
 
-        var requeued = await RequeueContentItemsAsync(itemIds);
+        var requeued = await _recordsService.RequeueAsync(itemIds, processAfterRequest: true);
 
-        await _notifier.SuccessAsync(H["{0} record(s) were queued for verification and will be processed shortly.", requeued]);
+        await _notifier.SuccessAsync(H["{0} record(s) were queued for verification and will be processed shortly.", requeued.Count]);
 
         return RedirectToReturnUrlOrIndex(returnUrl);
     }
@@ -344,7 +287,7 @@ public sealed class RecordsController : Controller
 
         var term = string.IsNullOrWhiteSpace(q) ? null : q.Trim();
 
-        var failedContentItemIds = await GetFailedContentItemIdsAsync(term);
+        var failedContentItemIds = await _recordsService.GetFailedContentItemIdsAsync(term);
 
         if (failedContentItemIds.Count == 0)
         {
@@ -353,9 +296,9 @@ public sealed class RecordsController : Controller
             return RedirectToReturnUrlOrIndex(returnUrl);
         }
 
-        var requeued = await RequeueContentItemsAsync(failedContentItemIds);
+        var requeued = await _recordsService.RequeueAsync(failedContentItemIds, processAfterRequest: true);
 
-        await _notifier.SuccessAsync(H["{0} failed or needs-attention record(s) were queued for verification and will be processed shortly.", requeued]);
+        await _notifier.SuccessAsync(H["{0} failed or needs-attention record(s) were queued for verification and will be processed shortly.", requeued.Count]);
 
         return RedirectToReturnUrlOrIndex(returnUrl);
     }
@@ -370,171 +313,6 @@ public sealed class RecordsController : Controller
         }
 
         return true;
-    }
-
-    private async Task<int> RequeueContentItemsAsync(IEnumerable<string> contentItemIds)
-    {
-        var ids = contentItemIds
-            .Where(id => !string.IsNullOrEmpty(id))
-            .Distinct()
-            .ToArray();
-
-        if (ids.Length == 0)
-        {
-            return 0;
-        }
-
-        var requeuedContentItemIds = new List<string>();
-
-        foreach (var chunk in ids.Chunk(RequeueBatchSize))
-        {
-            var contentItems = await _session.Query<ContentItem, ContentItemIndex>(index =>
-                    index.Latest && index.ContentItemId.IsIn(chunk))
-                .ListAsync();
-
-            foreach (var contentItem in contentItems)
-            {
-                if (!contentItem.Has<PhoneNumberVerificationPart>())
-                {
-                    continue;
-                }
-
-                contentItem.RequeuePhoneNumberVerification();
-
-                await _session.SaveAsync(contentItem);
-
-                requeuedContentItemIds.Add(contentItem.ContentItemId);
-            }
-        }
-
-        if (requeuedContentItemIds.Count > 0)
-        {
-            ShellScope.AddDeferredTask(scope => ProcessRequeuedRecordsAsync(scope, requeuedContentItemIds));
-        }
-
-        return requeuedContentItemIds.Count;
-    }
-
-    private async Task<IList<string>> GetFailedContentItemIdsAsync(string term)
-    {
-        var query = _session.QueryIndex<PhoneNumberVerificationPartIndex>(index =>
-            index.VerificationStatus == PhoneNumberVerificationStatus.Failed);
-
-        if (!string.IsNullOrWhiteSpace(term))
-        {
-            query = query.Where(index => index.PhoneNumber.Contains(term) || index.NormalizedPhoneNumber.Contains(term));
-        }
-
-        var indexes = await query
-            .OrderBy(index => index.ContentItemId)
-            .Take(MaxRetryAllFailedRecords)
-            .ListAsync();
-
-        return indexes
-            .Select(index => index.ContentItemId)
-            .Where(contentItemId => !string.IsNullOrEmpty(contentItemId))
-            .Distinct()
-            .ToList();
-    }
-
-    private static async Task ProcessRequeuedRecordsAsync(ShellScope scope, List<string> contentItemIds)
-    {
-        if (contentItemIds.Count == 0)
-        {
-            return;
-        }
-
-        var services = scope.ServiceProvider;
-        var verificationManager = services.GetRequiredService<IPhoneNumberVerificationManager>();
-
-        if ((await verificationManager.GetEnabledProvidersAsync()).Count == 0)
-        {
-            return;
-        }
-
-        var session = services.GetRequiredService<ISession>();
-        var siteService = services.GetRequiredService<ISiteService>();
-        var queueProcessor = services.GetRequiredService<IPhoneNumberVerificationQueueProcessor>();
-        var settings = await siteService.GetSettingsAsync<PhoneNumberVerificationsSettings>();
-        var delayBeforeNextRequest = false;
-
-        foreach (var chunk in contentItemIds.Chunk(RequeueBatchSize))
-        {
-            var contentItems = await session.Query<ContentItem, ContentItemIndex>(index =>
-                    index.Latest && index.ContentItemId.IsIn(chunk))
-                .ListAsync();
-
-            var processed = await queueProcessor.ProcessAsync(contentItems, settings, delayBeforeNextRequest);
-
-            if (processed > 0)
-            {
-                delayBeforeNextRequest = true;
-            }
-
-            foreach (var contentItem in contentItems)
-            {
-                await session.SaveAsync(contentItem);
-            }
-
-            await session.SaveChangesAsync();
-        }
-    }
-
-    private IQuery<ContentItem, PhoneNumberVerificationPartIndex> BuildBaseQuery(string term)
-    {
-        var query = _session.Query<ContentItem, ContentItemIndex>(index => index.Latest)
-            .With<PhoneNumberVerificationPartIndex>(index => index.PhoneNumber != null || index.NormalizedPhoneNumber != null);
-
-        if (!string.IsNullOrWhiteSpace(term))
-        {
-            // A text can't seek. Grouped by document, the database reads the matches and sorts them, instead of
-            // walking an index of the order looking for the few records that contain the text.
-            query = query.NoIndexOptimizations().With<PhoneNumberVerificationPartIndex>(index =>
-                index.PhoneNumber.Contains(term) || index.NormalizedPhoneNumber.Contains(term));
-        }
-
-        return query;
-    }
-
-    private static IQuery<ContentItem, PhoneNumberVerificationPartIndex> ApplyStatusFilter(
-        IQuery<ContentItem, PhoneNumberVerificationPartIndex> query,
-        PhoneNumberVerificationRecordFilter status,
-        int maxAttempts)
-    {
-        return status switch
-        {
-            PhoneNumberVerificationRecordFilter.Verified => query.With<PhoneNumberVerificationPartIndex>(index => index.IsVerified),
-            PhoneNumberVerificationRecordFilter.Invalid => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Invalid),
-            PhoneNumberVerificationRecordFilter.Pending => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Unverified),
-            PhoneNumberVerificationRecordFilter.Failed => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Failed && index.FailedAttemptCount < maxAttempts),
-            PhoneNumberVerificationRecordFilter.NeedsAttention => query.With<PhoneNumberVerificationPartIndex>(index => index.VerificationStatus == PhoneNumberVerificationStatus.Failed && index.FailedAttemptCount >= maxAttempts),
-            _ => query,
-        };
-    }
-
-    private static IQuery<ContentItem> ApplySort(
-        IQuery<ContentItem, PhoneNumberVerificationPartIndex> query,
-        PhoneNumberVerificationRecordSort sort)
-    {
-        return sort switch
-        {
-            PhoneNumberVerificationRecordSort.LeastRecentlyAttempted => query.OrderBy(index => index.LastAttemptUtc).ThenBy(index => index.ContentItemId),
-            PhoneNumberVerificationRecordSort.RecentlyCreated => query.With<ContentItemIndex>().OrderByDescending(index => index.CreatedUtc).ThenBy(index => index.ContentItemId),
-            PhoneNumberVerificationRecordSort.OldestCreated => query.With<ContentItemIndex>().OrderBy(index => index.CreatedUtc).ThenBy(index => index.ContentItemId),
-            _ => query.OrderByDescending(index => index.LastAttemptUtc).ThenBy(index => index.ContentItemId),
-        };
-    }
-
-    private async Task<IDictionary<PhoneNumberVerificationRecordFilter, int>> BuildStatusCountsAsync(int maxAttempts, string term)
-    {
-        var counts = new Dictionary<PhoneNumberVerificationRecordFilter, int>();
-
-        foreach (var filter in Enum.GetValues<PhoneNumberVerificationRecordFilter>())
-        {
-            counts[filter] = await ApplyStatusFilter(BuildBaseQuery(term), filter, maxAttempts).CountAsync();
-        }
-
-        return counts;
     }
 
     private IList<SelectListItem> BuildSortOptions()

@@ -155,7 +155,7 @@ public sealed class CalendarCategoriesController : Controller
             ModelState.AddModelError(nameof(model.Name), S["The name is required."]);
         }
 
-        if (string.IsNullOrWhiteSpace(model.Color) || !System.Text.RegularExpressions.Regex.IsMatch(model.Color.Trim(), "^#[0-9a-fA-F]{6}$"))
+        if (!CalendarCategoryRules.IsValidColor(model.Color))
         {
             ModelState.AddModelError(nameof(model.Color), S["Choose a color."]);
         }
@@ -165,12 +165,7 @@ public sealed class CalendarCategoriesController : Controller
             return View(model);
         }
 
-        category.Name = model.Name.Trim();
-        category.Color = model.Color.Trim().ToLowerInvariant();
-
-        // Only a calendar manager decides whether a category is everyone's; anyone else's categories are their own. A new
-        // category has no owner yet, so it must not be mistaken for a shared one.
-        category.OwnerId = canShare && model.Shared ? null : CalendarUser.GetId(User);
+        CalendarCategoryRules.Apply(category, model.Name, model.Color, model.Shared, canShare, CalendarUser.GetId(User));
 
         await _categoryService.SaveAsync(category, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The category has been saved."]);
@@ -207,9 +202,7 @@ public sealed class CalendarCategoriesController : Controller
 
     private async Task<bool> CanChangeAsync(CalendarCategory category)
     {
-        return category.IsShared
-            ? await CanManageSharedAsync()
-            : string.Equals(category.OwnerId, CalendarUser.GetId(User), StringComparison.Ordinal);
+        return CalendarCategoryRules.CanChange(category, CalendarUser.GetId(User), category.IsShared && await CanManageSharedAsync());
     }
 
     private Task<bool> CanManageSharedAsync()

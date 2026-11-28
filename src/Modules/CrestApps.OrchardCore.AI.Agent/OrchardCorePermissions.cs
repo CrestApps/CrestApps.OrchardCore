@@ -1,5 +1,8 @@
+using OrchardCore.Contents;
+using OrchardCore.Contents.Security;
 using OrchardCore.Localization;
 using OrchardCore.Security.Permissions;
+using OrchardCore.Users;
 
 namespace CrestApps.OrchardCore.AI.Agent;
 
@@ -39,4 +42,123 @@ internal static class OrchardCorePermissions
     /// Gets the security-critical permission to manage workflows.
     /// </summary>
     public static readonly Permission ManageWorkflows = new("ManageWorkflows", LocalizationSource.Create("Manage workflows", typeof(OrchardCorePermissions)), isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the permission to manage menus. As in the Menu module, the permission to edit Menu content items implies it.
+    /// </summary>
+    public static readonly Permission ManageMenu = new(
+        "ManageMenu",
+        LocalizationSource.Create("Manage menus", typeof(OrchardCorePermissions)),
+        [ContentTypePermissionsHelper.CreateDynamicPermissionOf(CommonPermissions.EditContent.Name, "Menu")]);
+
+    /// <summary>
+    /// Gets the permission to manage taxonomies. Its name is singular in the Taxonomies module.
+    /// </summary>
+    public static readonly Permission ManageTaxonomies = new("ManageTaxonomy", LocalizationSource.Create("Manage taxonomies", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the security-critical permission to run SQL queries. Orchard Core declares it in OrchardCore.Queries.Core,
+    /// a package this repository does not reference.
+    /// </summary>
+    public static readonly Permission ManageSqlQueries = new("ManageSqlQueries", LocalizationSource.Create("Manage SQL Queries", typeof(OrchardCorePermissions)), isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the permission to create, change, move and delete secrets. The Secrets module declares it in its module
+    /// assembly.
+    /// </summary>
+    public static readonly Permission ManageSecrets = new("ManageSecrets", LocalizationSource.Create("Manage secrets", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the permission to list secrets, without their values. As in the Secrets module, the permission to manage
+    /// secrets implies it.
+    /// </summary>
+    public static readonly Permission ViewSecrets = new("ViewSecrets", LocalizationSource.Create("View secrets", typeof(OrchardCorePermissions)), [ManageSecrets]);
+
+    /// <summary>
+    /// Gets the security-critical permission to see the details of the audit trail events about any user. The Users
+    /// module declares it in its module assembly.
+    /// </summary>
+    public static readonly Permission ViewUserAuditTrailEvents = new(
+        "ViewUserAuditTrailEvents",
+        LocalizationSource.Create("View Audit Trail events about users", typeof(OrchardCorePermissions)),
+        [],
+        isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the security-critical permission to see the details of the audit trail events about the caller's own
+    /// account. As in the Users module, the permission for the events about any user implies it.
+    /// </summary>
+    public static readonly Permission ViewOwnUserAuditTrailEvents = new(
+        "ViewOwnUserAuditTrailEvents",
+        LocalizationSource.Create("View Audit Trail events about own user", typeof(OrchardCorePermissions)),
+        [ViewUserAuditTrailEvents],
+        isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the permission to arrange the widgets of the admin dashboard. The Admin Dashboard module declares it in its
+    /// module assembly.
+    /// </summary>
+    public static readonly Permission ManageAdminDashboard = new("ManageAdminDashboard", LocalizationSource.Create("Manage the Admin Dashboard", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the permission to see the admin dashboard. As in the Admin Dashboard module, the permission to manage the
+    /// dashboard implies it.
+    /// </summary>
+    public static readonly Permission AccessAdminDashboard = new("AccessAdminDashboard", LocalizationSource.Create("Access the Admin Dashboard", typeof(OrchardCorePermissions)), [ManageAdminDashboard]);
+
+    /// <summary>
+    /// Gets the permission to manage the custom admin menus. Orchard Core declares it in
+    /// OrchardCore.AdminMenu.Abstractions, a package this repository does not reference.
+    /// </summary>
+    public static readonly Permission ManageAdminMenu = new("ManageAdminMenu", LocalizationSource.Create("Manage the admin menu", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the permission to manage the tenant feature profiles. The Tenants module declares it in its module assembly.
+    /// </summary>
+    public static readonly Permission ManageTenantFeatureProfiles = new("ManageTenantFeatureProfiles", LocalizationSource.Create("Manage tenant feature profiles", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the permission to see, change and run the background tasks. The Background Tasks module declares it in its
+    /// module assembly.
+    /// </summary>
+    public static readonly Permission ManageBackgroundTasks = new("ManageBackgroundTasks", LocalizationSource.Create("Manage background tasks", typeof(OrchardCorePermissions)));
+
+    /// <summary>
+    /// Gets the security-critical permission to create, design, publish and delete data pipelines. The Data Pipelines
+    /// module declares it in its module assembly; a published pipeline runs with the access of the user who published it.
+    /// </summary>
+    public static readonly Permission ManageDataPipelines = new("ManageDataPipelines", LocalizationSource.Create("Manage data pipelines", typeof(OrchardCorePermissions)), isSecurityCritical: true);
+
+    /// <summary>
+    /// Gets the permission to run published data pipelines and cancel their runs. As in the Data Pipelines module, the
+    /// permission to manage data pipelines implies it.
+    /// </summary>
+    public static readonly Permission RunDataPipelines = new("RunDataPipelines", LocalizationSource.Create("Run data pipelines", typeof(OrchardCorePermissions)), [ManageDataPipelines]);
+
+    /// <summary>
+    /// Gets the permission to view data pipelines and their runs. As in the Data Pipelines module, the permissions to
+    /// manage and to run data pipelines imply it.
+    /// </summary>
+    public static readonly Permission ViewDataPipelines = new("ViewDataPipelines", LocalizationSource.Create("View data pipelines and their runs", typeof(OrchardCorePermissions)), [ManageDataPipelines, RunDataPipelines]);
+
+    /// <summary>
+    /// Gets the permission to list, revoke and delete the shared links of every module. The Data Pipelines Core feature
+    /// declares it in the Data Pipelines module assembly.
+    /// </summary>
+    public static readonly Permission ManageSharedLinks = new("ManageSharedLinks", LocalizationSource.Create("Manage shared links", typeof(OrchardCorePermissions)));
+
+    // The Users module declares this template in its module assembly. As there, the permission to manage users implies it.
+    private static readonly PermissionTemplate _manageOwnCustomUserSettings = new(
+        "ManageOwnCustomUserSettings_{0}",
+        LocalizationSource.Create("Manage Own Custom User Settings - {0}", typeof(OrchardCorePermissions)),
+        UsersPermissions.ManageUsers);
+
+    /// <summary>
+    /// Creates the permission to edit the values of one custom user settings type. Despite its name, the user editor
+    /// checks it for whichever user is edited.
+    /// </summary>
+    /// <param name="settingsType">The technical name of the custom user settings content type.</param>
+    /// <returns>The permission for that settings type.</returns>
+    public static Permission CreateManageOwnCustomUserSettings(string settingsType)
+        => _manageOwnCustomUserSettings.CreateDynamicPermission(settingsType);
 }

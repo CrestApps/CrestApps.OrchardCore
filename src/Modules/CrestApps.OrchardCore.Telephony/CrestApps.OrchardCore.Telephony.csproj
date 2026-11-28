@@ -37,6 +37,7 @@
     <PackageReference Include="OrchardCore.SignalR" />
     <PackageReference Include="YesSql.Abstractions" />
     <PackageReference Include="CrestApps.Core.Data.YesSql" />
+    <PackageReference Include="CrestApps.Core.AI" />
   </ItemGroup>
 
   <ItemGroup>

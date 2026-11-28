@@ -1,43 +1,21 @@
-using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Localization;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Logging;
 using OrchardCore;
 using OrchardCore.DisplayManagement.Handlers;
 using OrchardCore.DisplayManagement.Shapes;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Environment.Shell.Scope;
 using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.ContactCenter.Drivers;
 
 internal sealed class VoiceMediaItemDisplayDriver : DisplayDriver<VoiceMediaItem>
 {
-    // Telnyx Media Storage caps media at 20 MB; a greeting or hold-music clip sits well under this, so anything
-    // larger is not voice media.
-    private const long MaxAudioBytes = 20L * 1024 * 1024;
-
-    // Labels the provider's copy by purpose so provider media storage stays identifiable.
-    private const string MediaNamePrefix = "cc-voice-media";
-
-    private static readonly string[] _allowedContentTypes =
-    [
-        "audio/mpeg",
-        "audio/mp3",
-        "audio/wav",
-        "audio/x-wav",
-        "audio/wave",
-        "audio/webm",
-        "audio/ogg",
-    ];
-
     private readonly IVoiceMediaProvisioningService _provisioning;
     private readonly INotifier _notifier;
     private readonly IHtmlLocalizer H;
@@ -139,87 +117,40 @@ internal sealed class VoiceMediaItemDisplayDriver : DisplayDriver<VoiceMediaItem
 
     private async Task UploadAudioAsync(VoiceMediaItem item, IFormFile audio, UpdateEditorContext context)
     {
-        if (audio.Length > MaxAudioBytes)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(VoiceMediaItemViewModel.Audio), S["The audio is too large. It must be 20 MB or less."]);
-
-            return;
-        }
-
-        if (!_allowedContentTypes.Contains(audio.ContentType, StringComparer.OrdinalIgnoreCase))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(VoiceMediaItemViewModel.Audio), S["Unsupported audio format."]);
-
-            return;
-        }
-
-        if (!_provisioning.CanUpload)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(VoiceMediaItemViewModel.Audio), S["Audio uploads are unavailable because no media storage and no telephony provider capable of hosting media is configured."]);
-
-            return;
-        }
-
-        VoiceMediaStoreResult result;
+        VoiceMediaAudioUploadResult result;
 
         await using (var stream = audio.OpenReadStream())
         {
-            result = await _provisioning.StoreAsync(item, stream, audio.ContentType, VoiceMediaUploadFormat.Resolve(audio), MediaNamePrefix, CancellationToken.None);
+            result = await VoiceMediaAudioUpload.UploadAsync(_provisioning, item, stream, audio.Length, audio.ContentType, VoiceMediaUploadFormat.Resolve(audio), CancellationToken.None);
         }
 
-        if (!result.Succeeded)
+        switch (result.Status)
         {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(VoiceMediaItemViewModel.Audio), S["The audio could not be uploaded. Please try again."]);
-
-            return;
-        }
-
-        // The single provider copy recorded before copies were tracked per provider follows the copy the active
-        // provider was just given, so a reader of those members still finds a copy that plays.
-        item.ProviderName = result.ProviderReference is null ? null : result.ProviderName;
-        item.MediaReference = result.ProviderReference;
-
-        if (result.ProviderUploadFailed)
-        {
-            await _notifier.WarningAsync(H["The audio was stored, but {0} did not accept a copy. The provider is given one when the clip is next played, or use Re-sync media.", result.ProviderName]);
-        }
-        else if (!result.MasterStored)
-        {
-            await _notifier.WarningAsync(H["The audio was sent to {0}, but no master copy could be kept. Keep the original file: the clip has to be uploaded again if the provider changes.", result.ProviderName]);
-        }
-
-        // The copies this upload replaced are deleted once the entry is saved, and the new copies are deleted
-        // instead when it is not: the reconciliation runs after the request's unit of work, so neither a failed save
-        // nor a refused form leaves the stored entry pointing at audio that is gone.
-        ShellScope.AddDeferredTask(scope => ReconcileReplacedAudioAsync(scope, item.ItemId, VoiceMediaAssetCopies.Snapshot(item), result.Replaced));
-    }
-
-    private static async Task ReconcileReplacedAudioAsync(ShellScope scope, string itemId, VoiceMediaAsset uploaded, IVoiceMediaAsset replaced)
-    {
-        var provisioning = scope.ServiceProvider.GetRequiredService<IVoiceMediaProvisioningService>();
-        var logger = scope.ServiceProvider.GetRequiredService<ILogger<VoiceMediaItemDisplayDriver>>();
-
-        try
-        {
-            var store = scope.ServiceProvider.GetRequiredService<IVoiceMediaItemStore>();
-            var stored = string.IsNullOrEmpty(itemId) ? null : await store.FindByIdAsync(itemId);
-
-            if (VoiceMediaAssetCopies.HoldsSameAudio(stored, uploaded))
-            {
-                if (replaced is not null)
-                {
-                    await provisioning.DeleteEverywhereAsync(replaced);
-                }
+            case VoiceMediaAudioUploadStatus.TooLarge:
+                context.Updater.ModelState.AddModelError(Prefix, nameof(VoiceMediaItemViewModel.Audio), S["The audio is too large. It must be 20 MB or less."]);
 
                 return;
-            }
+            case VoiceMediaAudioUploadStatus.UnsupportedFormat:
+                context.Updater.ModelState.AddModelError(Prefix, nameof(VoiceMediaItemViewModel.Audio), S["Unsupported audio format."]);
 
-            // The entry was not saved with the new audio, so the copies made for it would never be played.
-            await provisioning.DeleteEverywhereAsync(uploaded);
+                return;
+            case VoiceMediaAudioUploadStatus.Unavailable:
+                context.Updater.ModelState.AddModelError(Prefix, nameof(VoiceMediaItemViewModel.Audio), S["Audio uploads are unavailable because no media storage and no telephony provider capable of hosting media is configured."]);
+
+                return;
+            case VoiceMediaAudioUploadStatus.Failed:
+                context.Updater.ModelState.AddModelError(Prefix, nameof(VoiceMediaItemViewModel.Audio), S["The audio could not be uploaded. Please try again."]);
+
+                return;
         }
-        catch (Exception ex)
+
+        if (result.Store.ProviderUploadFailed)
         {
-            logger.LogWarning(ex, "Failed to delete the voice media audio replaced by an upload to the entry {ItemId}.", itemId.SanitizeLogValue());
+            await _notifier.WarningAsync(H["The audio was stored, but {0} did not accept a copy. The provider is given one when the clip is next played, or use Re-sync media.", result.Store.ProviderName]);
+        }
+        else if (!result.Store.MasterStored)
+        {
+            await _notifier.WarningAsync(H["The audio was sent to {0}, but no master copy could be kept. Keep the original file: the clip has to be uploaded again if the provider changes.", result.Store.ProviderName]);
         }
     }
 }

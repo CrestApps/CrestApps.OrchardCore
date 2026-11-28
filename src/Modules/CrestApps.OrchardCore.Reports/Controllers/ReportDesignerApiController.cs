@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Admin;
-using OrchardCore.DataPipelines.SharedLinks;
 using OrchardCore.DataSources;
 using OrchardCore.DataSources.Expressions;
 using OrchardCore.Modules;
@@ -32,7 +31,7 @@ public sealed class ReportDesignerApiController : Controller
     private readonly IStringLocalizerFactory _localizerFactory;
     private readonly ReportQueryPlanner _planner;
     private readonly ReportDesignService _designService;
-    private readonly ISharedLinkManager _sharedLinks;
+    private readonly ReportShareLinkService _shareLinks;
     private readonly IAuthorizationService _authorizationService;
     private readonly IUserSearchService _userSearchService;
     private readonly ILogger _logger;
@@ -46,7 +45,7 @@ public sealed class ReportDesignerApiController : Controller
     /// <param name="localizerFactory">The localizer factory, for the names of the data sources.</param>
     /// <param name="planner">The query planner.</param>
     /// <param name="designService">The design service.</param>
-    /// <param name="sharedLinks">The shared links of Orchard Core.</param>
+    /// <param name="shareLinks">The service that keeps the shared links of reports.</param>
     /// <param name="authorizationService">The authorization service.</param>
     /// <param name="userSearchService">The shared user search, for the people a report can be shared with.</param>
     /// <param name="logger">The logger.</param>
@@ -57,7 +56,7 @@ public sealed class ReportDesignerApiController : Controller
         IStringLocalizerFactory localizerFactory,
         ReportQueryPlanner planner,
         ReportDesignService designService,
-        ISharedLinkManager sharedLinks,
+        ReportShareLinkService shareLinks,
         IAuthorizationService authorizationService,
         IUserSearchService userSearchService,
         ILogger<ReportDesignerApiController> logger,
@@ -68,7 +67,7 @@ public sealed class ReportDesignerApiController : Controller
         _localizerFactory = localizerFactory;
         _planner = planner;
         _designService = designService;
-        _sharedLinks = sharedLinks;
+        _shareLinks = shareLinks;
         _authorizationService = authorizationService;
         _userSearchService = userSearchService;
         _logger = logger;
@@ -351,7 +350,7 @@ public sealed class ReportDesignerApiController : Controller
             return Forbid();
         }
 
-        var links = await _sharedLinks.ListAsync(ReportsConstants.SharedLinkKind, design.ItemId, HttpContext.RequestAborted);
+        var links = await _shareLinks.ListAsync(design, HttpContext.RequestAborted);
 
         return Json(links.Select(link => new
         {
@@ -396,47 +395,19 @@ public sealed class ReportDesignerApiController : Controller
             return BadRequest();
         }
 
-        var note = ReportDesignNormalizer.Truncate(request.Note);
-        var linkRequest = new SharedLinkRequest
-        {
-            Kind = ReportsConstants.SharedLinkKind,
-            ResourceId = design.ItemId,
-            Title = design.DisplayText,
-            SourceName = design.DisplayText,
-            Recipients = (request.Recipients ?? []).Where(recipient => !string.IsNullOrWhiteSpace(recipient)).Select(recipient => recipient.Trim()).ToArray(),
-            Lifetime = TimeSpan.FromDays(request.ExpiresAfterDays),
-            MaxUses = Math.Max(0, request.MaxUses),
-            NotifyByEmail = request.NotifyByEmail,
-            Message = note,
-        };
+        var outcome = await _shareLinks.CreateAsync(design, request, User.Identity?.Name, HttpContext.RequestAborted);
 
-        linkRequest.Properties[ReportSharedLinkHandler.AllowExportProperty] = request.AllowExport ? "true" : "false";
-
-        if (!string.IsNullOrEmpty(note))
-        {
-            linkRequest.Properties[ReportSharedLinkHandler.NoteProperty] = note;
-        }
-
-        SharedLinkResult result;
-
-        try
-        {
-            result = await _sharedLinks.CreateAsync(linkRequest, HttpContext.RequestAborted);
-        }
-        catch (InvalidOperationException exception)
+        if (outcome.Result is null)
         {
             // A recipient is not a user of the site, there is no recipient, or emailing is asked for while the Email feature
             // is off.
             return Json(new
             {
-                Errors = new[] { exception.Message },
+                Errors = new[] { outcome.Error },
             }, ReportDesignerJson.Options);
         }
 
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("User '{UserName}' shared designed report '{ReportId}' with link '{LinkId}', expiring {ExpiresUtc}.", User.Identity?.Name, design.ItemId, result.Link.LinkId, result.Link.ExpiresUtc);
-        }
+        var result = outcome.Result;
 
         return Json(new
         {
@@ -469,20 +440,11 @@ public sealed class ReportDesignerApiController : Controller
             return Forbid();
         }
 
-        var link = await _sharedLinks.GetAsync(linkId, HttpContext.RequestAborted);
+        var link = await _shareLinks.RevokeAsync(design, linkId, User.Identity?.Name, HttpContext.RequestAborted);
 
-        if (link is null ||
-            !string.Equals(link.Kind, ReportsConstants.SharedLinkKind, StringComparison.Ordinal) ||
-            !string.Equals(link.ResourceId, design.ItemId, StringComparison.Ordinal))
+        if (link is null)
         {
             return NotFound();
-        }
-
-        await _sharedLinks.RevokeAsync(link, HttpContext.RequestAborted);
-
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation("User '{UserName}' revoked link '{LinkId}' of designed report '{ReportId}'.", User.Identity?.Name, link.LinkId, design.ItemId);
         }
 
         return NoContent();
@@ -516,41 +478,4 @@ public sealed class ReportDesignerApiController : Controller
             dataSet.References,
         };
     }
-}
-
-/// <summary>
-/// The settings of a new shared link of a report.
-/// </summary>
-public sealed class ReportShareLinkRequest
-{
-    /// <summary>
-    /// Gets or sets the user names or emails of the users of the site the link is for.
-    /// </summary>
-    public IList<string> Recipients { get; set; } = [];
-
-    /// <summary>
-    /// Gets or sets an optional note about what the link is for, sent with the email and shown with the link.
-    /// </summary>
-    public string Note { get; set; }
-
-    /// <summary>
-    /// Gets or sets the number of days the link works.
-    /// </summary>
-    public int ExpiresAfterDays { get; set; } = 7;
-
-    /// <summary>
-    /// Gets or sets the most times the link may be used, or <c>0</c> for no limit. Opening the report, changing its
-    /// filters, and exporting it are each a use.
-    /// </summary>
-    public int MaxUses { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the link also allows exporting.
-    /// </summary>
-    public bool AllowExport { get; set; }
-
-    /// <summary>
-    /// Gets or sets a value indicating whether the link is emailed to its recipients.
-    /// </summary>
-    public bool NotifyByEmail { get; set; } = true;
 }

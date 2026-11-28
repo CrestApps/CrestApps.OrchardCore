@@ -164,6 +164,7 @@ public sealed class ReportExportPermissionTests
         var controller = new ReportSubscriptionsController(
             store.Object,
             SubscriptionService(email, grants),
+            new ReportSubscriptionEditor(ReportManager().Object, ExportManager(), new SourceTextLocalizerFactory(), Authorization(grants), new SourceTextStringLocalizer<ReportSubscriptionEditor>()),
             ReportManager().Object,
             ExportManager(),
             new SourceTextLocalizerFactory(),
@@ -172,8 +173,7 @@ public sealed class ReportExportPermissionTests
             Mock.Of<IClock>(),
             Mock.Of<IDisplayManager<ReportSubscriptionEditViewModel>>(),
             Mock.Of<IUpdateModelAccessor>(),
-            Mock.Of<IHtmlLocalizer<ReportSubscriptionsController>>(),
-            new SourceTextStringLocalizer<ReportSubscriptionsController>())
+            Mock.Of<IHtmlLocalizer<ReportSubscriptionsController>>())
         {
             ControllerContext = new ControllerContext
             {

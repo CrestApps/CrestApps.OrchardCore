@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.AI.Core;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using OrchardCore.Deployment;
+using OrchardCore.Workflows;
 
 namespace CrestApps.OrchardCore.AI.Agent.Workflows;
 
@@ -21,6 +23,15 @@ public sealed class CreateOrUpdateWorkflowTool : ImportRecipeBaseTool
     {
         ArgumentNullException.ThrowIfNull(arguments);
         ArgumentNullException.ThrowIfNull(arguments.Services);
+
+        // Recipe import gate (review of PR 1334, F1 and F5): the recipe is imported as the JSON import of the Deployment
+        // admin imports one, and it can hold steps other than workflows, so the caller needs that page's permission as
+        // well as the right to manage workflows.
+        if (!await AgentToolAuthorization.IsAuthorizedAsync(arguments.Services, WorkflowsPermissions.ManageWorkflows) ||
+            !await AgentToolAuthorization.IsAuthorizedAsync(arguments.Services, DeploymentPermissions.Import))
+        {
+            return AIToolCallerAuthorization.NotAllowedMessage;
+        }
 
         var logger = arguments.Services.GetRequiredService<ILogger<CreateOrUpdateWorkflowTool>>();
 

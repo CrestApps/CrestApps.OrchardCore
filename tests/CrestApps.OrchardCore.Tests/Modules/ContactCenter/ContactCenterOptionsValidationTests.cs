@@ -408,13 +408,10 @@ public sealed class ContactCenterOptionsValidationTests
         return null;
     }
 
+    // A localizer that returns each text as written, as the site does without a translation: the AI startups register
+    // record kinds, which refuse an empty description.
     private static object CreateLocalizer(Type localizerType)
-    {
-        var mockType = typeof(Mock<>).MakeGenericType(localizerType);
-        var mock = (Mock)Activator.CreateInstance(mockType);
-
-        return mock.Object;
-    }
+        => Activator.CreateInstance(typeof(CrestApps.OrchardCore.Tests.Agent.AIModels.PassThroughStringLocalizer<>).MakeGenericType(localizerType.GetGenericArguments()));
 
     private static IEnumerable<Type> DiscoverStartupTypes()
         => _governedAssemblyMarkers

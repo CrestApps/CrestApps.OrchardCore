@@ -1,9 +1,9 @@
-using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.ContactCenter.Core.Models;
 using CrestApps.OrchardCore.ContactCenter.Core.Services;
 using CrestApps.OrchardCore.ContactCenter.Models;
+using CrestApps.OrchardCore.ContactCenter.Services;
 using CrestApps.OrchardCore.ContactCenter.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -377,8 +377,8 @@ public sealed class SharedVoicemailController : Controller
             QueueName = queueNames.TryGetValue(voicemail.QueueId, out var name) && !string.IsNullOrWhiteSpace(name)
                 ? name
                 : voicemail.QueueId,
-            HasRecording = HasRecording(interaction),
-            DurationSeconds = GetDurationSeconds(interaction, voicemail),
+            HasRecording = SharedVoicemailRecordingInfo.HasRecording(interaction),
+            DurationSeconds = SharedVoicemailRecordingInfo.GetDurationSeconds(interaction, voicemail),
             IsMine = access.Holds(voicemail),
             CanClaim = access.CanClaim(voicemail),
             CanRelease = access.CanRelease(voicemail),
@@ -386,33 +386,6 @@ public sealed class SharedVoicemailController : Controller
             CanCallBack = access.CanWork(voicemail) && !string.IsNullOrWhiteSpace(voicemail.CallerNumber),
             CanDelete = access.CanDelete(voicemail),
         };
-    }
-
-    private static bool HasRecording(Interaction interaction)
-        => interaction is not null &&
-            !string.IsNullOrEmpty(interaction.RecordingReference) &&
-            interaction.TechnicalMetadata is not null &&
-            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.RecordingMetadata.StorageReference, out var reference) &&
-            !string.IsNullOrEmpty(reference?.ToString());
-
-    // The provider's own length of the recording when it reported one; otherwise the time from the caller being sent to
-    // voicemail to their hanging up, which includes the greeting but is the closest the platform knows.
-    private static int? GetDurationSeconds(Interaction interaction, SharedVoicemail voicemail)
-    {
-        if (interaction?.TechnicalMetadata is not null &&
-            interaction.TechnicalMetadata.TryGetValue(ContactCenterConstants.RecordingMetadata.DurationSeconds, out var value) &&
-            double.TryParse(Convert.ToString(value, CultureInfo.InvariantCulture), NumberStyles.Float, CultureInfo.InvariantCulture, out var seconds) &&
-            seconds >= 0)
-        {
-            return (int)Math.Round(seconds);
-        }
-
-        if (interaction?.EndedUtc is { } endedUtc && voicemail.ReceivedUtc != default && endedUtc >= voicemail.ReceivedUtc)
-        {
-            return (int)Math.Round((endedUtc - voicemail.ReceivedUtc).TotalSeconds);
-        }
-
-        return null;
     }
 
     private async Task NotifyFailureAsync(SharedVoicemailActionResult result)

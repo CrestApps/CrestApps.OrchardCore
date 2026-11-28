@@ -68,6 +68,7 @@
     <PackageVersion Include="OrchardCore.DisplayManagement" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.DisplayManagement.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Email.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Email.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Features" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.FileStorage.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.FileStorage.AzureBlob" Version="$(OrchardCoreVersion)" />
@@ -78,6 +79,7 @@
     <PackageVersion Include="OrchardCore.Lists" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Liquid" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Liquid.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Localization.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Logging.NLog" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Markdown" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Media" Version="$(OrchardCoreVersion)" />
@@ -110,6 +112,7 @@
     <PackageVersion Include="OrchardCore.Indexing.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Lucene.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Seo" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Seo.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Search.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Shortcodes.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Secrets.Abstractions" Version="$(OrchardCoreVersion)" />
@@ -117,13 +120,17 @@
     <PackageVersion Include="OrchardCore.Setup.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.SignalR" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.SignalR.Redis" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Sitemaps.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Sms.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Settings" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Settings.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Taxonomies" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.Taxonomies.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Tenants" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Title" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.UrlRewriting.Abstractions" Version="$(OrchardCoreVersion)" />
+    <PackageVersion Include="OrchardCore.UrlRewriting.Core" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users.Abstractions" Version="$(OrchardCoreVersion)" />
     <PackageVersion Include="OrchardCore.Users.Core" Version="$(OrchardCoreVersion)" />

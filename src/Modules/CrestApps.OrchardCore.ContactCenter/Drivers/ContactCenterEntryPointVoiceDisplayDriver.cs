@@ -125,17 +125,10 @@ internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var isAgentTarget = model.TargetType == EntryPointTargetType.Agent;
-
         // Whether an unanswered specific-agent call goes to voicemail, and the ring window that governs it. The
         // window is always stored as a valid positive value; the checkbox controls whether it is used.
         entryPoint.VoicemailEnabled = model.VoicemailEnabled;
-        entryPoint.RingTimeoutSeconds = model.RingTimeoutSeconds <= 0
-            ? ContactCenterConstants.DirectRouting.DefaultRingTimeoutSeconds
-            : Math.Clamp(
-                model.RingTimeoutSeconds,
-                ContactCenterConstants.DirectRouting.MinimumRingTimeoutSeconds,
-                ContactCenterConstants.DirectRouting.MaximumRingTimeoutSeconds);
+        entryPoint.RingTimeoutSeconds = model.RingTimeoutSeconds;
 
         entryPoint.Priority = model.Priority;
         entryPoint.ClosedAction = model.ClosedAction;
@@ -144,17 +137,11 @@ internal sealed class ContactCenterEntryPointVoiceDisplayDriver : DisplayDriver<
         entryPoint.WelcomeMessage = model.WelcomeMessage?.Trim();
         entryPoint.VoicemailGreetingText = string.IsNullOrWhiteSpace(model.VoicemailGreetingText) ? null : model.VoicemailGreetingText.Trim();
 
-        // Only a queue line needs a mailbox of its own; a personal line's messages always go to its agent. A line that
-        // delivers to the queue's shared box has no agent inbox, so the agent selection is cleared rather than kept
-        // looking as if it still received the line's messages.
-        var deliversToSharedBox = !isAgentTarget && model.VoicemailDestination == EntryPointVoicemailDestination.QueueSharedBox;
+        entryPoint.VoicemailDestination = model.VoicemailDestination;
+        entryPoint.VoicemailRecipientAgentId = model.VoicemailRecipientAgentId;
 
-        entryPoint.VoicemailDestination = deliversToSharedBox
-            ? EntryPointVoicemailDestination.QueueSharedBox
-            : EntryPointVoicemailDestination.AgentInbox;
-        entryPoint.VoicemailRecipientAgentId = !isAgentTarget && !deliversToSharedBox && !string.IsNullOrWhiteSpace(model.VoicemailRecipientAgentId)
-            ? model.VoicemailRecipientAgentId.Trim()
-            : null;
+        // The ring window is stored within its limits, and only a queue line keeps a mailbox of its own.
+        ContactCenterEntryPointEditorRules.ApplyVoice(entryPoint, model.TargetType);
 
         // The menu tree is edited as JSON. The binder parses it and reports malformed JSON against the field;
         // whether the parsed flow is runnable is checked by the entry point handler, so a recipe import and

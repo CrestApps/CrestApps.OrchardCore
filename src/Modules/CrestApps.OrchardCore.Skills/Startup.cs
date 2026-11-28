@@ -20,6 +20,7 @@ using CrestApps.OrchardCore.Skills.ViewModels;
 using CrestApps.OrchardCore.Skills.Webhooks;
 using CrestApps.OrchardCore.Webhooks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
 using OrchardCore.ContentManagement;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
@@ -63,6 +64,7 @@ public sealed class Startup : StartupBase
         services.AddPersonalDataContributor<SkillsPersonalDataContributor>();
         services.AddNavigationProvider<SkillsAdminMenu>();
         services.AddSingleton<IBackgroundTask, SkillsDailyBackgroundTask>();
+        services.TryAddEnumerable(ServiceDescriptor.Scoped<ISkillSubjectProvider, UserSkillSubjectProvider>());
     }
 }
 

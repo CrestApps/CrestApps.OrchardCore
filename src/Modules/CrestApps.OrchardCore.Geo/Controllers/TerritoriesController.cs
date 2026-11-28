@@ -195,11 +195,7 @@ public sealed class TerritoriesController : Controller
         // Members of kinds no module lists any more stay as they were.
         var kinds = _memberSources.Select(source => source.Kind).ToHashSet(StringComparer.Ordinal);
 
-        item.Members =
-        [
-            .. item.Members.Where(member => !kinds.Contains(member.Kind ?? string.Empty)),
-            .. kinds.SelectMany(kind => (form.Members?.GetValueOrDefault(kind) ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).Select(id => new TerritoryMember { Kind = kind, Id = id, Role = TerritoryRole.Primary })),
-        ];
+        item.Members = TerritoryCommands.MergeMembers(item.Members, kinds, form.Members);
 
         var validation = await _manager.ValidateAsync(item);
 
@@ -248,15 +244,7 @@ public sealed class TerritoriesController : Controller
             return NotFound();
         }
 
-        var children = (await _manager.GetAllAsync(HttpContext.RequestAborted)).Where(other => other.ParentId == item.ItemId).ToList();
-
-        foreach (var child in children)
-        {
-            child.ParentId = item.ParentId;
-            await _manager.UpdateAsync(child);
-        }
-
-        await _manager.DeleteAsync(item);
+        await TerritoryCommands.DeleteAsync(_manager, item, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The territory was deleted."]);
 
         return RedirectToAction(nameof(Index));

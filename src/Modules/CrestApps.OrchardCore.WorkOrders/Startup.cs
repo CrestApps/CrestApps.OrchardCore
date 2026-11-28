@@ -82,6 +82,7 @@ public sealed class Startup : StartupBase
         services.AddDisplayDriver<WorkOrderSubStatusEditViewModel, WorkOrderSubStatusEditDisplayDriver>();
         services.AddDisplayDriver<WorkOrderSettingRow, WorkOrderSettingRowDisplayDriver>();
         services.AddScoped<WorkOrderLookups>();
+        services.AddScoped<WorkOrderSettingDeletion>();
         services.AddNavigationProvider<WorkOrdersAdminMenu>();
     }
 

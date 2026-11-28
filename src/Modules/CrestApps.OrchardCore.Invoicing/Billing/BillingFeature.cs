@@ -330,7 +330,10 @@ public sealed class BillableItemDisplayDriver : DisplayDriver<BillableItem>
             model.TaxCategoryCode = item.TaxCategoryCode;
             model.IsBilled = item.IsBilled;
             model.InvoiceId = item.InvoiceId;
-            model.PartySearchEndpoint = _links.GetPathByRouteValues(_httpContextAccessor.HttpContext, InvoicePartySearchEndpoints.RouteName, values: null);
+            // The picker's search address, for the page; an editor built without a request (the AI record tools) has none.
+            model.PartySearchEndpoint = _httpContextAccessor.HttpContext is { } httpContext
+                ? _links.GetPathByRouteValues(httpContext, InvoicePartySearchEndpoints.RouteName, values: null)
+                : null;
         }).Location(l => l.Zone("Content", position).Card(card, cardPosition));
 
     /// <inheritdoc/>

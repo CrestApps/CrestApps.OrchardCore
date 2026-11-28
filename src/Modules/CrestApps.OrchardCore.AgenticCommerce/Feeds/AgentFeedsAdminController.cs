@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc.Localization;
 using OrchardCore.Admin;
 using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
-using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.AgenticCommerce.Feeds;
 
@@ -16,9 +15,7 @@ namespace CrestApps.OrchardCore.AgenticCommerce.Feeds;
 public sealed class AgentFeedsAdminController : Controller
 {
     private readonly IAuthorizationService _authorizationService;
-    private readonly ISiteService _siteService;
-    private readonly AgentFeedSftpPusher _sftpPusher;
-    private readonly AcpFeedPusher _acpPusher;
+    private readonly AgentFeedPushService _pushService;
     private readonly INotifier _notifier;
 
     internal readonly IHtmlLocalizer H;
@@ -27,23 +24,17 @@ public sealed class AgentFeedsAdminController : Controller
     /// Initializes a new instance of the <see cref="AgentFeedsAdminController"/> class.
     /// </summary>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="siteService">The site service, for the agent feed settings.</param>
-    /// <param name="sftpPusher">The SFTP push.</param>
-    /// <param name="acpPusher">The ACP feed API push.</param>
+    /// <param name="pushService">The push of the feed over SFTP and to the ACP feed APIs.</param>
     /// <param name="notifier">The notifier.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
     public AgentFeedsAdminController(
         IAuthorizationService authorizationService,
-        ISiteService siteService,
-        AgentFeedSftpPusher sftpPusher,
-        AcpFeedPusher acpPusher,
+        AgentFeedPushService pushService,
         INotifier notifier,
         IHtmlLocalizer<AgentFeedsAdminController> htmlLocalizer)
     {
         _authorizationService = authorizationService;
-        _siteService = siteService;
-        _sftpPusher = sftpPusher;
-        _acpPusher = acpPusher;
+        _pushService = pushService;
         _notifier = notifier;
         H = htmlLocalizer;
     }
@@ -61,15 +52,10 @@ public sealed class AgentFeedsAdminController : Controller
             return Forbid();
         }
 
-        var settings = await _siteService.GetSettingsAsync<AgentFeedSettings>();
-        var pushed = false;
+        var run = await _pushService.PushAsync(HttpContext.RequestAborted);
 
-        if (settings.Sftp?.Enabled == true)
+        if (run.Sftp is { } result)
         {
-            pushed = true;
-
-            var result = await _sftpPusher.PushAsync(HttpContext.RequestAborted);
-
             if (result.Succeeded)
             {
                 await _notifier.SuccessAsync(H["The feed was pushed over SFTP: {0}", result.Message]);
@@ -80,28 +66,19 @@ public sealed class AgentFeedsAdminController : Controller
             }
         }
 
-        if (await _acpPusher.HasTargetsAsync())
+        foreach (var target in run.Targets)
         {
-            pushed = true;
-
-            var targets = (settings.FeedApiTargets ?? []).ToDictionary(target => target.Id ?? string.Empty, target => target.Name, StringComparer.Ordinal);
-
-            foreach (var (targetId, result) in await _acpPusher.PushAllAsync(HttpContext.RequestAborted))
+            if (target.Result.Succeeded)
             {
-                var name = targets.GetValueOrDefault(targetId) ?? targetId;
-
-                if (result.Succeeded)
-                {
-                    await _notifier.SuccessAsync(H["The products were pushed to {0}: {1}", name, result.Message]);
-                }
-                else
-                {
-                    await _notifier.ErrorAsync(H["The products couldn't be pushed to {0}: {1}", name, result.Message]);
-                }
+                await _notifier.SuccessAsync(H["The products were pushed to {0}: {1}", target.Name, target.Result.Message]);
+            }
+            else
+            {
+                await _notifier.ErrorAsync(H["The products couldn't be pushed to {0}: {1}", target.Name, target.Result.Message]);
             }
         }
 
-        if (!pushed)
+        if (!run.Pushed)
         {
             await _notifier.WarningAsync(H["Nothing to push: turn on the SFTP push or enable a feed API, and save, first."]);
         }

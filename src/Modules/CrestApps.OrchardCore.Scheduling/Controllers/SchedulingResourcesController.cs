@@ -105,7 +105,7 @@ public sealed class SchedulingResourcesController : Controller
         }
 
         var isNew = string.IsNullOrEmpty(id);
-        var resource = isNew ? NewResource() : await _resourceStore.FindByIdAsync(id);
+        var resource = isNew ? SchedulingResourceEditorRules.NewResource() : await _resourceStore.FindByIdAsync(id);
 
         if (resource is null)
         {
@@ -135,7 +135,7 @@ public sealed class SchedulingResourcesController : Controller
         }
 
         var isNew = string.IsNullOrEmpty(id);
-        var resource = isNew ? NewResource() : await _resourceStore.FindByIdAsync(id);
+        var resource = isNew ? SchedulingResourceEditorRules.NewResource() : await _resourceStore.FindByIdAsync(id);
 
         if (resource is null)
         {
@@ -197,17 +197,5 @@ public sealed class SchedulingResourcesController : Controller
         }
 
         return RedirectToAction(nameof(Index));
-    }
-
-    private static SchedulingResource NewResource()
-    {
-        var resource = new SchedulingResource();
-
-        foreach (var day in new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday })
-        {
-            resource.WorkingHours.Add(new SchedulingWorkingHours { Day = day, Start = "09:00", End = "17:00" });
-        }
-
-        return resource;
     }
 }

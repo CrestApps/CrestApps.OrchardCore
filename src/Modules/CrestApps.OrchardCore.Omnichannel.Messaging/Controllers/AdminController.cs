@@ -251,19 +251,11 @@ public sealed class AdminController : Controller
             return Forbid();
         }
 
-        var endpoint = string.IsNullOrEmpty(model.EndpointId) ? null : await _endpointManager.FindByIdAsync(model.EndpointId);
-        // An address can be used on several channels; the composer sends on the first messaging channel it has.
-        var channel = endpoint is null ? null : _channelResolver.GetAll().FirstOrDefault(candidate => endpoint.HasCapability(candidate.Name));
-
-        var addresses = MessagingRecipients.Parse(model.Recipients)
-            .Concat(model.ContactAddresses ?? [])
-            .Where(address => !string.IsNullOrWhiteSpace(address))
-            .ToList();
-
-        var recipients = addresses
-            .Select(address => channel?.NormalizeAddress(address) ?? address.Trim())
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var check = await MessagingRecipientRules.CheckAsync(
+            _endpointManager, _channelResolver, _contactSearch, _workspaceBuilder, User, model.EndpointId, model.Recipients, model.ContactAddresses, HttpContext.RequestAborted);
+        var endpoint = check.Endpoint;
+        var channel = check.Channel;
+        var recipients = check.Recipients.ToList();
 
         if (endpoint is null || channel is null)
         {
@@ -271,24 +263,15 @@ public sealed class AdminController : Controller
         }
         else
         {
-            var invalid = recipients.Where(address => !channel.IsValidAddress(address)).ToArray();
-
-            if (invalid.Length > 0)
+            if (check.InvalidAddresses.Count > 0)
             {
-                ModelState.AddModelError(nameof(model.Recipients), S["These are not valid {0} addresses: {1}", channel.DisplayName, string.Join(", ", invalid)]);
+                ModelState.AddModelError(nameof(model.Recipients), S["These are not valid {0} addresses: {1}", channel.DisplayName, string.Join(", ", check.InvalidAddresses)]);
             }
-            else
+            else if (check.UnlistedAddresses.Count > 0)
             {
-                // An address no contact owns is held to the stricter rule for typed addresses, so a number is never
-                // guessed into a country.
-                var unlisted = await _contactSearch.FindInvalidNewAddressesAsync(addresses, channel.Name, HttpContext.RequestAborted);
-
-                if (unlisted.Count > 0)
-                {
-                    ModelState.AddModelError(nameof(model.Recipients), channel.Capabilities.AddressesArePhoneNumbers
-                        ? S["These numbers are not in your contacts, so they must be in international format, for example +12015550123: {0}", string.Join(", ", unlisted)]
-                        : S["These addresses are not in your contacts and are not valid {0} addresses: {1}", channel.DisplayName, string.Join(", ", unlisted)]);
-                }
+                ModelState.AddModelError(nameof(model.Recipients), channel.Capabilities.AddressesArePhoneNumbers
+                    ? S["These numbers are not in your contacts, so they must be in international format, for example +12015550123: {0}", string.Join(", ", check.UnlistedAddresses)]
+                    : S["These addresses are not in your contacts and are not valid {0} addresses: {1}", channel.DisplayName, string.Join(", ", check.UnlistedAddresses)]);
             }
 
             if (recipients.Count > 1 && !channel.Capabilities.SupportsBroadcast)
@@ -314,19 +297,14 @@ public sealed class AdminController : Controller
 
         // A recipient who already has a conversation is written to in that conversation, so the composer is held to
         // the same rule as replying in it.
-        if (channel is not null && recipients.Count > 0)
+        if (check.UnreachableRecipients.Count > 0)
         {
-            var unreachable = await _workspaceBuilder.FindUnreachableRecipientsAsync(User, channel.Name, recipients, HttpContext.RequestAborted);
+            _logger.LogWarning(
+                "Refused a new message from user '{UserId}' to {Count} recipient(s) whose conversation they may not send on.",
+                User.FindFirstValue(ClaimTypes.NameIdentifier).SanitizeLogValue(),
+                check.UnreachableRecipients.Count);
 
-            if (unreachable.Count > 0)
-            {
-                _logger.LogWarning(
-                    "Refused a new message from user '{UserId}' to {Count} recipient(s) whose conversation they may not send on.",
-                    User.FindFirstValue(ClaimTypes.NameIdentifier).SanitizeLogValue(),
-                    unreachable.Count);
-
-                ModelState.AddModelError(nameof(model.Recipients), S["These recipients already have a conversation you cannot send on, handled by a colleague or another queue: {0}", string.Join(", ", unreachable)]);
-            }
+            ModelState.AddModelError(nameof(model.Recipients), S["These recipients already have a conversation you cannot send on, handled by a colleague or another queue: {0}", string.Join(", ", check.UnreachableRecipients)]);
         }
 
         if (!ModelState.IsValid)

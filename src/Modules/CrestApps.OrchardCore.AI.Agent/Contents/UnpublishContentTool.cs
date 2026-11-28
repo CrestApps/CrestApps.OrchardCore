@@ -64,13 +64,20 @@ public sealed class UnpublishContentTool : AIFunction
             return "Unable to find a contentItemId argument in the function arguments.";
         }
 
-        var contentItem = await contentManager.GetAsync(contentItemId);
+        // The content manager unpublishes from the latest version, which finds the published one; given the published
+        // version of an item that also has a draft, it throws "Not the latest version".
+        var contentItem = await contentManager.GetAsync(contentItemId, VersionOptions.Latest);
 
         if (contentItem is null)
         {
             logger.LogWarning("AI tool '{ToolName}': Unable to find a content item with ContentItemId '{ContentItemId}'.", TheName, contentItemId);
 
             return $"Unable to find a content item that match the ContentItemId: {contentItemId}";
+        }
+
+        if (!contentItem.Published && await contentManager.GetAsync(contentItemId, VersionOptions.Published) is null)
+        {
+            return $"Nothing was changed: the content item {contentItemId} is not published.";
         }
 
         await contentManager.UnpublishAsync(contentItem);

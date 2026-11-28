@@ -1,6 +1,5 @@
 using CrestApps.OrchardCore.ServiceLevels.Services;
 using CrestApps.OrchardCore.WorkOrders.Core;
-using CrestApps.OrchardCore.WorkOrders.Core.Indexes;
 using CrestApps.OrchardCore.WorkOrders.Core.Services;
 using CrestApps.OrchardCore.WorkOrders.Models;
 using CrestApps.OrchardCore.WorkOrders.Services;
@@ -18,7 +17,6 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Modules;
 using OrchardCore.Navigation;
 using YesSql;
-using YesSql.Services;
 
 namespace CrestApps.OrchardCore.WorkOrders.Controllers;
 
@@ -30,12 +28,12 @@ public sealed class WorkOrdersController : Controller
     /// <summary>
     /// The status filter for the work orders still to finish.
     /// </summary>
-    public const string OpenFilter = "open";
+    public const string OpenFilter = WorkOrderListQuery.OpenFilter;
 
     /// <summary>
     /// The status filter for every work order.
     /// </summary>
-    public const string AllFilter = "all";
+    public const string AllFilter = WorkOrderListQuery.AllFilter;
 
     private readonly IAuthorizationService _authorizationService;
     private readonly WorkOrderService _service;
@@ -118,52 +116,22 @@ public sealed class WorkOrdersController : Controller
 
         var types = (await _types.GetAllAsync()).OrderBy(type => type.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
         var subStatuses = (await _subStatuses.GetAllAsync()).ToDictionary(item => item.ItemId, item => item.Name, StringComparer.Ordinal);
-        var query = _session.Query<WorkOrder, WorkOrderIndex>(collection: WorkOrdersConstants.CollectionName);
-
-        if (form.Status == OpenFilter)
-        {
-            query = query.Where(index => index.IsOpen);
-        }
-        else if (Enum.TryParse<WorkOrderStatus>(form.Status, out var status))
-        {
-            var value = status.ToString();
-
-            query = query.Where(index => index.Status == value);
-        }
-
-        if (!string.IsNullOrEmpty(form.TypeId))
-        {
-            query = query.Where(index => index.TypeId == form.TypeId);
-        }
-
-        if (Enum.TryParse<WorkOrderPriority>(form.Priority, out var priority))
-        {
-            var value = priority.ToString();
-
-            query = query.Where(index => index.Priority == value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(form.Q))
-        {
-            var q = form.Q.Trim();
-
-            query = query.Where(index => index.Number.Contains(q) || index.Summary.Contains(q));
-        }
 
         if (!string.IsNullOrEmpty(form.AssetId))
         {
-            var ids = (await _session.QueryIndex<WorkOrderAssetIndex>(index => index.AssetId == form.AssetId, collection: WorkOrdersConstants.CollectionName).ListAsync(HttpContext.RequestAborted))
-                .Select(index => index.WorkOrderId)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-
-            query = query.Where(index => index.ItemId.IsIn(ids));
             form.AssetName = (await _lookups.AssetsAsync(HttpContext.RequestAborted)).FirstOrDefault(option => option.Value == form.AssetId)?.Text ?? form.AssetId;
         }
 
         var pager = new Pager(pagerParameters, pagerOptions.Value);
-        var count = await query.CountAsync(HttpContext.RequestAborted);
-        var page = await query.OrderByDescending(index => index.CreatedUtc).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync(HttpContext.RequestAborted);
+        var filter = new WorkOrderListFilter
+        {
+            Status = form.Status,
+            TypeId = form.TypeId,
+            Priority = form.Priority,
+            Search = form.Q,
+            AssetId = form.AssetId,
+        };
+        var (count, page) = await WorkOrderListQuery.PageAsync(_session, filter, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
         var typeNames = types.ToDictionary(type => type.ItemId, type => type.Name, StringComparer.Ordinal);
         var now = _clock.UtcNow;
 

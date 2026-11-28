@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text;
 using CrestApps.OrchardCore.Calendars.Core.ICalendar;
 using CrestApps.OrchardCore.Calendars.Core.Services;
@@ -126,7 +125,7 @@ public sealed class CalendarFeedsController : Controller
             return Forbid();
         }
 
-        calendar.FeedToken = remove ? null : Convert.ToHexString(RandomNumberGenerator.GetBytes(24)).ToLowerInvariant();
+        CalendarFeedAddress.Reset(calendar, remove);
 
         await _calendarService.UpdateAsync(calendar, new CalendarChangeOptions { Actor = CalendarUser.GetId(User) });
         await _notifier.SuccessAsync(remove ? H["The subscription address has been removed."] : H["A new subscription address has been made. The old one no longer works."]);

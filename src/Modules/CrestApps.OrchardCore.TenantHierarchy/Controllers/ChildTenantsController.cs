@@ -119,7 +119,7 @@ public sealed class ChildTenantsController : Controller
         options ??= new ChildTenantListOptions();
 
         var all = await _broker.ListChildrenAsync();
-        var filtered = Filter(all, options).ToList();
+        var filtered = ChildTenantListFilter.Apply(all, options).ToList();
         var pager = new Pager(pagerParameters, pagerOptions.Value);
         var routeData = new RouteData();
 
@@ -849,36 +849,6 @@ public sealed class ChildTenantsController : Controller
             .Select(recipe => new SelectListItem(recipe.DisplayName ?? recipe.Name, recipe.Name, recipe.Name == model.RecipeName))
             .ToList();
         model.RecipeDescriptions = recipes.ToDictionary(recipe => recipe.Name, recipe => recipe.Description ?? string.Empty);
-    }
-
-    private static IEnumerable<ChildTenantInfo> Filter(IEnumerable<ChildTenantInfo> items, ChildTenantListOptions options)
-    {
-        if (!string.IsNullOrWhiteSpace(options.Search))
-        {
-            var search = options.Search.Trim();
-            items = items.Where(item =>
-                (item.Entry.DisplayName?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (item.Entry.Host?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (item.Entry.Description?.Contains(search, StringComparison.OrdinalIgnoreCase) ?? false));
-        }
-
-        items = options.State switch
-        {
-            ChildTenantStateFilter.Running => items.Where(item => item.State == ChildTenantRuntimeState.Running && item.Entry.Status == ChildTenantStatus.Ready),
-            ChildTenantStateFilter.Suspended => items.Where(item => item.State == ChildTenantRuntimeState.Suspended && item.Entry.Status == ChildTenantStatus.Ready),
-            ChildTenantStateFilter.SettingUp => items.Where(item => item.Entry.Status == ChildTenantStatus.Provisioning || item.State == ChildTenantRuntimeState.Initializing),
-            ChildTenantStateFilter.Failed => items.Where(item => item.Entry.Status == ChildTenantStatus.Failed),
-            ChildTenantStateFilter.PendingRemoval => items.Where(item => item.Entry.Status is ChildTenantStatus.PendingRemoval or ChildTenantStatus.Removing),
-            ChildTenantStateFilter.ChangedByPlatform => items.Where(item => item.State == ChildTenantRuntimeState.ChangedByPlatform),
-            _ => items,
-        };
-
-        return options.OrderBy switch
-        {
-            ChildTenantSort.Newest => items.OrderByDescending(item => item.Entry.CreatedUtc),
-            ChildTenantSort.State => items.OrderBy(item => item.State).ThenBy(item => item.Entry.DisplayName, StringComparer.CurrentCultureIgnoreCase),
-            _ => items.OrderBy(item => item.Entry.DisplayName, StringComparer.CurrentCultureIgnoreCase),
-        };
     }
 
     private string GetScheme()

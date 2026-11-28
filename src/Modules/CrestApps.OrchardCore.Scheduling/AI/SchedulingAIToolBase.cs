@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
+using CrestApps.Core.Security;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Scheduling.Core.Services;
 using CrestApps.OrchardCore.Scheduling.Models;
@@ -52,9 +53,24 @@ public abstract class SchedulingAIToolBase : AIFunction
     /// <returns><see langword="true"/> when they may.</returns>
     protected static async Task<bool> CanManageAsync(IServiceProvider services)
     {
-        var user = services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
+        var user = GetCaller(services);
 
         return user?.Identity?.IsAuthenticated == true && await services.GetRequiredService<IAuthorizationService>().AuthorizeAsync(user, SchedulingPermissions.ManageAppointments);
+    }
+
+    /// <summary>
+    /// Gets the person using the AI. The chat hubs publish them through <see cref="IUserAccessor"/> for the whole
+    /// invocation, where there is no request; the request's user is the fallback.
+    /// </summary>
+    /// <param name="services">The request's services.</param>
+    /// <returns>The person, or <see langword="null"/> when there is none.</returns>
+    private static ClaimsPrincipal GetCaller(IServiceProvider services)
+    {
+        var published = services.GetService<IUserAccessor>()?.User;
+
+        return published?.Identity?.IsAuthenticated == true
+            ? published
+            : services.GetService<IHttpContextAccessor>()?.HttpContext?.User;
     }
 
     /// <summary>

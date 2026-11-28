@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Managements.Services;
 using CrestApps.OrchardCore.Omnichannel.Managements.ViewModels;
 using Microsoft.Extensions.Localization;
 using OrchardCore;
@@ -57,9 +58,7 @@ internal sealed class LeadStatusDisplayDriver : DisplayDriver<LeadStatus>
             model.Order = entry.Order;
             model.IsDefault = entry.IsDefault;
             model.IsContacted = entry.IsContacted;
-            model.Kind = entry.IsConverted
-                ? LeadStatusKind.Converted
-                : entry.IsClosed ? LeadStatusKind.Closed : LeadStatusKind.Open;
+            model.Kind = LeadStatusKinds.GetKind(entry);
         }).Location(l => l.Zone("Content", "1").Card(S["General"], "1"));
     }
 
@@ -76,14 +75,7 @@ internal sealed class LeadStatusDisplayDriver : DisplayDriver<LeadStatus>
 
         entry.Description = model.Description?.Trim();
         entry.Order = model.Order;
-        entry.IsConverted = model.Kind == LeadStatusKind.Converted;
-        entry.IsClosed = model.Kind != LeadStatusKind.Open;
-
-        // The default box is hidden, not cleared, when another type is picked, so it only counts for an open status.
-        entry.IsDefault = model.IsDefault && model.Kind == LeadStatusKind.Open;
-
-        // A lead that was contacted moves out of the default status, so the contacted status is open and not the default.
-        entry.IsContacted = model.IsContacted && model.Kind == LeadStatusKind.Open && !entry.IsDefault;
+        LeadStatusKinds.Apply(entry, model.Kind, model.IsDefault, model.IsContacted);
 
         return Edit(entry, context);
     }

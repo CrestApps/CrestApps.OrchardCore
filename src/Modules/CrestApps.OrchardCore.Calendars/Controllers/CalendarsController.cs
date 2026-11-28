@@ -323,38 +323,14 @@ public sealed class CalendarsController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    private async Task<Calendar> NewCalendarAsync(string type)
+    private Task<Calendar> NewCalendarAsync(string type)
     {
-        var calendar = await _calendarService.NewAsync(type);
-
-        if (calendar?.OwnerKind == CalendarOwnerKind.User)
-        {
-            calendar.OwnerId = CalendarUser.GetId(User);
-            calendar.Name = User.Identity?.Name;
-        }
-
-        return calendar;
+        return CalendarCreation.NewAsync(_calendarService, type, User);
     }
 
     private void EnsureCreatorCanManage(Calendar calendar)
     {
-        var userId = CalendarUser.GetId(User);
-
-        if (string.IsNullOrEmpty(userId) || (calendar.OwnerKind == CalendarOwnerKind.User && calendar.OwnerId == userId))
-        {
-            return;
-        }
-
-        if (!calendar.Shares.Any(share => share.PrincipalKind == CalendarPrincipalKind.User && share.PrincipalId == userId && share.Access == CalendarAccessLevel.Manage))
-        {
-            calendar.Shares.Add(new CalendarShare
-            {
-                PrincipalKind = CalendarPrincipalKind.User,
-                PrincipalId = userId,
-                DisplayName = User.Identity?.Name,
-                Access = CalendarAccessLevel.Manage,
-            });
-        }
+        CalendarCreation.EnsureCreatorCanManage(calendar, User);
     }
 
     private string GetNewTitle(string type)

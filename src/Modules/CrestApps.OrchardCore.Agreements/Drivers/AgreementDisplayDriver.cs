@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Agreements.Core.Services;
 using CrestApps.OrchardCore.Agreements.Models;
 using CrestApps.OrchardCore.Agreements.ViewModels;
 using CrestApps.OrchardCore.Core.Services;
@@ -90,20 +91,18 @@ internal sealed class AgreementDisplayDriver : DisplayDriver<Agreement>
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        // A new end date, or a pause, gives the agreement a new notice.
-        if (agreement.EndDate != model.EndDate || model.Status != AgreementStatus.Active)
+        // The editor's rules, which the tools that change agreements without the editor apply too.
+        AgreementEditorRules.ApplyGeneralFields(agreement, new AgreementGeneralFields
         {
-            agreement.ExpiringNotifiedUtc = null;
-        }
-
-        agreement.Name = model.Name?.Trim();
-        agreement.Status = model.Status;
-        agreement.AccountId = string.IsNullOrWhiteSpace(model.AccountId) ? null : model.AccountId.Trim();
-        agreement.StartDate = model.StartDate;
-        agreement.EndDate = model.EndDate;
-        agreement.TimeZoneId = string.IsNullOrWhiteSpace(model.TimeZoneId) ? null : model.TimeZoneId;
-        agreement.ExpiringNoticeDays = model.ExpiringNoticeDays;
-        agreement.Notes = string.IsNullOrWhiteSpace(model.Notes) ? null : model.Notes.Trim();
+            Name = model.Name,
+            Status = model.Status,
+            AccountId = model.AccountId,
+            StartDate = model.StartDate,
+            EndDate = model.EndDate,
+            TimeZoneId = model.TimeZoneId,
+            ExpiringNoticeDays = model.ExpiringNoticeDays,
+            Notes = model.Notes,
+        });
 
         return Edit(agreement, context);
     }

@@ -316,23 +316,7 @@ internal sealed class OmnichannelActivityDisplayDriver : DisplayDriver<Omnichann
             }
             else
             {
-                // Derive valid dispositions from subject actions.
-                var allActions = await _actionCatalog.GetAllAsync();
-                var subjectDispositionIds = allActions
-                    .Where(a => string.Equals(a.SubjectContentType, activity.SubjectContentType, StringComparison.OrdinalIgnoreCase))
-                    .Select(a => a.DispositionId)
-                    .Where(id => !string.IsNullOrEmpty(id))
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-
-                if (!string.IsNullOrEmpty(activity.DispositionId))
-                {
-                    subjectDispositionIds.Add(activity.DispositionId);
-                }
-
-                var dispositions = await _dispositionsCatalog.GetAsync(subjectDispositionIds);
-
-                var disposition = dispositions.FirstOrDefault(d => d.ItemId == processModel.DispositionId);
+                var disposition = await SubjectDispositionRules.FindAllowedAsync(_actionCatalog, _dispositionsCatalog, activity, processModel.DispositionId);
 
                 if (disposition == null)
                 {

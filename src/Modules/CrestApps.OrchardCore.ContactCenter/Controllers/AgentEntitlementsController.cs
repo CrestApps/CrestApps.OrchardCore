@@ -173,16 +173,14 @@ public sealed class AgentEntitlementsController : Controller
         {
             var userName = await _userManager.GetUserNameAsync(user);
             var entitlements = ReadEntitlements(model);
-            var agent = await _agentManager.NewAsync();
-            agent.UserId = userId;
-            agent.UserName = userName;
-            agent.DisplayName = userName;
-            agent.Name = userId;
-            agent.AllowedQueueIds = model.AllowedQueueIds;
-            agent.AllowedCampaignIds = model.AllowedCampaignIds;
-            AgentEntitlementUtilities.ApplySkills(agent, skills: null, entitlements.SkillProficiencies);
-            agent.QueueMemberships = AgentEntitlementUtilities.NormalizeQueueMemberships(entitlements.QueueMemberships);
-            agent.CreatedUtc = _clock.UtcNow;
+            var agent = await AgentProfileFactory.NewAsync(_agentManager, userId, userName, new AgentManagedConfiguration
+            {
+                DisplayName = userName,
+                AllowedQueueIds = model.AllowedQueueIds,
+                AllowedCampaignIds = model.AllowedCampaignIds,
+                SkillProficiencies = entitlements.SkillProficiencies,
+                QueueMemberships = entitlements.QueueMemberships,
+            }, _clock.UtcNow);
 
             await _agentManager.CreateAsync(agent);
             await _notifier.SuccessAsync(H["Agent entitlements have been created successfully."]);

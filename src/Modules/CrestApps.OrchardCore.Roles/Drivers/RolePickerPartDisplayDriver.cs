@@ -1,4 +1,5 @@
-﻿using CrestApps.OrchardCore.Roles.Core.Models;
+﻿using CrestApps.OrchardCore.Roles.Core;
+using CrestApps.OrchardCore.Roles.Core.Models;
 using CrestApps.OrchardCore.Roles.ViewModels;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -62,23 +63,19 @@ internal sealed class RolePickerPartDisplayDriver : ContentPartDisplayDriver<Rol
 
         var settings = context.TypePartDefinition.GetSettings<RolePickerPartSettings>();
 
-        var selectedRoles = (model.Roles ?? []).Except(settings.ExcludedRoles ?? []).ToArray();
+        var selectedRoles = RolePickerRoleSelection.Select(settings, model.Roles);
 
-        if (settings.Required && selectedRoles.Length == 0)
+        switch (RolePickerRoleSelection.Check(settings, selectedRoles))
         {
-            if (settings.AllowSelectMultiple)
-            {
+            case RolePickerSelectionProblem.AtLeastOneRoleRequired:
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Roles), S["You must select at least one role."]);
-            }
-            else
-            {
+                break;
+            case RolePickerSelectionProblem.RoleRequired:
                 context.Updater.ModelState.AddModelError(Prefix, nameof(model.Roles), S["You must select a role."]);
-            }
-        }
-
-        if (!settings.AllowSelectMultiple && selectedRoles.Length > 1)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Roles), S["Only one roles is allowed."]);
+                break;
+            case RolePickerSelectionProblem.OnlyOneRoleAllowed:
+                context.Updater.ModelState.AddModelError(Prefix, nameof(model.Roles), S["Only one roles is allowed."]);
+                break;
         }
 
         part.RoleNames = selectedRoles;

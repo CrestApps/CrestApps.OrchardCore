@@ -1,5 +1,4 @@
 using CrestApps.Core.Services;
-using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Telephony;
 using CrestApps.OrchardCore.Telnyx.Services;
@@ -124,7 +123,12 @@ public sealed class TelnyxNumbersController : Controller
             return Forbid();
         }
 
-        var (result, _, status) = await _client.OrderNumbersAsync([phoneNumber], cancellationToken: HttpContext.RequestAborted);
+        var purchase = await TelnyxNumberPurchase.BuyAsync(
+            _client,
+            HttpContext.RequestServices.GetService<ICatalogManager<OmnichannelChannelEndpoint>>(),
+            phoneNumber,
+            HttpContext.RequestAborted);
+        var result = purchase.Result;
 
         if (!result.Succeeded)
         {
@@ -133,22 +137,7 @@ public sealed class TelnyxNumbersController : Controller
             return RedirectToAction(nameof(Search));
         }
 
-        if (HttpContext.RequestServices.GetService<ICatalogManager<OmnichannelChannelEndpoint>>() is { } endpoints)
-        {
-            var endpoint = await endpoints.NewAsync(cancellationToken: HttpContext.RequestAborted);
-            endpoint.DisplayText = phoneNumber;
-            endpoint.Value = phoneNumber;
-            endpoint.Channel = OmnichannelConstants.Channels.Phone;
-            endpoint.Capabilities = [OmnichannelConstants.Channels.Phone];
-            endpoint.ProviderName = TelnyxConstants.ProviderTechnicalName;
-
-            if ((await endpoints.ValidateAsync(endpoint, HttpContext.RequestAborted)).Succeeded)
-            {
-                await endpoints.CreateAsync(endpoint, HttpContext.RequestAborted);
-            }
-        }
-
-        await _notifier.SuccessAsync(H["{0} was ordered ({1}) and added as a phone address.", phoneNumber, status]);
+        await _notifier.SuccessAsync(H["{0} was ordered ({1}) and added as a phone address.", phoneNumber, purchase.Status]);
 
         return RedirectToAction(nameof(Index));
     }

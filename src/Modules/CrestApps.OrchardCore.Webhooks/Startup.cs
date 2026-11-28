@@ -9,6 +9,7 @@ using CrestApps.OrchardCore.Webhooks.Drivers;
 using CrestApps.OrchardCore.Webhooks.Navigation;
 using CrestApps.OrchardCore.Webhooks.ViewModels;
 using CrestApps.OrchardCore.Webhooks.Recipes;
+using CrestApps.OrchardCore.Webhooks.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using OrchardCore.BackgroundTasks;
@@ -34,6 +35,7 @@ public sealed class Startup : StartupBase
     public override void ConfigureServices(IServiceCollection services)
     {
         services.AddWebhooks();
+        services.AddScoped<WebhookSubscriptionCommands>();
 
         services
             .AddDataMigration<WebhookMigrations>()

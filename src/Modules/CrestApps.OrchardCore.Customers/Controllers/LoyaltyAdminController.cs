@@ -57,15 +57,17 @@ public sealed class LoyaltyAdminController : Controller
             return NotFound();
         }
 
-        if (string.IsNullOrEmpty(customer.UserId))
+        var problem = CustomerBalanceRules.CheckPoints(customer, points, reason);
+
+        if (problem == CustomerBalanceProblem.NoAccount)
         {
             await _notifier.ErrorAsync(H["Only customers with an account can be given points."]);
         }
-        else if (points is null or 0)
+        else if (problem == CustomerBalanceProblem.NoAmount)
         {
             await _notifier.ErrorAsync(H["Enter points to give, or a negative number to take away."]);
         }
-        else if (string.IsNullOrWhiteSpace(reason))
+        else if (problem == CustomerBalanceProblem.NoReason)
         {
             await _notifier.ErrorAsync(H["Say why the points change. It's kept with their activity."]);
         }

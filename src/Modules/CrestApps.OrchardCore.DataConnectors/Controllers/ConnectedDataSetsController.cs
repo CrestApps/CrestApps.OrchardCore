@@ -40,7 +40,7 @@ public sealed class ConnectedDataSetsController : Controller
     private readonly IConnectedDataSetStore _dataSetStore;
     private readonly IDataConnectionStore _connectionStore;
     private readonly IDataSetRefreshRunStore _runStore;
-    private readonly IDataSetRowStore _rowStore;
+    private readonly DataConnectorCommands _commands;
     private readonly IDataConnectorManager _connectorManager;
     private readonly ConnectedDataReader _reader;
     private readonly INotifier _notifier;
@@ -60,7 +60,7 @@ public sealed class ConnectedDataSetsController : Controller
     /// <param name="dataSetStore">The data sets.</param>
     /// <param name="connectionStore">The connections.</param>
     /// <param name="runStore">The refreshes.</param>
-    /// <param name="rowStore">The rows of imported data sets.</param>
+    /// <param name="commands">The actions that change connections and data sets.</param>
     /// <param name="connectorManager">The registered connectors.</param>
     /// <param name="reader">The reader of external systems.</param>
     /// <param name="notifier">The notifier.</param>
@@ -76,7 +76,7 @@ public sealed class ConnectedDataSetsController : Controller
         IConnectedDataSetStore dataSetStore,
         IDataConnectionStore connectionStore,
         IDataSetRefreshRunStore runStore,
-        IDataSetRowStore rowStore,
+        DataConnectorCommands commands,
         IDataConnectorManager connectorManager,
         ConnectedDataReader reader,
         INotifier notifier,
@@ -92,7 +92,7 @@ public sealed class ConnectedDataSetsController : Controller
         _dataSetStore = dataSetStore;
         _connectionStore = connectionStore;
         _runStore = runStore;
-        _rowStore = rowStore;
+        _commands = commands;
         _connectorManager = connectorManager;
         _reader = reader;
         _notifier = notifier;
@@ -442,9 +442,7 @@ public sealed class ConnectedDataSetsController : Controller
             return NotFound();
         }
 
-        await _rowStore.DeleteAllAsync(dataSet.ItemId, cancellationToken: HttpContext.RequestAborted);
-        await _runStore.PruneAsync(dataSet.ItemId, 0, HttpContext.RequestAborted);
-        await _dataSetStore.DeleteAsync(dataSet, HttpContext.RequestAborted);
+        await _commands.DeleteDataSetAsync(dataSet, HttpContext.RequestAborted);
         await _notifier.SuccessAsync(H["The data set was deleted. Reports and data pipelines that read it will find it missing."]);
 
         return RedirectToAction(nameof(Index));
@@ -548,9 +546,7 @@ public sealed class ConnectedDataSetsController : Controller
 
     private async Task RequestRefreshAsync(ConnectedDataSet dataSet)
     {
-        dataSet.Import ??= new DataSetImportState();
-        dataSet.Import.RefreshRequestedUtc = _clock.UtcNow;
-        await _dataSetStore.UpdateAsync(dataSet, HttpContext.RequestAborted);
+        await _commands.RequestRefreshAsync(dataSet, HttpContext.RequestAborted);
 
         var state = (dataSet.ItemId, User.Identity?.Name, TraceParent: TraceContextPropagation.Capture());
 

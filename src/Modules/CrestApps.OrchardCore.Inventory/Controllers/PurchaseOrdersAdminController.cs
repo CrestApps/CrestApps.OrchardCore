@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Security.Claims;
 using CrestApps.Core;
 using CrestApps.OrchardCore.Core;
@@ -7,6 +6,7 @@ using CrestApps.OrchardCore.Inventory.Core;
 using CrestApps.OrchardCore.Inventory.Core.Models;
 using CrestApps.OrchardCore.Inventory.Core.Services;
 using CrestApps.OrchardCore.Inventory.Endpoints;
+using CrestApps.OrchardCore.Inventory.Services;
 using CrestApps.OrchardCore.Inventory.ViewModels;
 using CrestApps.OrchardCore.Numbering;
 using CrestApps.OrchardCore.Products.Core.Services;
@@ -34,13 +34,6 @@ namespace CrestApps.OrchardCore.Inventory.Controllers;
 [Feature(InventoryConstants.Features.PurchaseOrders)]
 public sealed class PurchaseOrdersAdminController : Controller
 {
-    private const int MaxLines = 500;
-
-    private const string PurchaseOrderNumberSeries = "Inventory.PurchaseOrder";
-    private const int MaxQuantity = 1_000_000;
-    private const int LowStockScanPageSize = 500;
-    private const int LowStockScanMaxItems = 5_000;
-
     private readonly IPurchaseOrderStore _orders;
     private readonly IStockItemStore _items;
     private readonly IInventoryLocationService _locations;
@@ -197,7 +190,7 @@ public sealed class PurchaseOrdersAdminController : Controller
         var order = new PurchaseOrder
         {
             ItemId = UniqueId.GenerateId(),
-            Number = await NewNumberAsync(now),
+            Number = await PurchaseOrderRules.NewNumberAsync(_numberSequence, now, HttpContext.RequestAborted),
             Status = PurchaseOrderStatus.Draft,
             CreatedUtc = now,
             ModifiedUtc = now,
@@ -219,7 +212,7 @@ public sealed class PurchaseOrdersAdminController : Controller
 
         if (model.StartWithLowStock)
         {
-            order.Lines = await LowStockLinesAsync(order.LocationId);
+            order.Lines = await PurchaseOrderRules.LowStockLinesAsync(_items, order.LocationId, HttpContext.RequestAborted);
         }
 
         await _orders.CreateAsync(order, HttpContext.RequestAborted);
@@ -272,7 +265,7 @@ public sealed class PurchaseOrdersAdminController : Controller
             return NotFound();
         }
 
-        if (order.Status is PurchaseOrderStatus.Received or PurchaseOrderStatus.Canceled)
+        if (!PurchaseOrderRules.CanChange(order))
         {
             await _notifier.WarningAsync(H["A purchase order that's received or canceled can't be changed."]);
 
@@ -352,7 +345,7 @@ public sealed class PurchaseOrdersAdminController : Controller
             ? order.Lines.ToDictionary(line => line.LineId, line => line.Outstanding)
             : (model?.Lines ?? []).Where(line => !string.IsNullOrEmpty(line?.LineId) && line.Receive > 0)
                 .GroupBy(line => line.LineId)
-                .ToDictionary(group => group.Key, group => Math.Min(MaxQuantity, group.Sum(line => line.Receive.Value)));
+                .ToDictionary(group => group.Key, group => Math.Min(PurchaseOrderRules.MaxQuantity, group.Sum(line => line.Receive.Value)));
 
         var received = await _receiver.ReceiveAsync(order, quantities, StockActor.ForUser(User), HttpContext.RequestAborted);
 
@@ -399,7 +392,7 @@ public sealed class PurchaseOrdersAdminController : Controller
             return NotFound();
         }
 
-        if (order.Status is PurchaseOrderStatus.Received or PurchaseOrderStatus.Canceled)
+        if (!PurchaseOrderRules.CanChange(order))
         {
             return RedirectToAction(nameof(Edit), new { purchaseOrderId });
         }
@@ -450,136 +443,38 @@ public sealed class PurchaseOrdersAdminController : Controller
 
     private async Task ApplyDetailsAsync(PurchaseOrder order, PurchaseOrderEditViewModel model)
     {
-        if (string.IsNullOrWhiteSpace(model.Supplier))
+        var supplierGiven = PurchaseOrderRules.ApplyDetails(order, new PurchaseOrderDetails
+        {
+            Supplier = model.Supplier,
+            SupplierEmail = model.SupplierEmail,
+            LocationId = model.LocationId,
+            Currency = model.Currency,
+            ExpectedDate = model.ExpectedDate,
+            Note = model.Note,
+        }, await _locations.GetLocationsAsync());
+
+        if (!supplierGiven)
         {
             ModelState.AddModelError(nameof(model.Supplier), S["Enter who the stock is ordered from."]);
-        }
-
-        order.Supplier = model.Supplier?.Trim();
-        order.SupplierEmail = string.IsNullOrWhiteSpace(model.SupplierEmail) ? null : model.SupplierEmail.Trim();
-        order.Note = string.IsNullOrWhiteSpace(model.Note) ? null : model.Note.Trim();
-        order.Currency = string.IsNullOrWhiteSpace(model.Currency) ? order.Currency : model.Currency.Trim().ToUpperInvariant();
-
-        // Noon UTC, so the date reads the same in every time zone.
-        order.ExpectedUtc = model.ExpectedDate is { } expected ? DateTime.SpecifyKind(expected.Date.AddHours(12), DateTimeKind.Utc) : null;
-
-        // Where the stock arrives can change until some of it has.
-        if (order.Received == 0 && (await _locations.GetLocationsAsync()).Any(location => location.LocationId == model.LocationId))
-        {
-            order.LocationId = model.LocationId;
         }
     }
 
     private async Task ApplyLinesAsync(PurchaseOrder order, PurchaseOrderEditViewModel model)
     {
-        foreach (var posted in model.Lines ?? [])
+        var problems = await PurchaseOrderRules.ApplyLinesAsync(
+            order,
+            (model.Lines ?? []).Where(posted => posted is not null).Select(posted => new PurchaseOrderLineChange(posted.LineId, posted.Ordered, posted.UnitCost, posted.Remove)),
+            model.AddStockItemIds,
+            _items,
+            HttpContext.RequestAborted);
+
+        foreach (var problem in problems)
         {
-            if (order.Lines.FirstOrDefault(line => line.LineId == posted?.LineId) is not { } line)
-            {
-                continue;
-            }
-
-            // A draft's lines can be removed and their quantities changed; once ordered, only the costs.
-            if (order.IsDraft && posted.Remove)
-            {
-                order.Lines.Remove(line);
-
-                continue;
-            }
-
-            if (order.IsDraft)
-            {
-                if (posted.Ordered is not (> 0 and <= MaxQuantity))
-                {
-                    ModelState.AddModelError(nameof(model.Lines), S["Enter how many of {0} to order, or remove it.", line.Title]);
-                }
-                else
-                {
-                    line.Ordered = posted.Ordered.Value;
-                }
-            }
-
-            if (posted.UnitCost is < 0)
-            {
-                ModelState.AddModelError(nameof(model.Lines), S["A cost can't be negative."]);
-            }
-            else
-            {
-                line.UnitCost = posted.UnitCost ?? 0;
-            }
-        }
-
-        if (!order.IsDraft)
-        {
-            return;
-        }
-
-        foreach (var stockItemId in (model.AddStockItemIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal))
-        {
-            if (order.Lines.Count >= MaxLines)
-            {
-                break;
-            }
-
-            if (order.Lines.Any(line => line.StockItemId == stockItemId))
-            {
-                continue;
-            }
-
-            if (await _items.FindByIdAsync(stockItemId, HttpContext.RequestAborted) is { Archived: false } item)
-            {
-                order.Lines.Add(NewLine(item, 1));
-            }
+            ModelState.AddModelError(nameof(model.Lines), problem.Kind == PurchaseOrderLineProblemKind.Quantity
+                ? S["Enter how many of {0} to order, or remove it.", problem.Line.Title]
+                : S["A cost can't be negative."]);
         }
     }
-
-    // The items kept at the location (that have had units there) at or below their low-stock threshold, each ordered
-    // up to twice its threshold. An item never stocked at a location isn't low there.
-    private async Task<List<PurchaseOrderLine>> LowStockLinesAsync(string locationId)
-    {
-        var lines = new List<PurchaseOrderLine>();
-
-        for (var skip = 0; skip < LowStockScanMaxItems && lines.Count < MaxLines; skip += LowStockScanPageSize)
-        {
-            var (_, items) = await _items.PageAsync(new StockItemQuery(), skip, LowStockScanPageSize, HttpContext.RequestAborted);
-
-            foreach (var item in items)
-            {
-                // An item counted before there were locations, with none left, is kept at the default location.
-                var level = item.FindLevel(locationId) ??
-                    (locationId == InventoryConstants.DefaultLocationId && item.Levels.Count == 0 ? new StockLocationLevel { LocationId = locationId } : null);
-
-                if (level is null)
-                {
-                    continue;
-                }
-
-                var available = level.Available;
-
-                if (available <= item.LowStockThreshold && lines.Count < MaxLines)
-                {
-                    lines.Add(NewLine(item, Math.Max(1, (item.LowStockThreshold * 2) - available)));
-                }
-            }
-
-            if (items.Count < LowStockScanPageSize)
-            {
-                break;
-            }
-        }
-
-        return lines;
-    }
-
-    private static PurchaseOrderLine NewLine(StockItem item, int quantity)
-        => new()
-        {
-            LineId = UniqueId.GenerateId(),
-            StockItemId = item.ItemId,
-            Title = item.Title,
-            Sku = item.Sku,
-            Ordered = quantity,
-        };
 
     private async Task PopulateAsync(PurchaseOrderEditViewModel model, PurchaseOrder order, bool keepPosted = false)
     {
@@ -607,15 +502,6 @@ public sealed class PurchaseOrdersAdminController : Controller
         model.Suppliers = await _orders.ListSuppliersAsync(HttpContext.RequestAborted);
         model.CanManage = await _authorizationService.AuthorizeAsync(User, InventoryPermissions.ManageInventory);
         model.SearchEndpoint = Url.RouteUrl(StockItemSearchEndpoints.RouteName);
-    }
-
-    // A number staff can read out: the date and five characters made from the purchase order's place in a locked
-    // sequence, such as PO-261019-K3QZ7. Two purchase orders never get the same number.
-    private async Task<string> NewNumberAsync(DateTime now)
-    {
-        var sequence = await _numberSequence.NextAsync(PurchaseOrderNumberSeries, cancellationToken: HttpContext.RequestAborted);
-
-        return $"PO-{now.ToString("yyMMdd", CultureInfo.InvariantCulture)}-{ReadableCodes.FromNumber(sequence, 5)}";
     }
 
     private static RouteValueDictionary FilterRouteValues(PurchaseOrderIndexOptions options, PagerParameters pagerParameters)

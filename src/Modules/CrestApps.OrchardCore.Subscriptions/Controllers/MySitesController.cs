@@ -240,9 +240,7 @@ public sealed class TenantProvisioningAdminController : Controller
         // Retrying an abandoned job means an operator believes the cause is fixed, so the attempt counter and
         // the back-off are reset. Without that reset the job would be abandoned again on the next attempt and
         // the retry button would do nothing.
-        job.Status = TenantProvisioningStatus.Pending;
-        job.AttemptCount = 0;
-        job.NextAttemptUtc = null;
+        TenantProvisioningJobActions.PrepareRetry(job);
 
         await _jobStore.UpdateAsync(job);
 
@@ -288,18 +286,7 @@ public sealed class TenantProvisioningAdminController : Controller
             return RedirectToAction(nameof(Index));
         }
 
-        var now = clock.UtcNow;
-
-        job.Status = TenantProvisioningStatus.Succeeded;
-        job.CompletedUtc = now;
-        job.UpdatedUtc = now;
-        job.NextAttemptUtc = null;
-        job.LastError = null;
-
-        if (!string.IsNullOrWhiteSpace(siteUrl))
-        {
-            job.SiteUrl = siteUrl.Trim();
-        }
+        TenantProvisioningJobActions.MarkCreated(job, siteUrl, clock.UtcNow);
 
         await _jobStore.UpdateAsync(job);
 

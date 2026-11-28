@@ -72,6 +72,17 @@ public static class AIConstants
         public const string Webhooks = "CrestApps.OrchardCore.AI.Webhooks";
 
         public const string CustomLlm = "CrestApps.OrchardCore.AI.CustomLlm";
+
+        /// <summary>
+        /// The Agent-to-Agent client feature. The module keeps its own constant; this one is for code that cannot
+        /// reference the module.
+        /// </summary>
+        public const string A2A = "CrestApps.OrchardCore.AI.A2A";
+
+        /// <summary>
+        /// The chat interactions feature, for code that does not reference the chat interactions projects.
+        /// </summary>
+        public const string ChatInteractions = "CrestApps.OrchardCore.AI.Chat.Interactions";
     }
 
     /// <summary>

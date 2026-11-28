@@ -1,18 +1,22 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+
 namespace CrestApps.OrchardCore.Workforce.ViewModels;
 
 /// <summary>
-/// The workers on a team today, shown on the team editor.
+/// The workers on a team today, shown on the team editor. It is shown only and never posted back, so nothing in it binds.
 /// </summary>
 public class WorkforceTeamMembersViewModel
 {
     /// <summary>
     /// Gets or sets the team.
     /// </summary>
+    [BindNever]
     public string TeamId { get; set; }
 
     /// <summary>
     /// Gets or sets the workers and what they do in the team.
     /// </summary>
+    [BindNever]
     public IList<WorkforceTeamMemberRow> Members { get; set; } = [];
 }
 

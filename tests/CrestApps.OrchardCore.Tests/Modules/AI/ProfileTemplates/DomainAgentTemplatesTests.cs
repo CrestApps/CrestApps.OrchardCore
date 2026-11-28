@@ -10,6 +10,7 @@ using CrestApps.OrchardCore.AI.Agent.Profiles;
 using CrestApps.OrchardCore.AI.Agent.Quality;
 using CrestApps.OrchardCore.AI.Agent.Workflows;
 using CrestApps.OrchardCore.AI.Core.Models;
+using CrestApps.OrchardCore.AI.Core.Services;
 using CrestApps.OrchardCore.AI.Services;
 using CrestApps.OrchardCore.Calendars.AI;
 using CrestApps.OrchardCore.Scheduling.AI;

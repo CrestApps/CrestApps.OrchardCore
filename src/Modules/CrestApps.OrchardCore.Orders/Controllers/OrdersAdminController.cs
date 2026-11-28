@@ -445,23 +445,7 @@ public sealed class OrdersAdminController : Controller
 
     // The list's search and status as a query, shared by the list and its export.
     private static OrderQuery BuildQuery(OrdersIndexOptions options, string userId)
-        => new()
-        {
-            UserId = userId,
-            Search = userId is null ? options.Search : null,
-            Channel = userId is null && options.Channel is OrderChannels.Online or OrderChannels.PointOfSale or OrderChannels.Draft or OrderChannels.Agent ? options.Channel : null,
-            Statuses = userId is not null
-                ? [OrderStatus.Paid, OrderStatus.AwaitingPayment]
-                : options.Status switch
-                {
-                    OrderStatusFilter.Paid => [OrderStatus.Paid],
-                    OrderStatusFilter.AwaitingPayment => [OrderStatus.AwaitingPayment],
-                    OrderStatusFilter.Canceled => [OrderStatus.Canceled],
-                    OrderStatusFilter.Drafts => [OrderStatus.Draft],
-                    OrderStatusFilter.All => [],
-                    _ => [OrderStatus.Paid, OrderStatus.AwaitingPayment],
-                },
-        };
+        => OrderListQuery.Build(options.Status, options.Channel, options.Search, userId);
 
     private static RouteValueDictionary FilterRouteValues(OrdersIndexOptions options, PagerParameters pagerParameters)
     {

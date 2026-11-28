@@ -18,17 +18,48 @@
 
   <ItemGroup>
     <PackageReference Include="OrchardCore.Abstractions" />
+    <PackageReference Include="OrchardCore.Admin.Abstractions" />
     <PackageReference Include="OrchardCore.Module.Targets" />
+    <PackageReference Include="OrchardCore.Navigation.Core" />
+    <PackageReference Include="OrchardCore.Settings.Core" />
+    <PackageReference Include="OrchardCore.AuditTrail.Abstractions" />
+    <PackageReference Include="OrchardCore.Autoroute.Core" />
+    <PackageReference Include="OrchardCore.ContentLocalization.Abstractions" />
     <PackageReference Include="OrchardCore.ContentManagement" />
+    <PackageReference Include="OrchardCore.ContentManagement.Display" />
+    <PackageReference Include="OrchardCore.Contents.Core" />
     <PackageReference Include="OrchardCore.ContentTypes.Abstractions" />
+    <PackageReference Include="OrchardCore.DataPipelines.Abstractions" />
+    <PackageReference Include="OrchardCore.DataSources.Abstractions" />
     <PackageReference Include="OrchardCore.DisplayManagement" />
     <PackageReference Include="OrchardCore.Setup.Core" />
+    <PackageReference Include="OrchardCore.Seo.Abstractions" />
+    <PackageReference Include="OrchardCore.Sitemaps.Abstractions" />
+    <PackageReference Include="OrchardCore.Taxonomies.Core" />
     <PackageReference Include="OrchardCore.Email.Abstractions" />
+    <PackageReference Include="OrchardCore.Email.Core" />
+    <PackageReference Include="OrchardCore.Flows.Core" />
+    <PackageReference Include="OrchardCore.Indexing.Core" />
+    <PackageReference Include="OrchardCore.Lucene.Core" />
+    <PackageReference Include="OrchardCore.Localization.Core" />
+    <PackageReference Include="OrchardCore.Elasticsearch.Core" />
+    <PackageReference Include="OrchardCore.Media.Core" />
+    <PackageReference Include="OrchardCore.OpenId.Core" />
+    <PackageReference Include="OrchardCore.Queries.Abstractions" />
+    <PackageReference Include="OrchardCore.RateLimits.Core" />
+    <PackageReference Include="OrchardCore.Search.Abstractions" />
+    <PackageReference Include="OrchardCore.Secrets.Abstractions" />
+    <PackageReference Include="OrchardCore.Shortcodes.Abstractions" />
     <PackageReference Include="OrchardCore.Sms.Abstractions" />
+    <PackageReference Include="OrchardCore.Sms.Core" />
+    <PackageReference Include="OrchardCore.UrlRewriting.Abstractions" />
+    <PackageReference Include="OrchardCore.UrlRewriting.Core" />
     <PackageReference Include="OrchardCore.Users.Abstractions" />
     <PackageReference Include="OrchardCore.Notifications.Core" />
     <PackageReference Include="OrchardCore.Deployment.Core" />
     <PackageReference Include="OrchardCore.Workflows.Abstractions" />
+    <PackageReference Include="CrestApps.Core.AI.A2A" />
+    <PackageReference Include="CrestApps.Core.AI.Mcp" />
   </ItemGroup>
 
   <ItemGroup>

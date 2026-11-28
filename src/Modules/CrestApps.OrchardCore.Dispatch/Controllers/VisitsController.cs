@@ -1,7 +1,6 @@
 using System.Globalization;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Dispatch.Core;
-using CrestApps.OrchardCore.Dispatch.Core.Indexes;
 using CrestApps.OrchardCore.Dispatch.Core.Services;
 using CrestApps.OrchardCore.Dispatch.Models;
 using CrestApps.OrchardCore.Dispatch.Services;
@@ -22,7 +21,6 @@ using OrchardCore.DisplayManagement.Notify;
 using OrchardCore.Navigation;
 using OrchardCore.Settings;
 using YesSql;
-using YesSql.Services;
 using IClock = OrchardCore.Modules.IClock;
 
 namespace CrestApps.OrchardCore.Dispatch.Controllers;
@@ -110,47 +108,16 @@ public sealed class VisitsController : Controller
         var zone = await _timeZone.GetAsync();
         var workers = await _resources.ListWorkersAsync(HttpContext.RequestAborted);
         var names = workers.ToDictionary(worker => worker.ItemId, worker => worker.DisplayName, StringComparer.Ordinal);
-        var query = _session.Query<ServiceVisit, ServiceVisitIndex>(collection: DispatchConstants.CollectionName);
-
-        if (form.Status == OpenFilter)
+        var filter = new VisitListFilter
         {
-            query = query.Where(index => index.IsOpen);
-        }
-        else if (Enum.TryParse<VisitStatus>(form.Status, out var status))
-        {
-            var value = status.ToString();
-
-            query = query.Where(index => index.Status == value);
-        }
-
-        if (!string.IsNullOrWhiteSpace(form.Q))
-        {
-            var q = form.Q.Trim();
-
-            query = query.Where(index => index.Number.Contains(q) || index.WorkOrderNumber.Contains(q) || index.Summary.Contains(q));
-        }
-
-        if (DateOnly.TryParseExact(form.Day, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day))
-        {
-            var from = CalendarTime.ToUtc(day.ToDateTime(TimeOnly.MinValue), zone);
-            var to = CalendarTime.ToUtc(day.AddDays(1).ToDateTime(TimeOnly.MinValue), zone);
-
-            query = query.Where(index => index.StartUtc < to && index.EndUtc > from);
-        }
-
-        if (!string.IsNullOrEmpty(form.WorkerId))
-        {
-            var ids = (await _session.QueryIndex<VisitWorkerIndex>(index => index.WorkerId == form.WorkerId, collection: DispatchConstants.CollectionName).ListAsync(HttpContext.RequestAborted))
-                .Select(index => index.VisitId)
-                .Distinct(StringComparer.Ordinal)
-                .ToArray();
-
-            query = query.Where(index => index.ItemId.IsIn(ids));
-        }
-
+            Status = form.Status,
+            Search = form.Q,
+            Day = DateOnly.TryParseExact(form.Day, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day : null,
+            TimeZoneId = zone,
+            WorkerId = form.WorkerId,
+        };
         var pager = new Pager(pagerParameters, pagerOptions.Value);
-        var count = await query.CountAsync(HttpContext.RequestAborted);
-        var page = await query.OrderByDescending(index => index.Priority).ThenBy(index => index.StartUtc).ThenByDescending(index => index.CreatedUtc).Skip(pager.GetStartIndex()).Take(pager.PageSize).ListAsync(HttpContext.RequestAborted);
+        var (count, page) = await VisitListQuery.PageAsync(_session, filter, pager.GetStartIndex(), pager.PageSize, HttpContext.RequestAborted);
         var types = (await _types.GetAllAsync()).ToDictionary(type => type.ItemId, type => type.Name, StringComparer.Ordinal);
         var now = _clock.UtcNow;
 

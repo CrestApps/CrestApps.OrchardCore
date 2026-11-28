@@ -17,14 +17,24 @@ internal static class VoiceMediaUploadFormat
     {
         ArgumentNullException.ThrowIfNull(audio);
 
-        var extension = Path.GetExtension(audio.FileName);
+        return Resolve(audio.FileName, audio.ContentType);
+    }
+
+    /// <summary>
+    /// Resolves the format (for example <c>mp3</c>) from a file name's extension, or from the content type when the
+    /// name has no extension.
+    /// </summary>
+    /// <param name="fileName">The file name.</param>
+    /// <param name="contentType">The content type of the audio.</param>
+    /// <returns>The lower-case format, or <see langword="null"/> when neither names one.</returns>
+    public static string Resolve(string fileName, string contentType)
+    {
+        var extension = Path.GetExtension(fileName);
 
         if (!string.IsNullOrWhiteSpace(extension))
         {
             return extension.TrimStart('.').ToLowerInvariant();
         }
-
-        var contentType = audio.ContentType;
 
         if (!string.IsNullOrWhiteSpace(contentType))
         {

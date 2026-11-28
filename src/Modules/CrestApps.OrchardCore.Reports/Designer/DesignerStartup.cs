@@ -72,7 +72,8 @@ public sealed class DesignerStartup : StartupBase
             .AddScoped<DesignedReportPresenter>()
             .AddScoped<ReportViewRunner>()
             .AddScoped<ReportViewSnapshotStore>()
-            .AddScoped<ReportViewSnapshotRefresher>();
+            .AddScoped<ReportViewSnapshotRefresher>()
+            .AddScoped<ReportShareLinkService>();
 
         services.AddDataSource<ReportViewsDataSource>();
         services.AddSharedLinkHandler<ReportSharedLinkHandler>();

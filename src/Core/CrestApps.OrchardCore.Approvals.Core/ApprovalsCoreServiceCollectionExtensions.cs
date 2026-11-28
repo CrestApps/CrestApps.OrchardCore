@@ -16,7 +16,7 @@ namespace CrestApps.OrchardCore.Approvals.Core;
 public static class ApprovalsCoreServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the request store, the policies, the rules and who the approver rules name.
+    /// Registers the request store, the policies, the rules, who the approver rules name and who may open a request.
     /// </summary>
     /// <param name="services">The services.</param>
     /// <returns>The services.</returns>
@@ -34,6 +34,7 @@ public static class ApprovalsCoreServiceCollectionExtensions
         services.TryAddScoped<IApprovalTypeCatalog, ApprovalTypeCatalog>();
         services.TryAddScoped<IApprovalPolicyResolver, ApprovalPolicyResolver>();
         services.TryAddScoped<ApprovalInbox>();
+        services.TryAddScoped<ApprovalRequestAccess>();
         services.AddApproverRuleProvider<PermissionApproverRuleProvider>();
         services.AddApproverRuleProvider<RoleApproverRuleProvider>();
         services.AddApproverRuleProvider<UsersApproverRuleProvider>();

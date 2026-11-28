@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.Invoicing.Models;
+using CrestApps.OrchardCore.Transactions.Models;
 
 namespace CrestApps.OrchardCore.Invoicing.Core.Services;
 
@@ -57,6 +58,25 @@ public static class CreditNoteRules
             Total = Math.Max(0m, invoice.Totals.Total - issued.Sum(note => note.Totals.Total)),
         };
     }
+
+    /// <summary>
+    /// Returns the most a credit note with a disposition can credit, given the ledger transaction of the invoice: what is
+    /// still owed for <see cref="CreditNoteDisposition.ReduceBalance"/>, what was paid and not refunded for
+    /// <see cref="CreditNoteDisposition.Refund"/>, what was paid for <see cref="CreditNoteDisposition.RefundedElsewhere"/>,
+    /// and no limit for <see cref="CreditNoteDisposition.CustomerCredit"/>. An invoice without a transaction can be
+    /// credited by nothing but customer credit.
+    /// </summary>
+    /// <param name="disposition">What the credit note does with the amount it credits.</param>
+    /// <param name="transaction">The invoice's ledger transaction, or <see langword="null"/> when it has none.</param>
+    /// <returns>The limit, or <see langword="null"/> when the disposition has none.</returns>
+    public static decimal? GetDispositionLimit(CreditNoteDisposition disposition, Transaction transaction)
+        => disposition switch
+        {
+            CreditNoteDisposition.ReduceBalance => transaction?.OutstandingAmount ?? 0m,
+            CreditNoteDisposition.Refund => Math.Max(0m, (transaction?.AmountPaid ?? 0m) - (transaction?.AmountRefunded ?? 0m)),
+            CreditNoteDisposition.RefundedElsewhere => transaction?.AmountPaid ?? 0m,
+            _ => null,
+        };
 
     /// <summary>
     /// Returns why a credit note cannot be issued against an invoice, or nothing when it can.

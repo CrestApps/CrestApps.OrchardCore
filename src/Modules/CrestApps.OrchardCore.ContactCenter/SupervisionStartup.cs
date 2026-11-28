@@ -28,6 +28,7 @@ public sealed class SupervisionStartup : StartupBase
         services
             .AddScoped<IContactCenterSupervisorInterventionService, ContactCenterSupervisorInterventionService>()
             .AddScoped<SupervisorDashboardInterventionDescriber>()
+            .AddScoped<SupervisorCallAccess>()
             .AddScoped<SupervisorInterventionEndpoints.CallScope>();
 
         // Finding the work an agent is wrongly holding, and freeing them of it, from the live dashboard.

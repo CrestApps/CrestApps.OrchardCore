@@ -99,56 +99,26 @@ internal sealed class AccountMembersPartDisplayDriver : ContentPartDisplayDriver
 
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        var accountId = part.ContentItem.ContentItemId;
-        var members = new List<AccountMember>();
-        var valid = true;
+        var resolution = await AccountMemberRules.ResolveAsync(
+            _userManager,
+            _accountMemberService,
+            _contentManager,
+            part,
+            (model.Members ?? []).Where(row => row is not null).Select(row => (row.User, row.Role)));
 
-        foreach (var row in (model.Members ?? []).Where(row => !string.IsNullOrWhiteSpace(row?.User)))
+        foreach (var problem in resolution.Problems)
         {
-            var name = row.User.Trim();
-            var user = await _userManager.FindByEmailAsync(name) ?? await _userManager.FindByNameAsync(name);
-
-            if (user is null)
-            {
-                context.Updater.ModelState.AddModelError(Key(), S["There's no user {0}. Add them as a user first.", name]);
-                valid = false;
-
-                continue;
-            }
-
-            var userId = await _userManager.GetUserIdAsync(user);
-
-            if (members.Any(member => member.UserId == userId))
-            {
-                continue;
-            }
-
-            if (await _accountMemberService.FindOtherAccountIdAsync(userId, accountId) is { } otherId)
-            {
-                var other = await _contentManager.GetAsync(otherId, VersionOptions.Latest);
-
-                context.Updater.ModelState.AddModelError(Key(), S["{0} is already a member of {1}.", name, other?.DisplayText ?? otherId]);
-                valid = false;
-
-                continue;
-            }
-
-            members.Add(new AccountMember
-            {
-                UserId = userId,
-                UserName = await _userManager.GetUserNameAsync(user),
-                Email = await _userManager.GetEmailAsync(user),
-                Role = row.Role,
-                ContactContentItemId = part.FindMember(userId)?.ContactContentItemId,
-            });
+            context.Updater.ModelState.AddModelError(Key(), problem.Kind == AccountMemberProblemKind.UnknownUser
+                ? S["There's no user {0}. Add them as a user first.", problem.User]
+                : S["{0} is already a member of {1}.", problem.User, problem.OtherAccountName]);
         }
 
-        if (!valid)
+        if (resolution.Problems.Count > 0)
         {
             return BuildEditor(model.Members ?? [], context);
         }
 
-        part.Members = members;
+        part.Members = resolution.Members;
 
         return await EditAsync(part, context);
     }

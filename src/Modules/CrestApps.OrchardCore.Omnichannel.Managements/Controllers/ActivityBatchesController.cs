@@ -544,14 +544,16 @@ public sealed class ActivityBatchesController : Controller
             return NotFound();
         }
 
-        if (model.Status == OmnichannelActivityBatchStatus.Loaded)
+        var loadRefusal = ActivityBatchRules.GetLoadRefusal(model);
+
+        if (loadRefusal == ActivityBatchLoadRefusal.AlreadyLoaded)
         {
             await _notifier.ErrorAsync(H["This batch was already loaded and can't be loaded again."]);
 
             return RedirectToAction(nameof(Index));
         }
 
-        if (model.Status == OmnichannelActivityBatchStatus.Started || model.Status == OmnichannelActivityBatchStatus.Loading)
+        if (loadRefusal == ActivityBatchLoadRefusal.Loading)
         {
             await _notifier.ErrorAsync(H["This batch was already being loaded and can't be loaded again."]);
 
@@ -568,13 +570,7 @@ public sealed class ActivityBatchesController : Controller
         var loaderId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var loaderUserName = User.Identity.Name;
 
-        // A new load starts from the beginning, with no error from the last one, and records who started it and when,
-        // so the watchdog can tell it from a load that stalled and resume it as the same user.
-        model.ResetLoadProgress();
-        model.Status = OmnichannelActivityBatchStatus.Started;
-        model.LoadStartedUtc = _clock.UtcNow;
-        model.LoadStartedById = loaderId;
-        model.LoadStartedByUsername = loaderUserName;
+        ActivityBatchRules.MarkStarted(model, loaderId, loaderUserName, _clock.UtcNow);
         await _manager.UpdateAsync(model);
         var batchId = model.ItemId;
 
@@ -669,25 +665,14 @@ public sealed class ActivityBatchesController : Controller
         return RedirectToAction(nameof(Index));
     }
 
-    // A batch is never removed while it is being loaded: the load reads it again as it commits, and would store it a
-    // second time. A loaded batch is only the record of a finished load. Nothing refers to it afterwards -- the
-    // activities it created carry no reference back to it and stay exactly as they are -- so it may be removed, but
-    // only by someone allowed to remove that record.
+    // The rules are ActivityBatchRules.GetDeleteRefusalAsync, which the AI tools share.
     private async Task<LocalizedHtmlString> GetDeleteRefusalAsync(OmnichannelActivityBatch batch)
-    {
-        if (batch.Status == OmnichannelActivityBatchStatus.Started || batch.Status == OmnichannelActivityBatchStatus.Loading)
+        => await ActivityBatchRules.GetDeleteRefusalAsync(_authorizationService, User, batch) switch
         {
-            return H["This batch is being loaded and can't be removed."];
-        }
-
-        if (batch.Status == OmnichannelActivityBatchStatus.Loaded &&
-            !await _authorizationService.AuthorizeAsync(User, OmnichannelConstants.Permissions.DeleteLoadedActivityBatches))
-        {
-            return H["This batch was already loaded, and you are not allowed to remove a loaded batch."];
-        }
-
-        return null;
-    }
+            ActivityBatchDeleteRefusal.Loading => H["This batch is being loaded and can't be removed."],
+            ActivityBatchDeleteRefusal.LoadedNotAllowed => H["This batch was already loaded, and you are not allowed to remove a loaded batch."],
+            _ => null,
+        };
 
     private bool TryGetActivityBatchSource(string source, out ActivityBatchSourceEntry sourceEntry)
         => TryGetActivityBatchSource(source, _activityBatchSourceOptions, out sourceEntry);

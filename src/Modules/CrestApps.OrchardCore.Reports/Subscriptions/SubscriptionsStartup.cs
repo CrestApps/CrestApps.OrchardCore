@@ -35,6 +35,7 @@ public sealed class SubscriptionsStartup : StartupBase
             .AddIndexProvider<ReportSubscriptionIndexProvider>();
         services.AddScoped<IReportSubscriptionStore, ReportSubscriptionStore>();
         services.AddScoped<ReportSubscriptionService>();
+        services.AddScoped<ReportSubscriptionEditor>();
 
         // A subscription that attaches an export checks the export permission of the person who saved it.
         services.TryAddScoped<ReportOwnerPrincipalResolver>();

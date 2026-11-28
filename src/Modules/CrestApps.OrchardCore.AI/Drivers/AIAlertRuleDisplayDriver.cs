@@ -79,27 +79,7 @@ public sealed class AIAlertRuleDisplayDriver : DisplayDriver<AIAlertRule>
         var model = new AIAlertRuleViewModel();
         await context.Updater.TryUpdateModelAsync(model, Prefix);
 
-        if (string.IsNullOrWhiteSpace(model.Name))
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.Name), S["The name is required."]);
-        }
-
-        if (model.WindowMinutes is < 1 or > 43200)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.WindowMinutes), S["The window must be between 1 minute and 30 days."]);
-        }
-
-        if (model.CheckEveryMinutes is < 1 or > 1440)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.CheckEveryMinutes), S["Check between every minute and once a day."]);
-        }
-
-        if (model.MinimumSampleSize < 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix, nameof(model.MinimumSampleSize), S["The minimum sample cannot be negative."]);
-        }
-
-        var changed = rule.Metric != model.Metric || rule.Condition != model.Condition || rule.Threshold != model.Threshold || rule.ProfileId != model.ProfileId;
+        var watched = AIAlertRuleValidator.GetWatched(rule);
 
         rule.Name = model.Name?.Trim();
         rule.Enabled = model.Enabled;
@@ -112,11 +92,13 @@ public sealed class AIAlertRuleDisplayDriver : DisplayDriver<AIAlertRule>
         rule.CheckEveryMinutes = model.CheckEveryMinutes;
         rule.NotifyEmails = model.NotifyEmails?.Trim();
 
-        // A changed rule is checked at once.
-        if (changed)
+        foreach (var error in AIAlertRuleValidator.Validate(rule, S))
         {
-            rule.LastCheckedUtc = null;
+            context.Updater.ModelState.AddModelError(Prefix, error.MemberNames.First(), error.ErrorMessage);
         }
+
+        // A changed rule is checked at once.
+        AIAlertRuleValidator.ResetCheckWhenWatchChanged(rule, watched);
 
         return Edit(rule, context);
     }

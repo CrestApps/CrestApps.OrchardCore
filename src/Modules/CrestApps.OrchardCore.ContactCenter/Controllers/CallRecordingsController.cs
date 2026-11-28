@@ -48,8 +48,7 @@ public sealed class CallRecordingsController : Controller
 
     private readonly ICallRecordingStore _store;
     private readonly IAuthorizationService _authorizationService;
-    private readonly IEnumerable<ICallRecordingTranscriptProvider> _transcriptProviders;
-    private readonly IRecordingAccessGovernanceService _governance;
+    private readonly CallRecordingReader _reader;
     private readonly IInteractionManager _interactionManager;
     private readonly IOmnichannelActivityManager _activityManager;
     private readonly IRecordingMediaStore _mediaStore;
@@ -59,7 +58,6 @@ public sealed class CallRecordingsController : Controller
     private readonly IAgentProfileManager _agentProfileManager;
     private readonly ISiteService _siteService;
     private readonly ILocalClock _localClock;
-    private readonly IClock _clock;
     private readonly INotifier _notifier;
     private readonly ILogger _logger;
 
@@ -71,8 +69,7 @@ public sealed class CallRecordingsController : Controller
     /// </summary>
     /// <param name="store">The call recordings catalog.</param>
     /// <param name="authorizationService">The authorization service.</param>
-    /// <param name="transcriptProviders">The sources of a call's transcript.</param>
-    /// <param name="governance">The recording governance that audits every playback and erases interaction recordings.</param>
+    /// <param name="reader">Finds, audits, transcribes and erases the recordings the viewer may hear.</param>
     /// <param name="interactionManager">The interaction manager, read for a recording's legal hold.</param>
     /// <param name="activityManager">The CRM activity manager, read for the contact a call was with.</param>
     /// <param name="mediaStores">The encrypted recording media store, when telephony registered one.</param>
@@ -82,7 +79,6 @@ public sealed class CallRecordingsController : Controller
     /// <param name="agentProfileManagers">The agent profile manager, when agents are enabled, listing the agents the page can be narrowed to.</param>
     /// <param name="siteService">The site service, read for the region phone numbers are shown in.</param>
     /// <param name="localClock">The viewer's local clock, which the date filters are in.</param>
-    /// <param name="clock">The clock.</param>
     /// <param name="notifier">The admin notifier.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="htmlLocalizer">The HTML localizer.</param>
@@ -90,8 +86,7 @@ public sealed class CallRecordingsController : Controller
     public CallRecordingsController(
         ICallRecordingStore store,
         IAuthorizationService authorizationService,
-        IEnumerable<ICallRecordingTranscriptProvider> transcriptProviders,
-        IRecordingAccessGovernanceService governance,
+        CallRecordingReader reader,
         IInteractionManager interactionManager,
         IOmnichannelActivityManager activityManager,
         IEnumerable<IRecordingMediaStore> mediaStores,
@@ -101,7 +96,6 @@ public sealed class CallRecordingsController : Controller
         IEnumerable<IAgentProfileManager> agentProfileManagers,
         ISiteService siteService,
         ILocalClock localClock,
-        IClock clock,
         INotifier notifier,
         ILogger<CallRecordingsController> logger,
         IHtmlLocalizer<CallRecordingsController> htmlLocalizer,
@@ -109,8 +103,7 @@ public sealed class CallRecordingsController : Controller
     {
         _store = store;
         _authorizationService = authorizationService;
-        _transcriptProviders = transcriptProviders;
-        _governance = governance;
+        _reader = reader;
         _interactionManager = interactionManager;
         _activityManager = activityManager;
         _mediaStore = mediaStores.LastOrDefault();
@@ -120,7 +113,6 @@ public sealed class CallRecordingsController : Controller
         _agentProfileManager = agentProfileManagers.FirstOrDefault();
         _siteService = siteService;
         _localClock = localClock;
-        _clock = clock;
         _notifier = notifier;
         _logger = logger;
         H = htmlLocalizer;
@@ -160,7 +152,7 @@ public sealed class CallRecordingsController : Controller
         var query = new CallRecordingQuery
         {
             // Someone who may only hear their own calls is only ever searched their own, whatever was asked for.
-            AgentUserId = access.CanListEveryone ? NullIfEmpty(filter.AgentUserId) : access.UserId,
+            AgentUserId = access.NarrowAgentUserId(NullIfEmpty(filter.AgentUserId)),
             CustomerAddress = NullIfEmpty(filter.Number),
             Direction = filter.Direction,
             Source = filter.Source,
@@ -270,7 +262,7 @@ public sealed class CallRecordingsController : Controller
             Recording = recording,
             AgentName = NameOf(recording.AgentUserId, names),
             CustomerNumber = FormatNumber(recording.CustomerAddress, await GetPhoneRegionAsync()),
-            Transcript = await GetTranscriptAsync(recording),
+            Transcript = await _reader.GetTranscriptAsync(recording, HttpContext.RequestAborted),
             ContactContentItemId = activity?.ContactContentItemId,
             IsUnderLegalHold = interaction?.RecordingLegalHold == true,
             CanErase = await _authorizationService.AuthorizeAsync(User, ContactCenterPermissions.DeleteCallRecordings),
@@ -391,58 +383,25 @@ public sealed class CallRecordingsController : Controller
             return RedirectToRoute(DisplayRouteName, new { id });
         }
 
-        reason = reason.Trim();
+        var outcome = await _reader.EraseAsync(recording, access, reason.Trim());
 
-        if (!string.IsNullOrEmpty(recording.InteractionId))
+        if (outcome == CallRecordingErasureOutcome.Erased)
         {
-            // Durable writes that must not be torn by a viewer who navigates away, like the erasure endpoint's.
-            var decision = await _governance.EraseAsync(
-                recording.InteractionId,
-                ContactCenterActor.Supervisor(access.UserId),
-                reason,
-                CancellationToken.None);
+            await _notifier.SuccessAsync(H["The recording was erased."]);
 
-            if (decision.Erased)
-            {
-                // The erasure event takes every recording of the interaction off the page; this one goes at once.
-                recording.ErasedUtc = _clock.UtcNow;
-                await _store.UpdateAsync(recording, CancellationToken.None);
-
-                LogErased(recording, access);
-                await _notifier.SuccessAsync(H["The recording was erased."]);
-
-                return RedirectToRoute(IndexRouteName);
-            }
-
-            // A hold is checked on the interaction too: it no longer naming a recording does not lift it.
-            var interaction = await _interactionManager.FindByIdAsync(recording.InteractionId, CancellationToken.None);
-
-            if (decision.DenyReasonCode == ContactCenterConstants.RecordingErasureDenyReason.LegalHold ||
-                interaction?.RecordingLegalHold == true)
-            {
-                await _notifier.ErrorAsync(H["The recording is under legal hold and cannot be erased."]);
-
-                return RedirectToRoute(DisplayRouteName, new { id });
-            }
-
-            // The interaction no longer names a recording: it was erased already, or this one was never attached to
-            // it. The entry's own media is erased below.
+            return RedirectToRoute(IndexRouteName);
         }
 
-        if (_mediaStore is null || !await _mediaStore.DeleteAsync(recording.StorageReference, CancellationToken.None))
+        if (outcome == CallRecordingErasureOutcome.LegalHold)
         {
-            await _notifier.ErrorAsync(H["The recording could not be erased. Try again in a moment."]);
+            await _notifier.ErrorAsync(H["The recording is under legal hold and cannot be erased."]);
 
             return RedirectToRoute(DisplayRouteName, new { id });
         }
 
-        recording.ErasedUtc = _clock.UtcNow;
-        await _store.UpdateAsync(recording, CancellationToken.None);
+        await _notifier.ErrorAsync(H["The recording could not be erased. Try again in a moment."]);
 
-        LogErased(recording, access);
-        await _notifier.SuccessAsync(H["The recording was erased."]);
-
-        return RedirectToRoute(IndexRouteName);
+        return RedirectToRoute(DisplayRouteName, new { id });
     }
 
     private static bool IsPlaybackStart(string range)
@@ -453,68 +412,11 @@ public sealed class CallRecordingsController : Controller
         => _accessEvaluator.GetAccessAsync(User);
 
     // A recording the viewer may not hear, or that cannot be played, is reported as one that is not there.
-    private async Task<CallRecording> FindPlayableAsync(string id, CallRecordingAccess access)
-    {
-        if (string.IsNullOrWhiteSpace(id))
-        {
-            return null;
-        }
+    private Task<CallRecording> FindPlayableAsync(string id, CallRecordingAccess access)
+        => _reader.FindPlayableAsync(id, access, HttpContext.RequestAborted);
 
-        var recording = await _store.FindByIdAsync(id, HttpContext.RequestAborted);
-
-        return CallRecordingAccess.IsPlayable(recording) && access.CanHear(recording)
-            ? recording
-            : null;
-    }
-
-    private async Task AuditAccessAsync(CallRecording recording, CallRecordingAccess access, string purpose)
-    {
-        var actor = access.CanListEveryone && !string.Equals(recording.AgentUserId, access.UserId, StringComparison.Ordinal)
-            ? ContactCenterActor.Supervisor(access.UserId)
-            : ContactCenterActor.Agent(access.UserId);
-
-        // An interaction's recording is listened to on the interaction's own recording-access trail. A recording
-        // that belongs to no interaction has no trail to join, so the access is logged.
-        if (!string.IsNullOrEmpty(recording.InteractionId) &&
-            await _governance.RecordAccessAsync(recording.InteractionId, actor, purpose, HttpContext.RequestAborted))
-        {
-            return;
-        }
-
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "User '{UserId}' opened call recording '{RecordingId}' ({Source}, agent '{AgentUserId}') for {Purpose}.",
-                access.UserId.SanitizeLogValue(),
-                recording.ItemId.SanitizeLogValue(),
-                recording.Source,
-                recording.AgentUserId.SanitizeLogValue(),
-                purpose);
-        }
-    }
-
-    private async Task<CallRecordingTranscript> GetTranscriptAsync(CallRecording recording)
-    {
-        foreach (var provider in _transcriptProviders)
-        {
-            try
-            {
-                var transcript = await provider.GetTranscriptAsync(recording, HttpContext.RequestAborted);
-
-                if (transcript is not null && transcript.Phrases.Count > 0)
-                {
-                    return transcript;
-                }
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // The recording still plays without its transcript.
-                _logger.LogWarning(ex, "The transcript of call recording '{RecordingId}' could not be read.", recording.ItemId.SanitizeLogValue());
-            }
-        }
-
-        return null;
-    }
+    private Task AuditAccessAsync(CallRecording recording, CallRecordingAccess access, string purpose)
+        => _reader.AuditAccessAsync(recording, access, purpose, HttpContext.RequestAborted);
 
     private async Task<DateTime> ToUtcAsync(DateTime localTime)
         => DateTime.SpecifyKind(await _localClock.ConvertToUtcAsync(DateTime.SpecifyKind(localTime, DateTimeKind.Unspecified)), DateTimeKind.Utc);
@@ -573,18 +475,6 @@ public sealed class CallRecordingsController : Controller
 
     private Task<Dictionary<string, string>> GetUserNamesAsync(IEnumerable<string> userIds)
         => _nameResolver.GetNamesAsync(userIds, HttpContext.RequestAborted);
-
-    private void LogErased(CallRecording recording, CallRecordingAccess access)
-    {
-        if (_logger.IsEnabled(LogLevel.Information))
-        {
-            _logger.LogInformation(
-                "User '{UserId}' erased call recording '{RecordingId}' (interaction '{InteractionId}').",
-                access.UserId.SanitizeLogValue(),
-                recording.ItemId.SanitizeLogValue(),
-                recording.InteractionId.SanitizeLogValue());
-        }
-    }
 
     private static string NameOf(string userId, Dictionary<string, string> names)
         => CallRecordingAgentNameResolver.NameOf(userId, names);
