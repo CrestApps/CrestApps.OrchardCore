@@ -26,9 +26,9 @@ public abstract class SurveyChoiceAnalyzerBase : SurveyAnalyzerBase
     /// <param name="context">The analysis context.</param>
     /// <returns>The options.</returns>
     protected virtual IEnumerable<(string Id, string Label)> GetOptions(SurveyQuestion question, SurveyAnalysisContext context)
-        => (question.Choices ?? [])
+        => SurveyChoiceSource.GetChoices(question, context?.Format?.Definition)
             .Where(choice => choice is not null)
-            .Select(choice => (choice.Id, context.Format?.Text($"choice:{question.Id}:{choice.Id}", choice.Text) ?? choice.Text));
+            .Select(choice => (choice.Id, context?.Format?.Text($"choice:{question.Id}:{choice.Id}", choice.Text) ?? choice.Text));
 
     /// <inheritdoc />
     protected override async Task FillAsync(SurveyQuestion question, SurveyQuestionSummary summary, SurveyAnalysisContext context, CancellationToken cancellationToken)

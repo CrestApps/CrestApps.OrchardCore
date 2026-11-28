@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Reports.Models;
 using CrestApps.OrchardCore.Surveys;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Controls.Ranking;
 using CrestApps.OrchardCore.Surveys.Core.Controls.Rating;
 using CrestApps.OrchardCore.Surveys.Core.Controls.SingleChoice;
 using CrestApps.OrchardCore.Surveys.Models;
@@ -81,6 +82,40 @@ public sealed class SurveyControlAnalyzerTests
         var sections = analyzer.ToReportSections(question, summary, context).ToList();
 
         Assert.Contains(sections, section => section.Title == "Net Promoter Score" && section.Metrics[0].Value == "50");
+    }
+
+    [Fact]
+    public async Task CarriedForward_Summarize_LabelsTheBarsWithTheSourceChoiceTexts()
+    {
+        // Round 12 M8: a question that carries its choices forward has none of its own.
+        var source = Question(SurveyControlNames.SingleChoice, ("a", "Apple"), ("b", "Banana"));
+        var carried = new SurveyQuestion { Id = "q2", Name = "q_two", ControlType = SurveyControlNames.SingleChoice, ChoicesFrom = source.Id };
+        var definition = new SurveyDefinition { Pages = [new SurveyPage { Id = "p1", Questions = [source, carried] }] };
+        var aggregates = new ControlsFakeAggregates(4, 4, new() { [string.Empty] = new() { ["a"] = 3, ["b"] = 1 } });
+        var analyzer = new SingleChoiceAnalyzer(new ControlsTestLocalizer<SingleChoiceAnalyzer>());
+        var context = new SurveyAnalysisContext { Aggregates = aggregates, Format = new SurveyFormatContext { Definition = definition } };
+
+        var summary = await analyzer.SummarizeAsync(carried, context, CancellationToken.None);
+        var section = analyzer.ToReportSections(carried, summary, context).Single();
+
+        Assert.Equal(["Apple", "Banana"], section.Bars.Select(bar => bar.Label));
+    }
+
+    [Fact]
+    public async Task CarriedForward_Ranking_Summarize_ListsTheSourceItems()
+    {
+        // Round 12 M8: a ranking that carries its items forward has none of its own.
+        var source = Question(SurveyControlNames.MultipleChoice, ("a", "Apple"), ("b", "Banana"));
+        var carried = new SurveyQuestion { Id = "q2", Name = "q_two", ControlType = SurveyControlNames.Ranking, ChoicesFrom = source.Id };
+        var definition = new SurveyDefinition { Pages = [new SurveyPage { Id = "p1", Questions = [source, carried] }] };
+        var numbers = new SurveyNumberStatistics { Count = 4, Average = 1.5m };
+        var analyzer = new RankingAnalyzer(new ControlsTestLocalizer<RankingAnalyzer>());
+        var context = new SurveyAnalysisContext { Aggregates = new ControlsFakeAggregates(4, 4, [], numbers), Format = new SurveyFormatContext { Definition = definition } };
+
+        var summary = await analyzer.SummarizeAsync(carried, context, CancellationToken.None);
+        var section = analyzer.ToReportSections(carried, summary, context).Single();
+
+        Assert.Equal(2, section.Rows.Count);
     }
 
     private sealed class ControlsFakeAggregates : ISurveyAnswerAggregates

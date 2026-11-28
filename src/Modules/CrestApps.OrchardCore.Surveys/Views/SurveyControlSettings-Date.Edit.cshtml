@@ -1,4 +1,15 @@
 @model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Date.DateSettings>
+@using CrestApps.OrchardCore.Surveys.Core.Controls.Date
+
+@{
+    // Earliest and Latest ask for what the saved question asks for; after the mode changes, they follow once it is saved.
+    var limitType = Model.Settings?.Mode switch
+    {
+        DateMode.Time => "time",
+        DateMode.DateTime => "datetime-local",
+        _ => "date",
+    };
+}
 
 <div class="ocat-wrapper">
     <label asp-for="Settings.Mode" class="ocat-label">@T["Ask for"]</label>
@@ -14,14 +25,14 @@
 <div class="ocat-wrapper">
     <label asp-for="Settings.Min" class="ocat-label">@T["Earliest"]</label>
     <div class="ocat-end">
-        <input asp-for="Settings.Min" class="form-control" type="datetime-local" />
-        <span class="hint">@T["The respondent's own date and time, as entered."]</span>
+        <input asp-for="Settings.Min" class="form-control" type="@limitType" />
+        <span class="hint">@T["The respondent's own date and time, as entered. Only the part the question asks for counts; after you change what it asks for, save it to enter these as a date, a time or both."]</span>
     </div>
 </div>
 
 <div class="ocat-wrapper">
     <label asp-for="Settings.Max" class="ocat-label">@T["Latest"]</label>
     <div class="ocat-end">
-        <input asp-for="Settings.Max" class="form-control" type="datetime-local" />
+        <input asp-for="Settings.Max" class="form-control" type="@limitType" />
     </div>
 </div>

@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using CrestApps.Core.Support;
 using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Caching.Memory;
@@ -340,7 +341,7 @@ public sealed class SurveyFormulaService
                     if (questions.TryGetValue(field.Id, out var question) && _registry.GetHandler(question.ControlType) is { } handler)
                     {
                         response.Answers.TryGetValue(question.Id, out var answer);
-                        row[field.Slot] = handler.GetFormulaValue(question, answer, field.RowId);
+                        row[field.Slot] = handler.GetFormulaValue(SurveyChoiceSource.WithSourceChoices(question, definition), answer, field.RowId);
                     }
 
                     break;

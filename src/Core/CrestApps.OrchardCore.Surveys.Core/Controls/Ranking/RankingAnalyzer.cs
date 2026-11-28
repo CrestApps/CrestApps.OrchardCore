@@ -25,7 +25,7 @@ public sealed class RankingAnalyzer : SurveyAnalyzerBase
     /// <inheritdoc />
     protected override async Task FillAsync(SurveyQuestion question, SurveyQuestionSummary summary, SurveyAnalysisContext context, CancellationToken cancellationToken)
     {
-        foreach (var choice in question.Choices.Where(choice => choice is not null))
+        foreach (var choice in SurveyChoiceSource.GetChoices(question, context.Format?.Definition).Where(choice => choice is not null))
         {
             var numbers = await context.Aggregates.NumberStatisticsAsync(context.Filter, question.Id, choice.Id, cancellationToken);
 
@@ -40,7 +40,7 @@ public sealed class RankingAnalyzer : SurveyAnalyzerBase
     /// <inheritdoc />
     protected override IEnumerable<ReportSection> BuildSections(SurveyQuestion question, string title, SurveyQuestionSummary summary, SurveyAnalysisContext context)
     {
-        var rows = question.Choices
+        var rows = SurveyChoiceSource.GetChoices(question, context.Format?.Definition)
             .Where(choice => choice is not null && summary.Extra.ContainsKey(choice.Id))
             .Select(choice => (choice, Average: summary.Extra[choice.Id]!.GetValue<decimal>()))
             .OrderBy(entry => entry.Average)

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using CrestApps.OrchardCore.Surveys.Models;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Controls;
@@ -30,6 +31,29 @@ public static class SurveyChoiceSource
             .FirstOrDefault(other => string.Equals(other?.Id, question.ChoicesFrom, StringComparison.Ordinal));
 
         return source?.Choices is { Count: > 0 } choices ? choices : question.Choices ?? [];
+    }
+
+    /// <summary>
+    /// Gets a question whose own choices are the ones it offers, for the question type methods that are given no
+    /// definition (formula values, index rows, export columns): the question itself when it carries nothing forward,
+    /// otherwise a copy with the choices of the question it carries them from.
+    /// </summary>
+    /// <param name="question">The question.</param>
+    /// <param name="definition">The definition, or <see langword="null"/>.</param>
+    /// <returns>The question, or a copy of it.</returns>
+    public static SurveyQuestion WithSourceChoices(SurveyQuestion question, SurveyDefinition definition)
+    {
+        var choices = GetChoices(question, definition);
+
+        if (question is null || ReferenceEquals(choices, question.Choices))
+        {
+            return question;
+        }
+
+        var copy = JsonSerializer.Deserialize<SurveyQuestion>(JsonSerializer.Serialize(question));
+        copy.Choices = [.. choices];
+
+        return copy;
     }
 
     /// <summary>

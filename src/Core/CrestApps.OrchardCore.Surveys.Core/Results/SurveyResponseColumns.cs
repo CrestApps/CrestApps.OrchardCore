@@ -1,5 +1,6 @@
 using System.Text.Json;
 using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 
@@ -87,7 +88,7 @@ public sealed class SurveyResponseColumns
 
                 result._canonicalNames[question.Id] = unique;
 
-                foreach (var column in handler.DescribeColumns(Rename(question, unique)) ?? [])
+                foreach (var column in handler.DescribeColumns(Rename(question, unique, version.Definition)) ?? [])
                 {
                     if (column is not null && !string.IsNullOrEmpty(column.Key) && keys.Add(column.Key))
                     {
@@ -130,7 +131,7 @@ public sealed class SurveyResponseColumns
 
             if (!_renamed.TryGetValue((response.SurveyVersionId ?? string.Empty, question.Id), out var renamed))
             {
-                _renamed[(response.SurveyVersionId ?? string.Empty, question.Id)] = renamed = Rename(question, name);
+                _renamed[(response.SurveyVersionId ?? string.Empty, question.Id)] = renamed = Rename(question, name, definition);
             }
 
             response.Answers.TryGetValue(question.Id, out var answer);
@@ -138,14 +139,18 @@ public sealed class SurveyResponseColumns
         }
     }
 
-    private static SurveyQuestion Rename(SurveyQuestion question, string name)
+    // The question under its column name, with the choices it offers (carried-forward choices are those of the question
+    // they come from), so its columns and values name those choices.
+    private static SurveyQuestion Rename(SurveyQuestion question, string name, SurveyDefinition definition)
     {
-        if (string.Equals(question.Name, name, StringComparison.Ordinal))
+        var resolved = SurveyChoiceSource.WithSourceChoices(question, definition);
+
+        if (string.Equals(resolved.Name, name, StringComparison.Ordinal))
         {
-            return question;
+            return resolved;
         }
 
-        var copy = JsonSerializer.Deserialize<SurveyQuestion>(JsonSerializer.Serialize(question));
+        var copy = ReferenceEquals(resolved, question) ? JsonSerializer.Deserialize<SurveyQuestion>(JsonSerializer.Serialize(question)) : resolved;
         copy.Name = name;
 
         return copy;

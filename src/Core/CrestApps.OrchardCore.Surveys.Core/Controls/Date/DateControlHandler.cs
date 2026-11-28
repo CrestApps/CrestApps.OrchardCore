@@ -65,12 +65,16 @@ public sealed class DateControlHandler : SurveyControlHandlerBase<DateSettings>
 
         var settings = context.Question.GetSettings<DateSettings>();
 
-        if (settings.Min is { } min && value < min)
+        // Only the part the mode asks for counts: Earliest and Latest may carry a date in Time mode or a time in Date
+        // mode, as an older editor or a recipe saved them.
+        var answer = Normalize(value, settings.Mode);
+
+        if (settings.Min is { } min && answer < Normalize(min, settings.Mode))
         {
             context.Errors.Add(S["Enter a value on or after {0}.", Format(min, settings.Mode, CultureInfo.CurrentCulture)]);
         }
 
-        if (settings.Max is { } max && value > max)
+        if (settings.Max is { } max && answer > Normalize(max, settings.Mode))
         {
             context.Errors.Add(S["Enter a value on or before {0}.", Format(max, settings.Mode, CultureInfo.CurrentCulture)]);
         }
@@ -97,6 +101,23 @@ public sealed class DateControlHandler : SurveyControlHandlerBase<DateSettings>
 
         return Format(value, mode, context?.Culture ?? CultureInfo.InvariantCulture);
     }
+
+    /// <summary>
+    /// Keeps only the part of a value a mode asks for: the time of day on 1 January 2000 for a time, the day for a date,
+    /// the whole value for a date and a time. Answers, Earliest and Latest are compared this way.
+    /// </summary>
+    /// <param name="value">The value.</param>
+    /// <param name="mode">The mode.</param>
+    /// <returns>The value, with no time zone.</returns>
+    public static DateTime Normalize(DateTime value, DateMode mode)
+        => DateTime.SpecifyKind(
+            mode switch
+            {
+                DateMode.Time => new DateTime(2000, 1, 1, value.Hour, value.Minute, value.Second),
+                DateMode.Date => value.Date,
+                _ => value,
+            },
+            DateTimeKind.Unspecified);
 
     /// <summary>
     /// Formats a value as an HTML input expects it.

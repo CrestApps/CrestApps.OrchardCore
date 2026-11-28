@@ -15,7 +15,7 @@ Every question has a **question type** (in code, a *control*), registered by nam
 | `SingleChoice` | Single choice | Choice | Yes | Right choice or points per choice; other choice; carried-forward choices |
 | `MultipleChoice` | Multiple choice | Choice | Yes | All or nothing or partial, penalties; exclusive and other choices |
 | `Boolean` | Yes or no | Choice | Yes | Yes/no, true/false, toggle or consent box |
-| `Ranking` | Ranking | Choice | Yes | Right order, partial credit; drag list script |
+| `Ranking` | Ranking | Choice | Yes | Right order, partial credit; drag list script; ranks only the items the page shows (choice rules, carried-forward items) |
 | `ShortText` | Short text | Text | Yes | Accepted answers, with or without case |
 | `LongText` | Long text | Text | By a grader | Word limits; grader guidance |
 | `MultipleText` | Multiple text | Text | No | One text per row |
@@ -23,7 +23,7 @@ Every question has a **question type** (in code, a *control*), registered by nam
 | `Number` | Number | Number | Yes | Right number with a tolerance |
 | `Slider` | Slider | Number | Yes | Script shows the value |
 | `ConstantSum` | Constant sum | Number | No | Numbers that must add up to a total |
-| `Date` | Date and time | Date | No | Date, time or both, with limits |
+| `Date` | Date and time | Date | No | Date, time or both, with limits; only the part the mode asks for is compared (the time of day in Time mode, the day in Date mode) and saved for Earliest and Latest |
 | `Rating` | Rating | Rating | No | Stars, numbers or smileys; presets **Net Promoter Score** (`Nps`, 0 to 10) and **Customer satisfaction** (`Csat`, 1 to 5), whose results show the NPS and CSAT scores |
 | `Matrix` | Matrix | Matrix | Yes | Rows by columns, one or several per row |
 | `MatrixDropdown` | Drop-down matrix | Matrix | No | A drop-down in each cell |
@@ -48,6 +48,8 @@ A type declares what it can do with `SurveyControlCapabilities` flags. The desig
 | --- | --- | --- |
 | `Answerable` | Collects an answer | The runner (a type without it shows no answer area), required checks |
 | `UsesChoices` | The editor shows the choice list; shuffle, carry forward and choice visibility apply | The designer, the publish checks, spreadsheet imports, results filters |
+
+A question that carries its choices forward (`ChoicesFrom`) stores the source question's choice ids. `SurveyChoiceSource.GetChoices(question, definition)` returns the choices it offers; answer text, the exclusive-choice check, formulas, index rows, export columns, analyzers and the AI results tool all go through it, so they show the source question's choice texts and values. A handler method that is given no definition (`GetFormulaValue`, `GetIndexRows`, `DescribeColumns`) receives a copy of the question whose `Choices` were resolved this way (`SurveyChoiceSource.WithSourceChoices`).
 | `UsesRows` | The editor shows rows | The designer, spreadsheet imports |
 | `Scorable` | Has a scorer | The designer's scoring card, the publish checks |
 | `ManuallyGraded` | Its scorer may leave the score to a grader | The scoring card, grading, AI scoring help |

@@ -41,7 +41,7 @@ public sealed class RankingControlHandler : SurveyChoiceControlHandlerBase<Ranki
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var items = SurveyChoiceSource.GetChoices(context.Question, context.Definition).Where(choice => !choice.Retired).Select(choice => choice.Id).ToHashSet(StringComparer.Ordinal);
+        var items = ShownItems(context.Question, context.Definition, context.AllowedChoiceIds);
         var ordered = ReadValues(context, context.Prefix).Where(items.Contains).Distinct(StringComparer.Ordinal).ToList();
 
         if (ordered.Count == 0)
@@ -81,8 +81,9 @@ public sealed class RankingControlHandler : SurveyChoiceControlHandlerBase<Ranki
             return Task.CompletedTask;
         }
 
+        // Only the items the page shows: a rule can hide some, and carried-forward items are those the earlier answer allows.
         var settings = context.Question.GetSettings<RankingSettings>();
-        var items = context.Question.Choices.Count(choice => choice is not null && !choice.Retired);
+        var items = ShownItems(context.Question, context.Definition, context.AllowedChoiceIds).Count;
         var needed = settings.MaxRanked is > 0 ? Math.Min(settings.MaxRanked.Value, items) : items;
 
         if ((context.Answer?.Values?.Count ?? 0) < needed)
@@ -96,8 +97,20 @@ public sealed class RankingControlHandler : SurveyChoiceControlHandlerBase<Ranki
     /// <inheritdoc />
     public override string FormatAnswer(SurveyQuestion question, SurveyAnswer answer, SurveyFormatContext context)
         => answer?.Values is { Count: > 0 } values
-            ? string.Join(", ", values.Select((id, index) => $"{index + 1}. {(FindChoice(question, id) is { } choice ? (context?.UseValues == true ? choice.Value ?? choice.Id : choice.Text) : id)}"))
+            ? string.Join(", ", values.Select((id, index) => $"{index + 1}. {(FindChoice(question, context?.Definition, id) is { } choice ? (context?.UseValues == true ? choice.Value ?? choice.Id : choice.Text) : id)}"))
             : string.Empty;
+
+    // The items the respondent may rank: those the page offers when it says (AllowedChoiceIds), among the question's
+    // items that aren't retired, following carried-forward items.
+    private static HashSet<string> ShownItems(SurveyQuestion question, SurveyDefinition definition, IReadOnlyList<string> allowed)
+    {
+        var choices = SurveyChoiceSource.GetChoices(question, definition).Where(choice => choice is not null && !choice.Retired).ToList();
+        var shown = AllowedIds(allowed, choices);
+
+        shown.IntersectWith(choices.Select(choice => choice.Id));
+
+        return shown;
+    }
 
     /// <inheritdoc />
     public override IEnumerable<SurveyAnswerIndexRow> GetIndexRows(SurveyQuestion question, SurveyAnswer answer)

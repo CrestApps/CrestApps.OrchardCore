@@ -1,3 +1,4 @@
+using CrestApps.OrchardCore.Surveys.Core.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
@@ -43,7 +44,7 @@ public static class SurveyAnswerIndexRows
 
             var first = true;
 
-            foreach (var value in handler.GetIndexRows(question, answer) ?? [])
+            foreach (var value in handler.GetIndexRows(SurveyChoiceSource.WithSourceChoices(question, definition), answer) ?? [])
             {
                 if (value is null)
                 {

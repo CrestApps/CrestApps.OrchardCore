@@ -54,11 +54,11 @@ If you leave the designer, or open another question, while some changes are not 
 | **Question pool** | Puts the question in a pool of the page. |
 | **Shows**, **Required when**, **Can be answered when** | See [Logic](./logic.md). |
 
-**Choices** lists the choices: their text, **Export value**, **Image path**, **Other with text**, **Clears the others**, **Pinned**, **Retired** and **Show this choice only when**. **Show the choices in a random order** shuffles them; **Carry forward from** reuses the choices of an earlier question (all, the ones picked, or the ones not picked).
+**Choices** lists the choices: their text, **Export value**, **Image path**, **Other with text**, **Clears the others**, **Pinned**, **Retired** and **Show this choice only when**. **Show the choices in a random order** shuffles them; **Carry forward from** reuses the choices of an earlier question (all, the ones picked, or the ones not picked); answers, results and exports show that question's choice texts. A ranking question asks respondents to rank only the items they are shown.
 
 **Validation** adds checks: a length, a number range, a pattern, an e-mail or web address, or a formula, each with an optional **Message**.
 
-Each question type also has its own settings card, such as the lowest and highest value of a slider.
+Each question type also has its own settings card, such as the lowest and highest value of a slider. For a date and time question, **Earliest** and **Latest** count only what the question asks for: a time, a day, or both. After you change what it asks for, save the question to enter them in the new form.
 
 ## Survey settings
 

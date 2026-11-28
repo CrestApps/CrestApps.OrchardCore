@@ -58,7 +58,7 @@ Formulas use Orchard Core's formula language (see the Data Pipelines formula ref
 
 | Function | Returns |
 | --- | --- |
-| `SELECTED([question], value)` | Whether a choice is chosen |
+| `SELECTED([question], value)` | Whether a choice is chosen; for carried-forward choices, the value is the source question's export value |
 | `COUNTSELECTED([question])` | How many choices are chosen |
 | `ANSWERED([question])` | Whether the question has an answer |
 | `SCORE('question name')` | The question's score |

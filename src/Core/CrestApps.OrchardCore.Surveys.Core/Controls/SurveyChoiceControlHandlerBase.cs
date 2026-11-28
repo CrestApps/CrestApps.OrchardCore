@@ -178,7 +178,7 @@ public abstract class SurveyChoiceControlHandlerBase<TSettings> : SurveyControlH
 
         foreach (var id in values)
         {
-            var choice = FindChoice(question, id);
+            var choice = FindChoice(question, context?.Definition, id);
 
             if (choice is null)
             {
@@ -216,17 +216,33 @@ public abstract class SurveyChoiceControlHandlerBase<TSettings> : SurveyControlH
     }
 
     /// <summary>
-    /// Finds a choice of a question by id.
+    /// Finds a choice of a question by id among the question's own choices. A caller that has no definition at hand is
+    /// given a question whose choices were resolved (<see cref="SurveyChoiceSource.WithSourceChoices"/>).
     /// </summary>
     /// <param name="question">The question.</param>
     /// <param name="choiceId">The choice id.</param>
     /// <returns>The choice, or <see langword="null"/>.</returns>
     protected static SurveyChoice FindChoice(SurveyQuestion question, string choiceId)
-        => question?.Choices?.FirstOrDefault(choice => string.Equals(choice?.Id, choiceId, StringComparison.Ordinal));
+        => FindChoice(question, definition: null, choiceId);
 
-    // The choices that may be picked: the list given, even an empty one (a carried-forward question with nothing carried
-    // forward allows nothing, it never falls back to every choice); every choice not retired when none is given.
-    private static HashSet<string> AllowedIds(IReadOnlyList<string> allowed, IEnumerable<SurveyChoice> choices)
+    /// <summary>
+    /// Finds a choice of a question by id, following carried-forward choices to the question they come from.
+    /// </summary>
+    /// <param name="question">The question.</param>
+    /// <param name="definition">The definition the question belongs to, or <see langword="null"/>.</param>
+    /// <param name="choiceId">The choice id.</param>
+    /// <returns>The choice, or <see langword="null"/>.</returns>
+    protected static SurveyChoice FindChoice(SurveyQuestion question, SurveyDefinition definition, string choiceId)
+        => SurveyChoiceSource.GetChoices(question, definition).FirstOrDefault(choice => string.Equals(choice?.Id, choiceId, StringComparison.Ordinal));
+
+    /// <summary>
+    /// Gets the choices that may be picked: the list given, even an empty one (a carried-forward question with nothing
+    /// carried forward allows nothing, it never falls back to every choice); every choice not retired when none is given.
+    /// </summary>
+    /// <param name="allowed">The choice ids the page offers, or <see langword="null"/>.</param>
+    /// <param name="choices">The question's choices.</param>
+    /// <returns>The choice ids.</returns>
+    protected static HashSet<string> AllowedIds(IReadOnlyList<string> allowed, IEnumerable<SurveyChoice> choices)
         => allowed is not null
             ? allowed.ToHashSet(StringComparer.Ordinal)
             : choices.Where(choice => choice is not null && !choice.Retired).Select(choice => choice.Id).ToHashSet(StringComparer.Ordinal);

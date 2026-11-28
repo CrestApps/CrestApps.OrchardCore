@@ -50,7 +50,8 @@ public sealed class MultipleChoiceControlHandler : SurveyChoiceControlHandlerBas
 
         var settings = context.Question.GetSettings<MultipleChoiceSettings>();
         var count = context.Answer.Values.Count;
-        var exclusive = context.Question.Choices.Any(choice => choice.IsExclusive && context.Answer.Values.Contains(choice.Id, StringComparer.Ordinal));
+        var exclusive = SurveyChoiceSource.GetChoices(context.Question, context.Definition)
+            .Any(choice => choice is not null && choice.IsExclusive && context.Answer.Values.Contains(choice.Id, StringComparer.Ordinal));
 
         if (!exclusive && settings.MinSelected is { } min && count < min)
         {
