@@ -106,6 +106,7 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
             model.AfterProcessing = mailbox.AfterProcessing;
             model.ProcessedFolder = mailbox.ProcessedFolder;
             model.InitialLookbackDays = mailbox.InitialLookbackDays;
+            model.TrustedAuthenticationServerId = mailbox.TrustedAuthenticationServerId;
             var limits = settings.Limits ?? new EmailSendingLimits();
 
             model.MaxPerHour = limits.MaxPerHour;
@@ -202,6 +203,12 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
         settings.Mailbox.AfterProcessing = model.AfterProcessing;
         settings.Mailbox.ProcessedFolder = model.ProcessedFolder?.Trim();
         settings.Mailbox.InitialLookbackDays = Math.Clamp(model.InitialLookbackDays, 0, 30);
+        settings.Mailbox.TrustedAuthenticationServerId = string.IsNullOrWhiteSpace(model.TrustedAuthenticationServerId) ? null : model.TrustedAuthenticationServerId.Trim();
+
+        if (settings.Mailbox.TrustedAuthenticationServerId is { } serverId && serverId.Any(character => char.IsWhiteSpace(character) || character is ';' or '=' or '(' or ')'))
+        {
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.TrustedAuthenticationServerId), S["Enter only the server name, such as mx.google.com: the first word of the mail host's Authentication-Results header."]);
+        }
 
         settings.Limits ??= new EmailSendingLimits();
 

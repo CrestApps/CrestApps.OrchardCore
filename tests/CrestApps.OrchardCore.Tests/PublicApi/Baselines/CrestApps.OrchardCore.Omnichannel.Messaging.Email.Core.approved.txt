@@ -525,7 +525,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox
     {
         public const int MaxMessagesPerRead = 50;
         public const int MaxReceiveAttempts = 5;
-        public ImapEmailMailboxReader(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.IEmailInboundReceiver receiver, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailMailboxSyncState> syncStates, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox.ImapEmailMailboxReader> logger) { }
+        public ImapEmailMailboxReader(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound.IEmailInboundReceiver receiver, CrestApps.Core.Services.ICatalog<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailMailboxSyncState> syncStates, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox.ImapEmailMailboxReader> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox.ImapEmailMailboxReader> stringLocalizer) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox.EmailMailboxReadResult> ReadAsync(CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelChannelEndpoint address, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailAddressSettings settings, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> TestAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailMailboxSettings mailbox, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -608,6 +608,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models
         public int InitialLookbackDays { get; set; }
         public string ProcessedFolder { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings Server { get; set; }
+        public string TrustedAuthenticationServerId { get; set; }
     }
     public sealed class EmailMailboxSyncState : CrestApps.Core.Models.CatalogItem
     {
@@ -716,7 +717,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services
     }
     public sealed class EmailConnectionTester : CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailConnectionTester
     {
-        public EmailConnectionTester(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox.IEmailMailboxReader mailboxReader, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.EmailConnectionTester> logger) { }
+        public EmailConnectionTester(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox.IEmailMailboxReader mailboxReader, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.EmailConnectionTester> logger, Microsoft.Extensions.Localization.IStringLocalizer<CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.EmailConnectionTester> stringLocalizer) { }
         public System.Threading.Tasks.Task<string> TestImapAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailMailboxSettings mailbox, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<string> TestSmtpAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -820,7 +821,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports
         public const int SmtpSubmissionPort = 587;
         public const int TimeoutMilliseconds = 30000;
         public static System.Threading.Tasks.Task ConnectAsync(MailKit.IMailService client, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int port, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, System.Threading.CancellationToken cancellationToken) { }
-        public static string DescribeFailure(System.Exception exception) { }
+        public static string DescribeFailure(System.Exception exception, Microsoft.Extensions.Localization.IStringLocalizer S) { }
         public static bool IsSameAccount(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings stored, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings candidate, int defaultPort, int implicitTlsPort) { }
         public static string ProtectPassword(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int defaultPort, int implicitTlsPort, string password) { }
         public static int ResolvePort(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int defaultPort, int implicitTlsPort) { }

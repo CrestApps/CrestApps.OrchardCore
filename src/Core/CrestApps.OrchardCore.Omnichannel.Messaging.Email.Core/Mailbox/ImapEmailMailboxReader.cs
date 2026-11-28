@@ -11,6 +11,7 @@ using MailKit;
 using MailKit.Net.Imap;
 using MailKit.Search;
 using MailKit.Security;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 using OrchardCore.Modules;
 
@@ -47,6 +48,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
     private readonly IEmailSecretProtector _secretProtector;
     private readonly IClock _clock;
     private readonly ILogger _logger;
+    private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ImapEmailMailboxReader"/> class.
@@ -56,18 +58,21 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
     /// <param name="secretProtector">The protector the mailbox password is read with.</param>
     /// <param name="clock">The clock.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public ImapEmailMailboxReader(
         IEmailInboundReceiver receiver,
         ICatalog<EmailMailboxSyncState> syncStates,
         IEmailSecretProtector secretProtector,
         IClock clock,
-        ILogger<ImapEmailMailboxReader> logger)
+        ILogger<ImapEmailMailboxReader> logger,
+        IStringLocalizer<ImapEmailMailboxReader> stringLocalizer)
     {
         _receiver = receiver;
         _syncStates = syncStates;
         _secretProtector = secretProtector;
         _clock = clock;
         _logger = logger;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -81,7 +86,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
 
         if (!server.IsConfigured)
         {
-            return new EmailMailboxReadResult { Error = "The address reads its mailbox, but no IMAP server is set on the address." };
+            return new EmailMailboxReadResult { Error = S["The address reads its mailbox, but no IMAP server is set on the address."] };
         }
 
         var folderName = string.IsNullOrWhiteSpace(mailbox.Folder) ? EmailMailboxSettings.DefaultFolder : mailbox.Folder.Trim();
@@ -125,7 +130,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
                 ? await client.GetFolderAsync(mailbox.ProcessedFolder.Trim(), cancellationToken)
                 : null;
 
-            await ReceiveBatchAsync(folder, uids.Take(MaxMessagesPerRead).ToList(), destination, state, address, result, cancellationToken);
+            await ReceiveBatchAsync(folder, uids.Take(MaxMessagesPerRead).ToList(), destination, state, address, mailbox.TrustedAuthenticationServerId, result, cancellationToken);
 
             await client.DisconnectAsync(quit: true, cancellationToken);
 
@@ -142,7 +147,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
             // Shown on the address, so it never carries the exception's own words, which would tell whether a host and
             // port answer on the site's network; those are in the log below.
             state.LastError = ex is AuthenticationException
-                ? "The mail server refused the sign-in. Check the user name and password (or app password) on the address."
+                ? S["The mail server refused the sign-in. Check the user name and password (or app password) on the address."]
                 : DescribeFailure(ex);
 
             result.Error = state.LastError;
@@ -184,7 +189,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
 
         if (!server.IsConfigured)
         {
-            return "No IMAP server is set.";
+            return S["No IMAP server is set."];
         }
 
         try
@@ -236,6 +241,8 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
     /// <param name="destination">The folder received mail is moved to, or <see langword="null"/> to leave it in place.</param>
     /// <param name="state">The read position, moved forward as the mail is received.</param>
     /// <param name="address">The address whose mailbox is read.</param>
+    /// <param name="trustedAuthenticationServerId">The <c>authserv-id</c> whose <c>Authentication-Results</c> are
+    /// believed, or <see langword="null"/> to read the topmost header.</param>
     /// <param name="result">The result the received emails are counted in.</param>
     /// <param name="cancellationToken">The token to monitor for cancellation requests.</param>
     /// <returns>A task that completes once the batch is received or a busy email stops it.</returns>
@@ -245,6 +252,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
         IMailFolder destination,
         EmailMailboxSyncState state,
         OmnichannelChannelEndpoint address,
+        string trustedAuthenticationServerId,
         EmailMailboxReadResult result,
         CancellationToken cancellationToken)
     {
@@ -271,7 +279,7 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
             }
             else
             {
-                outcome = await ReceiveAsync(folder, uid, address, result, cancellationToken);
+                outcome = await ReceiveAsync(folder, uid, address, trustedAuthenticationServerId, result, cancellationToken);
             }
 
             if (outcome == MessageOutcome.Busy)
@@ -357,10 +365,10 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
         return sizes;
     }
 
-    private static string DescribeFailure(Exception exception)
+    private string DescribeFailure(Exception exception)
         => exception is FolderNotFoundException notFound
-            ? $"The mailbox has no folder named '{notFound.FolderName}'."
-            : EmailServerConnection.DescribeFailure(exception);
+            ? S["The mailbox has no folder named '{0}'.", notFound.FolderName]
+            : EmailServerConnection.DescribeFailure(exception, S);
 
     // A failure of the connection (it dropped, or the server stopped answering as it should) says nothing about the
     // email being received and would fail every email after it too, so it ends the read rather than passing the email
@@ -439,15 +447,30 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
         return present;
     }
 
-    private async Task<MessageOutcome> ReceiveAsync(IMailFolder folder, UniqueId uid, OmnichannelChannelEndpoint address, EmailMailboxReadResult readResult, CancellationToken cancellationToken)
+    private async Task<MessageOutcome> ReceiveAsync(
+        IMailFolder folder,
+        UniqueId uid,
+        OmnichannelChannelEndpoint address,
+        string trustedAuthenticationServerId,
+        EmailMailboxReadResult readResult,
+        CancellationToken cancellationToken)
     {
         InboundEmail email;
+        string authenticationResults;
 
         try
         {
             var message = await folder.GetMessageAsync(uid, cancellationToken);
 
             email = MimeInboundEmailParser.Parse(message);
+
+            // Every Authentication-Results header, topmost first: the one believed is the trusted server's own when the
+            // mailbox names one, otherwise the topmost.
+            authenticationResults = InboundEmailAuthentication.SelectAuthenticationResults(
+                message.Headers
+                    .Where(header => string.Equals(header.Field, InboundEmailAuthentication.AuthenticationResultsHeader, StringComparison.OrdinalIgnoreCase))
+                    .Select(header => header.Value),
+                trustedAuthenticationServerId);
         }
         catch (Exception ex) when (IsEmailFailure(ex))
         {
@@ -462,11 +485,10 @@ public sealed class ImapEmailMailboxReader : IEmailMailboxReader
         }
 
         // A mailbox host that checks DMARC (Microsoft 365, Google Workspace) adds its own Authentication-Results above any
-        // header the sender wrote, so the topmost one says whether the From domain passed. Which server wrote it is not
-        // checked, so a host that adds none leaves the sender's own header on top.
-        email.IsFromDomainAuthenticated = InboundEmailAuthentication.HasDmarcPass(
-            email.Headers.TryGetValue(InboundEmailAuthentication.AuthenticationResultsHeader, out var authenticationResults) ? authenticationResults : null,
-            email.From?.Address);
+        // header the sender wrote, so the topmost one says whether the From domain passed. When the mailbox names the
+        // host's authserv-id, only a header that host wrote is believed, so a host that adds none never leaves the
+        // sender's own header to be read instead.
+        email.IsFromDomainAuthenticated = InboundEmailAuthentication.HasDmarcPass(authenticationResults, email.From?.Address);
 
         // The mailbox belongs to the address, so mail in it was sent to the address even when it arrived through an
         // alias, a forward or a Bcc that does not name it.

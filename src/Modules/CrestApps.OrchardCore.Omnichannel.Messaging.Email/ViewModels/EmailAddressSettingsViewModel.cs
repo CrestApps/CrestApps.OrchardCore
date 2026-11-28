@@ -127,6 +127,11 @@ public class EmailAddressSettingsViewModel
     /// </summary>
     public int InitialLookbackDays { get; set; }
 
+    /// <summary>
+    /// Gets or sets the <c>authserv-id</c> of the mailbox host whose <c>Authentication-Results</c> are believed.
+    /// </summary>
+    public string TrustedAuthenticationServerId { get; set; }
+
     public int MaxPerHour { get; set; }
 
     public int MaxPerDay { get; set; }

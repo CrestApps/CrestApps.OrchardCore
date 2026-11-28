@@ -99,6 +99,55 @@ public static class InboundEmailAuthentication
         return false;
     }
 
+    /// <summary>
+    /// Picks the <c>Authentication-Results</c> header to believe out of an email's headers, topmost first.
+    /// </summary>
+    /// <remarks>
+    /// With no trusted server, the topmost header is taken: a mailbox host that checks DMARC adds its own above any the
+    /// sender wrote. With one, only a header whose <c>authserv-id</c> (its first word, RFC 8601) is that server's is taken,
+    /// the topmost of them, so on a host that adds no header the sender's own is never read instead. A host removes the
+    /// headers that arrive claiming its own <c>authserv-id</c>, as RFC 8601 asks.
+    /// </remarks>
+    /// <param name="headers">The values of the email's <c>Authentication-Results</c> headers, topmost first.</param>
+    /// <param name="trustedServerId">The <c>authserv-id</c> of the server whose results are believed, or
+    /// <see langword="null"/> to take the topmost header.</param>
+    /// <returns>The header's value, or <see langword="null"/> when no header may be believed.</returns>
+    internal static string SelectAuthenticationResults(IEnumerable<string> headers, string trustedServerId)
+    {
+        if (headers is null)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(trustedServerId))
+        {
+            return headers.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value));
+        }
+
+        var trusted = trustedServerId.Trim();
+
+        return headers.FirstOrDefault(value => string.Equals(GetServerId(value), trusted, StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Reads the <c>authserv-id</c> an <c>Authentication-Results</c> header starts with, such as <c>mx.google.com</c>.
+    /// </summary>
+    /// <param name="authenticationResults">The header's value.</param>
+    /// <returns>The identifier, or <see langword="null"/> when the header names none (Microsoft 365 writes none).</returns>
+    internal static string GetServerId(string authenticationResults)
+    {
+        if (string.IsNullOrWhiteSpace(authenticationResults))
+        {
+            return null;
+        }
+
+        var first = authenticationResults.Split(';', 2)[0];
+        var tokens = RemoveComments(first).Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+
+        // A header that starts with a result ("spf=pass ...") names no server.
+        return tokens.Length == 0 || tokens[0].Contains('=') ? null : tokens[0];
+    }
+
     private static string GetDomain(string address)
     {
         var normalized = OmnichannelEmailAddress.Normalize(address);

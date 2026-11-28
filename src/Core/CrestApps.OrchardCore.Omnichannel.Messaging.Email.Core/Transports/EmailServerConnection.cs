@@ -2,6 +2,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using MailKit;
 using MailKit.Security;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 
@@ -36,15 +37,9 @@ public static class EmailServerConnection
     /// </summary>
     public const int TimeoutMilliseconds = 30_000;
 
-    /// <summary>
-    /// The words shown when a mail server refused the sign-in.
-    /// </summary>
-    internal const string RefusedSignInMessage = "The mail server refused the sign-in. Check the user name and password (or app password).";
+    private const string SmtpProtocol = "smtp";
 
-    /// <summary>
-    /// The words shown for any other failure to connect to a mail server or sign in.
-    /// </summary>
-    internal const string UnreachableMessage = "The mail server could not be reached, or it did not answer as a mail server. Check the host, port and security; the details are in the site's log.";
+    private const string ImapProtocol = "imap";
 
     /// <summary>
     /// Maps the configured security onto MailKit's options.
@@ -109,18 +104,18 @@ public static class EmailServerConnection
     }
 
     /// <summary>
-    /// Protects a password for the one account it is typed for: the server's host, port, security and user name are
-    /// sealed in with it, and <see cref="ConnectAsync"/> only reads it back for that same account.
+    /// Protects a password for the one account it is typed for: the protocol and the server's host, port, security and
+    /// user name are sealed in with it, and <see cref="ConnectAsync"/> only reads it back for that same account.
     /// </summary>
     /// <remarks>
     /// The protected value is stored in the address's settings, which reach places the editor's own checks do not (the
     /// channel endpoints API, a recipe, an import or a copy). Sealing the account in means a protected password copied
-    /// next to another server or user name, or with the security turned off, no longer reads back, so it is never sent
-    /// anywhere but where it was saved for.
+    /// next to another server or user name, into the other server's slot (SMTP or IMAP), or with the security turned off,
+    /// no longer reads back, so it is never sent anywhere but where it was saved for.
     /// </remarks>
     /// <param name="secretProtector">The protector.</param>
     /// <param name="server">The server settings the password is for.</param>
-    /// <param name="defaultPort">The protocol's default port.</param>
+    /// <param name="defaultPort">The protocol's default port: <see cref="SmtpSubmissionPort"/> or <see cref="ImapPort"/>.</param>
     /// <param name="implicitTlsPort">The protocol's implicit-TLS port.</param>
     /// <param name="password">The password as typed.</param>
     /// <returns>The protected password, or <see langword="null"/> when <paramref name="password"/> is empty.</returns>
@@ -129,14 +124,16 @@ public static class EmailServerConnection
         ArgumentNullException.ThrowIfNull(secretProtector);
         ArgumentNullException.ThrowIfNull(server);
 
+        var protocol = defaultPort == ImapPort ? ImapProtocol : SmtpProtocol;
+
         return string.IsNullOrEmpty(password)
             ? null
-            : secretProtector.Protect(AccountKey(server, ResolvePort(server, defaultPort, implicitTlsPort)) + password);
+            : secretProtector.Protect(AccountKey(protocol, server, ResolvePort(server, defaultPort, implicitTlsPort)) + password);
     }
 
     // The password of the account the settings name, or null when the stored one was protected for another account (or
     // before passwords were sealed to their account) and has to be typed again.
-    internal static string UnprotectPassword(IEmailSecretProtector secretProtector, EmailServerSettings server, int port)
+    internal static string UnprotectPassword(IEmailSecretProtector secretProtector, string protocol, EmailServerSettings server, int port)
     {
         var payload = secretProtector.Unprotect(server.Password);
 
@@ -145,18 +142,19 @@ public static class EmailServerConnection
             return null;
         }
 
-        var account = AccountKey(server, port);
+        var account = AccountKey(protocol, server, port);
 
         return payload.StartsWith(account, StringComparison.Ordinal)
             ? payload.Substring(account.Length)
             : null;
     }
 
-    // Host, port, security and user name, compared the way IsSameAccount compares them, ended by a character no typed
-    // host or user name holds.
-    private static string AccountKey(EmailServerSettings server, int port)
+    // Protocol, host, port, security and user name, compared the way IsSameAccount compares them, ended by a character
+    // no typed host or user name holds.
+    private static string AccountKey(string protocol, EmailServerSettings server, int port)
         => string.Join(
             '\n',
+            protocol,
             server.Host?.Trim().ToLowerInvariant() ?? string.Empty,
             port.ToString(System.Globalization.CultureInfo.InvariantCulture),
             ((int)server.Security).ToString(System.Globalization.CultureInfo.InvariantCulture),
@@ -174,15 +172,20 @@ public static class EmailServerConnection
     /// exception belongs in the log.
     /// </remarks>
     /// <param name="exception">The failure.</param>
-    /// <returns>The words to show.</returns>
-    public static string DescribeFailure(Exception exception)
-        => exception switch
+    /// <param name="S">The localizer of the caller that shows the words.</param>
+    /// <returns>The words to show, in the current culture.</returns>
+    public static string DescribeFailure(Exception exception, IStringLocalizer S)
+    {
+        ArgumentNullException.ThrowIfNull(S);
+
+        return exception switch
         {
-            AuthenticationException => RefusedSignInMessage,
-            EmailConnectionNotSecureException notSecure => notSecure.Message,
-            EmailStoredPasswordUnusableException unusable => unusable.Message,
-            _ => UnreachableMessage,
+            AuthenticationException => S["The mail server refused the sign-in. Check the user name and password (or app password)."],
+            EmailConnectionNotSecureException notSecure => S["The mail server at '{0}' did not offer an encrypted connection, so the password was not sent. Choose STARTTLS or SSL/TLS, or None to send it unencrypted.", notSecure.Host],
+            EmailStoredPasswordUnusableException unusable => S["The stored password for the mail server at '{0}' was saved for other settings, so it was not sent. Type the password again on the address.", unusable.Host],
+            _ => S["The mail server could not be reached, or it did not answer as a mail server. Check the host, port and security; the details are in the site's log."],
         };
+    }
 
     /// <summary>
     /// Connects a client and signs it in when the server settings name a user.
@@ -209,7 +212,8 @@ public static class EmailServerConnection
 
         // A password protected for another account (moved next to another server or user name, or with the security
         // turned off) does not read back, and the server is not even contacted.
-        var password = signsIn ? UnprotectPassword(secretProtector, server, port) : null;
+        var protocol = client is MailKit.Net.Imap.IImapClient ? ImapProtocol : SmtpProtocol;
+        var password = signsIn ? UnprotectPassword(secretProtector, protocol, server, port) : null;
 
         if (signsIn && password is null)
         {

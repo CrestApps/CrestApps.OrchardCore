@@ -365,6 +365,15 @@
                 <span class="hint">@T["0 receives only mail that arrives after the mailbox is connected, so connecting a busy mailbox does not flood the workspace."]</span>
             </div>
         </div>
+
+        <div class="ocat-wrapper" asp-validation-class-for="TrustedAuthenticationServerId">
+            <label asp-for="TrustedAuthenticationServerId" class="ocat-label">@T["Trusted authentication server"]</label>
+            <div class="ocat-end">
+                <input asp-for="TrustedAuthenticationServerId" class="form-control" placeholder="mx.google.com" />
+                <span asp-validation-for="TrustedAuthenticationServerId" class="text-danger"></span>
+                <span class="hint">@T["The server name the mail host writes first in its Authentication-Results header (Google Workspace writes mx.google.com). When set, only that server's report says whether the business's own domain passed DMARC. Leave it empty to read the topmost header; Microsoft 365 writes no server name, so leave it empty there."]</span>
+            </div>
+        </div>
     </div>
 </div>
 

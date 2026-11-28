@@ -3,6 +3,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports;
 using MailKit.Net.Smtp;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
@@ -15,6 +16,7 @@ public sealed class EmailConnectionTester : IEmailConnectionTester
     private readonly IEmailSecretProtector _secretProtector;
     private readonly IEmailMailboxReader _mailboxReader;
     private readonly ILogger _logger;
+    private readonly IStringLocalizer S;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="EmailConnectionTester"/> class.
@@ -22,14 +24,17 @@ public sealed class EmailConnectionTester : IEmailConnectionTester
     /// <param name="secretProtector">The protector the passwords are read with.</param>
     /// <param name="mailboxReader">The mailbox reader, which tests the IMAP connection.</param>
     /// <param name="logger">The logger the reason a test failed is written to.</param>
+    /// <param name="stringLocalizer">The string localizer.</param>
     public EmailConnectionTester(
         IEmailSecretProtector secretProtector,
         IEmailMailboxReader mailboxReader,
-        ILogger<EmailConnectionTester> logger)
+        ILogger<EmailConnectionTester> logger,
+        IStringLocalizer<EmailConnectionTester> stringLocalizer)
     {
         _secretProtector = secretProtector;
         _mailboxReader = mailboxReader;
         _logger = logger;
+        S = stringLocalizer;
     }
 
     /// <inheritdoc/>
@@ -39,7 +44,7 @@ public sealed class EmailConnectionTester : IEmailConnectionTester
 
         if (!server.IsConfigured)
         {
-            return "No SMTP server is set.";
+            return S["No SMTP server is set."];
         }
 
         try
@@ -63,7 +68,7 @@ public sealed class EmailConnectionTester : IEmailConnectionTester
             // cannot be used to find out which hosts and ports answer on the site's network.
             _logger.LogWarning(ex, "Testing the SMTP server '{Host}' failed.", server.Host.SanitizeLogValue());
 
-            return EmailServerConnection.DescribeFailure(ex);
+            return EmailServerConnection.DescribeFailure(ex, S);
         }
     }
 

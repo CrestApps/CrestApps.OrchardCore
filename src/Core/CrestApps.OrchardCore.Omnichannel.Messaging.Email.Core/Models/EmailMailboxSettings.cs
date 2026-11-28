@@ -35,4 +35,11 @@ public sealed class EmailMailboxSettings
     /// mail that arrives after the mailbox is connected, so connecting a busy mailbox does not flood the workspace.
     /// </summary>
     public int InitialLookbackDays { get; set; }
+
+    /// <summary>
+    /// Gets or sets the <c>authserv-id</c> the mailbox host writes first in its <c>Authentication-Results</c> header, such
+    /// as <c>mx.google.com</c>. When set, only that host's results say whether a sender's domain passed DMARC; when empty,
+    /// the topmost header is read.
+    /// </summary>
+    public string TrustedAuthenticationServerId { get; set; }
 }

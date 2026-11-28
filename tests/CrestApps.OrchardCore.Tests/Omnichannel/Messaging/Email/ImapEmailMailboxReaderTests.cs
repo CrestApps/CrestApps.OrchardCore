@@ -6,6 +6,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Mailbox;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services;
 using MailKit;
+using CrestApps.OrchardCore.Tests.Telephony.Doubles;
 using MailKit.Search;
 using Microsoft.Extensions.Logging.Abstractions;
 using MimeKit;
@@ -129,6 +130,45 @@ public sealed class ImapEmailMailboxReaderTests
     }
 
     [Fact]
+    public async Task ReceiveBatchAsync_WithATrustedServer_BelievesOnlyThatServersAuthenticationResults()
+    {
+        // Arrange: the host is mx.google.com. Email 1 carries its pass. Email 2 reached a host that added no header, so
+        // the sender's own forged pass is on top. Email 3 has the host's fail on top of a forged pass below it. Email 4
+        // has a forged pass on top, above the host's own pass.
+        var harness = new Harness { TrustedAuthenticationServerId = "MX.google.com" };
+        harness.AuthenticationResults[1] = ["mx.google.com; dkim=pass header.d=example.com; dmarc=pass (p=REJECT) header.from=example.com"];
+        harness.AuthenticationResults[2] = ["forged.example; dmarc=pass header.from=example.com"];
+        harness.AuthenticationResults[3] =
+        [
+            "mx.google.com; dmarc=fail (p=NONE) header.from=example.com",
+            "mx.google.com; dmarc=pass header.from=example.com",
+        ];
+        harness.AuthenticationResults[4] =
+        [
+            "forged.example; dmarc=pass header.from=example.com",
+            "mx.google.com (the host); dmarc=pass header.from=example.com",
+        ];
+
+        // Act
+        await harness.ReceiveAsync(1, 2, 3, 4);
+
+        // Assert: only the trusted server's topmost report counts, wherever it is.
+        Assert.Equal(new[] { true, false, false, true }, harness.Emails.Select(email => email.IsFromDomainAuthenticated));
+    }
+
+    [Theory]
+    [InlineData("mx.google.com; dmarc=pass header.from=example.com", "mx.google.com")]
+    [InlineData("  mx.google.com 1 ; dmarc=pass", "mx.google.com")]
+    [InlineData("(comment) mx.contoso.com; spf=pass", "mx.contoso.com")]
+    [InlineData("spf=pass (sender IP is 1.2.3.4) smtp.mailfrom=example.com; dmarc=pass header.from=example.com", null)]
+    [InlineData("", null)]
+    public void GetServerId_ReadsTheFirstWordOfTheHeader(string header, string expected)
+    {
+        // Act & Assert
+        Assert.Equal(expected, InboundEmailAuthentication.GetServerId(header));
+    }
+
+    [Fact]
     public async Task FindNewMailAsync_TriesAKeptEmailBeforeTheNewMail()
     {
         // Arrange: UIDs 1 to 5 are in the folder, 3 was the last read, and the receiver failed on 2.
@@ -238,7 +278,8 @@ public sealed class ImapEmailMailboxReaderTests
                 Mock.Of<ICatalog<EmailMailboxSyncState>>(),
                 Mock.Of<IEmailSecretProtector>(),
                 Mock.Of<IClock>(),
-                NullLogger<ImapEmailMailboxReader>.Instance);
+                NullLogger<ImapEmailMailboxReader>.Instance,
+                new PassThroughStringLocalizer<ImapEmailMailboxReader>());
         }
 
         public Mock<IMailFolder> Folder { get; } = new();
@@ -258,6 +299,8 @@ public sealed class ImapEmailMailboxReaderTests
 
         public string BusyMessageId { get; set; }
 
+        public string TrustedAuthenticationServerId { get; set; }
+
         public EmailMailboxSyncState State { get; } = new() { ItemId = "address-support", UidValidity = 1 };
 
         public EmailMailboxReadResult Result { get; } = new();
@@ -271,6 +314,7 @@ public sealed class ImapEmailMailboxReaderTests
                 destination: null,
                 State,
                 _address,
+                TrustedAuthenticationServerId,
                 Result,
                 TestContext.Current.CancellationToken);
 
