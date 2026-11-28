@@ -1,0 +1,33 @@
+@model ShapeViewModel<SurveyResponse>
+
+@{
+    var response = Model.Value;
+    var status = response.Status switch
+    {
+        SurveyResponseStatus.Completed => T["Completed"],
+        SurveyResponseStatus.ScreenedOut => T["Screened out"],
+        SurveyResponseStatus.Abandoned => T["Abandoned"],
+        SurveyResponseStatus.Voided => T["Voided"],
+        _ => T["In progress"],
+    };
+    var css = response.Status == SurveyResponseStatus.Completed ? "text-bg-success" : "text-bg-light border";
+}
+
+<span class="badge @css fw-normal" title="@T["Status"]">@status</span>
+@if (response.Grading == GradingStatus.Pending && response.Status == SurveyResponseStatus.Completed)
+{
+    <span class="badge text-bg-warning fw-normal" title="@T["Grading"]"><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> @T["Needs grading"]</span>
+}
+@if (response.Percent is not null)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Score"]"><i class="fa-solid fa-star-half-stroke" aria-hidden="true"></i> @response.Percent.Value.ToString("0.#")%</span>
+}
+@if (response.Passed is not null)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Result"]">@(response.Passed == true ? T["Passed"] : T["Not passed"])</span>
+}
+<span class="badge ta-badge fw-normal" title="@T["Version"]"><i class="fa-solid fa-code-branch" aria-hidden="true"></i> @T["v{0}", response.VersionNumber]</span>
+@if (response.UpkeepFailures >= CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyMaintenanceService.MaxUpkeepFailures)
+{
+    <span class="badge text-bg-danger fw-normal" title="@T["Background upkeep failed on this response too many times in a row and stopped trying it."]"><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> @T["Upkeep stopped"]</span>
+}

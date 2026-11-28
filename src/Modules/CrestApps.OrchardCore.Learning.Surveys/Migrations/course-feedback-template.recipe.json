@@ -1,0 +1,313 @@
+{
+  "name": "CourseFeedbackSurveyTemplate",
+  "displayName": "Course feedback survey template",
+  "description": "Adds the course feedback survey template that course survey items start from.",
+  "author": "CrestApps",
+  "website": "https://crestapps.com",
+  "version": "1.0.0",
+  "issetuprecipe": false,
+  "categories": [],
+  "tags": [],
+  "steps": [
+    {
+      "name": "SurveyTemplates",
+      "Templates": [
+        {
+          "ItemId": "4r4pemgj35vx2hxmv74qb7x91z",
+          "Name": "course-feedback",
+          "Title": "Course feedback",
+          "Description": "Rate a course, its content and its instructor.",
+          "Kind": "Survey",
+          "Icon": "fa-solid fa-graduation-cap",
+          "Position": 50,
+          "Definition": {
+            "SchemaVersion": 1,
+            "Title": "Course feedback",
+            "Introduction": null,
+            "Pages": [
+              {
+                "Id": "4vxpxktb7wvq2z23yfwhxat6wb",
+                "Name": "page_1",
+                "Title": null,
+                "Description": null,
+                "Visibility": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "Questions": [
+                  {
+                    "Id": "4ke6avccahxp52trc9xwrv7fdx",
+                    "Name": "q1",
+                    "ControlType": "Rating",
+                    "Title": "How would you rate the course overall?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": true,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Min": 1,
+                      "Max": 5,
+                      "Style": "Stars",
+                      "Metric": "None"
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "4m5whh3qhb86xxshf124tbdtw8",
+                    "Name": "q2",
+                    "ControlType": "Rating",
+                    "Title": "How clear was the content?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Min": 1,
+                      "Max": 5,
+                      "Style": "Stars",
+                      "Metric": "None"
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "4aavksj6j1q6vsh80hdas622w9",
+                    "Name": "q3",
+                    "ControlType": "Rating",
+                    "Title": "How helpful was the instructor?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Min": 1,
+                      "Max": 5,
+                      "Style": "Stars",
+                      "Metric": "None"
+                    },
+                    "Properties": {}
+                  },
+                  {
+                    "Id": "4e90eq9nrr2zx75hdx433eb641",
+                    "Name": "q4",
+                    "ControlType": "LongText",
+                    "Title": "What would you improve?",
+                    "Description": null,
+                    "Placeholder": null,
+                    "Required": false,
+                    "Pinned": false,
+                    "PoolId": null,
+                    "Visibility": {
+                      "Mode": "Always",
+                      "Rule": null,
+                      "Formula": null
+                    },
+                    "RequiredWhen": null,
+                    "EnabledWhen": null,
+                    "Choices": [],
+                    "ShuffleChoices": false,
+                    "ChoicesFrom": null,
+                    "ChoicesFromMode": "All",
+                    "Rows": [],
+                    "Scoring": {
+                      "Points": null,
+                      "PartialCredit": false,
+                      "PenaltyPerWrong": null,
+                      "CategoryId": null,
+                      "ChoicePoints": {},
+                      "CorrectChoiceIds": [],
+                      "AcceptedAnswers": [],
+                      "CaseSensitive": false,
+                      "NumberAnswer": null,
+                      "Tolerance": 0,
+                      "Pairs": {},
+                      "GeneralFeedback": null,
+                      "CorrectFeedback": null,
+                      "IncorrectFeedback": null,
+                      "ChoiceFeedback": {},
+                      "GraderGuidance": null,
+                      "Key": {}
+                    },
+                    "Validation": [],
+                    "Settings": {
+                      "Rows": 5
+                    },
+                    "Properties": {}
+                  }
+                ],
+                "Pools": [],
+                "QuestionOrder": "AsDefined",
+                "Branches": [],
+                "AllowBack": true,
+                "TimeLimitSeconds": null
+              }
+            ],
+            "Variables": [],
+            "Endings": [
+              {
+                "Id": "45khmdb1sbxe4vywsw53c63eww",
+                "Name": "thank_you",
+                "Title": "Thank you",
+                "Message": "<p>Thank you for your response.</p>",
+                "RedirectUrl": null,
+                "Outcome": "Completed",
+                "Condition": {
+                  "Mode": "Always",
+                  "Rule": null,
+                  "Formula": null
+                },
+                "IsDefault": true
+              }
+            ],
+            "ScoreCategories": [],
+            "ScoreBands": [],
+            "Quotas": [],
+            "Presentation": {
+              "ShowTitle": true,
+              "ShowQuestionNumbers": true,
+              "ShowPageTitles": true,
+              "ShowProgressBar": true,
+              "ProgressBasis": "Pages",
+              "QuestionsPerPage": 0,
+              "PageOrder": "AsDefined",
+              "SkipLanding": false,
+              "CssClass": null,
+              "CompletedRedirectUrl": null
+            },
+            "Navigation": {
+              "AllowBack": true,
+              "Sequential": false,
+              "AutoAdvance": false,
+              "AllowResume": true,
+              "AllowEditAfterSubmit": false,
+              "ConfirmBeforeSubmit": false
+            },
+            "Scoring": {
+              "Enabled": false,
+              "PassMarkPercent": null,
+              "DefaultPoints": 1,
+              "NegativeMarking": false,
+              "ShowScoreToRespondent": true,
+              "FeedbackMode": "Deferred",
+              "RoundingDecimals": 2,
+              "ScoreFormula": null
+            },
+            "Review": {
+              "During": "None",
+              "ImmediatelyAfter": "Score, Responses",
+              "LaterWhileOpen": "Score, Responses",
+              "AfterClose": "All",
+              "ResultsVisibility": "Never"
+            },
+            "Timing": {
+              "TimeLimitMinutes": null,
+              "GraceSeconds": 5,
+              "AutoSubmitAtDeadline": true
+            },
+            "Translations": {},
+            "Properties": {}
+          }
+        }
+      ]
+    }
+  ]
+}

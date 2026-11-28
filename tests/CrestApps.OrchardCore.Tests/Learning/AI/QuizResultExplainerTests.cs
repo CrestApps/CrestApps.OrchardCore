@@ -1,110 +1,78 @@
-using System.Text.Json;
 using CrestApps.OrchardCore.Learning.AI.Services;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
 
 namespace CrestApps.OrchardCore.Tests.Learning.AI;
 
 /// <summary>
-/// The explain-my-quiz-result tool tells the learner only what the quiz's review policy lets them see: never the answer
-/// key of an attempt they may not review.
+/// The explain-my-result tool shows only what the quiz's review settings let the learner see: a review that shows the
+/// answers but hides the score never gives the score away.
 /// </summary>
 public sealed class QuizResultExplainerTests
 {
-    private const string RightAnswerText = "Class C (electrical)";
-    private const string KeyFeedback = "Water conducts electricity.";
-
     [Fact]
-    public void ReviewAllowed_ExplainsTheQuestionsWithTheAnswersRightAnswersAndFeedback()
+    public void Describe_ReviewShowsAnswersButHidesTheScore_LeavesScorePercentAndPassedOut()
     {
-        var explanation = QuizResultExplainer.Describe(Attempt(), canReview: true, canSeeScore: true);
+        // Arrange
+        var response = Response();
 
+        // Act
+        var explanation = QuizResultExplainer.Describe(response, new SurveyDefinition(), "Quiz", ReviewShows.Responses, registry: null);
+
+        // Assert
         Assert.True(explanation.ReviewAvailable);
-        Assert.Equal(1m, explanation.Score);
-        var question = Assert.Single(explanation.Questions);
-        Assert.Equal("Which extinguisher for an electrical fire?", question.Prompt);
-        Assert.Equal("Water", question.YourAnswer);
-        Assert.Equal(RightAnswerText, question.RightAnswer);
-        Assert.Contains(KeyFeedback, question.Feedback, StringComparison.Ordinal);
-        Assert.Equal("Well tried.", explanation.Feedback);
-    }
-
-    [Fact]
-    public void ScoreOnly_GivesTheScoreAndNoQuestionAnswerKeyOrFeedback()
-    {
-        var explanation = QuizResultExplainer.Describe(Attempt(), canReview: false, canSeeScore: true);
-        var json = JsonSerializer.Serialize(explanation);
-
-        Assert.False(explanation.ReviewAvailable);
-        Assert.Equal(1m, explanation.Score);
-        Assert.Empty(explanation.Questions);
-        Assert.Null(explanation.Feedback);
-        Assert.DoesNotContain(RightAnswerText, json, StringComparison.Ordinal);
-        Assert.DoesNotContain(KeyFeedback, json, StringComparison.Ordinal);
-        Assert.False(string.IsNullOrEmpty(explanation.Message));
-    }
-
-    [Fact]
-    public void Hidden_GivesNeitherTheScoreNorTheKey()
-    {
-        var explanation = QuizResultExplainer.Describe(Attempt(), canReview: false, canSeeScore: false);
-        var json = JsonSerializer.Serialize(explanation);
-
         Assert.Null(explanation.Score);
+        Assert.Null(explanation.MaxScore);
+        Assert.Null(explanation.Percent);
         Assert.Null(explanation.Passed);
-        Assert.Empty(explanation.Questions);
-        Assert.DoesNotContain(RightAnswerText, json, StringComparison.Ordinal);
+        Assert.Null(explanation.PassMark);
+        Assert.Contains("hide the score", explanation.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Describe_ReviewShowsTheScore_GivesTheScore()
+    {
+        // Arrange
+        var response = Response();
+
+        // Act
+        var explanation = QuizResultExplainer.Describe(response, new SurveyDefinition(), "Quiz", ReviewShows.Responses | ReviewShows.Score, registry: null);
+
+        // Assert
+        Assert.Equal(8m, explanation.Score);
+        Assert.Equal(80m, explanation.Percent);
+        Assert.True(explanation.Passed);
     }
 
     [Theory]
-    [InlineData(AttemptStatus.NeedsGrading)]
-    [InlineData(AttemptStatus.Submitted)]
-    [InlineData(AttemptStatus.Voided)]
-    public void AttemptsWithoutAResult_GiveNoScoreAndNoKey_WhateverThePolicy(AttemptStatus status)
+    [InlineData(ReviewShows.Responses | ReviewShows.Score, false)]
+    [InlineData(ReviewShows.Responses | ReviewShows.Score | ReviewShows.Feedback, true)]
+    public void Describe_GradersWords_FollowTheFeedbackSetting(ReviewShows shows, bool expected)
     {
-        var attempt = Attempt();
-        attempt.Status = status;
+        // Arrange: a graded answer with a grader's comment, and the grader's overall feedback.
+        var definition = new SurveyDefinition();
+        definition.Pages.Add(new SurveyPage { Id = "p1", Questions = [new SurveyQuestion { Id = "q1", Name = "q1", Title = "Q1", ControlType = AuthoringSurveyHarness.TextControl }] });
+        var response = Response();
+        response.Feedback = "Overall: revise chapter 2.";
+        response.Answers["q1"] = new SurveyAnswer { Values = ["my answer"], ManualScore = 1m, MaxPoints = 2m, GraderComment = "The key is X." };
 
-        var explanation = QuizResultExplainer.Describe(attempt, canReview: true, canSeeScore: true);
-        var json = JsonSerializer.Serialize(explanation);
+        // Act
+        var explanation = QuizResultExplainer.Describe(response, definition, "Quiz", shows, AuthoringSurveyHarness.CreateRegistry());
 
-        Assert.Null(explanation.Score);
-        Assert.Empty(explanation.Questions);
-        Assert.DoesNotContain(RightAnswerText, json, StringComparison.Ordinal);
+        // Assert
+        var question = Assert.Single(explanation.Questions);
+        Assert.Equal(expected, explanation.Feedback is not null);
+        Assert.Equal(expected, question.Feedback?.Contains("The key is X.", StringComparison.Ordinal) == true);
     }
 
-    private static AssessmentAttempt Attempt()
+    private static SurveyResponse Response()
         => new()
         {
-            ItemId = "a1",
-            UserId = "learner",
-            QuizTitle = "Fire safety quiz",
-            Sequence = 1,
-            Status = AttemptStatus.Graded,
-            Score = 1,
-            MaxScore = 2,
-            Percent = 50,
-            Passed = false,
-            PassMark = 80,
-            Feedback = "Well tried.",
-            ReviewPolicy = ReviewPolicy.AfterGraded,
-            Items =
-            [
-                new AttemptItem
-                {
-                    Index = 0,
-                    QuestionType = "SingleChoice",
-                    Title = "Electrical fires",
-                    Prompt = "<p>Which extinguisher for an <strong>electrical</strong> fire?</p>".Replace("<strong>", string.Empty, StringComparison.Ordinal).Replace("</strong>", string.Empty, StringComparison.Ordinal),
-                    Choices =
-                    [
-                        new AttemptChoice { Id = "w", Text = "Water", Feedback = KeyFeedback },
-                        new AttemptChoice { Id = "c", Text = RightAnswerText },
-                    ],
-                    Key = new AttemptKey { ChoiceIds = ["c"] },
-                    Points = 2,
-                    Response = new AttemptResponse { ChoiceIds = ["w"] },
-                    AutoScore = 0,
-                },
-            ],
+            ItemId = "r1",
+            Status = SurveyResponseStatus.Completed,
+            Score = 8m,
+            MaxScore = 10m,
+            Percent = 80m,
+            Passed = true,
         };
 }

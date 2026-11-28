@@ -1,0 +1,39 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+
+@model SurveyTaskViewModel
+
+<div class="mb-3">
+    <label asp-for="SurveyId" class="form-label">@T["Survey id"]</label>
+    <input asp-for="SurveyId" class="form-control code" />
+    <span class="hint">@T["The id of the survey, a Liquid expression such as Workflow.Input.SurveyId between double braces."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="UserId" class="form-label">@T["User id"]</label>
+    <input asp-for="UserId" class="form-control code" />
+    <span class="hint">@T["The id of the user. Supports Liquid."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ExtraMinutes" class="form-label">@T["Extra minutes"]</label>
+    <input asp-for="ExtraMinutes" class="form-control code" />
+    <span class="hint">@T["The minutes added to the time limit."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="ExtraAttempts" class="form-label">@T["Extra attempts"]</label>
+    <input asp-for="ExtraAttempts" class="form-control code" />
+    <span class="hint">@T["The attempts added to the limit."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Reason" class="form-label">@T["Reason"]</label>
+    <input asp-for="Reason" class="form-control code" />
+    <span class="hint">@T["Why. Required; kept with the change."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="OutputName" class="form-label">@T["Output name"]</label>
+    <input asp-for="OutputName" class="form-control code" />
+    <span class="hint">@T["The workflow output that holds the result."]</span>
+</div>

@@ -2,7 +2,7 @@ using System.Globalization;
 using System.IO.Compression;
 using System.Text.Json;
 using CrestApps.OrchardCore.FileStorage;
-using CrestApps.OrchardCore.Learning.Core.Archives;
+using CrestApps.OrchardCore.Archives;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages.Core.Scorm;

@@ -2,7 +2,9 @@ namespace CrestApps.OrchardCore.Consent.Core;
 
 /// <summary>
 /// The default <see cref="IConsentService"/>: asks the registered <see cref="IConsentSource"/>s in registration order
-/// and stops at the first that says the person opted out, and records each change with every source.
+/// and stops at the first that says the person opted out, and records each change with every source. A source that
+/// can't tell (<see cref="ConsentAnswer.Unknown"/>) is named in <see cref="ConsentStatus.UnknownSources"/> and the
+/// question goes on to the next source.
 /// </summary>
 public sealed class DefaultConsentService : IConsentService
 {
@@ -37,6 +39,8 @@ public sealed class DefaultConsentService : IConsentService
             return ConsentStatus.NotOptedOut;
         }
 
+        List<string> unknown = null;
+
         foreach (var source in _sources)
         {
             if (query.ExcludedSources?.Contains(source.Name, StringComparer.Ordinal) == true)
@@ -44,13 +48,20 @@ public sealed class DefaultConsentService : IConsentService
                 continue;
             }
 
-            if (await source.HasOptedOutAsync(query, cancellationToken))
+            switch (await source.GetAnswerAsync(query, cancellationToken))
             {
-                return ConsentStatus.OptedOutBy(source.Name);
+                case ConsentAnswer.OptedOut:
+                    // An opt-out is enough on its own, whatever another source couldn't tell.
+                    return ConsentStatus.OptedOutBy(source.Name);
+                case ConsentAnswer.Unknown:
+                    // A source that can't tell doesn't stop the question: the others still answer, and the caller
+                    // decides what the unknown means for its send.
+                    (unknown ??= []).Add(source.Name);
+                    break;
             }
         }
 
-        return ConsentStatus.NotOptedOut;
+        return unknown is null ? ConsentStatus.NotOptedOut : ConsentStatus.UnknownTo(unknown);
     }
 
     /// <inheritdoc />

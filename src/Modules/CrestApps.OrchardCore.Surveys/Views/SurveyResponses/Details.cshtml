@@ -1,0 +1,155 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyResponseDetailsViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyRespondentNames RespondentNames
+@inject CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymousDays AnonymousDays
+
+@{
+    var response = Model.Response;
+
+    // An anonymous survey names nobody and shows its times by the day only, in the site's time zone, preformatted so
+    // nothing converts it again in the viewer's.
+    var anonymous = Model.Survey.Access?.Anonymity == AnonymityMode.Anonymous;
+}
+
+<zone Name="Title">
+    <breadcrumb name="SurveysResponse" title="@T["Response {0}", Model.Label]">
+        <breadcrumb-item id="Surveys" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="Responses" url="@Url.RouteUrl("SurveysResponses", new { id = Model.Survey.ItemId })">@T["Responses"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<survey-layout survey="Model.Survey">
+
+<div class="card mb-3">
+    <div class="card-header">@T["Summary"]</div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">@T["Survey"]</dt>
+            <dd class="col-sm-9">@Model.Survey.Title @if (Model.ShowsVersion) { <text>(@T["version {0}", response.VersionNumber])</text> }</dd>
+            <dt class="col-sm-3">@T["Status"]</dt>
+            <dd class="col-sm-9">@response.Status @(response.IsTest ? T["(test)"].Value : string.Empty)</dd>
+            <dt class="col-sm-3">@T["Respondent"]</dt>
+            <dd class="col-sm-9">@await RespondentNames.GetAsync(response, Model.Survey)</dd>
+            <dt class="col-sm-3">@T["Started"]</dt>
+            <dd class="col-sm-9">@if (anonymous) { @await AnonymousDays.TextAsync(response.StartedUtc) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: "g")) }</dd>
+            @if (response.CompletedUtc is { } completed)
+            {
+                <dt class="col-sm-3">@T["Completed"]</dt>
+                <dd class="col-sm-9">@if (anonymous) { @await AnonymousDays.TextAsync(completed) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g")) } @(response.AutoSubmitted ? T["(at the deadline)"].Value : string.Empty)</dd>
+            }
+            @if (!anonymous && response.StatementAcceptedUtc is { } accepted)
+            {
+                <dt class="col-sm-3">@T["Statement accepted"]</dt>
+                <dd class="col-sm-9" data-survey-statement-accepted>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(accepted, DateTimeKind.Utc), Format: "g"))</dd>
+            }
+            @if (response.Score is not null)
+            {
+                <dt class="col-sm-3">@T["Score"]</dt>
+                <dd class="col-sm-9">@response.Score.Value.ToString("0.##") / @((response.MaxScore ?? 0).ToString("0.##")) (@((response.Percent ?? 0).ToString("0.#"))%) @(response.Passed == true ? T["Passed"].Value : response.Passed == false ? T["Not passed"].Value : string.Empty)</dd>
+            }
+        </dl>
+    </div>
+</div>
+
+@await DisplayAsync(Model.Extensions)
+
+<div class="card mb-3">
+    <div class="card-header">@T["Answers"]</div>
+    <div class="card-body">
+        @foreach (var question in Model.Questions)
+        {
+            @await DisplayAsync(question)
+        }
+    </div>
+</div>
+
+@if (response.CategoryScores.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Score by category"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var category in response.CategoryScores)
+            {
+                <li class="list-group-item d-flex justify-content-between"><span>@(Model.CategoryNames.TryGetValue(category.Key, out var name) ? name : category.Key)</span><span>@category.Value.ToString("0.##")</span></li>
+            }
+        </ul>
+    </div>
+}
+
+@if (response.Variables.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Variables"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var variable in response.Variables)
+            {
+                <li class="list-group-item d-flex justify-content-between"><code>@variable.Key</code><span>@variable.Value</span></li>
+            }
+        </ul>
+    </div>
+}
+
+<div class="card mb-3">
+    <div class="card-header">@T["Page visits"]</div>
+    <ul class="list-group list-group-flush">
+        @foreach (var visit in response.PageVisits)
+        {
+            var pageId = CrestApps.OrchardCore.Surveys.Core.Runtime.SurveyPlanNavigator.PageOf(response.Plan, visit.PageId);
+            <li class="list-group-item d-flex flex-wrap justify-content-between">
+                <span>@(Model.PageNames.TryGetValue(pageId ?? string.Empty, out var pageName) ? pageName : visit.PageId)</span>
+                <span class="text-muted small">
+                    @if (!anonymous)
+                    {
+                        @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(visit.EnteredUtc, DateTimeKind.Utc), Format: "T"))
+                    }
+                    @if (visit.LeftUtc is { } left)
+                    {
+                        // In whole minutes on an anonymous survey (SurveyAnonymity.ShownDuration), so the seconds spent on a
+                        // page can't line it up with a time recorded elsewhere.
+                        var spent = CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.ShownDuration(left - visit.EnteredUtc, anonymous);
+                        if (anonymous)
+                        {
+                            <text>&ndash; @T["{0} min", (long)spent.TotalMinutes]</text>
+                        }
+                        else
+                        {
+                            <text>&ndash; @CrestApps.OrchardCore.Surveys.Core.Results.SurveyDurations.Minutes(spent)</text>
+                        }
+                    }
+                </span>
+            </li>
+        }
+    </ul>
+</div>
+
+@if (response.ScoreHistory.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Score history"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var change in response.ScoreHistory)
+            {
+                <li class="list-group-item">
+                    <span class="text-muted small">@if (anonymous) { @await AnonymousDays.TextAsync(change.ChangedUtc) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: "g")) }</span>
+                    @change.Kind: @(change.From?.ToString("0.##") ?? "-") &rarr; @(change.To?.ToString("0.##") ?? "-") @change.Reason
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+@if (Model.CanDelete)
+{
+    @* Void and Delete are links: the admin theme's confirm posts the link's own URL with the antiforgery token. *@
+    <form method="post" action="@Url.RouteUrl("SurveysResponseVoid", new { id = response.ItemId })">
+        @Html.AntiForgeryToken()
+        <div class="action-bar-bottom">
+            <a class="btn btn-secondary cancel" role="button" href="@Url.RouteUrl("SurveysResponses", new { id = Model.Survey.ItemId })">@T["Back"]</a>
+            @if (response.Status != SurveyResponseStatus.Voided)
+            {
+                <a class="btn btn-warning action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysResponseVoid", new { id = response.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Void Response"]" data-message="@T["Void this response?"]" data-ok-text="@T["Void"]" data-cancel-text="@T["Cancel"]">@T["Void"]</a>
+            }
+            <a class="btn btn-danger action-bar-secondary" role="button" href="@Url.RouteUrl("SurveysResponseDelete", new { id = response.ItemId })" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete Response"]" data-message="@T["Delete this response? This cannot be undone."]">@T["Delete"]</a>
+        </div>
+    </form>
+}
+
+</survey-layout>

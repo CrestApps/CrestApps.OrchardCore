@@ -754,6 +754,16 @@ public sealed class MigrationAdditiveOnlyGuardTests
             "Workforce_TeamIndex",
             "The index of the team documents Workforce kept in its own collection before teams had their own module. Workforce is new in 3.0.0, so no stable release created the table. It is dropped in the same step that saves every one of those teams again in the Teams collection with the same id, where the Teams module's own index serves them."),
         new MigrationContractEntry(
+            "src/Modules/CrestApps.OrchardCore.Learning.Surveys/Migrations/LearningSurveysMigrations.cs",
+            "LearningSurveysMigrations",
+            "CreateAsync",
+            "DropTableAsync",
+            "LearningSurveyResponses_SurveyResponseIndex",
+            MigrationContractJustification.NeverReleased,
+            "3.0.0",
+            "LearningSurveyResponses_SurveyResponseIndex",
+            "The index table of the first Learning release's course survey responses, which now live in the Surveys module as survey responses. Learning is new in 3.0.0, so no stable release created the table. It is dropped in the step that moves every quiz onto a survey, and no version of this release reads it."),
+        new MigrationContractEntry(
             "src/Modules/CrestApps.OrchardCore.KnowledgeBase/Migrations/KnowledgeBaseMigrations.cs",
             "KnowledgeBaseMigrations",
             "UpdateFrom4Async",

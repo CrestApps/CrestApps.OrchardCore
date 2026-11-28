@@ -1,0 +1,19 @@
+@* Scoring help on the Surveys grading page: suggests points and a comment for an answer that needs a grader. *@
+@{
+    var responseId = (string)Model.ResponseId;
+    var questionId = (string)Model.QuestionId;
+    var needsGrading = Model.NeedsGrading is bool flag && flag;
+}
+
+@if (needsGrading && !string.IsNullOrEmpty(responseId) && !string.IsNullOrEmpty(questionId))
+{
+    <script asp-name="surveys-ai-scoring-help" at="Foot"></script>
+    <div class="ocat-wrapper">
+        <div class="ocat-end-offset">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-survey-scoring-help="@Url.RouteUrl("SurveysAIScoringHelp", new { responseId, questionId })" data-question-id="@questionId" data-busy-text="@T["Asking AI..."]">
+                <i class="fa-solid fa-wand-magic-sparkles" aria-hidden="true"></i> @T["Suggest a Score With AI"]
+            </button>
+            <span class="hint" role="status" aria-live="polite" data-survey-scoring-help-status="@questionId"></span>
+        </div>
+    </div>
+}

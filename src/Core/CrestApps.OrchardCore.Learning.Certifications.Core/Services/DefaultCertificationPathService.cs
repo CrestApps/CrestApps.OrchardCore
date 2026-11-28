@@ -8,6 +8,7 @@ using CrestApps.OrchardCore.Skills.Services;
 using CrestApps.OrchardCore.WorkQueues;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging;
+using OrchardCore;
 using OrchardCore.Locking.Distributed;
 using OrchardCore.Modules;
 using YesSql;
@@ -114,7 +115,7 @@ public sealed class DefaultCertificationPathService : ICertificationPathService
 
         foreach (var requirement in path.InitialRequirements.Concat(path.RenewalRequirements))
         {
-            requirement.Id = string.IsNullOrEmpty(requirement.Id) ? Guid.NewGuid().ToString("n")[..12] : requirement.Id;
+            requirement.Id = string.IsNullOrEmpty(requirement.Id) ? IdGenerator.GenerateId() : requirement.Id;
 
             if (!kinds.Contains(requirement.Kind ?? string.Empty))
             {

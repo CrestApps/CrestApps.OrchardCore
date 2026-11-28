@@ -1,9 +1,10 @@
-using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
+using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,10 +46,10 @@ internal sealed class CertificationReviewActionProvider : IEnrollmentReviewActio
 
     public async Task<IEnumerable<EnrollmentReviewAction>> GetActionsAsync(Enrollment enrollment, CancellationToken cancellationToken = default)
     {
-        var attempts = _services.GetService<AssessmentAttemptStore>();
+        var responses = _services.GetService<ISurveyResponseQueries>();
         var affected = await _paths.ListRestingOnAsync(
             enrollment,
-            attempts is null ? null : async attemptId => (await attempts.FindByIdAsync(attemptId, cancellationToken))?.EnrollmentId,
+            responses is null ? null : async responseId => LearningSurveyContexts.EnrollmentIdOf(await responses.FindByIdAsync(responseId, cancellationToken)),
             cancellationToken);
         var actions = new List<EnrollmentReviewAction>();
         var httpContext = _httpContextAccessor.HttpContext;

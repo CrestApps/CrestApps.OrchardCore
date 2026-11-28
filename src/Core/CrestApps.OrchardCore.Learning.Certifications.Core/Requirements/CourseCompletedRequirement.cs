@@ -43,7 +43,7 @@ public sealed class CourseCompletedRequirement : ICertificationRequirement
             .Where(CompletionEvidence.CountsAsEvidence)
             .Where(enrollment => !CompletionEvidence.RestsOnABrowserResult(enrollment))
             .Where(enrollment => context.SinceUtc is null || enrollment.CompletedUtc >= context.SinceUtc)
-            .Where(enrollment => context.Requirement.MinimumGrade is null || (enrollment.Grade ?? enrollment.Completion?.Grade) >= context.Requirement.MinimumGrade)
+            .Where(enrollment => MeetsMinimumGrade(enrollment, context.Requirement.MinimumGrade))
             .OrderByDescending(enrollment => enrollment.CompletedUtc)
             .FirstOrDefault();
 
@@ -61,6 +61,28 @@ public sealed class CourseCompletedRequirement : ICertificationRequirement
             CompletedUtc = best.CompletedUtc.Value,
             Grade = best.Grade ?? best.Completion?.Grade,
         };
+    }
+
+    /// <summary>
+    /// Gets whether a completed enrollment meets a minimum grade: its grade reaches it, or it has no grade because nothing
+    /// in the course gave the learner one (recorded on its completion). A missing grade for any other reason, such as an
+    /// imported enrollment or a completion recorded without the course's outline, doesn't meet it (R9-M3).
+    /// </summary>
+    /// <param name="enrollment">The enrollment.</param>
+    /// <param name="minimumGrade">The minimum grade, or <see langword="null"/> for none.</param>
+    /// <returns><see langword="true"/> when it meets it.</returns>
+    public static bool MeetsMinimumGrade(Enrollment enrollment, decimal? minimumGrade)
+    {
+        ArgumentNullException.ThrowIfNull(enrollment);
+
+        if (minimumGrade is null)
+        {
+            return true;
+        }
+
+        return (enrollment.Grade ?? enrollment.Completion?.Grade) is { } grade
+            ? grade >= minimumGrade
+            : enrollment.Completion?.NoGradeSource == true;
     }
 
     /// <inheritdoc/>

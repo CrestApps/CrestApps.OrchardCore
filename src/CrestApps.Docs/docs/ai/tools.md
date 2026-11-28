@@ -244,6 +244,18 @@ These tools act for the signed-in person using the AI and refuse anonymous calle
 | `listOverdueLearners` | Lists the learners whose course is past its due date, within the caller's scope. |
 | `listLearnersExpiringSoon` | Lists the learners whose access to a course ends within the coming days, within the caller's scope. |
 
+### Survey tools
+
+**Available when:** `CrestApps.OrchardCore.Surveys.AI` on
+
+These tools act for the signed-in person using the AI and refuse anonymous callers. Each checks the person's access to every survey it reads or writes: managing a survey, or reading its responses, through the Surveys permissions and the providers that grant access to surveys owned by other features.
+
+| Function | Description |
+| --- | --- |
+| `list_surveys` | Lists the surveys, polls and quizzes the person manages or may read the results of, with their status, published version and number of responses. |
+| `get_survey_results` | Gets the results of a survey's published version through each question type's analyzer: counts per choice, number statistics and a few written answers. Anonymous surveys with fewer responses than their minimum group size show no results. |
+| `create_survey_draft` | Drafts a new survey from instructions or a document, checks it against the survey definition JSON schema and saves it as a draft for the person to review. It never publishes. Needs **Manage own surveys**. |
+
 ### Scheduling tools
 
 **Available when:** `CrestApps.OrchardCore.Scheduling` with `CrestApps.OrchardCore.AI` on

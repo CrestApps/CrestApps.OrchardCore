@@ -1,0 +1,12 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.Helpers
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<GrantSurveyOverrideTask>
+
+<header>
+    <h4>
+        <i class="fa-solid fa-universal-access" aria-hidden="true"></i>
+        @Model.Activity.GetTitleOrDefault(() => T["Grant Survey Accommodation"])
+    </h4>
+</header>

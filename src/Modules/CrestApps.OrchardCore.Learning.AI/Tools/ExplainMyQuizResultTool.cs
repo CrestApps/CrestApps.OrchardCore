@@ -1,10 +1,13 @@
 using System.Security.Claims;
 using System.Text.Json;
 using CrestApps.OrchardCore.Learning.AI.Services;
-using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Services;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
+using OrchardCore.Modules;
 using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Learning.AI.Tools;
@@ -44,26 +47,43 @@ public sealed class ExplainMyQuizResultTool : LearningAIToolBase
         var quiz = Read(arguments, "quiz");
         var sequence = ReadInt(arguments, "attempt");
 
-        // Only the person's own attempts are read, by their user id; an attempt id from the model is never trusted.
-        var attempts = (await services.GetRequiredService<AssessmentAttemptStore>().ListByUserAsync(userId, cancellationToken))
-            .Where(attempt => string.Equals(attempt.UserId, userId, StringComparison.Ordinal))
-            .Where(attempt => attempt.Status != AttemptStatus.InProgress)
-            .Where(attempt => quiz is null
-                || string.Equals(attempt.QuizId, quiz, StringComparison.Ordinal)
-                || (attempt.QuizTitle?.Contains(quiz, StringComparison.CurrentCultureIgnoreCase) ?? false))
-            .Where(attempt => sequence is null || attempt.Sequence == sequence)
-            .OrderByDescending(attempt => attempt.SubmittedUtc ?? attempt.StartedUtc)
-            .ToList();
-
-        var chosen = attempts.FirstOrDefault();
-
-        if (chosen is null)
+        // Only the person's own attempts are read, by their user id; a response id from the model is never trusted.
+        var queries = services.GetRequiredService<ISurveyResponseQueries>();
+        var surveys = services.GetRequiredService<ISurveyManager>();
+        var (_, responses) = await queries.ListAsync(new SurveyResponseQuery
         {
-            return "The learner has no submitted quiz attempt that matches.";
+            UserId = userId,
+            Take = SurveysConstants.PageSize,
+        }, cancellationToken);
+
+        foreach (var response in responses
+            .Where(response => string.Equals(response.UserId, userId, StringComparison.Ordinal) && response.Status != SurveyResponseStatus.InProgress)
+            .Where(response => sequence is null || response.AttemptNumber == sequence)
+            .OrderByDescending(response => response.CompletedUtc ?? response.StartedUtc))
+        {
+            var survey = await surveys.FindByIdAsync(response.SurveyId, cancellationToken);
+
+            if (survey is null || !string.Equals(survey.Kind, SurveyKinds.Quiz, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var ownerId = survey.Owner?.Id;
+
+            if (quiz is not null
+                && !string.Equals(ownerId, quiz, StringComparison.Ordinal)
+                && !string.Equals(survey.ItemId, quiz, StringComparison.Ordinal)
+                && !(survey.Title?.Contains(quiz, StringComparison.CurrentCultureIgnoreCase) ?? false))
+            {
+                continue;
+            }
+
+            var version = await services.GetRequiredService<ISurveyVersionCache>().GetAsync(response.SurveyVersionId, cancellationToken);
+            var shows = services.GetRequiredService<ISurveyReviewPolicy>().GetAllowed(survey, version?.Definition, response, services.GetRequiredService<IClock>().UtcNow);
+
+            return Json(QuizResultExplainer.Describe(response, version?.Definition, survey.Title, shows, services.GetRequiredService<ISurveyControlRegistry>()));
         }
 
-        var policy = services.GetRequiredService<AttemptReviewPolicy>();
-
-        return Json(QuizResultExplainer.Describe(chosen, policy.CanReview(chosen), policy.CanSeeScore(chosen)));
+        return "The learner has no submitted quiz attempt that matches.";
     }
 }

@@ -60,9 +60,13 @@
             "ManageMediaContent",
             "ManageQuestionBanks",
             "ViewQuestionBanks",
+            "ManageOwnSurveys",
+            "PublishOwnSurveys",
+            "ViewOwnSurveyResponses",
+            "GradeOwnSurveyResponses",
+            "ManageOwnSurveyOverrides",
             "GradeAssessments",
             "OverrideGrades",
-            "ManageAssessmentOverrides",
             "ManageGradeScales"
           ]
         },
@@ -91,9 +95,8 @@
             "ManageMediaContent",
             "ManageQuestionBanks",
             "ViewQuestionBanks",
-            "EditContent_QuestionBank",
-            "PublishContent_QuestionBank",
-            "ViewContent_QuestionBank",
+            "ManageOwnSurveys",
+            "PublishOwnSurveys",
             "EditContent_QuizLesson",
             "PublishContent_QuizLesson"
           ]
@@ -119,8 +122,7 @@
             "ManageOwnMedia",
             "ViewQuestionBanks",
             "EditOwnContent_QuizLesson",
-            "PublishOwnContent_QuizLesson",
-            "ManageAssessmentOverrides"
+            "PublishOwnContent_QuizLesson"
           ]
         },
         {
@@ -142,7 +144,7 @@
             "ViewLearningReports",
             "AccessLearning",
             "OverrideGrades",
-            "ManageAssessmentOverrides"
+            "ManageOwnSurveyOverrides"
           ]
         },
         {

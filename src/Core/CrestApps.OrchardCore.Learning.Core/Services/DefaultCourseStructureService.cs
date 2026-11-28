@@ -3,6 +3,8 @@ using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Records;
+using OrchardCore.Lists.Indexes;
 using OrchardCore.Lists.Models;
 using YesSql;
 using YesSql.Services;
@@ -16,6 +18,9 @@ namespace CrestApps.OrchardCore.Learning.Core.Services;
 /// </summary>
 public sealed class DefaultCourseStructureService : ICourseStructureService
 {
+    // Courses per IN list, well under SQL Server's limit of 2,100 parameters.
+    private const int CoursesPerQuery = 1000;
+
     private readonly IContentManager _contentManager;
     private readonly ISession _session;
     private readonly CourseItemKindOptions _kinds;
@@ -131,6 +136,26 @@ public sealed class DefaultCourseStructureService : ICourseStructureService
         }
 
         return outline;
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<ContentItem>> GetContainedItemsAsync(IReadOnlyCollection<string> courseIds)
+    {
+        var ids = (courseIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToArray();
+        var courses = ids.ToHashSet(StringComparer.Ordinal);
+        var items = new List<ContentItem>();
+
+        foreach (var chunk in ids.Chunk(CoursesPerQuery))
+        {
+            // Orchard's list part keeps a row for every version; the latest version decides the course an item is in now.
+            var latest = await _session.Query<ContentItem, ContainedPartIndex>(index => index.ListContentItemId.IsIn(chunk))
+                .With<ContentItemIndex>(index => index.Latest)
+                .ListAsync();
+
+            items.AddRange(latest.Where(item => item.Has<CourseItemPart>() && GetCourseId(item) is { } courseId && courses.Contains(courseId)));
+        }
+
+        return items;
     }
 
     /// <inheritdoc />

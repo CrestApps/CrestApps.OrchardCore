@@ -1,0 +1,49 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model RegradeVersionsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyGradingRegradeVersions" title="@T["Score Versions Again: {0}", Model.SurveyTitle]">
+        <breadcrumb-item id="SurveyGrading" action="Index" controller="SurveyGrading" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.GradeOwnSurveyResponses.Name">@T["Grading"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="RegradeVersions" asp-route-surveyId="@Model.SurveyId" method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Versions"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Score the responses of"]</span>
+                <div class="ocat-end">
+                    @foreach (var version in Model.Versions)
+                    {
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="from-@version.Value" name="FromVersionIds" value="@version.Value" checked="@Model.FromVersionIds.Contains(version.Value)" />
+                            <label class="form-check-label" for="from-@version.Value">@version.Text</label>
+                        </div>
+                    }
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="KeyVersionId" class="ocat-label">@T["With the key of"]</label>
+                <div class="ocat-end">
+                    <select asp-for="KeyVersionId" asp-items="Model.Versions" class="form-select"></select>
+                    <span class="hint">@T["Only questions whose type did not change take the other version's key."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Reason" class="ocat-label">@T["Reason"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Reason" class="form-control" />
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-primary">@T["Score Again"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-surveyId="@Model.SurveyId">@T["Cancel"]</a>
+    </div>
+</form>

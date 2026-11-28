@@ -1,0 +1,28 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyPreviewStartViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveysPreviewStart" title="@T["Preview"]">
+        <breadcrumb-item id="Surveys" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="Survey">@Model.Title</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+@* Opening the Preview link creates nothing: this page posts the start of the test response (at once with script). *@
+<form action="@Url.RouteUrl("SurveysPreview", new { id = Model.SurveyId, version = Model.Version })" method="post" class="no-multisubmit" data-survey-preview-start>
+    @Html.AntiForgeryToken()
+    <p>@T["Starting a test response. It is left out of results and limits."]</p>
+
+    <div class="action-bar-bottom">
+        <button type="submit" class="btn btn-primary">@T["Preview"]</button>
+    </div>
+</form>
+
+<script at="Foot">
+    (function () {
+        var form = document.querySelector('[data-survey-preview-start]');
+
+        if (form) {
+            form.submit();
+        }
+    })();
+</script>

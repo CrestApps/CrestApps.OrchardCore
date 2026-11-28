@@ -1,0 +1,79 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyLandingViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyContentSanitizer HtmlSanitizer
+
+<zone Name="Title">
+    <breadcrumb name="SurveyRunnerLanding" title="@Html.Raw(Html.Encode(Model.Title))">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyRunnerStyles" />
+
+<div class="container survey-runner my-4">
+    <div class="survey-landing @Model.CssClass">
+        <h1 class="h3 mb-3">@Model.Title</h1>
+
+        @if (!Model.AutoStart && !string.IsNullOrWhiteSpace(Model.Introduction))
+        {
+            <div class="survey-introduction mb-4">@Html.Raw(HtmlSanitizer.Sanitize(Model.Introduction))</div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.Message))
+        {
+            <div class="alert alert-warning" role="alert">@Model.Message</div>
+        }
+
+        @if (Model.CanStart)
+        {
+            <form action="@Url.Content("~/s/" + Model.Token + "/start")@Model.QueryString" method="post" class="no-multisubmit" data-survey-autostart="@(Model.AutoStart ? "true" : null)">
+                @Html.AntiForgeryToken()
+
+                @if (Model.NeedsPassword)
+                {
+                    <div class="mb-3">
+                        <label for="survey-password" class="form-label">@T["Password"]</label>
+                        <input type="password" id="survey-password" name="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore required aria-required="true" />
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.Statement))
+                {
+                    <div class="mb-3 survey-statement">
+                        <p class="mb-2" id="survey-statement-text">@Model.Statement</p>
+                        <div class="form-check">
+                            <input type="checkbox" id="survey-accept-statement" name="acceptStatement" value="true" class="form-check-input" required aria-required="true" aria-describedby="survey-statement-text" />
+                            <label for="survey-accept-statement" class="form-check-label">@T["I accept this statement"]</label>
+                        </div>
+                    </div>
+                }
+
+                @if (Model.NeedsCaptcha)
+                {
+                    <div class="mb-3">
+                        <captcha mode="AlwaysShow" />
+                    </div>
+                }
+
+                <button type="submit" class="btn btn-primary">@T["Start"]</button>
+            </form>
+
+            @if (Model.AutoStart)
+            {
+                <script at="Foot">
+                    (function () {
+                        var form = document.querySelector('[data-survey-autostart="true"]');
+
+                        if (form) {
+                            form.submit();
+                        }
+                    })();
+                </script>
+            }
+        }
+
+        @if (Model.ShowResultsLink)
+        {
+            <p class="mt-3"><a href="@Url.Content("~/s/" + Model.Token + "/results")">@T["See the results"]</a></p>
+        }
+    </div>
+</div>

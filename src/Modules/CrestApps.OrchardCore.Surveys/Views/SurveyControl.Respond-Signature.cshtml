@@ -1,0 +1,29 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.Signature
+
+@{
+    var settings = Model.GetSettings<SignatureSettings>();
+    var signed = Model.Answer is not null && (Model.Answer.AttachmentIds?.Count > 0 || Model.Answer.Extra?["DataUrl"] is not null);
+}
+<div class="survey-signature" data-survey-signature data-question-id="@Model.Question.Id" data-readonly="@(Model.ReadOnly ? "true" : "false")">
+    @if (signed)
+    {
+        <div class="form-text mb-1"><i class="fa-solid fa-check text-success" aria-hidden="true"></i> @T["Signed. Sign again to replace it."]</div>
+    }
+    <input type="hidden" name="@Model.Prefix" value="" />
+    <div data-signature-pad hidden>
+        <canvas class="border rounded w-100 d-block" style="height: @(Math.Clamp(settings.Height, 80, 400))px; touch-action: none" role="img" aria-label="@T["Signature area for {0}", Model.Question.Title]"></canvas>
+        <button type="button" class="btn btn-sm btn-outline-secondary mt-1" data-signature-clear>@T["Clear"]</button>
+    </div>
+    <noscript><div class="text-body-secondary">@T["Signing needs JavaScript."]</div></noscript>
+</div>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

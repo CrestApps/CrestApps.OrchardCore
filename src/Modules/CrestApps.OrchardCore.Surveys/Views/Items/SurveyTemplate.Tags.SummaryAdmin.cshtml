@@ -1,0 +1,9 @@
+@model ShapeViewModel<SurveyTemplate>
+
+@{
+    var questions = Model.Value.Definition?.Pages?.Sum(page => page.Questions?.Count ?? 0) ?? 0;
+}
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Technical name"]"><i class="fa-solid fa-code me-1" aria-hidden="true"></i>@Model.Value.Name</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Kind"]"><i class="fa-solid fa-shapes me-1" aria-hidden="true"></i>@Model.Value.Kind</span>
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Questions"]"><i class="fa-solid fa-list-ol me-1" aria-hidden="true"></i>@T.Plural(questions, "1 question", "{0} questions")</span>

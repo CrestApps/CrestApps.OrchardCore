@@ -6,9 +6,9 @@
     <Description>
       $(CrestAppsDescription)
 
-      Core services of Learning assessments: question scorers, random draws, the attempt service with server deadlines,
-      grading, regrades, overrides, grade scales, item analysis, their stores and indexes, and the access rule that keeps
-      questions private.
+      Core services of Learning assessments on Surveys: the quiz part handler that creates the owned survey, the quiz result
+      provider and grade calculator over survey responses, the grading list with the quiz responses source, grade scales
+      and the Moodle quiz and question mapping.
     </Description>
     <PackageTags>$(PackageTags) Learning LMS Assessments Quiz Exam Core</PackageTags>
   </PropertyGroup>
@@ -34,7 +34,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Abstractions\CrestApps.OrchardCore.Learning.Assessments.Abstractions\CrestApps.OrchardCore.Learning.Assessments.Abstractions.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Core\CrestApps.OrchardCore.Learning.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Learning.Surveys.Core\CrestApps.OrchardCore.Learning.Surveys.Core.csproj" />
     <ProjectReference Include="..\CrestApps.OrchardCore.YesSql.Core\CrestApps.OrchardCore.YesSql.Core.csproj" />
+    <ProjectReference Include="..\CrestApps.OrchardCore.Surveys.Core\CrestApps.OrchardCore.Surveys.Core.csproj" />
   </ItemGroup>
 
 </Project>

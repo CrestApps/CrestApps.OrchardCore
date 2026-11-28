@@ -1,0 +1,27 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyQuestionEditorViewModel
+
+@* A sub-form of the designer's editor card: it saves this item only, so its button stays with its fields. *@
+<div class="card border-0">
+    <form method="post" asp-action="Question" asp-controller="SurveyDesigner" asp-route-id="@Model.SurveyId" asp-route-questionId="@Model.QuestionId" data-survey-panel-form class="survey-question-editor">
+        <div class="d-flex align-items-center mb-2">
+            <h6 class="mb-0 me-auto">@Model.ControlName</h6>
+            @if (Model.Saved)
+            {
+                <span class="text-success small" role="status"><i class="fa-solid fa-check" aria-hidden="true"></i> @T["Saved."]</span>
+            }
+        </div>
+        @if (Model.Unavailable)
+        {
+            <div class="alert alert-warning">@T["This question type is not available, so it is left out for respondents. Turn on its feature or delete the question."]</div>
+        }
+        <div asp-validation-summary="All" class="text-danger"></div>
+        @await DisplayAsync(Model.Editor)
+        <div class="ocat-wrapper">
+            <div class="ocat-end-offset">
+                <button type="submit" class="btn btn-primary">@T["Save Question"]</button>
+                <span class="hint dashed d-block mt-1">@T["Saves this question to the draft. Save draft at the bottom of the page also saves it."]</span>
+            </div>
+        </div>
+    </form>
+</div>

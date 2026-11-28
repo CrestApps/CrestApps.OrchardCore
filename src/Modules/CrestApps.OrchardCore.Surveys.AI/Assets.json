@@ -1,0 +1,8 @@
+[
+  {
+    "action": "vite",
+    "name": "surveys-ai-scoring-help.js",
+    "source": "Assets/js/surveys-ai-scoring-help.js",
+    "dest": "wwwroot/scripts/surveys-ai-scoring-help.js"
+  }
+]

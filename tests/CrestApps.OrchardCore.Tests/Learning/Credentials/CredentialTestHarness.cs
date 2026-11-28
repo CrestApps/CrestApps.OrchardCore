@@ -1,6 +1,7 @@
 using System.Text.Json.Nodes;
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Credentials;
 using CrestApps.OrchardCore.Learning.Credentials.Core.Indexes;
 using CrestApps.OrchardCore.Learning.Credentials.Core.Services;
@@ -10,6 +11,9 @@ using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.SigningKeys;
 using CrestApps.OrchardCore.SigningKeys.Core;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Learning.Assessments;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -76,12 +80,7 @@ internal sealed class CredentialTestHarness : IAsyncDisposable
         inner.Courses.AddCourse("safety");
         inner.Courses.AddItem("safety", "lesson");
         inner.Courses.AddCourse("exams");
-        inner.Questions.AddChoice("q1", "a", options: ["a", "b"]);
-        inner.AddQuiz("exams", "final", quiz =>
-        {
-            quiz.QuestionIds = ["q1"];
-            quiz.MaxAttempts = null;
-        });
+        inner.AddQuiz("exams", "final", quiz => quiz.SurveyId = "final-survey");
 
         return new CredentialTestHarness(inner, definitions, queue, ring);
     }
@@ -127,17 +126,55 @@ internal sealed class CredentialTestHarness : IAsyncDisposable
         return await RunAsync(services => services.GetRequiredService<IEnrollmentStore>().FindByIdAsync(enrollment.ItemId));
     }
 
-    public async Task<AssessmentAttempt> PassQuizAsync(string userId, bool pass = true)
+    /// <summary>
+    /// Enrolls a learner in the exams course and tells the observers that the learner completed an attempt at the final
+    /// quiz (a response to its survey), passed or not.
+    /// </summary>
+    /// <param name="userId">The learner.</param>
+    /// <param name="pass">Whether the attempt passed.</param>
+    /// <returns>The attempt.</returns>
+    public async Task<SurveyResponse> PassQuizAsync(string userId, bool pass = true)
     {
-        await Inner.EnrollAsync(userId, "exams");
+        var enrollment = await Inner.EnrollAsync(userId, "exams");
+        var response = new SurveyResponse
+        {
+            ItemId = "response-" + userId,
+            SurveyId = "final-survey",
+            UserId = userId,
+            Status = SurveyResponseStatus.Completed,
+            Grading = GradingStatus.Graded,
+            Context = LearningSurveyContexts.Enrollment(enrollment.ItemId),
+            CompletedUtc = Clock.UtcNow,
+            Percent = pass ? 100 : 0,
+            Passed = pass,
+        };
 
-        var started = await Inner.StartAsync(userId, "final");
+        await NotifyAsync(response, (observer, context) => observer.CompletedAsync(context));
 
-        Assert.True(started.Succeeded, started.ErrorCode);
-        await Inner.RunAsync(service => service.SaveResponseAsync(started.Attempt.ItemId, userId, 0, new AttemptResponse { ChoiceIds = [pass ? "a" : "b"] }));
-
-        return (await Inner.RunAsync(service => service.SubmitAsync(started.Attempt.ItemId, userId))).Attempt;
+        return response;
     }
+
+    /// <summary>
+    /// Tells the observers about a response of the final quiz.
+    /// </summary>
+    /// <param name="response">The response.</param>
+    /// <param name="notify">The observer method to call.</param>
+    /// <returns>A task.</returns>
+    public Task NotifyAsync(SurveyResponse response, Func<ISurveyResponseObserver, SurveyResponseEventContext, Task> notify)
+        => RunAsync(async services =>
+        {
+            var context = new SurveyResponseEventContext
+            {
+                Survey = new Survey { ItemId = "final-survey", Kind = SurveyKinds.Quiz, Owner = LearningSurveyContexts.Owner("final") },
+                Response = response,
+                ActorId = "grader",
+            };
+
+            foreach (var observer in services.GetServices<ISurveyResponseObserver>())
+            {
+                await notify(observer, context);
+            }
+        });
 
     public Task<IReadOnlyList<CredentialAward>> AwardsAsync(string userId)
         => RunAsync(services => services.GetRequiredService<ICredentialAwardService>().ListForUserAsync(userId));

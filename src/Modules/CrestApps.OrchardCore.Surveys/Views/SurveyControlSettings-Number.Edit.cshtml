@@ -1,0 +1,49 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Number.NumberSettings>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Min" class="ocat-label">@T["Smallest value"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Min" class="form-control" type="number" step="any" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Max" class="ocat-label">@T["Largest value"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Max" class="form-control" type="number" step="any" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Step" class="ocat-label">@T["Step"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Step" class="form-control" type="number" step="any" min="0" />
+        <span class="hint">@T["Empty for any value."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Decimals" class="ocat-label">@T["Most decimals"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Decimals" class="form-control" type="number" min="0" max="10" />
+        <span class="hint">@T["Empty for any."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Unit" class="ocat-label">@T["Unit"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Unit" class="form-control" type="text" />
+        <span class="hint">@T["Shown after the box, such as km or %."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Display" class="ocat-label">@T["Show as"]</label>
+    <div class="ocat-end">
+        <select asp-for="Settings.Display" class="form-select">
+            <option value="Input">@T["A number box"]</option>
+            <option value="Slider">@T["A slider"]</option>
+        </select>
+    </div>
+</div>

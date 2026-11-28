@@ -1,0 +1,50 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyDefinitionScoringEditViewModel
+
+@{
+    var flags = new[]
+    {
+        (ReviewShows.Score, T["Score"].Value),
+        (ReviewShows.Responses, T["Their answers"].Value),
+        (ReviewShows.RightAnswers, T["Right answers"].Value),
+        (ReviewShows.Feedback, T["Answer feedback"].Value),
+        (ReviewShows.GeneralFeedback, T["General feedback"].Value),
+    };
+    var moments = new[]
+    {
+        (Html.NameFor(m => m.ReviewDuring).ToString(), T["While answering"].Value, Model.ReviewDuring),
+        (Html.NameFor(m => m.ReviewImmediatelyAfter).ToString(), T["Right after"].Value, Model.ReviewImmediatelyAfter),
+        (Html.NameFor(m => m.ReviewLaterWhileOpen).ToString(), T["Later, while open"].Value, Model.ReviewLaterWhileOpen),
+        (Html.NameFor(m => m.ReviewAfterClose).ToString(), T["After the survey closes"].Value, Model.ReviewAfterClose),
+    };
+}
+
+@foreach (var (name, label, selected) in moments)
+{
+    <div class="ocat-wrapper">
+        <span class="ocat-label">@label</span>
+        <div class="ocat-end">
+            @foreach (var (flag, text) in flags)
+            {
+                var id = name.Replace('.', '_') + "_" + flag;
+
+                <div class="form-check form-check-inline">
+                    <input type="checkbox" class="form-check-input" id="@id" name="@name" value="@flag" checked="@selected.Contains(flag)" />
+                    <label class="form-check-label" for="@id">@text</label>
+                </div>
+            }
+        </div>
+    </div>
+}
+<div class="ocat-wrapper">
+    <label asp-for="ResultsVisibility" class="ocat-label">@T["Totals of all responses"]</label>
+    <div class="ocat-end">
+        <select asp-for="ResultsVisibility" class="form-select">
+            <option value="@ResultsVisibility.Never">@T["Never"]</option>
+            <option value="@ResultsVisibility.AfterAnswer">@T["After they answer"]</option>
+            <option value="@ResultsVisibility.AfterClose">@T["After the survey closes"]</option>
+            <option value="@ResultsVisibility.Always">@T["Always"]</option>
+        </select>
+        <span class="hint">@T["For polls: respondents see how everyone answered."]</span>
+    </div>
+</div>

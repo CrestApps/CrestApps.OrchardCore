@@ -28,7 +28,7 @@ A course is a page on your site with lessons in it. Each lesson is a page, a vid
    - **Approval**: people ask, and a training manager approves or rejects them.
 5. On the **Dates** card, set when the course **Starts** and **Ends**, in your time zone, or leave them empty. Before the start, learners see the course and may enroll, but cannot open its lessons; the course page tells them when it starts. The end date does not close the course, as in Moodle: learners keep their access, and the course is shown as ended (**Ended on**) on its card on **My learning**.
 6. Set **Access length (days)** to end a self enrollment's access that many days after enrolling, or leave it empty for no end. Choose the **Prerequisite courses** people must have completed first: type part of a course's title to find it.
-7. Under **Completion and grade**, set the **Pass mark (%)** of the course grade, then the rules a learner must meet besides completing every required item: a **Minimum course grade (%)**, a **Minimum time (minutes)**, a **Final assessment to pass**, or that a member of the course staff approves each completion.
+7. Under **Completion and grade**, set the **Pass mark (%)** of the course grade, then the rules a learner must meet besides completing every required item: a **Minimum course grade (%)**, a **Minimum time (minutes)**, a **Final assessment to pass**, or that a member of the course staff approves each completion. If nothing in the course gives a grade (no item counts toward the course grade, or every one that does is an anonymous survey), learners get no course grade: the minimum course grade is then met without a check, the pass mark decides nothing, and the editor shows a warning.
 8. With **Course Categories** on, choose the course's **Category**. Categories come from the **Course categories** taxonomy under **Content** → **Taxonomies**, where you build the tree of categories and sub-categories. The list of courses filters by category with its **Course categories** filter.
 9. Select **Publish**.
 
@@ -62,7 +62,7 @@ The setting is a shortcut for an **After completing** rule on every lesson. Use 
 
 ## Grade categories
 
-The course grade is the weighted mean of the graded lessons. To group them, such as homework and exams, add rows to the **Grade categories** card: a **Category** name, its **Weight** and how many of its lowest scores to **Drop lowest**. A category's score is the weighted mean of its lessons after the lowest are dropped, and the course grade is the weighted mean of the categories. Choose each graded lesson's **Grade category** on its **Course item** card. A graded lesson without a category counts as a category of its own, weighted by its lesson weight. Rows without a name are left out.
+The course grade is the weighted mean of the graded lessons. To group them, such as homework and exams, add rows to the **Grade categories** card: a **Category** name, its **Weight** and how many of its lowest scores to **Drop lowest**. A category's score is the weighted mean of its lessons after the lowest are dropped, and the course grade is the weighted mean of the categories. Choose each graded lesson's **Grade category** on its **Course item** card. A graded lesson without a category counts as a category of its own, weighted by its lesson weight. Rows without a name are left out. An anonymous quiz or survey has no score, so once the learner finishes it, it is left out of the course grade and the other lessons are weighed without it.
 
 Leave **Pass mark (%)** empty for a course without a grade.
 

@@ -1,10 +1,10 @@
-using CrestApps.OrchardCore.Learning.Assessments.Models;
-using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Skills.Models;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -40,39 +40,39 @@ public sealed class CertificationEnrollmentObserver : IEnrollmentObserver
 }
 
 /// <summary>
-/// Checks the certification paths of a passed quiz. A failure is logged; the upkeep catches up on it.
+/// Checks the certification paths of a quiz when a learner's attempt (a response to the quiz's survey) passes.
 /// </summary>
-public sealed class CertificationAttemptObserver : IAttemptObserver
+public sealed class CertificationSurveyObserver : ISurveyResponseObserver
 {
     private readonly IServiceProvider _services;
     private readonly ILogger _logger;
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="CertificationAttemptObserver"/> class.
+    /// Initializes a new instance of the <see cref="CertificationSurveyObserver"/> class.
     /// </summary>
-    /// <param name="services">The services; the path service is resolved when needed.</param>
+    /// <param name="services">The services.</param>
     /// <param name="logger">The logger.</param>
-    public CertificationAttemptObserver(IServiceProvider services, ILogger<CertificationAttemptObserver> logger)
+    public CertificationSurveyObserver(IServiceProvider services, ILogger<CertificationSurveyObserver> logger)
     {
         _services = services;
         _logger = logger;
     }
 
     /// <inheritdoc/>
-    public Task SubmittedAsync(AssessmentAttempt attempt, CancellationToken cancellationToken = default)
-        => PassedAsync(attempt, cancellationToken);
+    public Task CompletedAsync(SurveyResponseEventContext context)
+        => PassedAsync(context);
 
     /// <inheritdoc/>
-    public Task GradedAsync(AssessmentAttempt attempt, CancellationToken cancellationToken = default)
-        => PassedAsync(attempt, cancellationToken);
+    public Task GradedAsync(SurveyResponseEventContext context)
+        => PassedAsync(context);
 
     /// <inheritdoc/>
-    public Task ScoreChangedAsync(AssessmentAttempt attempt, AttemptScoreChange change, CancellationToken cancellationToken = default)
-        => PassedAsync(attempt, cancellationToken);
+    public Task ScoreChangedAsync(SurveyResponseEventContext context)
+        => PassedAsync(context);
 
-    private Task PassedAsync(AssessmentAttempt attempt, CancellationToken cancellationToken)
-        => attempt.Passed == true
-            ? CertificationTriggers.EvaluateAsync(_services.GetRequiredService<ICertificationPathService>(), attempt.QuizId, attempt.UserId, _logger, cancellationToken)
+    private Task PassedAsync(SurveyResponseEventContext context)
+        => context?.Response is { Passed: true, IsTest: false } response && LearningSurveyContexts.IsContentOwner(context.Survey?.Owner)
+            ? CertificationTriggers.EvaluateAsync(_services.GetRequiredService<ICertificationPathService>(), context.Survey.Owner.Value.Id, response.UserId, _logger, CancellationToken.None)
             : Task.CompletedTask;
 }
 

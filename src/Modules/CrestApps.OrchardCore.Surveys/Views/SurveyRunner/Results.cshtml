@@ -1,0 +1,35 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyResultsViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyContentSanitizer HtmlSanitizer
+
+<zone Name="Title">
+    <breadcrumb name="SurveyRunnerResults" title="@T["Results"]">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyRunnerStyles" />
+
+<div class="container survey-runner my-4">
+    <div class="survey-results">
+        <h1 class="h3 mb-1">@Model.Title</h1>
+        <p class="text-muted">@T.Plural((int)Model.Responses, "1 response", "{0} responses")</p>
+
+        @foreach (var question in Model.Questions)
+        {
+            <div class="card mb-3">
+                <div class="card-header">@Html.Raw(HtmlSanitizer.Sanitize(question.Title))</div>
+                <div class="card-body">
+                    @foreach (var choice in question.Choices)
+                    {
+                        <div class="mb-2">
+                            <div class="d-flex justify-content-between small"><span>@choice.Text</span><span>@choice.Percent% (@choice.Count)</span></div>
+                            <div class="progress" role="progressbar" aria-label="@choice.Text" aria-valuenow="@choice.Percent" aria-valuemin="0" aria-valuemax="100">
+                                <div class="progress-bar" style="width: @choice.Percent.ToString(System.Globalization.CultureInfo.InvariantCulture)%"></div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>

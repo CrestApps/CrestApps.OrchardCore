@@ -1,227 +1,148 @@
-using System.Text.Json;
-using CrestApps.OrchardCore.Calendars;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.ViewModels;
-using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Localization;
-using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
+using OrchardCore.ContentManagement.Metadata;
 using OrchardCore.ContentManagement.Display.ContentDisplay;
 using OrchardCore.ContentManagement.Display.Models;
-using OrchardCore.ContentManagement.Records;
 using OrchardCore.DisplayManagement.Views;
-using OrchardCore.Modules;
-using YesSql;
-using YesSql.Services;
+using OrchardCore.Mvc.ModelBinding;
 
 namespace CrestApps.OrchardCore.Learning.Assessments.Drivers;
 
+/// <summary>
+/// Shows, in the quiz editor, the survey the quiz owns with links to design it and to its settings, and edits how the
+/// attempts combine into the grade. It warns when the quiz completes "When the learner passes" but its survey (the draft
+/// or the published version) leaves some score with no pass decision: no pass mark, and a score band that neither passes
+/// nor fails or no band at all for that score, so a graded attempt with that score completes it. It also warns when the
+/// quiz counts toward the course grade but its survey is anonymous: an anonymous quiz records the completion only, so it
+/// stays out of the course grade. It edits the quiz's access code and honor statement, which Surveys enforces on the
+/// start of an attempt (<see cref="QuizStartSettings"/>).
+/// </summary>
 internal sealed class QuizPartDisplayDriver : ContentPartDisplayDriver<QuizPart>
 {
-    private readonly global::YesSql.ISession _session;
-    private readonly ILocalClock _localClock;
-    private readonly LearningSecretStore _secretStore;
-    private readonly IAssessmentContentSource _contentSource;
-    private readonly QuestionTypeOptions _questionTypes;
+    private readonly ISurveyManager _surveyManager;
+    private readonly ISurveyVersionCache _versions;
+    private readonly IContentDefinitionManager _contentDefinitionManager;
+    private readonly QuizStartSettings _startSettings;
+
+    // The longest honor statement, as long as a survey's statement may be.
+    private const int MaxStatementLength = 2000;
 
     internal readonly IStringLocalizer S;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="QuizPartDisplayDriver"/> class.
+    /// </summary>
+    /// <param name="surveyManager">The survey manager.</param>
+    /// <param name="versions">The survey versions, for the published one.</param>
+    /// <param name="contentDefinitionManager">The content definition manager, for the quiz's default completion mode.</param>
+    /// <param name="startSettings">The access code and honor statement of quizzes.</param>
+    /// <param name="stringLocalizer">The localizer.</param>
     public QuizPartDisplayDriver(
-        global::YesSql.ISession session,
-        ILocalClock localClock,
-        LearningSecretStore secretStore,
-        IAssessmentContentSource contentSource,
-        IOptions<QuestionTypeOptions> questionTypes,
+        ISurveyManager surveyManager,
+        ISurveyVersionCache versions,
+        IContentDefinitionManager contentDefinitionManager,
+        QuizStartSettings startSettings,
         IStringLocalizer<QuizPartDisplayDriver> stringLocalizer)
     {
-        _session = session;
-        _localClock = localClock;
-        _secretStore = secretStore;
-        _contentSource = contentSource;
-        _questionTypes = questionTypes.Value;
+        _surveyManager = surveyManager;
+        _versions = versions;
+        _contentDefinitionManager = contentDefinitionManager;
+        _startSettings = startSettings;
         S = stringLocalizer;
     }
 
+    /// <inheritdoc />
     public override IDisplayResult Edit(QuizPart part, BuildPartEditorContext context)
         => Initialize<QuizPartViewModel>(GetEditorShapeType(context), async model =>
         {
-            model.QuestionIds = [.. part.QuestionIds];
-            model.DrawRules = part.DrawRules.Select(rule => new DrawRuleRowViewModel { BankId = rule.BankId, Tag = rule.Tag, Difficulty = rule.Difficulty, Count = rule.Count }).ToList();
-
-            model.ShuffleQuestions = part.ShuffleQuestions;
-            model.TimeLimitMinutes = part.TimeLimitMinutes;
-            model.MaxAttempts = part.MaxAttempts;
-            model.DelayMinutes = part.DelayMinutes;
-            model.PassMark = part.PassMark;
+            model.Survey = string.IsNullOrEmpty(part.SurveyId) ? null : await _surveyManager.FindByIdAsync(part.SurveyId);
+            model.QuestionCount = model.Survey?.Draft?.Pages.Sum(page => page.Questions.Count(question => string.IsNullOrEmpty(question.PoolId)) + page.Pools.Sum(pool => pool.DrawCount)) ?? 0;
             model.GradingMethod = part.GradingMethod;
-            model.Navigation = part.Navigation;
-            model.Opens = part.OpensUtc is { } opens ? (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(opens, DateTimeKind.Utc)))).DateTime : null;
-            model.Closes = part.ClosesUtc is { } closes ? (await _localClock.ConvertToLocalAsync(new DateTimeOffset(DateTime.SpecifyKind(closes, DateTimeKind.Utc)))).DateTime : null;
-            model.HasAccessCode = await _secretStore.HasAsync(AssessmentsConstants.QuizAccessCodeSecret, part.ContentItem.ContentItemId);
-            model.HonorStatement = part.HonorStatement;
-            model.ReviewMode = part.ReviewOptions is null ? part.ReviewPolicy.ToString() : QuizPartViewModel.CustomReview;
-            var options = part.ReviewOptions ?? QuizReviewOptions.FromPolicy(part.ReviewPolicy);
-            model.ReviewMoments = Enum.GetValues<ReviewMoment>().Select(moment =>
-            {
-                var shows = options.For(moment);
-
-                return new ReviewMomentViewModel
-                {
-                    Moment = moment,
-                    Score = shows.HasFlag(ReviewShows.Score),
-                    RightAnswers = shows.HasFlag(ReviewShows.RightAnswers),
-                    Feedback = shows.HasFlag(ReviewShows.Feedback),
-                    GeneralFeedback = shows.HasFlag(ReviewShows.GeneralFeedback),
-                };
-            }).ToList();
-            model.QuestionsPerPage = part.QuestionsPerPage;
-            model.FeedbackMode = part.FeedbackMode;
-
-            // The fixed questions are searched on the server; only the chosen ones are rendered, in the quiz's order.
-            var chosen = part.QuestionIds.Count == 0
-                ? []
-                : (await _session.Query<ContentItem, ContentItemIndex>(index => index.Latest && index.ContentItemId.IsIn(part.QuestionIds)).ListAsync())
-                    .GroupBy(question => question.ContentItemId)
-                    .ToDictionary(group => group.Key, group => group.First().DisplayText, StringComparer.Ordinal);
-            var banks = await _session.Query<ContentItem, ContentItemIndex>(index => index.Published && index.ContentType == AssessmentsConstants.ContentTypes.QuestionBank)
-                .OrderBy(index => index.DisplayText)
-                .ListAsync();
-
-            model.InitialQuestionsJson = JsonSerializer.Serialize(part.QuestionIds
-                .Where(id => !string.IsNullOrEmpty(id))
-                .Select(id => new { value = id, text = chosen.TryGetValue(id, out var title) && !string.IsNullOrEmpty(title) ? title : id }));
-            model.BankOptions = banks.Select(bank => new SelectListItem(bank.DisplayText, bank.ContentItemId)).ToList();
+            model.HasAccessCode = await _startSettings.HasAccessCodeAsync(model.Survey);
+            model.HonorStatement = model.Survey?.Access?.Statement;
+            model.NoPassDecision = model.Survey is { } survey
+                && string.Equals(await CompletionModeAsync(part), CompletionModes.Passed, StringComparison.Ordinal)
+                && (!DecidesPass(survey.Draft) || (await PublishedDefinitionAsync(survey) is { } published && !DecidesPass(published)));
+            model.AnonymousGradable = model.Survey?.Access?.Anonymity == AnonymityMode.Anonymous
+                && part.ContentItem?.TryGet<CourseItemPart>(out var gradedItem) == true
+                && gradedItem.Gradable;
+            model.GradingMethods =
+            [
+                new SelectListItem(S["The highest score"], nameof(GradingMethod.Highest)),
+                new SelectListItem(S["The average score"], nameof(GradingMethod.Average)),
+                new SelectListItem(S["The first attempt"], nameof(GradingMethod.First)),
+                new SelectListItem(S["The latest attempt"], nameof(GradingMethod.Latest)),
+            ];
         });
 
+    /// <summary>
+    /// Gets whether a survey decides a pass for every score from 0 to 100, as <see cref="SurveyPassRule"/> decides it: it
+    /// has a pass mark, or every score falls in a score band that passes or fails (a band starts at 0 or below, and no band
+    /// a score can reach leaves the decision to the missing pass mark).
+    /// </summary>
+    /// <param name="definition">The survey definition.</param>
+    /// <returns><see langword="true"/> when every score has a pass decision.</returns>
+    internal static bool DecidesPass(SurveyDefinition definition)
+    {
+        if (definition?.Scoring?.PassMarkPercent is not null)
+        {
+            return true;
+        }
+
+        var bands = (definition?.ScoreBands ?? []).Where(band => band is not null && band.MinPercent <= 100).ToList();
+
+        return bands.Any(band => band.MinPercent <= 0) && bands.All(band => band.Passing is not null);
+    }
+
+    private async Task<SurveyDefinition> PublishedDefinitionAsync(Survey survey)
+        => (await _versions.GetPublishedAsync(survey))?.Definition;
+
+    private async Task<string> CompletionModeAsync(QuizPart part)
+    {
+        var mode = part.ContentItem?.TryGet<CourseItemPart>(out var courseItem) == true ? courseItem.CompletionMode : null;
+
+        if (!string.IsNullOrEmpty(mode))
+        {
+            return mode;
+        }
+
+        var type = string.IsNullOrEmpty(part.ContentItem?.ContentType) ? null : await _contentDefinitionManager.GetTypeDefinitionAsync(part.ContentItem.ContentType);
+        var settings = type?.Parts
+            .FirstOrDefault(candidate => string.Equals(candidate.PartDefinition?.Name, nameof(CourseItemPart), StringComparison.Ordinal))
+            ?.GetSettings<CourseItemPartSettings>();
+
+        // A quiz completes "When the learner passes" unless its type says otherwise.
+        return settings?.DefaultCompletionMode ?? CompletionModes.Passed;
+    }
+
+    /// <inheritdoc />
     public override async Task<IDisplayResult> UpdateAsync(QuizPart part, UpdatePartEditorContext context)
     {
         var model = new QuizPartViewModel();
 
-        await context.Updater.TryUpdateModelAsync(model, Prefix);
+        await context.Updater.TryUpdateModelAsync(model, Prefix, item => item.GradingMethod, item => item.AccessCode, item => item.RemoveAccessCode, item => item.HonorStatement);
 
-        part.QuestionIds = (model.QuestionIds ?? []).Where(id => !string.IsNullOrEmpty(id)).Distinct(StringComparer.Ordinal).ToList();
-        part.DrawRules = await ReadDrawRulesAsync(model.DrawRules ?? [], context);
-        part.ShuffleQuestions = model.ShuffleQuestions;
-        part.TimeLimitMinutes = model.TimeLimitMinutes is > 0 ? model.TimeLimitMinutes : null;
-        part.MaxAttempts = model.MaxAttempts is > 0 ? model.MaxAttempts : null;
-        part.DelayMinutes = Math.Max(model.DelayMinutes, 0);
-        part.PassMark = model.PassMark is { } passMark ? Math.Clamp(passMark, 0, 100) : null;
-        part.GradingMethod = model.GradingMethod;
-        part.Navigation = model.Navigation;
-        part.OpensUtc = model.Opens is { } opens ? await _localClock.ToUtcLenientAsync(DateTime.SpecifyKind(opens, DateTimeKind.Unspecified)) : null;
-        part.ClosesUtc = model.Closes is { } closes ? await _localClock.ToUtcLenientAsync(DateTime.SpecifyKind(closes, DateTimeKind.Unspecified)) : null;
-        part.HonorStatement = string.IsNullOrWhiteSpace(model.HonorStatement) ? null : model.HonorStatement.Trim();
-        part.QuestionsPerPage = Math.Clamp(model.QuestionsPerPage, 0, 100);
-        part.FeedbackMode = model.FeedbackMode;
+        part.GradingMethod = Enum.IsDefined(model.GradingMethod) ? model.GradingMethod : GradingMethod.Highest;
 
-        if (string.Equals(model.ReviewMode, QuizPartViewModel.CustomReview, StringComparison.Ordinal))
+        if (model.HonorStatement?.Trim().Length > MaxStatementLength)
         {
-            ReviewShows Shows(ReviewMoment moment)
-            {
-                var row = model.ReviewMoments?.FirstOrDefault(entry => entry?.Moment == moment);
-
-                return row is null
-                    ? ReviewShows.None
-                    : (row.Score ? ReviewShows.Score : ReviewShows.None)
-                        | (row.RightAnswers ? ReviewShows.RightAnswers : ReviewShows.None)
-                        | (row.Feedback ? ReviewShows.Feedback : ReviewShows.None)
-                        | (row.GeneralFeedback ? ReviewShows.GeneralFeedback : ReviewShows.None);
-            }
-
-            part.ReviewOptions = new QuizReviewOptions
-            {
-                During = Shows(ReviewMoment.During),
-                ImmediatelyAfter = Shows(ReviewMoment.ImmediatelyAfter),
-                LaterWhileOpen = Shows(ReviewMoment.LaterWhileOpen),
-                AfterClose = Shows(ReviewMoment.AfterClose),
-            };
+            context.Updater.ModelState.AddModelError(Prefix, nameof(model.HonorStatement), S["The honor statement can't be longer than {0} characters.", MaxStatementLength]);
         }
-        else
+        else if (!string.IsNullOrEmpty(part.SurveyId) && await _surveyManager.FindByIdAsync(part.SurveyId) is { } survey)
         {
-            part.ReviewPolicy = Enum.TryParse<ReviewPolicy>(model.ReviewMode, out var policy) ? policy : ReviewPolicy.AfterGraded;
-            part.ReviewOptions = null;
-        }
-
-        // The code is kept in its own record, out of the content item; it changes only when the rest of the form is valid.
-        if (context.Updater.ModelState.IsValid)
-        {
-            if (model.ClearAccessCode)
-            {
-                await _secretStore.SetHashAsync(AssessmentsConstants.QuizAccessCodeSecret, part.ContentItem.ContentItemId, null);
-            }
-            else if (!string.IsNullOrWhiteSpace(model.NewAccessCode))
-            {
-                await _secretStore.SetAsync(AssessmentsConstants.QuizAccessCodeSecret, part.ContentItem.ContentItemId, model.NewAccessCode);
-            }
-        }
-
-        if (part.QuestionIds.Count == 0 && part.DrawRules.Count == 0)
-        {
-            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.QuestionIds), S["Choose questions or add a rule that draws them from a bank."]);
-        }
-
-        if (part.OpensUtc is not null && part.ClosesUtc is not null && part.ClosesUtc <= part.OpensUtc)
-        {
-            context.Updater.ModelState.AddModelError(Prefix + "." + nameof(model.Closes), S["The quiz must close after it opens."]);
+            // The access code is the password of the survey's link a learner's start runs on; Surveys checks it, with its
+            // limit on wrong tries, and the honor statement before it.
+            await _startSettings.SaveAsync(survey, model.AccessCode, model.RemoveAccessCode, model.HonorStatement);
         }
 
         return Edit(part, context);
-    }
-
-    // The rules as stored, each checked against what its bank can supply: an attempt draws only the bank's published
-    // questions that match the rule's tag and difficulty, so a rule asking for more could never be met.
-    private async Task<List<QuizDrawRule>> ReadDrawRulesAsync(IList<DrawRuleRowViewModel> rows, UpdatePartEditorContext context)
-    {
-        var rules = new List<QuizDrawRule>();
-        var key = Prefix + "." + nameof(QuizPartViewModel.DrawRules);
-
-        for (var i = 0; i < rows.Count; i++)
-        {
-            var row = rows[i];
-
-            if (row is null)
-            {
-                continue;
-            }
-
-            if (string.IsNullOrEmpty(row.BankId))
-            {
-                context.Updater.ModelState.AddModelError(key, S["Choose the question bank of rule {0}, or remove the rule.", i + 1]);
-
-                continue;
-            }
-
-            if (row.Count < 1)
-            {
-                context.Updater.ModelState.AddModelError(key, S["Rule {0} must draw at least one question.", i + 1]);
-
-                continue;
-            }
-
-            var rule = new QuizDrawRule
-            {
-                BankId = row.BankId,
-                Tag = string.IsNullOrWhiteSpace(row.Tag) ? null : row.Tag.Trim(),
-                Difficulty = row.Difficulty is >= 1 and <= 5 ? row.Difficulty : null,
-                Count = row.Count,
-            };
-
-            var available = (await _contentSource.GetBankQuestionsAsync(rule.BankId))
-                .Count(question => _questionTypes.IsQuestion(question.ContentType) && QuizDrawRuleMatcher.Matches(question.Get<QuestionPart>(nameof(QuestionPart)), rule));
-
-            if (rule.Count > available)
-            {
-                var bank = await _contentSource.GetItemAsync(rule.BankId);
-
-                context.Updater.ModelState.AddModelError(key, S["Rule {0} draws {1} questions, but {2} has only {3} that match.", i + 1, rule.Count, bank?.DisplayText ?? rule.BankId, available]);
-            }
-
-            rules.Add(rule);
-        }
-
-        return rules;
     }
 }

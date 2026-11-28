@@ -1,0 +1,13 @@
+@* The sections other modules add to a response's admin page with a display driver (display type DetailAdmin): nothing unless a driver fills a zone. *@
+@if (Model.Header != null)
+{
+    @await DisplayAsync(Model.Header)
+}
+@if (Model.Content != null)
+{
+    @await DisplayAsync(Model.Content)
+}
+@if (Model.Meta != null)
+{
+    @await DisplayAsync(Model.Meta)
+}

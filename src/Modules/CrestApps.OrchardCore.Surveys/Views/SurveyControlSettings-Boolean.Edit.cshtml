@@ -1,0 +1,29 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.Boolean.BooleanSettings>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Display" class="ocat-label">@T["Show as"]</label>
+    <div class="ocat-end">
+        <select asp-for="Settings.Display" class="form-select">
+            <option value="YesNo">@T["Yes and No"]</option>
+            <option value="TrueFalse">@T["True and False"]</option>
+            <option value="Toggle">@T["A switch"]</option>
+            <option value="ConsentCheckbox">@T["A consent check box"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.TrueLabel" class="ocat-label">@T["Label of yes"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.TrueLabel" class="form-control" type="text" />
+        <span class="hint">@T["Empty for Yes or True."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.FalseLabel" class="ocat-label">@T["Label of no"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.FalseLabel" class="form-control" type="text" />
+        <span class="hint">@T["Empty for No or False."]</span>
+    </div>
+</div>

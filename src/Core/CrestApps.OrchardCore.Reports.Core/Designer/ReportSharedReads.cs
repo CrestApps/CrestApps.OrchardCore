@@ -10,7 +10,8 @@ namespace CrestApps.OrchardCore.Reports.Designer;
 /// the same data set with the same filters, each a copy of the others grouped another way: the first query that reads
 /// the data set keeps its rows, and the others read them from memory instead of from the data source. A query whose
 /// conditions include all of those of a kept read, such as one a click filters, reads the kept rows too, since the
-/// engine applies every filter to the rows again. Each data set is asked for every field the queries read from it, so one
+/// engine applies every filter to the rows again, unless the data source says through <see cref="IReportSharedReadPolicy"/>
+/// that the data set decides which rows to release from the read's own conditions. Each data set is asked for every field the queries read from it, so one
 /// read serves them all. Reads larger than <see cref="MaxRows"/> rows are not kept.
 /// </summary>
 public sealed class ReportSharedReads
@@ -103,7 +104,8 @@ public sealed class ReportSharedReads
             query.Fields = new HashSet<string>(_fields[key], StringComparer.Ordinal);
 
             var conditions = Describe(query.Conditions);
-            var match = kept.FirstOrDefault(read => read.Serves(conditions, query.MaxRows));
+            var narrower = dataSet.Source is not IReportSharedReadPolicy policy || policy.ServesNarrowerReads(dataSet.Reference.DataSet);
+            var match = kept.FirstOrDefault(read => read.Serves(conditions, query.MaxRows, narrower));
 
             if (match is not null)
             {
@@ -244,15 +246,16 @@ public sealed class ReportSharedReads
 
         // A read serves a query with the same conditions and row limit. When it holds every row its conditions keep, it
         // also serves a query with all of its conditions and more, whose rows the engine filters again, if they fit in
-        // that query's row limit: the engine counts the rows read against the limit before it filters them.
-        public bool Serves(HashSet<string> conditions, int maxRows)
+        // that query's row limit: the engine counts the rows read against the limit before it filters them. A data set
+        // that decides which rows to release from the read's conditions is served on the same conditions only.
+        public bool Serves(HashSet<string> conditions, int maxRows, bool narrower)
         {
             if (Conditions.SetEquals(conditions) && (MaxRows == maxRows || IsComplete))
             {
                 return true;
             }
 
-            return IsComplete && Conditions.IsSubsetOf(conditions) && (maxRows <= 0 || Rows < maxRows);
+            return narrower && IsComplete && Conditions.IsSubsetOf(conditions) && (maxRows <= 0 || Rows < maxRows);
         }
     }
 }

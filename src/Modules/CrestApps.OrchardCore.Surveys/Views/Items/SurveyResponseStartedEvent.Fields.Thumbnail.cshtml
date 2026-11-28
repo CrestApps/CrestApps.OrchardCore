@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyResponseStartedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-play" aria-hidden="true"></i>
+    @T["Survey Response Started"]
+</h4>
+<p>@T["Starts when a respondent starts a survey."]</p>

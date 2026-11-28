@@ -1,0 +1,128 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyCollectorEditViewModel
+
+@{
+    var isNew = Model.Collector is null;
+}
+
+<zone Name="Title">
+    <breadcrumb name="SurveyCollectorsEdit" title="@(isNew ? T["New Collector"] : T["Edit '{0}'", Model.Name])">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveyCollectorsIndex" action="Index" controller="SurveyCollectors" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@T["Collect Responses"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+<survey-layout survey="Model.Survey">
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+    <input type="hidden" asp-for="Kind" />
+
+    @if (!string.IsNullOrEmpty(Model.Link))
+    {
+        <div class="card mb-3">
+            <div class="card-header">@T["Link"]</div>
+            <div class="card-body">
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="collector-link">@T["Public link"]</label>
+                    <div class="ocat-end">
+                        <div class="input-group">
+                            <input id="collector-link" class="form-control" value="@Model.Link" readonly />
+                            <button type="button" class="btn btn-outline-secondary" data-survey-copy="@Model.Link">@T["Copy"]</button>
+                            <a class="btn btn-outline-secondary" asp-action="Qr" asp-route-collectorId="@Model.CollectorId">@T["QR Code"]</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-header">@(Model.Kind == SurveyCollectorKinds.Kiosk ? T["Kiosk"] : T["Web link"])</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" required />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                    <span class="hint">@T["Staff see the name, such as Newsletter or Front desk tablet."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Opens" class="ocat-label">@T["Opens"]</label>
+                <div class="ocat-end"><input asp-for="Opens" type="datetime-local" class="form-control" /></div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Closes" class="ocat-label">@T["Closes"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Closes" type="datetime-local" class="form-control" />
+                    <span asp-validation-for="Closes" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="MaxResponses" class="ocat-label">@T["Most responses"]</label>
+                <div class="ocat-end"><input asp-for="MaxResponses" type="number" min="1" class="form-control" /></div>
+            </div>
+            @if (Model.Kind == SurveyCollectorKinds.Kiosk)
+            {
+                <div class="ocat-wrapper">
+                    <label asp-for="KioskResetSeconds" class="ocat-label">@T["Show the ending for"]</label>
+                    <div class="ocat-end">
+                        <div class="input-group">
+                            <input asp-for="KioskResetSeconds" type="number" min="3" max="300" class="form-control" />
+                            <span class="input-group-text">@T["seconds"]</span>
+                        </div>
+                        <span class="hint">@T["Then the kiosk returns to the start for the next person."]</span>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Password and variables"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Password" class="ocat-label">@T["Password"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Password" type="password" class="form-control" autocomplete="new-password" data-1p-ignore data-lpignore="true" data-bwignore="true" placeholder="@(Model.HasPassword ? T["Saved. Enter a new password to replace it."] : null)" />
+                    <span class="hint">@T["Respondents enter it before they start. Leave it empty for no password."]</span>
+                </div>
+            </div>
+            @if (Model.HasPassword)
+            {
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="form-check">
+                            <input asp-for="RemovePassword" type="checkbox" class="form-check-input" />
+                            <label asp-for="RemovePassword" class="form-check-label">@T["Remove the password"]</label>
+                        </div>
+                    </div>
+                </div>
+            }
+            <div class="ocat-wrapper">
+                <label asp-for="Variables" class="ocat-label">@T["Hidden variables"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Variables" class="form-control" rows="3"></textarea>
+                    <span asp-validation-for="Variables" class="text-danger"></span>
+                    <span class="hint">@T["One name=value per line, such as source=newsletter. Only variables declared in the survey are kept."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <label asp-for="Culture" class="ocat-label">@T["Language"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Culture" class="form-control" placeholder="en-US" />
+                    <span class="hint">@T["The culture the survey shows in, such as fr-CA. Leave it empty for the visitor's language."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-id="@Model.Survey.ItemId">@T["Cancel"]</a>
+    </div>
+</form>
+
+<script asp-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.min.js" debug-src="~/CrestApps.OrchardCore.Surveys/scripts/survey-admin.js" at="Foot"></script>
+
+</survey-layout>

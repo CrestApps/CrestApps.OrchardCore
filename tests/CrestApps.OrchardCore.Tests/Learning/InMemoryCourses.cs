@@ -128,6 +128,16 @@ internal sealed class InMemoryCourses : ICourseStructureService
         return Task.FromResult(outline);
     }
 
+    public Task<IReadOnlyList<ContentItem>> GetContainedItemsAsync(IReadOnlyCollection<string> courseIds)
+    {
+        IReadOnlyList<ContentItem> items = _courseOfItem
+            .Where(pair => courseIds.Contains(pair.Value))
+            .Select(pair => _items[pair.Key])
+            .ToArray();
+
+        return Task.FromResult(items);
+    }
+
     public Task<IReadOnlyCollection<string>> GetStaffCourseIdsAsync(string userId, params string[] roles)
     {
         IReadOnlyCollection<string> ids = _items.Values

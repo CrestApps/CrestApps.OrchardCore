@@ -1,0 +1,106 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model SurveyTemplateEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="@(Model.IsNew ? "SurveyTemplatesCreate" : "SurveyTemplatesEdit")" title="@(Model.IsNew ? T["Add Template"] : T["Edit '{0}'", Model.Title])">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveyTemplates" action="Index" controller="SurveyTemplates" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageSurveyTemplates.Name">@T["Survey Templates"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Template"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Title" class="ocat-label">@T["Title"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Title" class="form-control" required />
+                    <span class="hint">@T["Shown under Start from on the new survey page."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+                    <span class="hint">@T["Lowercase letters, digits and dashes. Leave it empty to make one from the title. Recipes and modules find the template by this name."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="Kind" class="ocat-label">@T["Kind"]</label>
+                <div class="ocat-end">
+                    <select asp-for="Kind" asp-items="Model.Kinds" class="form-select"></select>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="Icon" class="ocat-label">@T["Icon"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Icon" class="form-control" />
+                    <span class="hint">@T["A Font Awesome class, such as fa-solid fa-star."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="Position" class="ocat-label">@T["Position"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Position" type="number" class="form-control" />
+                    <span class="hint">@T["Templates with a lower position come first."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Questions"]</div>
+        <div class="card-body">
+            @if (Model.IsNew)
+            {
+                <div class="ocat-wrapper">
+                    <label asp-for="FromSurveyId" class="ocat-label">@T["Copy questions from"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="FromSurveyId" asp-items="Model.Surveys" class="form-select"></select>
+                        <span class="hint">@T["The template copies the survey's draft: its pages, questions, logic and settings. Leave the definition below empty to copy it."]</span>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <span class="hint">@T.Plural(Model.QuestionCount, "The template has 1 question.", "The template has {0} questions.") @T["To change the questions, create a survey from the template, design it, then add it as a new template with Copy questions from."]</span>
+                    </div>
+                </div>
+            }
+
+            <div class="ocat-wrapper">
+                <label asp-for="DefinitionJson" class="ocat-label">@T["Definition (JSON)"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="DefinitionJson" class="form-control font-monospace" rows="14" spellcheck="false"></textarea>
+                    <span class="hint">@T["The survey definition in the shape of the Surveys recipe step. New surveys copy it with new ids."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        @if (!Model.IsNew)
+        {
+            <button class="btn btn-danger action-bar-secondary" type="submit" asp-action="Delete" asp-route-id="@Model.Id" data-url-af="RemoveUrl" data-title="@T["Delete"]" data-message="@T["Remove this template? Surveys made from it keep their questions."]">@T["Delete"]</button>
+        }
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+    </div>
+</form>

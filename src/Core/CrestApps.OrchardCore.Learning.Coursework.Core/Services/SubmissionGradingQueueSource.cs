@@ -20,7 +20,7 @@ internal sealed class SubmissionGradingQueueSource : IGradingQueueSource
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var (count, submissions) = await _store.PageWaitingAsync(query.CourseIds, 0, Math.Max(query.Take, 1), cancellationToken);
+        var (count, submissions) = await _store.PageWaitingAsync(query.CourseIds, 0, Math.Max(query.Take, 1), query.GraderUserId, cancellationToken);
 
         return new GradingQueuePage
         {

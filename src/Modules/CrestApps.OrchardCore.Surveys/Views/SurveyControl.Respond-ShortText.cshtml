@@ -1,0 +1,26 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.ShortText
+
+@{
+    var settings = Model.GetSettings<ShortTextSettings>();
+    var type = settings.InputType switch
+    {
+        ShortTextInputType.Email => "email",
+        ShortTextInputType.Url => "url",
+        ShortTextInputType.Phone => "tel",
+        _ => "text",
+    };
+    var maxLength = settings.MaxLength is > 0 ? settings.MaxLength.Value : ShortTextControlHandler.DefaultMaxLength;
+}
+<label class="visually-hidden" for="@Model.InputId">@Model.Question.Title</label>
+<input type="@type" class="form-control @(Model.HasErrors ? "is-invalid" : null)" id="@Model.InputId" name="@Model.Prefix" value="@Model.Answer?.Values?.FirstOrDefault()" maxlength="@maxLength" pattern="@settings.Mask" placeholder="@Model.Question.Placeholder" readonly="@Model.ReadOnly" aria-required="@(Model.Question.Required ? "true" : null)" aria-describedby="@Model.DescribedBy()" aria-invalid="@(Model.HasErrors ? "true" : null)" />
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

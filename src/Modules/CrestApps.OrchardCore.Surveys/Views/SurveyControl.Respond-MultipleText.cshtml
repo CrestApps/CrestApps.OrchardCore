@@ -1,0 +1,28 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.MultipleText
+
+@{
+    var settings = Model.GetSettings<MultipleTextSettings>();
+    var maxLength = settings.MaxLength is > 0 ? settings.MaxLength.Value : 500;
+}
+<fieldset aria-describedby="@Model.DescribedBy()">
+    <legend class="visually-hidden">@Model.Question.Title</legend>
+    @foreach (var row in Model.Question.Rows)
+    {
+        var id = $"{Model.InputId}-{row.Id}";
+        <div class="mb-2">
+            <label class="form-label" for="@id">@row.Text</label>
+            <input type="text" class="form-control" id="@id" name="@(Model.Prefix).@row.Id" value="@Model.RowValue(row.Id)" maxlength="@maxLength" readonly="@Model.ReadOnly" aria-invalid="@(Model.HasErrors ? "true" : null)" />
+        </div>
+    }
+</fieldset>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

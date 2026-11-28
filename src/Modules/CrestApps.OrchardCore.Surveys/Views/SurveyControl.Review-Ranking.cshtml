@@ -1,0 +1,39 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyContentSanitizer HtmlSanitizer
+
+<ol class="survey-answer mb-0">
+    @foreach (var id in Model.Answer?.Values ?? [])
+    {
+        <li>@(Model.Choices.FirstOrDefault(choice => choice.Id == id)?.Text ?? id)</li>
+    }
+</ol>
+
+@if (Model.Feedback is { } feedback)
+{
+    <div class="survey-feedback mt-2">
+        @if (feedback.Correct == true)
+        {
+            <div class="text-success"><i class="fa-solid fa-check" aria-hidden="true"></i> @T["Correct"]</div>
+        }
+        else if (feedback.Correct == false)
+        {
+            <div class="text-danger"><i class="fa-solid fa-xmark" aria-hidden="true"></i> @T["Incorrect"]</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(feedback.RightAnswer) && feedback.Correct != true)
+        {
+            <div class="small">@T["Right answer: {0}", feedback.RightAnswer]</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(feedback.Feedback))
+        {
+            <div class="small">@Html.Raw(HtmlSanitizer.Sanitize(feedback.Feedback))</div>
+        }
+        @foreach (var choiceFeedback in feedback.ChoiceFeedback)
+        {
+            <div class="small">@Html.Raw(HtmlSanitizer.Sanitize(choiceFeedback.Value))</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(feedback.GeneralFeedback))
+        {
+            <div class="small text-body-secondary">@Html.Raw(HtmlSanitizer.Sanitize(feedback.GeneralFeedback))</div>
+        }
+    </div>
+}

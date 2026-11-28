@@ -1,0 +1,47 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyQuestionRespondViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyContentSanitizer HtmlSanitizer
+
+@{
+    var question = Model.Question;
+    var hintId = (CrestApps.OrchardCore.Surveys.SurveysConstants.AnswerPrefix + "." + question.Id).Replace('.', '-') + "-hint";
+    var css = "survey-question mb-4" + (Model.Errors.Count > 0 ? " has-errors" : string.Empty);
+}
+
+<div class="@css" data-question-id="@question.Id" data-control-type="@question.ControlType" data-survey-locked="@(Model.Locked ? "true" : null)" hidden="@Model.Hidden">
+    @if (Model.Answerable)
+    {
+        <div class="survey-question-title fw-semibold mb-1" id="q-@question.Id-title">
+            @if (question.Number is not null)
+            {
+                <span class="survey-question-number">@question.Number.</span>
+            }
+            <span data-survey-text="title:@question.Id">@Html.Raw(HtmlSanitizer.Sanitize(question.Title))</span>
+            @if (question.Required)
+            {
+                <span class="text-danger" aria-hidden="true">*</span>
+                <span class="visually-hidden">@T["(required)"]</span>
+            }
+        </div>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(question.Description))
+    {
+        <div class="survey-question-description text-muted mb-2" id="@hintId" data-survey-text="description:@question.Id">@Html.Raw(HtmlSanitizer.Sanitize(question.Description))</div>
+    }
+
+    @await DisplayAsync(Model.Control)
+
+    @if (Model.DisplayType == CrestApps.OrchardCore.Surveys.Services.SurveyRunnerShapes.Respond && Model.Answerable)
+    {
+        @* The runner script writes here when a changed answer would skip or hide an answer already checked. *@
+        <div class="survey-lock-error text-danger small mt-1" data-survey-lock-error="@question.Id" hidden></div>
+    }
+
+    @* The control's own review template shows the answer's feedback (SurveyControl.Review and its alternates). *@
+
+    @if (Model.CanCheck && Model.Answerable)
+    {
+        <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-survey-check="@question.Id">@T["Check Answer"]</button>
+        <div class="survey-check-result mt-2 small" data-survey-check-result="@question.Id" aria-live="polite"></div>
+    }
+</div>

@@ -1,0 +1,7 @@
+@model ShapeViewModel<SurveyTemplate>
+
+@if (Model.Value.ModifiedUtc.HasValue || Model.Value.CreatedUtc != default)
+{
+    var changed = DateTime.SpecifyKind(Model.Value.ModifiedUtc ?? Model.Value.CreatedUtc, DateTimeKind.Utc);
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Last modified"]"><i class="fa-solid fa-calendar me-1" aria-hidden="true"></i>@await DisplayAsync(await New.DateTime(Utc: changed, Format: "g"))</span>
+}

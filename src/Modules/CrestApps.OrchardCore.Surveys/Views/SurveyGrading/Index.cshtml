@@ -1,0 +1,19 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model GradingQueueViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyGrading" title="@(string.IsNullOrEmpty(Model.SurveyTitle) ? T["Grading"] : T["Grading: {0}", Model.SurveyTitle])" />
+</zone>
+
+<admin-list name="SurveyGradingQueue" context="Model.List"
+            show-select-all="false"
+            empty-message="@T["<strong>Nothing to grade.</strong> Completed responses with questions a person must score, such as essays or uploaded files, appear here and leave once they are graded. Responses another module grades on its own page, such as course quiz attempts, are not listed here."]">
+    <admin-list-list item-css-class="list-group-item" />
+    <admin-list-grid>
+        <admin-list-column name="Name" position="20" title="@T["Response"]" />
+        <admin-list-column name="Survey" position="30" title="@T["Survey"]" width="auto" />
+        <admin-list-column name="Completed" position="40" title="@T["Completed"]" width="auto" />
+        <admin-list-column type="Actions" title="@T["Actions"]" />
+    </admin-list-grid>
+</admin-list>

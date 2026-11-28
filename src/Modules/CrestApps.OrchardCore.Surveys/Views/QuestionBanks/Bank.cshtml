@@ -1,0 +1,102 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model QuestionBankViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveysQuestionBank" title="@T["{0}", Model.Bank.Title]">
+        <breadcrumb-item id="SurveysQuestionBanks" action="Index" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ViewQuestionBanks.Name">@T["Question Banks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<style asp-name="bootstrap-select"></style>
+
+<form asp-action="Bank" asp-route-id="@Model.Bank.ItemId" method="post" id="bank-questions-filter" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                @if (Model.CanManage)
+                {
+                    <div class="col-auto">
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["Add Question"]</button>
+                            <div class="dropdown-menu dropdown-menu-end">
+                                @foreach (var group in Model.Controls.GroupBy(control => control.Category))
+                                {
+                                    <h6 class="dropdown-header">@group.Key</h6>
+                                    @foreach (var control in group)
+                                    {
+                                        <a class="dropdown-item" asp-action="CreateQuestion" asp-route-id="@Model.Bank.ItemId" asp-route-type="@control.Name"><i class="@control.Icon me-2" aria-hidden="true"></i>@control.DisplayName</a>
+                                    }
+                                }
+                            </div>
+                        </div>
+                        <a class="btn btn-secondary" role="button" asp-action="Import" asp-route-id="@Model.Bank.ItemId">@T["Import"]</a>
+                        <a class="btn btn-secondary" role="button" asp-action="Edit" asp-route-id="@Model.Bank.ItemId">@T["Edit Bank"]</a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.Bank.Description))
+    {
+        <p class="text-muted">@Model.Bank.Description</p>
+    }
+
+    @if (Model.CanManage && Model.OtherBanks.Count > 0)
+    {
+        <div class="ocat-wrapper mb-3">
+            <label asp-for="Options.TargetBankId" class="ocat-label">@T["Move selected questions to"]</label>
+            <div class="ocat-end">
+                <select asp-for="Options.TargetBankId" class="form-select">
+                    @foreach (var other in Model.OtherBanks)
+                    {
+                        <option value="@other.ItemId">@other.Title</option>
+                    }
+                </select>
+                <span class="hint">@T["Used by the Move to another bank action."]</span>
+            </div>
+        </div>
+    }
+
+    <admin-list name="SurveysBankQuestions" context="Model.List"
+                bulk-actions="Model.Options.BulkActions"
+                show-select-all="@Model.CanManage"
+                empty-message="@T["<strong>Nothing here!</strong> This bank has no questions that match."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            @if (Model.CanManage)
+            {
+                <admin-list-column type="Select" />
+            }
+            <admin-list-column name="Question" position="20" title="@T["Question"]" />
+            <admin-list-column name="Type" position="30" title="@T["Type"]" width="auto" />
+            <admin-list-column name="Modified" position="40" title="@T["Last Modified"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<script asp-name="list-management-ui" at="Foot"></script>
+<script at="Foot">
+    document.querySelectorAll('[data-surveys-bank-filter]').forEach((select) => {
+        select.addEventListener('change', () => {
+            const form = document.getElementById(select.getAttribute('form'));
+
+            if (form) {
+                form.requestSubmit(document.getElementById('submitFilter'));
+            }
+        });
+    });
+</script>

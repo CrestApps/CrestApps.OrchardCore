@@ -204,6 +204,18 @@ public sealed class DefaultAttachmentService : IAttachmentService
     }
 
     /// <inheritdoc/>
+    public async Task DiscardUncommittedAsync(string attachmentId, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(attachmentId))
+        {
+            return;
+        }
+
+        // The record rolls back with the failed request; only the file, written at once, is left to remove.
+        await _files.DeleteAsync(attachmentId, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public string CreateSignedPath(string attachmentId, TimeSpan lifetime)
     {
         ArgumentException.ThrowIfNullOrEmpty(attachmentId);

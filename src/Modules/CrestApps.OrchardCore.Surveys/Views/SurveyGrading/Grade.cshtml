@@ -1,0 +1,189 @@
+@using System.Globalization
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model GradeResponseViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymousDays AnonymousDays
+
+<zone Name="Title">
+    <breadcrumb name="SurveyGradingGrade" title="@T["Grade {0}", Model.Label]">
+        <breadcrumb-item id="SurveyGrading" action="Index" controller="SurveyGrading" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.GradeOwnSurveyResponses.Name">@T["Grading"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form asp-action="Grade" asp-route-responseId="@Model.Response.ItemId" method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Response"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Survey"]</span>
+                <div class="ocat-end">@Model.SurveyTitle</div>
+            </div>
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Respondent"]</span>
+                <div class="ocat-end">@(Model.RespondentName ?? T["Anonymous"].Value)</div>
+            </div>
+            @if (Model.Response.CompletedUtc is { } completed)
+            {
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Completed"]</span>
+                    @* An anonymous response's day is in the site's time zone, preformatted so it isn't converted again in the viewer's. *@
+                    <div class="ocat-end">@if (Model.IsAnonymous) { @await AnonymousDays.TextAsync(completed) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g")) }</div>
+                </div>
+            }
+            <div class="ocat-wrapper">
+                <span class="ocat-label">@T["Score"]</span>
+                <div class="ocat-end">@(Model.Response.Score?.ToString() ?? "-") / @(Model.Response.MaxScore?.ToString() ?? "-")</div>
+            </div>
+        </div>
+    </div>
+
+    @foreach (var question in Model.Questions)
+    {
+        <div class="card mb-3">
+            <div class="card-header">
+                @question.Title
+                @if (question.NeedsGrading)
+                {
+                    <span class="badge ta-badge fw-normal ms-1">@T["Needs grading"]</span>
+                }
+            </div>
+            <div class="card-body">
+                <div class="ocat-wrapper">
+                    <span class="ocat-label">@T["Answer"]</span>
+                    <div class="ocat-end"><div class="border rounded p-2" style="white-space: pre-wrap;">@question.Answer</div></div>
+                </div>
+                @if (!string.IsNullOrEmpty(question.GraderGuidance))
+                {
+                    <div class="ocat-wrapper">
+                        <span class="ocat-label">@T["Guidance"]</span>
+                        <div class="ocat-end"><span class="hint">@question.GraderGuidance</span></div>
+                    </div>
+                }
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="points-@question.QuestionId">@T["Points"]</label>
+                    <div class="ocat-end">
+                        <div class="input-group">
+                            @if (!Model.CanChangeScores && !question.NeedsGrading)
+                            {
+                                @* A read-only score is not posted, so saving never turns it into a grader's score. *@
+                                <input id="points-@question.QuestionId" type="number" class="form-control" value="@question.Points?.ToString(CultureInfo.InvariantCulture)" readonly />
+                            }
+                            else
+                            {
+                                <input id="points-@question.QuestionId" name="Points[@question.QuestionId]" type="number" min="0" max="@question.MaxPoints.ToString(CultureInfo.InvariantCulture)" step="any" class="form-control" value="@question.Points?.ToString(CultureInfo.InvariantCulture)" />
+                            }
+                            <span class="input-group-text">@T["of {0}", question.MaxPoints]</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label class="ocat-label" for="comment-@question.QuestionId">@T["Comment"]</label>
+                    <div class="ocat-end">
+                        <textarea id="comment-@question.QuestionId" name="Comments[@question.QuestionId]" rows="2" class="form-control">@question.Comment</textarea>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="ai-@question.QuestionId" name="AIAssisted" value="@question.QuestionId" checked="@question.AIAssisted" />
+                            <label class="form-check-label" for="ai-@question.QuestionId">@T["I used AI help to grade this answer"]</label>
+                        </div>
+                    </div>
+                </div>
+                @await DisplayAsync(await New.SurveyGradingQuestionTools(ResponseId: Model.Response.ItemId, QuestionId: question.QuestionId, NeedsGrading: question.NeedsGrading))
+            </div>
+        </div>
+    }
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Feedback"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Feedback" class="ocat-label">@T["Overall feedback"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Feedback" rows="3" class="form-control"></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Response.Grading == GradingStatus.Graded && !Model.CanChangeScores)
+    {
+        <div class="alert alert-info">@T["This response is graded. Changing its grades needs a permission you don't have."]</div>
+    }
+
+    <div class="action-bar-bottom">
+        @if (Model.Response.Grading != GradingStatus.Graded || Model.CanChangeScores)
+        {
+            <button type="submit" class="btn btn-primary">@T["Save Grades"]</button>
+        }
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-surveyId="@Model.Response.SurveyId">@T["Back"]</a>
+    </div>
+</form>
+
+@if (Model.CanChangeScores)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Change the total score"]</div>
+        <div class="card-body">
+            <form asp-action="ChangeScore" asp-route-responseId="@Model.Response.ItemId" method="post">
+                <div class="ocat-wrapper">
+                    <label asp-for="NewScore" class="ocat-label">@T["New score"]</label>
+                    <div class="ocat-end">
+                        @* A number input reads only invariant numbers: "2,5" in a decimal-comma culture would show as blank. *@
+                        <input asp-for="NewScore" type="number" min="0" max="@Model.Response.MaxScore?.ToString(CultureInfo.InvariantCulture)" step="any" class="form-control" value="@Model.NewScore?.ToString(CultureInfo.InvariantCulture)" />
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <label for="change-reason" class="ocat-label">@T["Reason"]</label>
+                    <div class="ocat-end">
+                        <input id="change-reason" name="Reason" class="form-control" required />
+                        <span class="hint">@T["The reason is kept in the score history."]</span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-secondary">@T["Change Score"]</button>
+                    </div>
+                </div>
+            </form>
+            <hr />
+            <form asp-action="Regrade" asp-route-responseId="@Model.Response.ItemId" method="post">
+                <div class="ocat-wrapper">
+                    <label for="regrade-reason" class="ocat-label">@T["Reason"]</label>
+                    <div class="ocat-end">
+                        <input id="regrade-reason" name="Reason" class="form-control" />
+                        <span class="hint">@T["Scores the response again with the key of its version. Grader scores are kept."]</span>
+                    </div>
+                </div>
+                <div class="ocat-wrapper">
+                    <div class="ocat-end-offset">
+                        <button type="submit" class="btn btn-secondary">@T["Score Again"]</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@if (Model.Response.ScoreHistory.Count > 0)
+{
+    <div class="card mb-3">
+        <div class="card-header">@T["Score history"]</div>
+        <ul class="list-group list-group-flush">
+            @foreach (var change in Model.Response.ScoreHistory.AsEnumerable().Reverse())
+            {
+                <li class="list-group-item">
+                    @if (Model.IsAnonymous) { @await AnonymousDays.TextAsync(change.ChangedUtc) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(change.ChangedUtc, DateTimeKind.Utc), Format: "g")) }:
+                    @change.Kind, @(change.From?.ToString() ?? "-") &rarr; @(change.To?.ToString() ?? "-")
+                    @if (!string.IsNullOrEmpty(change.Reason))
+                    {
+                        <span class="text-muted">(@change.Reason)</span>
+                    }
+                </li>
+            }
+        </ul>
+    </div>
+}

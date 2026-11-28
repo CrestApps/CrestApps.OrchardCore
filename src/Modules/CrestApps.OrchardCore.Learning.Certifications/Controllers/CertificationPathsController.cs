@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Core.Services;
 using CrestApps.OrchardCore.Learning.Certifications.Models;
 using CrestApps.OrchardCore.Learning.Certifications.Services;
@@ -6,6 +5,8 @@ using CrestApps.OrchardCore.Learning.Certifications.ViewModels;
 using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Skills.Services;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
+using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Localization;
@@ -159,12 +160,12 @@ public sealed class CertificationPathsController : Controller
         }
 
         // Managing this enrollment allows revoking only a certificate that rests on it, while its review is open.
-        var attempts = HttpContext.RequestServices.GetService<AssessmentAttemptStore>();
+        var responses = HttpContext.RequestServices.GetService<ISurveyResponseQueries>();
 
         if (!await paths.CanRevokeFromReviewAsync(
             enrollment,
             recordId,
-            attempts is null ? null : async attemptId => (await attempts.FindByIdAsync(attemptId, HttpContext.RequestAborted))?.EnrollmentId,
+            responses is null ? null : async responseId => LearningSurveyContexts.EnrollmentIdOf(await responses.FindByIdAsync(responseId, HttpContext.RequestAborted)),
             HttpContext.RequestAborted))
         {
             return Forbid();

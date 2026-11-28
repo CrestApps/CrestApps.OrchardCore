@@ -3,21 +3,23 @@ using OrchardCore.Security.Permissions;
 
 namespace CrestApps.OrchardCore.Learning.Assessments;
 
+/// <summary>
+/// Declares the permissions of Learning Assessments.
+/// </summary>
 internal sealed class AssessmentsPermissionsProvider : IPermissionProvider
 {
     private readonly IEnumerable<Permission> _allPermissions =
     [
-        AssessmentPermissions.ManageQuestionBanks,
-        AssessmentPermissions.ViewQuestionBanks,
         AssessmentPermissions.GradeAssessments,
         AssessmentPermissions.OverrideGrades,
-        AssessmentPermissions.ManageAssessmentOverrides,
         AssessmentPermissions.ManageGradeScales,
     ];
 
+    /// <inheritdoc />
     public Task<IEnumerable<Permission>> GetPermissionsAsync()
         => Task.FromResult(_allPermissions);
 
+    /// <inheritdoc />
     public IEnumerable<PermissionStereotype> GetDefaultStereotypes()
         =>
         [

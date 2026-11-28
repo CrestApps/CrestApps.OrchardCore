@@ -1,62 +1,24 @@
-using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 /// <summary>
-/// Registers question types and attempt observers.
+/// Registers extensions of Learning Assessments.
 /// </summary>
 public static class AssessmentsServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers a question type with its scorer.
+    /// Registers a source of work waiting for a grader on the Learning grading page.
     /// </summary>
-    /// <typeparam name="TScorer">The scorer.</typeparam>
-    /// <param name="services">The service collection.</param>
-    /// <param name="name">The question type.</param>
-    /// <param name="configure">Sets the content type and name.</param>
-    /// <returns>The service collection.</returns>
-    public static IServiceCollection AddQuestionType<TScorer>(this IServiceCollection services, string name, Action<QuestionTypeDescriptor> configure)
-        where TScorer : class, IQuestionScorer
-    {
-        ArgumentNullException.ThrowIfNull(services);
-        ArgumentException.ThrowIfNullOrEmpty(name);
-
-        services.Configure<QuestionTypeOptions>(options =>
-        {
-            var descriptor = new QuestionTypeDescriptor(name);
-            configure?.Invoke(descriptor);
-            options.Add(descriptor);
-        });
-        services.TryAddEnumerable(ServiceDescriptor.Singleton<IQuestionScorer, TScorer>());
-
-        return services;
-    }
-
-    /// <summary>
-    /// Registers an observer of attempt changes.
-    /// </summary>
-    /// <typeparam name="TObserver">The observer.</typeparam>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The service collection.</returns>
-    public static IServiceCollection AddAttemptObserver<TObserver>(this IServiceCollection services)
-        where TObserver : class, IAttemptObserver
-    {
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAttemptObserver, TObserver>());
-
-        return services;
-    }
-
-    /// <summary>
-    /// Registers a source of work that waits for a grader, which the grading list merges with the others.
-    /// </summary>
-    /// <typeparam name="TSource">The source.</typeparam>
-    /// <param name="services">The service collection.</param>
-    /// <returns>The service collection.</returns>
+    /// <typeparam name="TSource">The source type.</typeparam>
+    /// <param name="services">The services.</param>
+    /// <returns>The services.</returns>
     public static IServiceCollection AddGradingQueueSource<TSource>(this IServiceCollection services)
         where TSource : class, IGradingQueueSource
     {
+        ArgumentNullException.ThrowIfNull(services);
+
         services.TryAddEnumerable(ServiceDescriptor.Scoped<IGradingQueueSource, TSource>());
 
         return services;

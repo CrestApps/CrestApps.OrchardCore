@@ -1,0 +1,81 @@
+@model CrestApps.OrchardCore.Surveys.Reports.SurveyReportFilterViewModel
+
+<div class="col p-1">
+    <label asp-for="SurveyId" class="form-label">@T["Survey"]</label>
+    <select asp-for="SurveyId" asp-items="Model.Surveys" class="form-select">
+        <option value="">@T["Choose a survey"]</option>
+    </select>
+</div>
+@if (Model.Versions.Count > 0)
+{
+    <div class="col p-1">
+        <label asp-for="Version" class="form-label">@T["Versions"]</label>
+        <select asp-for="Version" asp-items="Model.Versions" class="form-select"></select>
+    </div>
+}
+@if (Model.Collectors.Count > 0)
+{
+    <div class="col p-1">
+        <label asp-for="CollectorId" class="form-label">@T["Collector"]</label>
+        <select asp-for="CollectorId" asp-items="Model.Collectors" class="form-select">
+            <option value="">@T["Every collector"]</option>
+        </select>
+    </div>
+}
+@if (Model.ContextKinds.Count > 0)
+{
+    <div class="col p-1">
+        <label asp-for="ContextKind" class="form-label">@T["Responses about"]</label>
+        <select asp-for="ContextKind" asp-items="Model.ContextKinds" class="form-select">
+            <option value="">@T["Anything"]</option>
+        </select>
+    </div>
+}
+@if (Model.ShowSegment && Model.SegmentQuestions.Count > 0)
+{
+    <div class="col p-1">
+        <label asp-for="SegmentQuestionId" class="form-label">@T["Compare by"]</label>
+        <select asp-for="SegmentQuestionId" asp-items="Model.SegmentQuestions" class="form-select">
+            <option value="">@T["No comparison"]</option>
+        </select>
+    </div>
+}
+@if (Model.ShowTrend)
+{
+    <div class="col p-1">
+        <label asp-for="TrendQuestionId" class="form-label">@T["Question"]</label>
+        <select asp-for="TrendQuestionId" asp-items="Model.TrendQuestions" class="form-select">
+            <option value="">@T["Choose a question"]</option>
+        </select>
+    </div>
+    <div class="col p-1">
+        <label asp-for="TrendPeriod" class="form-label">@T["Group"]</label>
+        <select asp-for="TrendPeriod" asp-items="Model.TrendPeriods" class="form-select"></select>
+    </div>
+}
+@if (Model.ShowStatus)
+{
+    <div class="col p-1">
+        <label asp-for="Status" class="form-label">@T["Status"]</label>
+        <select asp-for="Status" asp-items="Model.Statuses" class="form-select"></select>
+    </div>
+    <div class="col p-1">
+        <label asp-for="Page" class="form-label">@T["Page"]</label>
+        <input asp-for="Page" type="number" min="1" class="form-control" />
+    </div>
+}
+@if (Model.ShowAudience)
+{
+    <div class="col p-1">
+        <label asp-for="AudienceId" class="form-label">@T["Audience"]</label>
+        <select asp-for="AudienceId" asp-items="Model.Audiences" class="form-select">
+            <option value="">@T["Choose an audience"]</option>
+        </select>
+    </div>
+}
+<div class="col-auto p-1 d-flex align-items-end">
+    <div class="form-check mb-2">
+        <input asp-for="IncludeTest" type="checkbox" class="form-check-input" />
+        <label asp-for="IncludeTest" class="form-check-label">@T["Include test responses"]</label>
+    </div>
+</div>

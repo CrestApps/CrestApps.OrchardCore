@@ -1,0 +1,83 @@
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.AuditTrail;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.Tests.Doubles;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+
+namespace CrestApps.OrchardCore.Tests.Surveys.Integrations;
+
+/// <summary>
+/// The audit trail keeps the request's IP address next to the response id, so on an anonymous survey the events the
+/// respondent causes are not recorded, while staff and system events still are.
+/// </summary>
+public sealed class SurveysAuditTrailObserverTests
+{
+    [Fact]
+    public async Task ReopenedAsync_ByTheRespondentOfAnAnonymousSurvey_IsNotRecorded()
+    {
+        // Arrange
+        var auditTrail = new Mock<ISurveyAuditTrail>();
+        var observer = new SurveysAuditTrailObserver(auditTrail.Object, Names());
+
+        // Act: a respondent's reopen has no actor.
+        await observer.ReopenedAsync(Context(AnonymityMode.Anonymous, actorId: null));
+
+        // Assert
+        auditTrail.Verify(trail => trail.RecordAsync(It.IsAny<string>(), It.IsAny<SurveyAuditEntry>(), It.IsAny<CancellationToken>()), Times.Never());
+    }
+
+    [Fact]
+    public async Task ReopenedAsync_ByTheRespondentOfAnIdentifiedSurvey_IsRecorded()
+    {
+        // Arrange
+        var auditTrail = new Mock<ISurveyAuditTrail>();
+        var observer = new SurveysAuditTrailObserver(auditTrail.Object, Names());
+
+        // Act
+        await observer.ReopenedAsync(Context(AnonymityMode.Identified, actorId: null));
+
+        // Assert
+        auditTrail.Verify(trail => trail.RecordAsync(SurveyAuditEvents.ResponseReopened, It.Is<SurveyAuditEntry>(entry => entry.ResponseId == "r1"), It.IsAny<CancellationToken>()), Times.Once());
+    }
+
+    [Fact]
+    public async Task VoidedAsync_ByStaffOnAnAnonymousSurvey_IsStillRecorded()
+    {
+        // Arrange
+        var auditTrail = new Mock<ISurveyAuditTrail>();
+        var observer = new SurveysAuditTrailObserver(auditTrail.Object, Names());
+
+        // Act
+        await observer.VoidedAsync(Context(AnonymityMode.Anonymous, actorId: "admin-id"));
+
+        // Assert
+        auditTrail.Verify(trail => trail.RecordAsync(SurveyAuditEvents.ResponseVoided, It.Is<SurveyAuditEntry>(entry => entry.ActorId == "admin-id"), It.IsAny<CancellationToken>()), Times.Once());
+    }
+
+    [Fact]
+    public async Task DeletedAsync_ByRetentionOnAnAnonymousSurvey_IsRecordedWithNoActor()
+    {
+        // Arrange
+        var auditTrail = new Mock<ISurveyAuditTrail>();
+        var observer = new SurveysAuditTrailObserver(auditTrail.Object, Names());
+
+        // Act: a retention delete is a system event, with no actor.
+        await observer.DeletedAsync(Context(AnonymityMode.Anonymous, actorId: null));
+
+        // Assert
+        auditTrail.Verify(trail => trail.RecordAsync(SurveyAuditEvents.ResponseDeleted, It.Is<SurveyAuditEntry>(entry => entry.ResponseId == "r1" && entry.ActorId == null), It.IsAny<CancellationToken>()), Times.Once());
+    }
+
+    private static SurveyResponseEventContext Context(AnonymityMode anonymity, string actorId)
+        => new()
+        {
+            Survey = new Survey { ItemId = "s1", Name = "s1", Access = new SurveyAccessSettings { Anonymity = anonymity } },
+            Response = new SurveyResponse { ItemId = "r1", SurveyId = "s1" },
+            ActorId = actorId,
+        };
+
+    private static CrestApps.OrchardCore.Surveys.Core.Services.SurveyRespondentNames Names()
+        => new(new ServiceCollection().BuildServiceProvider(), RecipeRoundTrip.Localizer<CrestApps.OrchardCore.Surveys.Core.Services.SurveyRespondentNames>());
+}

@@ -466,6 +466,10 @@ runtime MCP skills shipped by the `CrestApps.OrchardCore.AI.Mcp` module (which c
 - **Example**: `.agents/skills/crestapps-calendar-provider` — how to add an external calendar provider (Google Calendar,
   Microsoft 365, CalDAV, …) to External Calendars: full and incremental reads, two-way writes with versions, conflict
   policies, refused access, account connections, event mapping, registration, tests and docs.
+- **Example**: `.agents/skills/crestapps-survey-controls` — how another module adds a survey question type to Surveys:
+  `AddSurveyControl` with its descriptor and capabilities, the handler base classes, scorers, analyzers and presets, the
+  settings driver, the Respond/Review views of the `SurveyControl` shape, client scripts that raise `survey:change`, the
+  answer key projection rule and the tests.
 - **Example**: `.agents/skills/crestapps-webmcp-tools` — how to extend the WebMCP module, a thin layer over CrestApps.Core's
   WebMCP: tools registered with the standard `document.modelContext.registerTool`, scripts and settings added through
   `IWebMcpClientConfigurationHandler`, the server-side checks every WebMCP list and call must keep, the chat bridge's

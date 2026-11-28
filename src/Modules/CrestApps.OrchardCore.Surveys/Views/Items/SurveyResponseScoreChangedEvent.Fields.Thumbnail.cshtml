@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyResponseScoreChangedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-scale-balanced" aria-hidden="true"></i>
+    @T["Survey Response Score Changed"]
+</h4>
+<p>@T["Starts when the score of a graded response is regraded or changed."]</p>

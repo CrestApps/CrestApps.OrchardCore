@@ -1,0 +1,41 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyInvitationsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyInvitationsIndex" title="@Html.Raw(Html.Encode(Model.Collector.Name))">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysDesign" action="Design" controller="SurveyDesigner" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@Model.Survey.Title</breadcrumb-item>
+        <breadcrumb-item id="SurveysCollectors" action="Index" controller="SurveyCollectors" area="CrestApps.OrchardCore.Surveys" route-id="@Model.Survey.ItemId">@T["Collect Responses"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<survey-layout survey="Model.Survey">
+
+<form method="post" class="no-multisubmit">
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col"></div>
+                <div class="col-auto">
+                    <a class="btn btn-primary" role="button" asp-action="Invite" asp-route-collectorId="@Model.Collector.ItemId">@T["Invite People"]</a>
+                    <button type="submit" class="btn btn-secondary" asp-action="Send" asp-route-collectorId="@Model.Collector.ItemId">@T["Send Invitations Not Sent Yet"]</button>
+                    <button type="submit" class="btn btn-secondary" asp-action="Remind" asp-route-collectorId="@Model.Collector.ItemId" data-url-af="UnsafeUrl" data-title="@T["Remind"]" data-message="@T["Remind everyone invited who has not completed the survey now?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Send Reminders Now"]</button>
+                    <a class="btn btn-secondary" role="button" asp-action="Settings" asp-route-collectorId="@Model.Collector.ItemId">@T["Settings"]</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <admin-list name="SurveyInvitations" context="Model.List"
+                show-select-all="false"
+                empty-message="@T["<strong>Nothing here!</strong> Nobody is invited yet."]">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column name="Recipient" position="20" title="@T["Invited"]" />
+            <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
+            <admin-list-column name="Sent" position="40" title="@T["Sent"]" width="auto" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+</survey-layout>

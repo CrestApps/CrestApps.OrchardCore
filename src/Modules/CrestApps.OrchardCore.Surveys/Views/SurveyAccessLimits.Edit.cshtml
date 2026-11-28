@@ -1,0 +1,53 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyAccessEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="LimitCounts" class="ocat-label">@T["Count"]</label>
+    <div class="ocat-end">
+        <select asp-for="LimitCounts" class="form-select">
+            <option value="@LimitCount.Completed">@T["Completed responses"]</option>
+            <option value="@LimitCount.Started">@T["Started responses"]</option>
+        </select>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="LimitTotal" class="ocat-label">@T["In total"]</label>
+    <div class="ocat-end"><input asp-for="LimitTotal" type="number" min="1" class="form-control" /><span class="hint">@T["For quizzes, the number of attempts."]</span></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="LimitPerDay" class="ocat-label">@T["A day"]</label>
+    <div class="ocat-end"><input asp-for="LimitPerDay" type="number" min="1" class="form-control" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="LimitPerWeek" class="ocat-label">@T["A week"]</label>
+    <div class="ocat-end"><input asp-for="LimitPerWeek" type="number" min="1" class="form-control" /><span class="hint">@T["Weeks start on the site's first day of the week."]</span></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="LimitPerMonth" class="ocat-label">@T["A month"]</label>
+    <div class="ocat-end"><input asp-for="LimitPerMonth" type="number" min="1" class="form-control" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="CooldownMinutes" class="ocat-label">@T["Wait between responses"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="CooldownMinutes" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["minutes"]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Uniqueness" class="ocat-label">@T["Recognize respondents by"]</label>
+    <div class="ocat-end">
+        <select asp-for="Uniqueness" class="form-select">
+            <option value="@UniquenessMode.SignedInUser">@T["Their user account"]</option>
+            <option value="@UniquenessMode.Invitation">@T["Their invitation"]</option>
+            <option value="@UniquenessMode.Cookie">@T["A browser cookie (weak)"]</option>
+            <option value="@UniquenessMode.None">@T["Not at all"]</option>
+        </select>
+        <span class="hint">@T["A cookie stops honest repeats only: a respondent can clear it. Use sign-in or invitations for one response per person."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="MaxResponses" class="ocat-label">@T["Most responses"]</label>
+    <div class="ocat-end"><input asp-for="MaxResponses" type="number" min="1" class="form-control" /><span class="hint">@T["The survey stops accepting responses once this many are completed."]</span></div>
+</div>

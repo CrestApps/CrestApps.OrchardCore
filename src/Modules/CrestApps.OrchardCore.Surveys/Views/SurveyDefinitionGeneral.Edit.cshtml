@@ -1,0 +1,14 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyDefinitionGeneralEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DefinitionTitle" class="ocat-label">@T["Title respondents see"]</label>
+    <div class="ocat-end"><input asp-for="DefinitionTitle" class="form-control" /></div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Introduction" class="ocat-label">@T["Introduction"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Introduction" class="form-control" rows="3"></textarea>
+        <span class="hint">@T["Shown on the start page. HTML is allowed and cleaned."]</span>
+    </div>
+</div>

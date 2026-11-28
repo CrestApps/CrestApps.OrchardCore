@@ -6,45 +6,42 @@ technical_manual:
   - modules/learning-surveys
 ---
 
-A **feedback survey** asks learners what they thought of a course: ratings, choices and written answers. A **choice** asks one question with a few options, as a poll. Both are lessons of the course: the learner answers in the course player, and the lesson counts as done when they answer.
+A **feedback survey** asks learners what they thought of a course. A **choice** asks one question with a few options, as a poll. Both are lessons of the course: the learner answers in the course, and the lesson counts as done when they answer. The questions are built in the survey designer of [Surveys](/docs/user-manual/surveys), so every question type and every logic rule of Surveys is available.
 
 | | |
 | --- | --- |
-| **Menu** | A course's list of lessons (create a **Feedback survey** or a **Choice**); the survey's editor → **Totals** |
+| **Menu** | A course's list of lessons (create a **Feedback survey** or a **Choice**); on the lesson, **Edit questions**, **Access and settings** and **Totals** |
 | **Permission** | Manage courses, or Manage the courses you teach for the course's staff, to build surveys and read the totals; Access learning to answer |
-| **Feature** | Learning Surveys |
+| **Feature** | Learning Surveys (with Surveys) |
 
 <AskYourAdmin />
 
 ## Build a feedback survey
 
 1. Open the course and, in its list of lessons, create a **Feedback survey**.
-2. Give it a title and, if you like, an introduction.
-3. Under **Questions**, write each question and choose its **Answer**:
-   - **One choice** or **Several choices**: write the choices, one a line (at least two);
-   - **Rating from 1 to 5**;
-   - **Written answer**.
-4. Tick **Learners must answer it** for the questions that may not be skipped. Use **Add a question** for more.
-5. Under **Survey**, choose when it **Closes** (in your time zone; empty keeps it open), when **Learners see the totals**, whether learners may change their answers, and whether it is **Anonymous**.
-6. Publish it and add it to the course outline.
+2. Give it a title and, if you like, an introduction, and save it. Saving makes the survey that holds its questions.
+3. Select **Edit questions**. The survey designer opens with a course feedback survey to start from: change, add or remove questions.
+4. Select **Publish** in the designer. Learners can answer only once the survey is published.
+5. Use **Access and settings** to choose when it closes and whether it is anonymous. On the designer's settings, choose whether learners may change a finished response and when they see the totals.
+6. Publish the lesson and add it to the course outline.
 
 ## Build a choice
 
-Create a **Choice** instead. It has one question, answered with one choice or several. To show learners how everyone answered, set **Learners see the totals** to **Once the learner answered**, **Once the survey closed** or **Always**.
+Create a **Choice** instead. Its survey starts as a poll with one question. To show learners how everyone answered, set when respondents see the totals of all responses in the survey's review settings.
 
 ## What learners see
 
-The learner opens the survey in the course, answers and selects **Send my answers**. A required question left out, or a survey that has closed, is refused with a message. After answering, the learner sees the date they answered, and the totals when the survey shows them. When the survey lets them, they can change their answers until it closes. A learner who has completed the course can still answer, for example the feedback survey at the end of the course, as long as they may review the course. When a learner cannot answer, the survey says why: the survey has closed, their answers are in and cannot change, their enrollment waits for approval or is paused, their access has ended, or the survey is not open to them yet.
+The learner opens the survey in the course and selects **Answer the survey**. The questions open on the survey page; the learner answers and finishes, and the last page links back to the course. Afterwards the lesson shows the date they answered, and **Change your answers** when the survey lets them. When a learner cannot answer, the lesson says so.
 
-An anonymous survey tells learners that the course staff see their answers without their name.
+An anonymous survey tells learners that the course staff see their answers without their name. The learner's progress records that they answered it by the day only, not the time, so the time can't tie them to their answers. It records the completion only: a score never reaches the gradebook, and grading the response later changes nobody's progress.
 
 ## Read the totals
 
-Open the survey's editor and select **Totals**. The page shows how many learners answered, the count and share of each choice, the average rating, and the written answers. Written answers carry the learner's name unless the survey is anonymous.
+On the lesson's editor, select **Totals**. The **Survey Results** report opens for the survey: how many answered, the count and share of each choice, averages, and the written answers. Anonymous surveys hide groups smaller than the survey's minimum group size.
 
 ## Moodle activities
 
-When a Moodle course is moved, its **Feedback** activities become feedback surveys and its **Choice** activities become choices. The other small Moodle activities are replaced or left out, as the table shows.
+When a Moodle course is moved, its **Feedback** activities become feedback surveys and its **Choice** activities become choices, with their questions in their surveys. The other small Moodle activities are replaced or left out, as the table shows.
 
 | Moodle activity | In Learning |
 | --- | --- |

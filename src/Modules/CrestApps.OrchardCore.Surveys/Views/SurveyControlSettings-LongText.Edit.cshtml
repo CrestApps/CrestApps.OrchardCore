@@ -1,0 +1,24 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.LongText.LongTextSettings>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Rows" class="ocat-label">@T["Visible lines"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Rows" class="form-control" type="number" min="2" max="30" />
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.MinWords" class="ocat-label">@T["Fewest words"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.MinWords" class="form-control" type="number" min="0" />
+        <span class="hint">@T["Empty for no minimum."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.MaxWords" class="ocat-label">@T["Most words"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.MaxWords" class="form-control" type="number" min="1" />
+        <span class="hint">@T["Empty for no maximum."]</span>
+    </div>
+</div>

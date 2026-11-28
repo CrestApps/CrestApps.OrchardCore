@@ -1,0 +1,43 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+
+@model SurveyEventActivityViewModel
+
+<style asp-name="bootstrap-select"></style>
+<script asp-name="bootstrap-select" depends-on="bootstrap" at="Foot"></script>
+<div class="mb-3">
+    <label asp-for="SurveyIds" class="form-label">@T["Surveys"]</label>
+    <select asp-for="SurveyIds" asp-items="Model.SurveyOptions" class="selectpicker show-tick" multiple data-live-search="true" data-actions-box="true" data-width="100%" data-selected-text-format="count > 3" title="@T["Every survey"]"></select>
+    <span class="hint">@T["The surveys that start the workflow. Choose none for every survey."]</span>
+</div>
+
+<div class="mb-3">
+    <label asp-for="Kinds" class="form-label">@T["Kinds"]</label>
+    <input asp-for="Kinds" class="form-control" />
+    <span class="hint">@T["The kinds of survey, such as Survey, Quiz or Poll, separated by commas. Leave it empty for every kind."]</span>
+</div>
+@if (Model.IsResponseEvent)
+{
+    <div class="alert alert-info" role="note">
+        @T["On an anonymous survey, a response starts this workflow only once enough responses share its link, version and context kind to hide it among them (the survey's minimum group size), or once enough responses in small groups reach the minimum together. The first responses of a new survey, link or version start nothing, and they don't start the workflow later either."]
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="CollectorIds" class="form-label">@T["Collectors"]</label>
+        <input asp-for="CollectorIds" class="form-control" />
+        <span class="hint">@T["The ids of the links or other collectors, separated by commas. Leave it empty for every collector."]</span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="ContextKinds" class="form-label">@T["Context kinds"]</label>
+        <input asp-for="ContextKinds" class="form-control" />
+        <span class="hint">@T["The kinds of record responses belong to, such as LearningEnrollment or Ticket, separated by commas. Leave it empty for every response."]</span>
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check">
+            <input asp-for="IncludeWorkflowChanges" type="checkbox" class="form-check-input" />
+            <label asp-for="IncludeWorkflowChanges" class="form-check-label">@T["Also start for changes a workflow made"]</label>
+            <span class="hint dashed">@T["Off by default, so a workflow that voids or regrades a response does not start itself again."]</span>
+        </div>
+    </div>
+}

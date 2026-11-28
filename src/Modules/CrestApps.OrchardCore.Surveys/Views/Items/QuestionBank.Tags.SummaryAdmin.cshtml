@@ -1,0 +1,7 @@
+@model ShapeViewModel<QuestionBank>
+
+<span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Technical name"]"><i class="fa-solid fa-code me-1" aria-hidden="true"></i>@Model.Value.Name</span>
+@foreach (var tag in Model.Value.Tags ?? [])
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Tag"]"><i class="fa-solid fa-tag me-1" aria-hidden="true"></i>@tag</span>
+}

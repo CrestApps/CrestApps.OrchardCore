@@ -247,6 +247,29 @@ public sealed class LearnerProgressServiceTests
     }
 
     [Fact]
+    public async Task R6M8_RecordResultAsync_OnAPassedItem_WithNoPassDecision_CompletesNeitherPassedNorFailed()
+    {
+        // Arrange: a quiz completed when the learner passes, whose survey has neither a pass mark nor a deciding band.
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1");
+        courses.AddItem("course1", "quiz", "Quiz", CompletionModes.Passed, configure: part => part.Gradable = true);
+        courses.AddItem("course1", "other");
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act: an attempt waiting for a grader, then the graded attempt.
+        var pending = await Progress(harness, (service, e) => service.RecordResultAsync(e, new CourseItemResult { ItemId = "quiz", PassDecided = true, Submitted = true, Attempts = 1 }), enrollment.ItemId);
+        var graded = await Progress(harness, (service, e) => service.RecordResultAsync(e, new CourseItemResult { ItemId = "quiz", Score = 40, PassDecided = true, CompletedWithoutPassDecision = true, Submitted = true, Graded = true, Attempts = 1 }), enrollment.ItemId);
+
+        // Assert
+        Assert.NotEqual(CourseItemState.Completed, pending.Item.State);
+        Assert.NotEqual(CourseItemState.Failed, pending.Item.State);
+        Assert.Equal(CourseItemState.Completed, graded.Item.State);
+        Assert.Null(graded.Item.Passed);
+        Assert.Equal(40, graded.Item.Score);
+    }
+
+    [Fact]
     public async Task RecordResultAsync_KeepsTheSelfReportedMark()
     {
         // Arrange
@@ -377,6 +400,50 @@ public sealed class LearnerProgressServiceTests
         Assert.True(high.CourseCompleted);
         Assert.True(high.Enrollment.Passed);
         Assert.Equal(85, (await FindAsync(harness, enrollment.ItemId)).Completion.Grade);
+    }
+
+    [Fact]
+    public async Task R8Mi26_ACourseWhoseOnlyGradableItemIsCompletionOnly_CompletesWithAMinimumGrade()
+    {
+        // Arrange: the only gradable item is an anonymous quiz, which records the learner's completion only.
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1", part =>
+        {
+            part.PassMark = 80;
+            part.CompletionCriteria = [new LearningRuleSettings { Name = LearningRuleNames.MinimumGrade, Values = { ["Grade"] = "80" } }];
+        });
+        courses.AddItem("course1", "quiz", "Quiz", CompletionModes.Submitted, configure: part => part.Gradable = true);
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act
+        var update = await Progress(harness, (service, e) => service.RecordResultAsync(e, new CourseItemResult { ItemId = "quiz", Submitted = true, CompletionOnly = true }), enrollment.ItemId);
+
+        // Assert: the course has no grade to check, so the minimum grade doesn't keep it from completing.
+        Assert.True(update.ItemCompleted);
+        Assert.True(update.CourseCompleted);
+        Assert.Null(update.Enrollment.Grade);
+        Assert.Null(update.Enrollment.Passed);
+    }
+
+    [Fact]
+    public async Task R8Mi26_AGradableItemNotScoredYet_CountsAsZero_SoTheMinimumGradeStillWaits()
+    {
+        // Arrange: an anonymous quiz plus an identified one that is still waiting for a score.
+        var (harness, courses, _) = await LearningTestHarness.CreateAsync();
+        await using var __ = harness;
+        courses.AddCourse("course1", part => part.CompletionCriteria = [new LearningRuleSettings { Name = LearningRuleNames.MinimumGrade, Values = { ["Grade"] = "50" } }]);
+        courses.AddItem("course1", "anonymous", "Quiz", CompletionModes.Submitted, configure: part => part.Gradable = true);
+        courses.AddItem("course1", "graded", "Quiz", CompletionModes.Submitted, configure: part => part.Gradable = true);
+        var enrollment = await EnrollAsync(harness, "user1", "course1");
+
+        // Act
+        await Progress(harness, (service, e) => service.RecordResultAsync(e, new CourseItemResult { ItemId = "anonymous", Submitted = true, CompletionOnly = true }), enrollment.ItemId);
+        var update = await Progress(harness, (service, e) => service.RecordResultAsync(e, new CourseItemResult { ItemId = "graded", Submitted = true }), enrollment.ItemId);
+
+        // Assert
+        Assert.Equal(0m, update.Enrollment.Grade);
+        Assert.False(update.CourseCompleted);
     }
 
     [Fact]

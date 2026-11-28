@@ -1,4 +1,3 @@
-using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Credentials;
 using CrestApps.OrchardCore.Learning.Credentials.Core.Rules;
 using CrestApps.OrchardCore.Learning.Credentials.Core.Services;
@@ -51,7 +50,7 @@ public static class LearningCredentialsCoreServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        services.TryAddEnumerable(ServiceDescriptor.Scoped<IAttemptObserver, CredentialAttemptObserver>());
+        services.AddSurveyResponseObserver<CredentialSurveyObserver>();
 
         return services;
     }

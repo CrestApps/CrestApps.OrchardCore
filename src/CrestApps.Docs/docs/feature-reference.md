@@ -291,7 +291,6 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Learning.Cohorts` | Enrollment by Cohort | [Learning](./modules/learning#enrollment-by-cohort) |
 | `CrestApps.OrchardCore.Learning.Assessments` | Learning Assessments | [Learning Assessments](./modules/learning-assessments) |
 | `CrestApps.OrchardCore.Learning.Assessments.Gradebook` | Learning Gradebook | [Learning Assessments](./modules/learning-assessments) |
-| `CrestApps.OrchardCore.Learning.Assessments.QtiImport` | Learning QTI Import | [Learning Assessments](./modules/learning-assessments#qti-import) |
 | `CrestApps.OrchardCore.Learning.Assessments.MoodleImport` | Learning Moodle Import | [Learning Assessments](./modules/learning-assessments#moodle-import) |
 | `CrestApps.OrchardCore.Learning.AI` | Learning Assistant | [Learning AI](./modules/learning-ai) |
 | `CrestApps.OrchardCore.Learning.AI.Authoring` | Learning Authoring Assistant | [Learning AI](./modules/learning-ai#author-prompts) |
@@ -307,6 +306,17 @@ The Contact Center reports (executive, interaction, queue/SLA, agent, transfer, 
 | `CrestApps.OrchardCore.Learning.Programs` | Learning Paths | [Learning Programs](./modules/learning-programs) |
 | `CrestApps.OrchardCore.Learning.Programs.RequiredLearning` | Required Learning | [Learning Programs](./modules/learning-programs#required-learning) |
 | `CrestApps.OrchardCore.Learning.Programs.TeamLearning` | Team Learning | [Learning Programs](./modules/learning-programs#team-learning) |
+
+## Surveys
+
+| Feature ID | Name | Docs |
+| --- | --- | --- |
+| `CrestApps.OrchardCore.Surveys` | Surveys | [Surveys](./modules/surveys/index.md) |
+| `CrestApps.OrchardCore.Surveys.Invitations` | Survey Invitations | [Collecting responses](./modules/surveys/collecting.md#invitations) |
+| `CrestApps.OrchardCore.Surveys.Embedding` | Survey Embedding | [Collecting responses](./modules/surveys/collecting.md#embedding) |
+| `CrestApps.OrchardCore.Surveys.Qti` | QTI Question Import | [Versions](./modules/surveys/versions.md#bank-questions) |
+| `CrestApps.OrchardCore.Surveys.Api` | Surveys API | [Surveys API](./modules/surveys/api.md) |
+| `CrestApps.OrchardCore.Surveys.AI` | Surveys AI | [Surveys AI](./modules/surveys/ai.md) |
 
 ## Data connectors
 

@@ -1,0 +1,49 @@
+@using CrestApps.OrchardCore.Surveys.Services
+@model SurveyDefinitionDiff
+
+<ul class="list-group">
+    @foreach (var change in Model.Changes)
+    {
+        var verb = change.Kind switch
+        {
+            SurveyChangeKind.Added => T["Added"],
+            SurveyChangeKind.Removed => T["Removed"],
+            SurveyChangeKind.Moved => T["Moved"],
+            _ => T["Changed"],
+        };
+        var target = change.Target switch
+        {
+            "page" => T["page"],
+            "question" => T["question"],
+            "choice" => T["choice"],
+            "row" => T["row"],
+            "ending" => T["ending"],
+            "variable" => T["variable"],
+            _ => (Microsoft.AspNetCore.Html.IHtmlContent)new Microsoft.AspNetCore.Html.HtmlString(Html.Encode(change.Target ?? string.Empty)),
+        };
+        var detail = change.Detail switch
+        {
+            "controlType" => T["question type"],
+            "required" => T["now required"],
+            "scoring" => T["scoring key"],
+            "retired" => T["retired"],
+            "name" => T["code"],
+            "page" => T["to another page"],
+            _ => null,
+        };
+
+        <li class="list-group-item d-flex align-items-center gap-2">
+            <span class="badge @(change.Destructive ? "text-bg-warning" : "ta-badge") fw-normal">@verb</span>
+            <span class="text-body-secondary">@target</span>
+            <span class="me-auto">@change.Name</span>
+            @if (detail is not null)
+            {
+                <span class="badge ta-badge fw-normal">@detail</span>
+            }
+            @if (change.Destructive)
+            {
+                <i class="fa-solid fa-triangle-exclamation text-warning" title="@T["Affects existing answers or comparisons"]" aria-hidden="true"></i>
+            }
+        </li>
+    }
+</ul>

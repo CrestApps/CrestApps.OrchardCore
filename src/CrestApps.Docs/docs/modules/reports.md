@@ -180,6 +180,27 @@ return new ReportDocument()
     .Add(ReportSection.ForTable(S["Queues"].Value, columns, rows));
 ```
 
+### Color rules shared with the Report Builder
+
+To color cells by rules rather than by hand, use the public `ReportColumnColorizer` of `CrestApps.OrchardCore.Reports.Core`, the engine the Report Builder colors its columns with. Describe the colors with `ReportColumnColors` (a color for every cell, a color scale, and rules such as "less than 60" or "between 7 and 8"), create a colorizer for the column's data type, and ask it for the style of each value:
+
+```csharp
+var colors = new ReportColumnColors
+{
+    Rules = [new ReportColorRule { Operator = DataFilterOperator.LessThan, Values = ["60"], Color = "#B02A37", Target = ReportColorTarget.Text }],
+};
+
+// The values feed the color scale; pass null when the colors have no scale.
+var colorizer = ReportColumnColorizer.Create(DataFieldType.Decimal, colors, values: null, today: localNow);
+
+if (colorizer?.StyleOf(percent) is { } style)
+{
+    row.WithCellStyle(percentIndex, style);
+}
+```
+
+`Create` returns `null` when the colors color nothing. A cell given only a background gets a readable text color. `HeaderStyleOf(colors)` gives the header style. The survey reports use it for scores below the pass mark, failed responses and Net Promoter Score bands.
+
 When the **Reports (OpenXml)** add-on is enabled, the Excel (`.xlsx`) export applies the font color, background fill, and bold weight to the matching cells. Header rows, subtotal rows, and grand-total rows are exported bold automatically. The **Reports (PDF)** add-on applies the same styles, and shades subtotal and grand-total rows as the report on screen does. CSV has no native styling, so it always exports values only.
 
 ### Contributing a family of reports

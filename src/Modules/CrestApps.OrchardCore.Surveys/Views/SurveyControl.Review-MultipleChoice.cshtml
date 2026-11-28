@@ -1,0 +1,53 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyContentSanitizer HtmlSanitizer
+
+<ul class="list-unstyled survey-answer mb-0">
+    @foreach (var choice in Model.Choices)
+    {
+        var selected = Model.IsSelected(choice.Id);
+        var correct = Model.Feedback?.CorrectChoiceIds?.Contains(choice.Id) == true;
+        <li class="@(selected ? "fw-semibold" : null)">
+            <i class="fa-regular @(selected ? "fa-square-check" : "fa-square") me-1" aria-hidden="true"></i>
+            <span class="visually-hidden">@(selected ? T["Selected"] : T["Not selected"])</span>
+            @choice.Text
+            @if (choice.IsOther && selected && !string.IsNullOrWhiteSpace(Model.Answer?.OtherText))
+            {
+                <span>: @Model.Answer.OtherText</span>
+            }
+            @if (correct)
+            {
+                <i class="fa-solid fa-check text-success ms-1" aria-hidden="true"></i><span class="visually-hidden">@T["Right answer"]</span>
+            }
+        </li>
+    }
+</ul>
+
+@if (Model.Feedback is { } feedback)
+{
+    <div class="survey-feedback mt-2">
+        @if (feedback.Correct == true)
+        {
+            <div class="text-success"><i class="fa-solid fa-check" aria-hidden="true"></i> @T["Correct"]</div>
+        }
+        else if (feedback.Correct == false)
+        {
+            <div class="text-danger"><i class="fa-solid fa-xmark" aria-hidden="true"></i> @T["Incorrect"]</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(feedback.RightAnswer) && feedback.Correct != true)
+        {
+            <div class="small">@T["Right answer: {0}", feedback.RightAnswer]</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(feedback.Feedback))
+        {
+            <div class="small">@Html.Raw(HtmlSanitizer.Sanitize(feedback.Feedback))</div>
+        }
+        @foreach (var choiceFeedback in feedback.ChoiceFeedback)
+        {
+            <div class="small">@Html.Raw(HtmlSanitizer.Sanitize(choiceFeedback.Value))</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(feedback.GeneralFeedback))
+        {
+            <div class="small text-body-secondary">@Html.Raw(HtmlSanitizer.Sanitize(feedback.GeneralFeedback))</div>
+        }
+    </div>
+}

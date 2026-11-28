@@ -1,13 +1,11 @@
-using CrestApps.OrchardCore.YesSql.Core.WorkQueues;
 using System.Security.Claims;
 using CrestApps.OrchardCore.Learning;
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Indexes;
-using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
 using CrestApps.OrchardCore.Learning.Assessments.Models;
-using CrestApps.OrchardCore.Learning.Assessments.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Calendars;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -17,23 +15,21 @@ using OrchardCore.Modules;
 namespace CrestApps.OrchardCore.Tests.Learning.Assessments;
 
 /// <summary>
-/// The Learning harness with the assessments core, in-memory questions and a clock the test moves.
+/// The Learning harness with the assessments core (the quiz course item and grade scales) and a clock the test moves.
+/// Quizzes are surveys: tests that answer them use the Surveys harnesses.
 /// </summary>
 internal sealed class AssessmentTestHarness : IAsyncDisposable
 {
-    private AssessmentTestHarness(CalendarTestHarness harness, InMemoryCourses courses, InMemoryQuestions questions, TestClock clock)
+    private AssessmentTestHarness(CalendarTestHarness harness, InMemoryCourses courses, TestClock clock)
     {
         Harness = harness;
         Courses = courses;
-        Questions = questions;
         Clock = clock;
     }
 
     public CalendarTestHarness Harness { get; }
 
     public InMemoryCourses Courses { get; }
-
-    public InMemoryQuestions Questions { get; }
 
     public TestClock Clock { get; }
 
@@ -44,7 +40,6 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
         string[] extraCollections = null)
     {
         var clock = new TestClock { UtcNow = LearningTestHarness.Now };
-        InMemoryQuestions questions = null;
 
         var (harness, courses, _) = await LearningTestHarness.CreateAsync(
             services =>
@@ -52,9 +47,13 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
                 services.AddLearningAssessmentsCore();
-                services.RemoveAll<IAssessmentContentSource>();
-                services.AddSingleton<IAssessmentContentSource>(provider => questions);
                 services.AddSingleton<global::OrchardCore.Infrastructure.Html.IHtmlSanitizerService, global::OrchardCore.Infrastructure.Html.HtmlSanitizerService>();
+
+                // Quiz attempts are survey responses; the tests add them by hand.
+                services.TryAddSingleton<InMemorySurveyResponses>();
+                services.TryAddSingleton<ISurveyResponseQueries>(provider => provider.GetRequiredService<InMemorySurveyResponses>());
+                services.TryAddSingleton(Moq.Mock.Of<ISurveyManager>());
+                services.TryAddSingleton(Moq.Mock.Of<IContentManager>());
                 configure?.Invoke(services);
             },
             async schemaBuilder =>
@@ -66,13 +65,10 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
                     await extraSchema(schemaBuilder);
                 }
             },
-            // The deadline queue's index provider comes from DI on a site; the harness store needs it listed.
-            [.. AssessmentsIndexProviders.All(), new LeasedWorkItemIndexProvider<AttemptDeadlineWork>(AttemptDeadlineWork.CollectionName), .. extraIndexProviders ?? []],
-            [AttemptDeadlineWork.CollectionName, .. extraCollections ?? []]);
+            [new GradeScaleIndexProvider(), .. extraIndexProviders ?? []],
+            [.. extraCollections ?? []]);
 
-        questions = new InMemoryQuestions(courses);
-
-        return new AssessmentTestHarness(harness, courses, questions, clock);
+        return new AssessmentTestHarness(harness, courses, clock);
     }
 
     public ContentItem AddQuiz(string courseId, string quizId, Action<QuizPart> configure, string completionMode = CompletionModes.Passed, decimal? passMark = 50)
@@ -100,18 +96,6 @@ internal sealed class AssessmentTestHarness : IAsyncDisposable
 
         return result.Enrollment;
     }
-
-    public Task<AttemptResult> StartAsync(string userId, string quizId, Action<StartAttemptRequest> configure = null)
-        => Harness.RunAsync(services =>
-        {
-            var request = new StartAttemptRequest { UserId = userId, User = CalendarTestHarness.User(userId), QuizId = quizId, HonorConfirmed = true };
-            configure?.Invoke(request);
-
-            return services.GetRequiredService<IAssessmentAttemptService>().StartAsync(request);
-        });
-
-    public Task<AttemptResult> RunAsync(Func<IAssessmentAttemptService, Task<AttemptResult>> work)
-        => Harness.RunAsync(services => work(services.GetRequiredService<IAssessmentAttemptService>()));
 
     public Task<T> RunAsync<T>(Func<IServiceProvider, Task<T>> work)
         => Harness.RunAsync(work);

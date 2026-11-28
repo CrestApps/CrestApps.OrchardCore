@@ -1,0 +1,32 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+
+<fieldset aria-describedby="@Model.DescribedBy()">
+    <legend class="visually-hidden">@Model.Question.Title</legend>
+    @foreach (var row in Model.Question.Rows)
+    {
+        var id = $"{Model.InputId}-{row.Id}";
+        var current = Model.RowValue(row.Id);
+        <div class="row g-2 align-items-center mb-2">
+            <div class="col-sm-6"><label for="@id">@row.Text</label></div>
+            <div class="col-sm-6">
+                <select class="form-select" id="@id" name="@(Model.Prefix).@row.Id" disabled="@Model.ReadOnly" aria-invalid="@(Model.HasErrors ? "true" : null)">
+                    <option value="">@T["Select a match"]</option>
+                    @foreach (var choice in Model.Choices)
+                    {
+                        <option value="@choice.Id" selected="@(current == choice.Id)">@choice.Text</option>
+                    }
+                </select>
+            </div>
+        </div>
+    }
+</fieldset>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

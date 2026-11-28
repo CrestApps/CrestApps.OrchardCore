@@ -1,4 +1,4 @@
-using CrestApps.Core;
+using OrchardCore;
 using CrestApps.OrchardCore.Learning.Commerce.Core.Services;
 using CrestApps.OrchardCore.Learning.Commerce.Models;
 using CrestApps.OrchardCore.Learning.Commerce.Services;
@@ -47,7 +47,7 @@ internal sealed class LearningOrderEventHandler : OrderLineGrantHandlerBase<Lear
         var item = context.ContentItem;
         var purchase = new LearningPurchase
         {
-            ItemId = UniqueId.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
             OrderId = order.ItemId,
             LineId = line.LineId,
             UserId = order.UserId,
@@ -103,7 +103,7 @@ internal sealed class LearningOrderEventHandler : OrderLineGrantHandlerBase<Lear
     // right after the request, and the background task runs whatever is still due.
     private async Task EnqueueAsync(LearningFulfillmentWork work, CancellationToken cancellationToken)
     {
-        work.ItemId = UniqueId.GenerateId();
+        work.ItemId = IdGenerator.GenerateId();
         await _queue.EnqueueAsync(work, cancellationToken);
 
         if (ShellScope.Current is not null)

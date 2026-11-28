@@ -10,6 +10,10 @@ using CrestApps.OrchardCore.Learning.Core.Services;
 using CrestApps.OrchardCore.Learning.Models;
 using CrestApps.OrchardCore.Learning.Packages;
 using CrestApps.OrchardCore.Learning.Packages.Models;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Services;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Learning.Moodle;
 using Microsoft.Extensions.DependencyInjection;
 using OrchardCore.ContentManagement;
@@ -126,22 +130,23 @@ public sealed class MoodleImportTests
         Assert.Equal("https://example.com/policy", ((JsonObject)ordered[2].Content)[LearningConstants.ContentTypes.LinkLesson]?["Url"]?["Url"]?.GetValue<string>());
         Assert.Contains("Rules of the site.", ordered[4].Content.HtmlBodyPart.Html.ToString(), StringComparison.Ordinal);
 
-        // The quiz, with its two questions in a bank of the course and its random question as a draw.
-        var quiz = ordered[3].Get<QuizPart>(nameof(QuizPart));
-        Assert.Equal(2, quiz.QuestionIds.Count);
-        Assert.Equal(30, quiz.TimeLimitMinutes);
-        Assert.Equal(2, quiz.MaxAttempts);
-        Assert.Equal(70, quiz.PassMark);
-        var draw = Assert.Single(quiz.DrawRules);
-        Assert.Equal(1, draw.Count);
+        // The quiz: its two questions in the survey it owns, and its random question as a pool that draws from the
+        // question bank of the category.
+        var survey = await SurveyAsync(ordered[3]);
+        Assert.True(survey.PublishedVersionNumber > 0);
+        Assert.Equal(SurveyKinds.Quiz, survey.Kind);
+        var page = Assert.Single(survey.Draft.Pages);
+        Assert.Equal(2, page.Questions.Count);
+        Assert.Equal(30, survey.Draft.Timing.TimeLimitMinutes);
+        Assert.Equal(2, survey.Access.Limits.Total);
+        Assert.Equal(70, survey.Draft.Scoring.PassMarkPercent);
+        var pool = Assert.Single(page.Pools);
+        Assert.Equal(1, pool.DrawCount);
+        var bankId = Assert.Single(pool.BankDraws).BankId;
 
-        var questions = await _fixture.InTenantAsync(async services =>
-            (await services.GetRequiredService<IContentManager>().GetAsync(quiz.QuestionIds, VersionOptions.Latest)).ToList());
-        Assert.Equal(
-            [AssessmentsConstants.ContentTypes.SingleChoiceQuestion, AssessmentsConstants.ContentTypes.TrueFalseQuestion],
-            questions.Select(question => question.ContentType).Order(StringComparer.Ordinal));
-        Assert.All(questions, question => Assert.Equal(draw.BankId, question.Get<ContainedPart>(nameof(ContainedPart))?.ListContentItemId));
-        Assert.All(questions, question => Assert.StartsWith("moodle:", question.Get<QuestionPart>(nameof(QuestionPart)).SourceIdentifier, StringComparison.Ordinal));
+        var bankQuestions = await _fixture.InTenantAsync(services => services.GetRequiredService<BankQuestionStore>().ListByBankAsync(bankId, includeRetired: false));
+        Assert.NotEmpty(bankQuestions);
+        Assert.All(bankQuestions, question => Assert.StartsWith("moodle:", question.SourceIdentifier, StringComparison.Ordinal));
     }
 
     [Fact]
@@ -220,8 +225,8 @@ public sealed class MoodleImportTests
         [
             LearningConstants.ContentTypes.TextBlock,
             CrestApps.OrchardCore.Learning.Coursework.CourseworkConstants.ContentTypes.Coursework,
-            CrestApps.OrchardCore.Learning.Surveys.SurveysConstants.ContentTypes.FeedbackSurvey,
-            CrestApps.OrchardCore.Learning.Surveys.SurveysConstants.ContentTypes.Choice,
+            CrestApps.OrchardCore.Learning.Surveys.LearningSurveysConstants.ContentTypes.FeedbackSurvey,
+            CrestApps.OrchardCore.Learning.Surveys.LearningSurveysConstants.ContentTypes.Choice,
             PackagesConstants.ContentTypes.Package,
             AssessmentsConstants.ContentTypes.Quiz,
             PackagesConstants.ContentTypes.Package,
@@ -244,32 +249,31 @@ public sealed class MoodleImportTests
         Assert.Equal(5, coursework.MaxFiles);
         Assert.Equal(CompletionModes.Submitted, ordered[1].Get<CourseItemPart>(nameof(CourseItemPart)).CompletionMode);
 
-        // The feedback and the choice as surveys.
-        var feedback = ordered[2].Get<CrestApps.OrchardCore.Learning.Surveys.Models.SurveyPart>("SurveyPart");
-        Assert.Equal(["How did you hear of it?", "What would you change?"], feedback.Questions.Select(question => question.Text));
-        Assert.Equal(["Friend", "Web"], feedback.Questions[0].Options);
-        Assert.True(feedback.Questions[0].Required);
-        var choice = ordered[3].Get<CrestApps.OrchardCore.Learning.Surveys.Models.SurveyPart>("SurveyPart");
-        Assert.Equal(["Monday", "Friday"], Assert.Single(choice.Questions).Options);
-        Assert.Equal(CrestApps.OrchardCore.Learning.Surveys.Models.SurveyResultsVisibility.AfterAnswer, choice.ResultsVisibility);
+        // The feedback and the choice as course surveys whose questions live in the surveys they own.
+        var feedback = (await SurveyAsync(ordered[2])).Draft.Pages.SelectMany(page => page.Questions).ToList();
+        Assert.Equal(["How did you hear of it?", "What would you change?"], feedback.Select(question => question.Title));
+        Assert.Equal(["Friend", "Web"], feedback[0].Choices.Select(choice => choice.Text));
+        Assert.True(feedback[0].Required);
+        var choiceSurvey = await SurveyAsync(ordered[3]);
+        Assert.Equal(["Monday", "Friday"], Assert.Single(choiceSurvey.Draft.Pages.SelectMany(page => page.Questions)).Choices.Select(choice => choice.Text));
+        Assert.Equal(ResultsVisibility.AfterAnswer, choiceSurvey.Draft.Review.ResultsVisibility);
 
         // The IMS package, which completes when the learner opens it.
         var ims = ordered[4];
         Assert.Equal(PackagesConstants.Standards.ImsContentPackage, ims.Get<LearningPackagePart>(nameof(LearningPackagePart)).Standard);
         Assert.Equal(CompletionModes.Viewed, ims.Get<CourseItemPart>(nameof(CourseItemPart)).CompletionMode);
 
-        // The quiz: two questions a page, immediate feedback, review options, and the new question types.
-        var quiz = ordered[5].Get<QuizPart>(nameof(QuizPart));
-        Assert.Equal(2, quiz.QuestionsPerPage);
-        Assert.Equal(QuizFeedbackMode.Immediate, quiz.FeedbackMode);
-        Assert.NotNull(quiz.ReviewOptions);
-        Assert.Equal(ReviewShows.Score, quiz.ReviewOptions.During);
-        Assert.Equal(ReviewShows.Score | ReviewShows.RightAnswers, quiz.ReviewOptions.AfterClose);
-        var questions = await _fixture.InTenantAsync(async services =>
-            (await services.GetRequiredService<IContentManager>().GetAsync(quiz.QuestionIds, VersionOptions.Latest)).ToDictionary(question => question.ContentItemId));
-        Assert.Equal(
-            [AssessmentsConstants.ContentTypes.SurveyQuestion, AssessmentsConstants.ContentTypes.DragIntoTextQuestion, AssessmentsConstants.ContentTypes.GapSelectQuestion, AssessmentsConstants.ContentTypes.DescriptionQuestion],
-            quiz.QuestionIds.Select(id => questions[id].ContentType));
+        // The quiz: two questions a page, immediate feedback, review options, and the newer question types mapped to
+        // Surveys question types.
+        var quizSurvey = await SurveyAsync(ordered[5]);
+        Assert.Equal(2, quizSurvey.Draft.Presentation.QuestionsPerPage);
+        Assert.Equal(FeedbackMode.Immediate, quizSurvey.Draft.Scoring.FeedbackMode);
+        Assert.Equal(ReviewShows.Responses | ReviewShows.Score, quizSurvey.Draft.Review.During);
+        Assert.Equal(ReviewShows.Responses | ReviewShows.Score | ReviewShows.RightAnswers, quizSurvey.Draft.Review.AfterClose);
+        var quizQuestions = quizSurvey.Draft.Pages.SelectMany(page => page.Questions).ToList();
+        Assert.Equal(4, quizQuestions.Count);
+        Assert.Contains(quizQuestions, question => question.ControlType == SurveyControlNames.ChoiceBlanks);
+        Assert.Contains(quizQuestions, question => question.ControlType == SurveyControlNames.TextBlock);
 
         // The SCORM package: a new window, two attempts, the average of them, and a score of at least 80.
         var scorm = ordered[6].Get<LearningPackagePart>(nameof(LearningPackagePart));
@@ -425,10 +429,29 @@ public sealed class MoodleImportTests
 
     private Task<List<string>> QuestionIdsAsync(IEnumerable<string> itemIds)
         => _fixture.InTenantAsync(async services =>
-            (await services.GetRequiredService<IContentManager>().GetAsync(itemIds, VersionOptions.Latest))
-                .Where(item => item.ContentType == AssessmentsConstants.ContentTypes.Quiz)
-                .SelectMany(item => item.Get<QuizPart>(nameof(QuizPart)).QuestionIds)
-                .ToList());
+        {
+            var ids = new List<string>();
+
+            foreach (var item in (await services.GetRequiredService<IContentManager>().GetAsync(itemIds, VersionOptions.Latest))
+                .Where(item => item.ContentType == AssessmentsConstants.ContentTypes.Quiz))
+            {
+                var survey = await services.GetRequiredService<ISurveyManager>().FindByIdAsync(item.Get<QuizPart>(nameof(QuizPart)).SurveyId);
+
+                ids.AddRange(survey.Draft.Pages.SelectMany(page => page.Questions).Select(question => question.Id));
+            }
+
+            return ids;
+        });
+
+    private Task<Survey> SurveyAsync(ContentItem item)
+        => _fixture.InTenantAsync(async services =>
+        {
+            var surveyId = LearningSurveyTestSupport.SurveyIdOf(item);
+
+            Assert.False(string.IsNullOrEmpty(surveyId));
+
+            return await services.GetRequiredService<ISurveyManager>().FindByIdAsync(surveyId);
+        });
 
     private Task<ContentItem> FindCourseAsync(string title)
         => _fixture.InTenantAsync(services => services.GetRequiredService<ISession>()
@@ -469,8 +492,8 @@ public sealed class MoodleImportTests
                     AssessmentsConstants.ContentTypes.Quiz,
                     LearningConstants.ContentTypes.TextBlock,
                     CrestApps.OrchardCore.Learning.Coursework.CourseworkConstants.ContentTypes.Coursework,
-                    CrestApps.OrchardCore.Learning.Surveys.SurveysConstants.ContentTypes.FeedbackSurvey,
-                    CrestApps.OrchardCore.Learning.Surveys.SurveysConstants.ContentTypes.Choice,
+                    CrestApps.OrchardCore.Learning.Surveys.LearningSurveysConstants.ContentTypes.FeedbackSurvey,
+                    CrestApps.OrchardCore.Learning.Surveys.LearningSurveysConstants.ContentTypes.Choice,
                 ],
             });
 

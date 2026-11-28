@@ -1,0 +1,36 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveySettingsViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="DefaultRetentionDays" class="ocat-label">@T["Keep responses for"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="DefaultRetentionDays" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["days"]</span>
+        </div>
+        <span class="hint">@T["Leave it empty to keep responses."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="DefaultIncompleteExpiryHours" class="ocat-label">@T["Abandon after"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="DefaultIncompleteExpiryHours" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["idle hours"]</span>
+        </div>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="DefaultMinimumGroupSize" class="ocat-label">@T["Minimum group size"]</label>
+    <div class="ocat-end">
+        <input asp-for="DefaultMinimumGroupSize" type="number" min="1" class="form-control" />
+        <span class="hint">@T["What new anonymous surveys start with. Reports, lists and exports of anonymous surveys hide groups with fewer responses."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="MinimumGroupSizeFloor" class="ocat-label">@T["Smallest group size allowed"]</label>
+    <div class="ocat-end">
+        <input asp-for="MinimumGroupSizeFloor" type="number" min="1" max="1000" class="form-control" />
+        <span class="hint">@T["No anonymous survey can show a group smaller than this, even if its owner asks for less. It also applies to surveys made before you raise it."]</span>
+    </div>
+</div>

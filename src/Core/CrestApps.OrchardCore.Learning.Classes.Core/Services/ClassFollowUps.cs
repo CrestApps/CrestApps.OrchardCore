@@ -1,4 +1,4 @@
-using CrestApps.Core;
+using OrchardCore;
 using CrestApps.OrchardCore.Scheduling.Services;
 using CrestApps.OrchardCore.WorkQueues;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,7 +45,7 @@ internal sealed class ClassFollowUps
     {
         await _queue.EnqueueAsync(new ClassFollowUpWork
         {
-            ItemId = UniqueId.GenerateId(),
+            ItemId = IdGenerator.GenerateId(),
             AppointmentId = appointmentId,
             Kind = kind,
             Actor = actor,

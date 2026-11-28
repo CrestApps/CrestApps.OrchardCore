@@ -1,0 +1,303 @@
+using System.Security.Claims;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
+using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Learning.Services;
+using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
+using Microsoft.AspNetCore.Http;
+using Moq;
+using OrchardCore.ContentManagement;
+
+namespace CrestApps.OrchardCore.Tests.Learning.Surveys;
+
+/// <summary>
+/// A survey owned by a course item can only be started, resumed and completed by a learner enrolled in the course who may
+/// open the published item now, for a response that belongs to their own enrollment (or to the course, for an anonymous
+/// survey).
+/// </summary>
+public sealed class LearningEnrollmentAccessRuleTests
+{
+    private const string UserId = "learner1";
+
+    [Theory]
+    [InlineData(CourseItemAccessReason.NotEnrolled)]
+    [InlineData(CourseItemAccessReason.NotReleased)]
+    [InlineData(CourseItemAccessReason.AccessEnded)]
+    [InlineData(CourseItemAccessReason.Suspended)]
+    public async Task CheckStart_ALearnerWhoMayNotOpenTheItem_IsRefused(CourseItemAccessReason reason)
+    {
+        // Arrange
+        var rule = Rule(new CourseItemAccess { Reason = reason });
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.NotInAudience, decision.Error);
+    }
+
+    [Fact]
+    public async Task CheckStart_AnEnrolledLearner_ForTheirOwnEnrollment_IsAllowed()
+    {
+        // Arrange
+        var rule = Rule(Enrolled());
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.True(decision.IsAllowed);
+    }
+
+    [Fact]
+    public async Task CheckStart_AnEnrolledLearner_ForSomeoneElsesEnrollment_IsRefused()
+    {
+        // Arrange
+        var rule = Rule(Enrolled());
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("someone-else")));
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.NotInAudience, decision.Error);
+    }
+
+    [Fact]
+    public async Task CheckStart_AnAnonymousCourseSurvey_TakesTheCourseAsItsContext()
+    {
+        // Arrange
+        var rule = Rule(Enrolled());
+        var context = Context(LearningSurveyContexts.Course("course1"));
+        context.Survey.Access.Anonymity = AnonymityMode.Anonymous;
+
+        // Act
+        var decision = await rule.CheckStartAsync(context);
+
+        // Assert
+        Assert.True(decision.IsAllowed);
+    }
+
+    [Fact]
+    public async Task CheckStart_SomeoneWhoIsNotSignedIn_MustSignIn()
+    {
+        // Arrange
+        var rule = Rule(Enrolled(), signedIn: false);
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.SignInRequired, decision.Error);
+    }
+
+    [Fact]
+    public async Task CheckStart_ASurveyNotOwnedByACourseItem_OrATestResponse_IsLeftToTheOtherRules()
+    {
+        // Arrange
+        var rule = Rule(new CourseItemAccess { Reason = CourseItemAccessReason.NotEnrolled });
+        var standalone = Context(null);
+        standalone.Survey.Owner = null;
+        var test = Context(LearningSurveyContexts.Enrollment("e1"));
+        test.IsTest = true;
+
+        // Act
+        var standaloneDecision = await rule.CheckStartAsync(standalone);
+        var testDecision = await rule.CheckStartAsync(test);
+
+        // Assert
+        Assert.True(standaloneDecision.IsAllowed);
+        Assert.True(testDecision.IsAllowed);
+    }
+
+    [Fact]
+    public async Task CheckStart_AnUnpublishedCourseItem_IsRefused_NotLeftOpen()
+    {
+        // Arrange
+        var rule = Rule(Enrolled(), published: false);
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.NotOpen, decision.Error);
+    }
+
+    [Fact]
+    public async Task CheckStart_ASurveyOwnedByAContentItemThatIsNotACourseItem_IsLeftToTheOtherRules()
+    {
+        // Arrange
+        var rule = Rule(new CourseItemAccess { Reason = CourseItemAccessReason.NotEnrolled }, courseOwned: false);
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.True(decision.IsAllowed);
+    }
+
+    [Theory]
+    [InlineData(CourseItemAccessReason.NotEnrolled)]
+    [InlineData(CourseItemAccessReason.Suspended)]
+    public async Task CheckResumeAndComplete_ALearnerNoLongerEnrolled_IsRefused(CourseItemAccessReason reason)
+    {
+        // Arrange
+        var rule = Rule(new CourseItemAccess { Reason = reason });
+        var context = Context(LearningSurveyContexts.Enrollment("e1"));
+        context.Response = new SurveyResponse { ItemId = "r1", Context = context.Context };
+
+        // Act
+        var resume = await rule.CheckResumeAsync(context);
+        var complete = await rule.CheckCompleteAsync(context);
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.NotInAudience, resume.Error);
+        Assert.Equal(SurveyErrorCode.NotInAudience, complete.Error);
+    }
+
+    [Fact]
+    public async Task CheckComplete_AnEnrolledLearner_ForTheirOwnEnrollment_IsAllowed()
+    {
+        // Arrange
+        var rule = Rule(Enrolled());
+
+        // Act
+        var decision = await rule.CheckCompleteAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.True(decision.IsAllowed);
+    }
+
+    [Fact]
+    public async Task CheckStart_AnApiCallerIdentifiedOnlyByTheSubClaim_IsRecognized()
+    {
+        // Arrange
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim("sub", UserId)], "Bearer"));
+        var rule = Rule(Enrolled(), user: user);
+
+        // Act
+        var decision = await rule.CheckStartAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.True(decision.IsAllowed);
+    }
+
+    [Theory]
+    [InlineData(CourseItemAccessReason.Enrolled, true)]
+    [InlineData(CourseItemAccessReason.NotEnrolled, false)]
+    public async Task CheckComplete_ADeadlineSubmissionWithoutTheLearnersRequest_ChecksTheResponsesLearner(CourseItemAccessReason reason, bool allowed)
+    {
+        // Arrange: the deadline task has no signed-in user; the learner was withdrawn meanwhile in the second case.
+        var access = reason == CourseItemAccessReason.Enrolled ? Enrolled() : new CourseItemAccess { Reason = reason };
+        var learner = new Mock<global::OrchardCore.Users.IUser>().Object;
+        var users = new Mock<Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>>(Mock.Of<Microsoft.AspNetCore.Identity.IUserStore<global::OrchardCore.Users.IUser>>(), null, null, null, null, null, null, null, null);
+        users.Setup(manager => manager.FindByIdAsync(UserId)).ReturnsAsync(learner);
+        var principals = new Mock<Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<global::OrchardCore.Users.IUser>>();
+        principals.Setup(factory => factory.CreateAsync(learner)).ReturnsAsync(new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId)], "Identity.Application")));
+        var services = new Mock<IServiceProvider>();
+        services.Setup(provider => provider.GetService(typeof(Microsoft.AspNetCore.Identity.UserManager<global::OrchardCore.Users.IUser>))).Returns(users.Object);
+        services.Setup(provider => provider.GetService(typeof(Microsoft.AspNetCore.Identity.IUserClaimsPrincipalFactory<global::OrchardCore.Users.IUser>))).Returns(principals.Object);
+        var rule = Rule(access, signedIn: false, services: services.Object);
+        var context = Context(LearningSurveyContexts.Enrollment("e1"));
+        context.AutoSubmitted = true;
+
+        // Act
+        var decision = await rule.CheckCompleteAsync(context);
+
+        // Assert
+        Assert.Equal(allowed, decision.IsAllowed);
+        Assert.Equal(allowed ? SurveyErrorCode.None : SurveyErrorCode.NotInAudience, decision.Error);
+    }
+
+    [Fact]
+    public async Task CheckComplete_ARespondentsOwnSubmitWithoutSignIn_IsStillRefused()
+    {
+        // Arrange
+        var rule = Rule(Enrolled(), signedIn: false, services: new Mock<IServiceProvider>().Object);
+
+        // Act
+        var decision = await rule.CheckCompleteAsync(Context(LearningSurveyContexts.Enrollment("e1")));
+
+        // Assert
+        Assert.Equal(SurveyErrorCode.SignInRequired, decision.Error);
+    }
+
+    // R11-L3: a completed enrollment keeps its access to review the course, but a new quiz attempt would change the grade
+    // and the credentials after the fact. The old start required an active enrollment; this restores it.
+    [Theory]
+    [InlineData(EnrollmentStatus.Active, true)]
+    [InlineData(EnrollmentStatus.Completed, false)]
+    [InlineData(EnrollmentStatus.Pending, false)]
+    public async Task CheckStart_AQuizAttempt_NeedsAnActiveEnrollment(EnrollmentStatus status, bool allowed)
+    {
+        // Arrange
+        var access = Enrolled();
+        access.Enrollment.Status = status;
+        var context = Context(LearningSurveyContexts.Enrollment("e1"));
+        context.Survey.Kind = SurveyKinds.Quiz;
+
+        // Act
+        var decision = await Rule(access).CheckStartAsync(context);
+
+        // Assert
+        Assert.Equal(allowed, decision.IsAllowed);
+    }
+
+    [Fact]
+    public async Task CheckStartResumeComplete_ACompletedEnrollment_StillAnswersACourseSurveyAndFinishesAnAttempt()
+    {
+        // Arrange: a course survey (feedback) after completion, and a quiz attempt started before the course completed.
+        var access = Enrolled();
+        access.Enrollment.Status = EnrollmentStatus.Completed;
+        var feedback = Context(LearningSurveyContexts.Enrollment("e1"));
+        feedback.Survey.Kind = SurveyKinds.Survey;
+        var attempt = Context(LearningSurveyContexts.Enrollment("e1"));
+        attempt.Survey.Kind = SurveyKinds.Quiz;
+        var rule = Rule(access);
+
+        // Act
+        var started = await rule.CheckStartAsync(feedback);
+        var resumed = await rule.CheckResumeAsync(attempt);
+        var completed = await rule.CheckCompleteAsync(attempt);
+
+        // Assert
+        Assert.True(started.IsAllowed);
+        Assert.True(resumed.IsAllowed);
+        Assert.True(completed.IsAllowed);
+    }
+
+    private static CourseItemAccess Enrolled()
+        => new()
+        {
+            Reason = CourseItemAccessReason.Enrolled,
+            Enrollment = new Enrollment { ItemId = "e1", CourseId = "course1", UserId = UserId },
+            CourseId = "course1",
+        };
+
+    private static LearningEnrollmentAccessRule Rule(CourseItemAccess access, bool signedIn = true, bool published = true, bool courseOwned = true, ClaimsPrincipal user = null, IServiceProvider services = null)
+    {
+        var item = new ContentItem { ContentItemId = "item1" };
+        var learningSurveys = new Mock<ILearningSurveyService>();
+        learningSurveys.Setup(service => service.IsOwnedByCourseItemAsync(It.IsAny<Survey>())).ReturnsAsync(courseOwned);
+        learningSurveys.Setup(service => service.FindOwnerItemAsync(It.IsAny<Survey>())).ReturnsAsync(published ? item : null);
+
+        var courseAccess = new Mock<ICourseAccessService>();
+        courseAccess.Setup(service => service.GetItemAccessAsync(It.IsAny<ClaimsPrincipal>(), item)).ReturnsAsync(access);
+
+        user ??= signedIn
+            ? new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, UserId)], "Test"))
+            : new ClaimsPrincipal(new ClaimsIdentity());
+        var accessor = new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = user } };
+
+        return new LearningEnrollmentAccessRule(learningSurveys.Object, courseAccess.Object, accessor, services);
+    }
+
+    private static SurveyAccessContext Context(RecordRef? context)
+        => new()
+        {
+            Survey = new Survey { ItemId = "survey1", Owner = LearningSurveyContexts.Owner("item1") },
+            Identity = new SurveyRespondentIdentity { UserId = UserId },
+            Context = context,
+        };
+}

@@ -135,7 +135,7 @@ internal sealed class LearningPathPartDisplayDriver : ContentPartDisplayDriver<L
 
             sets.Add(new LearningPathCourseSet
             {
-                Id = string.IsNullOrWhiteSpace(set.Id) ? Guid.NewGuid().ToString("n")[..12] : set.Id,
+                Id = string.IsNullOrWhiteSpace(set.Id) ? IdGenerator.GenerateId() : set.Id,
                 Title = set.Title?.Trim(),
                 Connector = sets.Count == 0 ? LearningPathConnector.Then : set.Connector,
                 Join = set.Join,

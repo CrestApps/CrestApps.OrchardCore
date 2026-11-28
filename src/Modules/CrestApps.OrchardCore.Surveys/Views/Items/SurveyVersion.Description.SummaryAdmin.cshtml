@@ -1,0 +1,7 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model ShapeViewModel<SurveyVersionRowViewModel>
+
+@if (!string.IsNullOrWhiteSpace(Model.Value.Version.Notes))
+{
+    <div class="admin-list-secondary">@Model.Value.Version.Notes</div>
+}

@@ -50,7 +50,7 @@
                     <div class="card mb-1">
                         <div class="card-body py-2">
                             <div class="fw-semibold">
-                                @(string.IsNullOrEmpty(set.Title) ? T["Courses"] : new LocalizedHtmlString(set.Title, set.Title))
+                                @(string.IsNullOrEmpty(set.Title) ? T["Courses"] : (Microsoft.AspNetCore.Html.IHtmlContent)new Microsoft.AspNetCore.Html.HtmlString(Html.Encode(set.Title)))
                                 <span class="text-muted small fw-normal ms-1">
                                     @switch (set.Join)
                                     {

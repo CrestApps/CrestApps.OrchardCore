@@ -223,7 +223,8 @@
                                 <td>@item.Section</td>
                                 <td>@StateText(progress?.State ?? CourseItemState.NotStarted)</td>
                                 <td>@(progress?.Score is { } score ? T.GetString("{0}%", score.ToString("0.##")).Value : string.Empty)</td>
-                                <td>@(progress is null ? string.Empty : TimeSpan.FromSeconds(progress.SecondsSpent).ToString(@"h\:mm\:ss"))</td>
+                                @* From the total hours: h\:mm\:ss would drop the whole days of time spent past 24 hours. *@
+                                <td>@(progress is null ? string.Empty : string.Format(System.Globalization.CultureInfo.InvariantCulture, "{0}:{1:00}:{2:00}", progress.SecondsSpent / 3600, progress.SecondsSpent / 60 % 60, progress.SecondsSpent % 60))</td>
                                 <td>
                                     @if (progress?.CompletedUtc is { } itemCompleted)
                                     {

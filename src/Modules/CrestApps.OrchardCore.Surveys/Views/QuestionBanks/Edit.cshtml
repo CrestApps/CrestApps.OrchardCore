@@ -1,0 +1,61 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model QuestionBankEditViewModel
+
+<zone Name="Title">
+    <breadcrumb name="@(Model.IsNew ? "SurveysQuestionBanksCreate" : "SurveysQuestionBanksEdit")" title="@(Model.IsNew ? T["Add Question Bank"] : T["Edit '{0}'", Model.Title])">
+        <breadcrumb-item id="SurveysQuestionBanks" action="Index" controller="QuestionBanks" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ViewQuestionBanks.Name">@T["Question Banks"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Question bank"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Title" class="ocat-label">@T["Title"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Title" class="form-control" required />
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Name" class="form-control" required pattern="[a-z0-9]+(-[a-z0-9]+)*" />
+                    <span class="hint">@T["Lowercase letters, digits and dashes. Recipes find the bank by this name."]</span>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="Description" class="ocat-label">@T["Description"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+
+            <div class="ocat-wrapper">
+                <label asp-for="Tags" class="ocat-label">@T["Tags"]</label>
+                <div class="ocat-end">
+                    <input asp-for="Tags" class="form-control" />
+                    <span class="hint">@T["Separate tags with commas."]</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Save"]</button>
+        @if (!Model.IsNew)
+        {
+            <button class="btn btn-danger action-bar-secondary" type="submit" asp-action="Delete" asp-route-id="@Model.Id" data-url-af="RemoveUrl" data-title="@T["Delete"]" data-message="@T["Delete this question bank and its questions? Published surveys keep the questions they drew from it."]">@T["Delete"]</button>
+            <a class="btn btn-secondary cancel" role="button" asp-action="Bank" asp-route-id="@Model.Id">@T["Cancel"]</a>
+        }
+        else
+        {
+            <a class="btn btn-secondary cancel" role="button" asp-action="Index">@T["Cancel"]</a>
+        }
+    </div>
+</form>

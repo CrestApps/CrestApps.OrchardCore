@@ -1,0 +1,43 @@
+@model ShapeViewModel<Survey>
+@inject OrchardCore.Environment.Shell.Descriptor.Models.ShellDescriptor ShellDescriptor
+
+@{
+    var survey = Model.Value;
+
+    // The Results report comes from the Reports feature, so without it the menu leaves Results out instead of showing a dead link.
+    var reportUrl = ShellDescriptor.Features.Any(feature => feature.Id == CrestApps.OrchardCore.Reports.ReportsConstants.Feature)
+        ? Url.RouteUrl("ReportsDisplay", new { id = "survey-results" })
+        : null;
+}
+
+<a asp-action="Index" asp-controller="SurveyCollectors" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Collect Responses"]</a>
+<a href="@Url.RouteUrl("SurveysResponses", new { id = survey.ItemId })" class="dropdown-item">@T["Responses"]</a>
+@if (reportUrl is not null)
+{
+    <a href="@(reportUrl + "?ReportFilter.SurveyId=" + Uri.EscapeDataString(survey.ItemId))" class="dropdown-item">@T["Results"]</a>
+}
+<a asp-action="Index" asp-controller="SurveyVersions" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Versions"]</a>
+<a asp-action="Access" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Access and Settings"]</a>
+<a asp-action="Logic" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item">@T["Logic Overview"]</a>
+<a href="@Url.RouteUrl("SurveyOverridesIndex", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Accommodations"]</a>
+<a href="@Url.RouteUrl("SurveyGradingRegradeVersions", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Regrade Versions"]</a>
+<a href="@Url.RouteUrl("SurveyGradingIndex", new { surveyId = survey.ItemId })" class="dropdown-item">@T["Grading"]</a>
+<a asp-action="Create" asp-controller="SurveyTemplates" asp-route-fromSurveyId="@survey.ItemId" class="dropdown-item">@T["Save as a Template"]</a>
+<a asp-action="Duplicate" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Copy"]" data-message="@T["Create a draft copy of this survey?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Copy as a Draft"]</a>
+@if (survey.Status == SurveyStatus.Open)
+{
+    <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Closed" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Close"]" data-message="@T["Stop collecting responses for this survey?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Close"]</a>
+}
+@if (survey.Status == SurveyStatus.Closed)
+{
+    <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Open" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Open"]" data-message="@T["Collect responses for this survey again?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Open"]</a>
+    <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Archived" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Archive"]" data-message="@T["Archive this survey? It keeps its results and leaves the default list."]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Archive"]</a>
+}
+@if (survey.Status == SurveyStatus.Archived)
+{
+    <a asp-action="Status" asp-controller="Surveys" asp-route-id="@survey.ItemId" asp-route-status="@SurveyStatus.Closed" class="dropdown-item" data-url-af="UnsafeUrl" data-title="@T["Unarchive"]" data-message="@T["Bring this survey back to the list as closed?"]" data-ok-text="@T["Yes"]" data-cancel-text="@T["Cancel"]">@T["Unarchive"]</a>
+}
+@if (survey.Owner is null)
+{
+    <a asp-action="Delete" asp-controller="Surveys" asp-route-id="@survey.ItemId" class="dropdown-item text-danger" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Delete"]" data-message="@T["Delete this survey? A survey with responses cannot be deleted; archive it instead. Its invitations, accommodations and test responses are deleted with it."]">@T["Delete"]</a>
+}

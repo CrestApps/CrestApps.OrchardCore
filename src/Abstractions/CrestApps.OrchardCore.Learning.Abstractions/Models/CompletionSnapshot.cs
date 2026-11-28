@@ -37,6 +37,14 @@ public sealed class CompletionSnapshot
     public bool? Passed { get; set; }
 
     /// <summary>
+    /// Gets or sets whether nothing in the course gave the learner a grade at completion (no item counted toward it, or
+    /// every one that did recorded the learner's completion only), which is why <see cref="Grade"/> is
+    /// <see langword="null"/>. A minimum grade is met by such a completion; a missing grade for any other reason (an
+    /// imported enrollment, a course that couldn't be loaded) is not.
+    /// </summary>
+    public bool NoGradeSource { get; set; }
+
+    /// <summary>
     /// Gets or sets the total time spent on the course items, in seconds.
     /// </summary>
     public long SecondsSpent { get; set; }

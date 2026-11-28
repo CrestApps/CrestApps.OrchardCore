@@ -1,0 +1,25 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyReviewViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyRunnerReview" title="@T["Review"]">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyRunnerStyles" />
+
+<div class="container survey-runner my-4">
+    <div class="survey-review">
+        <h1 class="h3 mb-3">@Model.Title</h1>
+
+        @if ((Model.Shows & ReviewShows.Score) != 0 && Model.Response.Score is not null && Model.Response.Grading == GradingStatus.Graded)
+        {
+            <p class="lead">@T["Your score: {0} of {1} ({2}%)", Model.Response.Score.Value.ToString("0.##"), (Model.Response.MaxScore ?? 0).ToString("0.##"), (Model.Response.Percent ?? 0).ToString("0.#")]</p>
+        }
+
+        @foreach (var question in Model.Questions)
+        {
+            @await DisplayAsync(question)
+        }
+    </div>
+</div>

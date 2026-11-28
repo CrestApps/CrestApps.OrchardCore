@@ -1,7 +1,9 @@
+using System.Globalization;
 using System.Net;
-using CrestApps.OrchardCore.Learning.Assessments;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Coursework.Models;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Models;
+using OrchardCore;
 using OrchardCore.ContentManagement;
 using OrchardCore.Title.Models;
 
@@ -14,64 +16,72 @@ namespace CrestApps.OrchardCore.Learning.AI.Services;
 internal static class AuthoringDraftBuilder
 {
     /// <summary>
-    /// Gets the content type of a drafted question type.
+    /// Builds a survey question from a drafted question. The drafted type names a question type of Surveys: a choice,
+    /// several choices, true or false, a short text or a written answer.
     /// </summary>
-    /// <param name="type">The drafted type.</param>
-    /// <returns>The content type, or <see langword="null"/>.</returns>
-    public static string QuestionContentType(string type)
-        => type switch
+    /// <param name="question">The drafted question.</param>
+    /// <returns>The survey question, or <see langword="null"/> for a type no survey question type matches.</returns>
+    public static SurveyQuestion BuildQuestion(DraftQuestion question)
+    {
+        ArgumentNullException.ThrowIfNull(question);
+
+        var controlType = question.Type switch
         {
-            "SingleChoice" => AssessmentsConstants.ContentTypes.SingleChoiceQuestion,
-            "MultipleChoice" => AssessmentsConstants.ContentTypes.MultipleChoiceQuestion,
-            "TrueFalse" => AssessmentsConstants.ContentTypes.TrueFalseQuestion,
-            "ShortText" => AssessmentsConstants.ContentTypes.ShortTextQuestion,
-            "Essay" => AssessmentsConstants.ContentTypes.EssayQuestion,
+            "SingleChoice" => SurveyControlNames.SingleChoice,
+            "MultipleChoice" => SurveyControlNames.MultipleChoice,
+            "TrueFalse" => SurveyControlNames.Boolean,
+            "ShortText" => SurveyControlNames.ShortText,
+            "Essay" => SurveyControlNames.LongText,
             _ => null,
         };
 
-    /// <summary>
-    /// Writes a drafted question into a new question content item.
-    /// </summary>
-    /// <param name="item">The question content item.</param>
-    /// <param name="question">The drafted question.</param>
-    public static void ApplyQuestion(ContentItem item, DraftQuestion question)
-    {
-        ArgumentNullException.ThrowIfNull(item);
-        ArgumentNullException.ThrowIfNull(question);
-
-        var title = ShortTitle(question.Prompt);
-
-        item.DisplayText = title;
-        item.Alter<TitlePart>(part => part.Title = title);
-        item.Alter<QuestionPart>(part =>
+        if (controlType is null)
         {
-            part.Prompt = Paragraphs(question.Prompt);
-            part.Points = question.Points;
-            part.GeneralFeedback = question.Type == "Essay" ? null : question.Feedback;
-        });
+            return null;
+        }
+
+        var built = new SurveyQuestion
+        {
+            Id = IdGenerator.GenerateId(),
+            ControlType = controlType,
+            Title = ShortText(question.Prompt),
+            Description = question.Prompt?.Contains('\n') == true ? Paragraphs(question.Prompt) : null,
+            Required = true,
+        };
+
+        built.Scoring.Points = question.Points;
 
         switch (question.Type)
         {
             case "SingleChoice":
             case "MultipleChoice":
-                item.Alter<ChoiceQuestionPart>(part =>
-                {
-                    part.ShuffleOptions = true;
-                    part.Options = question.Options
-                        .Select((option, index) => new ChoiceOption { Id = "o" + (index + 1), Text = option.Text, Correct = option.Correct })
-                        .ToList();
-                });
+                built.ShuffleChoices = true;
+                built.Choices = question.Options
+                    .Select((option, index) => new SurveyChoice { Id = IdGenerator.GenerateId(), Value = (index + 1).ToString(CultureInfo.InvariantCulture), Text = option.Text })
+                    .ToList();
+                built.Scoring.CorrectChoiceIds = built.Choices
+                    .Where((choice, index) => question.Options[index].Correct)
+                    .Select(choice => choice.Id)
+                    .ToList();
+                built.Scoring.PartialCredit = question.Type == "MultipleChoice";
+                built.Scoring.GeneralFeedback = question.Feedback;
                 break;
             case "TrueFalse":
-                item.Alter<TrueFalseQuestionPart>(part => part.Answer = question.Answer);
+                built.Settings["Display"] = "TrueFalse";
+                built.Scoring.AcceptedAnswers = [question.Answer ? "true" : "false"];
+                built.Scoring.Key["answer"] = question.Answer;
+                built.Scoring.GeneralFeedback = question.Feedback;
                 break;
             case "ShortText":
-                item.Alter<ShortTextQuestionPart>(part => part.AcceptedAnswers = question.AcceptedAnswers.ToList());
+                built.Scoring.AcceptedAnswers = question.AcceptedAnswers.ToList();
+                built.Scoring.GeneralFeedback = question.Feedback;
                 break;
             case "Essay":
-                item.Alter<EssayQuestionPart>(part => part.GraderGuidance = question.Feedback);
+                built.Scoring.GraderGuidance = question.Feedback;
                 break;
         }
+
+        return built;
     }
 
     /// <summary>
@@ -114,6 +124,23 @@ internal static class AuthoringDraftBuilder
     /// </summary>
     /// <param name="text">The text.</param>
     /// <returns>At most 80 characters of the text.</returns>
+    /// <summary>
+    /// Gets a question title from a prompt: its text on one line, cut to 500 characters.
+    /// </summary>
+    /// <param name="text">The prompt.</param>
+    /// <returns>The title.</returns>
+    public static string ShortText(string text)
+    {
+        var title = (text ?? string.Empty).Replace('\n', ' ').Trim();
+
+        return title.Length <= 500 ? title : title.Substring(0, 497).TrimEnd() + "...";
+    }
+
+    /// <summary>
+    /// Gets a short title from a text.
+    /// </summary>
+    /// <param name="text">The text.</param>
+    /// <returns>The title.</returns>
     public static string ShortTitle(string text)
     {
         var title = (text ?? string.Empty).Replace('\n', ' ').Trim();

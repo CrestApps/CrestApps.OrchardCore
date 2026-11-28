@@ -1,0 +1,33 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyDetailsEditViewModel
+
+<div class="ocat-wrapper">
+    <label asp-for="Title" class="ocat-label">@T["Title"]</label>
+    <div class="ocat-end">
+        <input asp-for="Title" class="form-control" required />
+        <span asp-validation-for="Title" class="text-danger"></span>
+        <span class="hint">@T["The title staff see. Respondents see the title set in the designer."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Name" class="ocat-label">@T["Technical name"]</label>
+    <div class="ocat-end">
+        <input asp-for="Name" class="form-control" pattern="[a-z0-9-]+" required />
+        <span asp-validation-for="Name" class="text-danger"></span>
+        <span class="hint">@T["Used by recipes and the survey shortcode."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Description" class="ocat-label">@T["Notes"]</label>
+    <div class="ocat-end">
+        <textarea asp-for="Description" class="form-control" rows="2"></textarea>
+        <span class="hint">@T["Only staff see these notes."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Tags" class="ocat-label">@T["Tags"]</label>
+    <div class="ocat-end">
+        <input asp-for="Tags" class="form-control" />
+        <span class="hint">@T["Separate tags with commas. The survey list filters by tag."]</span>
+    </div>
+</div>

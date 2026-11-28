@@ -1,0 +1,35 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.LongText
+
+@{
+    var settings = Model.GetSettings<LongTextSettings>();
+}
+<label class="visually-hidden" for="@Model.InputId">@Model.Question.Title</label>
+<textarea class="form-control @(Model.HasErrors ? "is-invalid" : null)" id="@Model.InputId" name="@Model.Prefix" rows="@Math.Clamp(settings.Rows, 2, 30)" maxlength="20000" placeholder="@Model.Question.Placeholder" readonly="@Model.ReadOnly" aria-required="@(Model.Question.Required ? "true" : null)" aria-describedby="@Model.DescribedBy()" aria-invalid="@(Model.HasErrors ? "true" : null)">@Model.Answer?.Values?.FirstOrDefault()</textarea>
+@if (settings.MinWords is > 0 || settings.MaxWords is > 0)
+{
+    <div class="form-text">
+        @if (settings.MinWords is > 0 && settings.MaxWords is > 0)
+        {
+            @T["Write from {0} to {1} words.", settings.MinWords, settings.MaxWords]
+        }
+        else if (settings.MinWords is > 0)
+        {
+            @T["Write at least {0} words.", settings.MinWords]
+        }
+        else
+        {
+            @T["Write at most {0} words.", settings.MaxWords]
+        }
+    </div>
+}
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

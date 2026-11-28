@@ -1,0 +1,9 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+
+@model ShapeViewModel<SurveyOverrideListItem>
+
+<span class="badge ta-badge fw-normal" title="@T["Granted"]"><i class="fa-regular fa-clock" aria-hidden="true"></i> @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(Model.Value.Override.CreatedUtc, DateTimeKind.Utc), Format: "g"))</span>
+@if (!string.IsNullOrEmpty(Model.Value.GrantedBy))
+{
+    <span class="badge ta-badge fw-normal" title="@T["Granted by"]"><i class="fa-regular fa-user" aria-hidden="true"></i> @Model.Value.GrantedBy</span>
+}

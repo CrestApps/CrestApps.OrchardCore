@@ -1,0 +1,44 @@
+@{
+    var vm = (CrestApps.OrchardCore.Surveys.ViewModels.SurveyResponsesIndexViewModel)Model.ViewModel;
+    var formId = (string)Model.FormId;
+}
+
+<div class="btn-group filter">
+    <select name="Status" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by status"]" data-dropdown-align-right="auto" aria-label="@T["Status"]" onchange="this.form.querySelector('#submitFilter').click()">
+        @foreach (var item in vm.StatusOptions)
+        {
+            <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select name="Version" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by version"]" data-dropdown-align-right="auto" aria-label="@T["Version"]" onchange="this.form.querySelector('#submitFilter').click()">
+        @foreach (var item in vm.VersionOptions)
+        {
+            <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select name="Collector" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Filter by collector"]" data-dropdown-align-right="auto" aria-label="@T["Collector"]" onchange="this.form.querySelector('#submitFilter').click()">
+        @foreach (var item in vm.CollectorOptions)
+        {
+            <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+        }
+    </select>
+</div>
+<div class="btn-group filter">
+    <select name="IncludeTest" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Test responses"]" data-dropdown-align-right="auto" aria-label="@T["Test responses"]" onchange="this.form.querySelector('#submitFilter').click()">
+        <option value="false" selected="@(!vm.IncludeTest)">@T["Without test responses"]</option>
+        <option value="true" selected="@vm.IncludeTest">@T["With test responses"]</option>
+    </select>
+</div>
+@if (vm.UpkeepStoppedCount > 0 || vm.UpkeepStopped)
+{
+    <div class="btn-group filter">
+        <select name="UpkeepStopped" form="@formId" class="selectpicker show-tick" data-style="btn-sm" data-width="fit" data-header="@T["Background upkeep"]" data-dropdown-align-right="auto" aria-label="@T["Background upkeep"]" onchange="this.form.querySelector('#submitFilter').click()">
+            <option value="false" selected="@(!vm.UpkeepStopped)">@T["Any upkeep state"]</option>
+            <option value="true" selected="@vm.UpkeepStopped">@T["Upkeep stopped"]</option>
+        </select>
+    </div>
+}

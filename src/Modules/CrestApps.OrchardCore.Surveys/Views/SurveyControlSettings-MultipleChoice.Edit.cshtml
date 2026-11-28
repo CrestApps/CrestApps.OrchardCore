@@ -1,0 +1,36 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlSettingsViewModel<CrestApps.OrchardCore.Surveys.Core.Controls.MultipleChoice.MultipleChoiceSettings>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Display" class="ocat-label">@T["Show the options as"]</label>
+    <div class="ocat-end">
+        <select asp-for="Settings.Display" class="form-select">
+            <option value="Checkboxes">@T["Check boxes"]</option>
+            <option value="ImageTiles">@T["Image tiles"]</option>
+            <option value="TagBox">@T["Tags"]</option>
+        </select>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.MinSelected" class="ocat-label">@T["Fewest options"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.MinSelected" class="form-control" type="number" min="0" />
+        <span class="hint">@T["Empty for no minimum."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.MaxSelected" class="ocat-label">@T["Most options"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.MaxSelected" class="form-control" type="number" min="1" />
+        <span class="hint">@T["Empty for no maximum."]</span>
+    </div>
+</div>
+
+<div class="ocat-wrapper">
+    <label asp-for="Settings.Columns" class="ocat-label">@T["Columns"]</label>
+    <div class="ocat-end">
+        <input asp-for="Settings.Columns" class="form-control" type="number" min="1" max="4" />
+        <span class="hint">@T["How many columns check boxes show in on wide screens, from 1 to 4."]</span>
+    </div>
+</div>

@@ -13,7 +13,7 @@ internal sealed class LearningRetrievalCandidate
     public bool Found { get; init; }
 
     /// <summary>
-    /// Gets whether the item is exam content: a question, a question bank or a quiz.
+    /// Gets whether the item is exam content: a quiz.
     /// </summary>
     public bool IsExamContent { get; init; }
 

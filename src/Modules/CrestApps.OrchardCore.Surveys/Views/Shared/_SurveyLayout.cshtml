@@ -1,0 +1,50 @@
+@model CrestApps.OrchardCore.Surveys.ViewModels.SurveyLayoutViewModel
+@* The layout every page of one survey shares: a header with its status and main actions, a grouped side menu and the page. *@
+
+@{
+    var survey = Model.Survey;
+    // The designer's own action bar has Save and publish, which saves the edits first, so the header leaves Publish out there.
+    var onDesigner = string.Equals(ViewContext.RouteData.Values["controller"]?.ToString(), "SurveyDesigner", StringComparison.OrdinalIgnoreCase)
+        && string.Equals(ViewContext.RouteData.Values["action"]?.ToString(), "Design", StringComparison.OrdinalIgnoreCase);
+    var canPublish = !onDesigner && survey.Status != SurveyStatus.Archived && (string.IsNullOrEmpty(survey.PublishedVersionId) || survey.HasUnpublishedChanges);
+    var (statusText, statusCss) = survey.Status switch
+    {
+        SurveyStatus.Open => (T["Open"], "text-bg-success"),
+        SurveyStatus.Closed => (T["Closed"], "text-bg-warning"),
+        SurveyStatus.Archived => (T["Archived"], "text-bg-dark"),
+        _ => (T["Draft"], "text-bg-secondary"),
+    };
+}
+
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3 pb-3 border-bottom">
+    @* The page title already names the survey, so the header shows its state. *@
+    <div class="me-auto d-flex flex-wrap align-items-center gap-2">
+        <span class="badge @statusCss">@statusText</span>
+        @if (survey.PublishedVersionNumber > 0)
+        {
+            <span class="small text-body-secondary">@T["Version {0}", survey.PublishedVersionNumber]</span>
+        }
+        @if (survey.HasUnpublishedChanges && survey.PublishedVersionNumber > 0)
+        {
+            <span class="badge text-bg-info">@T["Unpublished changes"]</span>
+        }
+    </div>
+    <a class="btn btn-sm btn-outline-secondary" href="@Url.RouteUrl("SurveysPreview", new { id = survey.ItemId })">
+        <i class="fa-solid fa-eye" aria-hidden="true"></i> @T["Preview"]
+    </a>
+    @if (canPublish)
+    {
+        <a class="btn btn-sm btn-success" asp-action="Publish" asp-controller="SurveyDesigner" asp-area="CrestApps.OrchardCore.Surveys" asp-route-id="@survey.ItemId">
+            <i class="fa-solid fa-upload" aria-hidden="true"></i> @T["Publish"]
+        </a>
+    }
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-auto">
+        <partial name="_SurveyNav" model="survey" />
+    </div>
+    <div class="col-lg" style="min-width: 0">
+        @Model.Body
+    </div>
+</div>

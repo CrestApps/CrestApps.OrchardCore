@@ -1,0 +1,17 @@
+@model dynamic
+
+@{
+    var screen = (CrestApps.OrchardCore.Surveys.ViewModels.SurveyPageRespondViewModel)Model;
+}
+
+<zone Name="Title">
+    <breadcrumb name="SurveyRunnerRespond" title="@Html.Raw(Html.Encode(screen.Title))">
+        <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<partial name="_SurveyRunnerStyles" />
+
+<div class="container survey-runner my-4" data-survey-kiosk-idle-url="@ViewData["SurveyKioskIdleUrl"]" data-survey-kiosk-idle-seconds="@ViewData["SurveyKioskIdleSeconds"]">
+    @await DisplayAsync((OrchardCore.DisplayManagement.IShape)Model)
+</div>

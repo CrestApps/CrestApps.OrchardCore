@@ -1,0 +1,10 @@
+@using CrestApps.OrchardCore.Surveys.Workflows
+@using OrchardCore.Workflows.ViewModels
+
+@model ActivityViewModel<SurveyResponseFailedEvent>
+
+<h4 class="card-title">
+    <i class="fa-solid fa-circle-xmark" aria-hidden="true"></i>
+    @T["Survey Response Failed"]
+</h4>
+<p>@T["Starts when a graded response stays under the pass mark."]</p>

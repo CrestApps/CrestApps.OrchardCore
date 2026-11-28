@@ -1,9 +1,0 @@
-@model QuizOverridesViewModel
-
-<div class="ocat-wrapper" asp-validation-class-for="UserName">
-    <label asp-for="UserName" class="ocat-label ocat-label-required">@T["Learner (user name)"]</label>
-    <div class="ocat-end">
-        <input asp-for="UserName" class="form-control" required />
-        <span asp-validation-for="UserName"></span>
-    </div>
-</div>

@@ -1,0 +1,47 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyQuestionCommonEditViewModel
+
+<div data-rule-sources="@Model.Sources">
+    <div class="ocat-wrapper">
+        <label asp-for="VisibilityMode" class="ocat-label">@T["Shows"]</label>
+        <div class="ocat-end">
+            <select asp-for="VisibilityMode" class="form-select">
+                <option value="@VisibilityMode.Always">@T["Always"]</option>
+                <option value="@VisibilityMode.ShowWhen">@T["Only when"]</option>
+                <option value="@VisibilityMode.HideWhen">@T["Unless"]</option>
+            </select>
+        </div>
+    </div>
+    <div class="ocat-wrapper" data-rule-field>
+        <div class="ocat-end-offset">
+            <input type="hidden" asp-for="VisibilityRule" data-rule-value />
+            <div data-rule-builder></div>
+        </div>
+    </div>
+    <div class="ocat-wrapper">
+        <label asp-for="VisibilityFormula" class="ocat-label">@T["And this formula holds"]</label>
+        <div class="ocat-end">
+            <input asp-for="VisibilityFormula" class="form-control font-monospace" />
+            <span class="hint">@T["Optional, such as [age] >= 18. Checked on the server."]</span>
+        </div>
+    </div>
+    @if (Model.Answerable)
+    {
+        <div class="ocat-wrapper" data-rule-field>
+            <label class="ocat-label">@T["Required when"]</label>
+            <div class="ocat-end">
+                <input type="hidden" asp-for="RequiredWhen" data-rule-value />
+                <div data-rule-builder></div>
+                <span class="hint">@T["When set, this rule decides whether an answer is required."]</span>
+            </div>
+        </div>
+        <div class="ocat-wrapper" data-rule-field>
+            <label class="ocat-label">@T["Can be answered when"]</label>
+            <div class="ocat-end">
+                <input type="hidden" asp-for="EnabledWhen" data-rule-value />
+                <div data-rule-builder></div>
+                <span class="hint">@T["Otherwise the question shows read-only."]</span>
+            </div>
+        </div>
+    }
+</div>

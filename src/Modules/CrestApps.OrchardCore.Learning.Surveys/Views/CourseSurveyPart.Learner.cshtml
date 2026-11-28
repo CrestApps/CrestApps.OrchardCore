@@ -1,0 +1,56 @@
+@model CourseSurveyPanelViewModel
+
+@{
+    var response = Model.Response;
+    var returnUrl = Context.Request.Path + Context.Request.QueryString;
+}
+
+<div class="card mb-3 learning-survey" data-learning-survey>
+    <div class="card-body">
+        @if (Model.Anonymous)
+        {
+            <p class="text-secondary small"><i class="fa-solid fa-user-secret me-1" aria-hidden="true"></i>@T["Your answers are anonymous: the course staff see them without your name."]</p>
+        }
+
+        @if (!Model.SignedIn)
+        {
+            <p class="mb-0">@T["Sign in to answer."]</p>
+        }
+        else if (Model.CannotAnswerReason == "NotOpen")
+        {
+            <p class="text-secondary small mb-0" data-learning-survey-reason><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["This survey is not open."]</p>
+        }
+        else if (Model.CannotAnswerReason is not null)
+        {
+            <p class="text-secondary small mb-0" data-learning-survey-reason>@T["You cannot answer this survey now."]</p>
+        }
+
+        @if (response is { CompletedUtc: not null })
+        {
+            <div class="alert alert-success" role="status">
+                <i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["You answered on"] @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.CompletedUtc.Value, DateTimeKind.Utc), Format: "g")).
+            </div>
+        }
+
+        @if (Model.CanAnswer)
+        {
+            <form method="post" action="@Url.Content("~/learning/surveys/" + Model.ItemId + "/start")">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="returnUrl" value="@returnUrl" />
+                @if (response is null && !string.IsNullOrEmpty(Model.Statement))
+                {
+                    <div class="mb-3">
+                        <p class="mb-2" id="course-survey-statement-@Model.ItemId">@Model.Statement</p>
+                        <div class="form-check">
+                            <input type="checkbox" id="course-survey-accept-statement-@Model.ItemId" name="acceptStatement" value="true" class="form-check-input" required aria-required="true" aria-describedby="course-survey-statement-@Model.ItemId" />
+                            <label for="course-survey-accept-statement-@Model.ItemId" class="form-check-label">@T["I accept this statement"]</label>
+                        </div>
+                    </div>
+                }
+                <button type="submit" class="btn btn-primary">
+                    @(response is null ? T["Answer the Survey"] : response.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.InProgress ? T["Continue"] : T["Change Your Answers"])
+                </button>
+            </form>
+        }
+    </div>
+</div>

@@ -1,0 +1,53 @@
+@model CrestApps.OrchardCore.Surveys.Core.ViewModels.SurveyControlViewModel
+@using CrestApps.OrchardCore.Surveys.Core.Controls.Ranking
+
+@using System.Globalization
+@{
+    var settings = Model.GetSettings<RankingSettings>();
+    var ranked = Model.Answer?.Values ?? [];
+    var ordered = ranked.Select(id => Model.Choices.FirstOrDefault(choice => choice.Id == id)).Where(choice => choice is not null)
+        .Concat(Model.Choices.Where(choice => !ranked.Contains(choice.Id))).ToList();
+    var count = settings.MaxRanked is > 0 ? Math.Min(settings.MaxRanked.Value, Model.Choices.Count) : Model.Choices.Count;
+}
+<fieldset data-survey-ranking data-question-id="@Model.Question.Id" data-readonly="@(Model.ReadOnly ? "true" : "false")" aria-describedby="@Model.DescribedBy()">
+    <legend class="visually-hidden">@Model.Question.Title</legend>
+    <div data-ranking-selects>
+        @foreach (var choice in Model.Choices)
+        {
+            var id = $"{Model.InputId}-{choice.Id}";
+            var rank = ranked.IndexOf(choice.Id) + 1;
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <select class="form-select form-select-sm w-auto" id="@id" name="@(Model.Prefix).@choice.Id" disabled="@Model.ReadOnly">
+                    <option value="">-</option>
+                    @for (var i = 1; i <= count; i++)
+                    {
+                        <option value="@i.ToString(CultureInfo.InvariantCulture)" selected="@(rank == i)">@i.ToString(CultureInfo.InvariantCulture)</option>
+                    }
+                </select>
+                <label for="@id">@choice.Text</label>
+            </div>
+        }
+    </div>
+    <ol class="list-group list-group-numbered survey-ranking-list" data-ranking-list hidden>
+        @foreach (var choice in ordered)
+        {
+            <li class="list-group-item d-flex align-items-center gap-2">
+                <input type="hidden" name="@Model.Prefix" value="@choice.Id" disabled />
+                <span class="visually-hidden" data-ranking-position></span>
+                <span class="flex-grow-1">@choice.Text</span>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-ranking-up title="@T["Move up"]" aria-label="@T["Move {0} up", choice.Text]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-ranking-down title="@T["Move down"]" aria-label="@T["Move {0} down", choice.Text]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+            </li>
+        }
+    </ol>
+</fieldset>
+
+@if (Model.HasErrors)
+{
+    <div id="@Model.ErrorId" class="invalid-feedback d-block" role="alert">
+        @foreach (var error in Model.Errors)
+        {
+            <div>@error</div>
+        }
+    </div>
+}

@@ -1,7 +1,9 @@
 using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
+using CrestApps.OrchardCore.Surveys.Controls;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
 
 namespace CrestApps.OrchardCore.Learning.AI.Services;
 
@@ -61,7 +63,7 @@ public sealed class QuizResultExplanation
     public string Message { get; set; }
 
     /// <summary>
-    /// Gets or sets the grader's overall feedback, when the learner may review the attempt.
+    /// Gets or sets the grader's overall feedback, when the review shows the learner feedback.
     /// </summary>
     public string Feedback { get; set; }
 
@@ -107,164 +109,156 @@ public sealed class QuizQuestionExplanation
     public decimal? Score { get; set; }
 
     /// <summary>
-    /// Gets or sets the feedback: the question's, the chosen options' and the grader's comment.
+    /// Gets or sets the feedback: the question's, the chosen options' and the grader's comment (the comment only when the review shows feedback).
     /// </summary>
     public string Feedback { get; set; }
 }
 
 /// <summary>
-/// Explains a learner's quiz attempt only as far as the quiz's review policy allows: the score when the policy shows
-/// it, and the questions, answers, right answers and feedback only when the learner may review the attempt. An answer
-/// key never leaves an attempt the learner may not review.
+/// Describes a learner's quiz attempt (a response to the quiz's survey) for the AI to explain, showing only what the
+/// survey's review settings let the learner see.
 /// </summary>
 internal static partial class QuizResultExplainer
 {
     /// <summary>
     /// Describes an attempt.
     /// </summary>
-    /// <param name="attempt">The attempt.</param>
-    /// <param name="canReview">Whether the review policy lets the learner see the answers now.</param>
-    /// <param name="canSeeScore">Whether the review policy lets the learner see the score.</param>
-    /// <returns>The explanation.</returns>
-    public static QuizResultExplanation Describe(AssessmentAttempt attempt, bool canReview, bool canSeeScore)
+    /// <param name="response">The attempt.</param>
+    /// <param name="definition">The definition of the version it ran on.</param>
+    /// <param name="quizTitle">The title of the quiz.</param>
+    /// <param name="shows">What the review settings let the learner see now.</param>
+    /// <param name="registry">The question types.</param>
+    /// <returns>The description.</returns>
+    public static QuizResultExplanation Describe(SurveyResponse response, SurveyDefinition definition, string quizTitle, ReviewShows shows, ISurveyControlRegistry registry)
     {
-        ArgumentNullException.ThrowIfNull(attempt);
+        ArgumentNullException.ThrowIfNull(response);
 
+        var canReview = (shows & ReviewShows.Responses) != 0;
+        var canSeeScore = (shows & ReviewShows.Score) != 0;
         var explanation = new QuizResultExplanation
         {
-            Quiz = attempt.QuizTitle,
-            Attempt = attempt.Sequence,
-            Status = attempt.Status.ToString(),
+            Quiz = quizTitle,
+            Attempt = response.AttemptNumber,
+            Status = response.Status.ToString(),
             ReviewAvailable = canReview,
         };
 
-        if (attempt.Status is AttemptStatus.InProgress)
+        if (response.Status == SurveyResponseStatus.InProgress)
         {
             explanation.Message = "The attempt is still in progress, so there is no result yet.";
 
             return explanation;
         }
 
-        if (attempt.Status is AttemptStatus.Submitted or AttemptStatus.NeedsGrading)
-        {
-            explanation.Message = "The attempt is waiting for a grader, so there is no result yet.";
-
-            return explanation;
-        }
-
-        if (attempt.Status is AttemptStatus.Voided or AttemptStatus.Abandoned)
+        if (response.Status is SurveyResponseStatus.Voided or SurveyResponseStatus.Abandoned)
         {
             explanation.Message = "The attempt was cancelled and does not count.";
 
             return explanation;
         }
 
-        if (canSeeScore || canReview)
+        if (response.Grading == GradingStatus.Pending)
         {
-            explanation.Score = attempt.Score;
-            explanation.MaxScore = attempt.MaxScore;
-            explanation.Percent = attempt.Percent;
-            explanation.Passed = attempt.Passed;
-            explanation.PassMark = attempt.PassMark;
+            explanation.Message = "The attempt is waiting for a grader, so there is no result yet.";
+
+            return explanation;
+        }
+
+        // The score, percent and pass/fail follow the score setting alone: a review that shows the answers but hides the
+        // score must not give the score away through the model.
+        if (canSeeScore)
+        {
+            explanation.Score = response.Score;
+            explanation.MaxScore = response.MaxScore;
+            explanation.Percent = response.Percent;
+            explanation.Passed = response.Passed;
+            explanation.PassMark = definition?.Scoring?.PassMarkPercent;
         }
 
         if (!canReview)
         {
             explanation.Message = canSeeScore
-                ? "The quiz's review policy does not let the learner see the questions, answers or feedback now. Explain the score only, and do not guess what the right answers were."
-                : "The quiz's review policy hides the result from the learner. Say that the result is not available, and do not guess it.";
+                ? "The quiz's review settings do not let the learner see the questions, answers or feedback now. Explain the score only, and do not guess what the right answers were."
+                : "The quiz's review settings hide the result from the learner. Say that the result is not available, and do not guess it.";
 
             return explanation;
         }
 
-        explanation.Feedback = attempt.Feedback;
+        // The grader's words are feedback: a review that hides feedback hides them from the model too.
+        var canSeeFeedback = (shows & ReviewShows.Feedback) != 0;
 
-        foreach (var item in attempt.Items.OrderBy(item => item.Index))
+        explanation.Feedback = canSeeFeedback ? response.Feedback : null;
+
+        if (!canSeeScore)
         {
-            var chosen = item.Response?.ChoiceIds ?? [];
-            var feedback = new List<string>();
+            explanation.Message = "The quiz's review settings hide the score from the learner. Explain the answers and feedback only, and do not work out or guess the score, the percent or whether the attempt passed.";
+        }
 
-            if (!string.IsNullOrWhiteSpace(item.Feedback))
+        var format = new SurveyFormatContext { Definition = definition, Culture = CultureInfo.InvariantCulture };
+        var shown = response.Plan?.QuestionOrder?.Values.SelectMany(ids => ids).ToHashSet(StringComparer.Ordinal) ?? [];
+        var number = 0;
+
+        foreach (var question in definition?.Pages.SelectMany(page => page.Questions) ?? [])
+        {
+            if (shown.Count > 0 && !shown.Contains(question.Id))
             {
-                feedback.Add(Text(item.Feedback));
+                continue;
             }
 
-            feedback.AddRange(item.Choices
-                .Where(choice => chosen.Contains(choice.Id) && !string.IsNullOrWhiteSpace(choice.Feedback))
-                .Select(choice => Text(choice.Feedback)));
+            var handler = registry?.GetHandler(question.ControlType);
+            var descriptor = registry?.GetControl(question.ControlType);
 
-            if (!string.IsNullOrWhiteSpace(item.GraderComment))
+            if (handler is null || descriptor is null || !descriptor.Has(SurveyControlCapabilities.Answerable))
             {
-                feedback.Add(item.GraderComment.Trim());
+                continue;
+            }
+
+            response.Answers.TryGetValue(question.Id, out var answer);
+
+            var feedback = new List<string>();
+            var rightAnswer = (string)null;
+
+            if (registry.GetScorer(question.ControlType) is { } scorer && scorer.GetFeedback(question, answer) is { } given)
+            {
+                if ((shows & ReviewShows.RightAnswers) != 0)
+                {
+                    rightAnswer = given.RightAnswer;
+                }
+
+                if ((shows & ReviewShows.Feedback) != 0)
+                {
+                    if (!string.IsNullOrWhiteSpace(given.Feedback))
+                    {
+                        feedback.Add(Text(given.Feedback));
+                    }
+
+                    feedback.AddRange(given.ChoiceFeedback.Values.Where(text => !string.IsNullOrWhiteSpace(text)).Select(Text));
+                }
+
+                if ((shows & ReviewShows.GeneralFeedback) != 0 && !string.IsNullOrWhiteSpace(given.GeneralFeedback))
+                {
+                    feedback.Add(Text(given.GeneralFeedback));
+                }
+            }
+
+            if (canSeeFeedback && !string.IsNullOrWhiteSpace(answer?.GraderComment))
+            {
+                feedback.Add(answer.GraderComment.Trim());
             }
 
             explanation.Questions.Add(new QuizQuestionExplanation
             {
-                Number = item.Index + 1,
-                Prompt = Text(item.Prompt) ?? item.Title,
-                YourAnswer = DescribeResponse(item),
-                RightAnswer = DescribeKey(item),
-                Points = item.Points,
-                Score = item.Score,
+                Number = ++number,
+                Prompt = Text(question.Title),
+                YourAnswer = answer is null ? null : handler.FormatAnswer(question, answer, format),
+                RightAnswer = rightAnswer,
+                Points = answer?.MaxPoints ?? 0,
+                Score = canSeeScore ? answer?.Score : null,
                 Feedback = feedback.Count == 0 ? null : string.Join(" ", feedback),
             });
         }
 
         return explanation;
-    }
-
-    private static string DescribeResponse(AttemptItem item)
-    {
-        var response = item.Response;
-
-        if (response is null)
-        {
-            return null;
-        }
-
-        if (response.ChoiceIds.Count > 0)
-        {
-            return string.Join("; ", response.ChoiceIds.Select(id => item.Choices.FirstOrDefault(choice => choice.Id == id)?.Text ?? id));
-        }
-
-        if (response.Pairs.Count > 0)
-        {
-            return string.Join("; ", response.Pairs.Select(pair => (item.Choices.FirstOrDefault(choice => choice.Id == pair.Key)?.Text ?? pair.Key) + " = " + (item.Answers.FirstOrDefault(answer => answer.Id == pair.Value)?.Text ?? pair.Value)));
-        }
-
-        if (response.Number is { } number)
-        {
-            return Number(number);
-        }
-
-        return response.Texts.Count == 0 ? null : string.Join("; ", response.Texts);
-    }
-
-    private static string DescribeKey(AttemptItem item)
-    {
-        var key = item.Key;
-
-        if (key is null)
-        {
-            return null;
-        }
-
-        if (key.ChoiceIds.Count > 0)
-        {
-            return string.Join("; ", key.ChoiceIds.Select(id => item.Choices.FirstOrDefault(choice => choice.Id == id)?.Text ?? id));
-        }
-
-        if (key.Pairs.Count > 0)
-        {
-            return string.Join("; ", key.Pairs.Select(pair => (item.Choices.FirstOrDefault(choice => choice.Id == pair.Key)?.Text ?? pair.Key) + " = " + (item.Answers.FirstOrDefault(answer => answer.Id == pair.Value)?.Text ?? pair.Value)));
-        }
-
-        if (key.Number is { } number)
-        {
-            return key.Tolerance > 0 ? $"{Number(number)} (within {Number(key.Tolerance)})" : Number(number);
-        }
-
-        return key.Texts.Count == 0 ? null : string.Join("; ", key.Texts);
     }
 
     [GeneratedRegex("<[^>]+>")]

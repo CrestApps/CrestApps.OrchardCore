@@ -1,0 +1,72 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@model SurveyInviteViewModel
+
+<zone Name="Title">
+    <breadcrumb name="SurveyInvitationsInvite" title="@T["Invite People"]">
+        <breadcrumb-item id="SurveysIndex" action="Index" controller="Surveys" area="CrestApps.OrchardCore.Surveys" permission="@SurveysPermissions.ManageOwnSurveys.Name">@T["Surveys"]</breadcrumb-item>
+        <breadcrumb-item id="SurveysCollectors" action="Index" controller="SurveyCollectors" area="CrestApps.OrchardCore.Surveys" route-id="@Model.SurveyId">@Model.SurveyTitle</breadcrumb-item>
+        <breadcrumb-item id="SurveyInvitationsIndex" action="Index" controller="SurveyInvitations" area="CrestApps.OrchardCore.Surveys" route-collectorId="@Model.CollectorId">@Model.CollectorName</breadcrumb-item>
+    </breadcrumb>
+</zone>
+
+<form method="post" class="no-multisubmit">
+    @Html.ValidationSummary()
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Users of this site"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="UserNames" class="ocat-label">@T["User names"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="UserNames" class="form-control" rows="3"></textarea>
+                    <span class="hint">@T["One per line or separated by commas. Users get a notification."]</span>
+                </div>
+            </div>
+            @if (Model.Audiences.Count > 1)
+            {
+                <div class="ocat-wrapper">
+                    <label asp-for="Audience" class="ocat-label">@T["Audience"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="Audience" asp-items="Model.Audiences" class="form-select"></select>
+                    </div>
+                </div>
+            }
+            @if (Model.Cohorts.Count > 1)
+            {
+                <div class="ocat-wrapper">
+                    <label asp-for="CohortId" class="ocat-label">@T["Cohort"]</label>
+                    <div class="ocat-end">
+                        <select asp-for="CohortId" asp-items="Model.Cohorts" class="form-select"></select>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card mb-3">
+        <div class="card-header">@T["Other people"]</div>
+        <div class="card-body">
+            <div class="ocat-wrapper">
+                <label asp-for="Emails" class="ocat-label">@T["E-mail addresses"]</label>
+                <div class="ocat-end">
+                    <textarea asp-for="Emails" class="form-control" rows="5"></textarea>
+                    <span class="hint">@T["One per line, as an address or as \"Name, address\". They get an e-mail."]</span>
+                </div>
+            </div>
+            <div class="ocat-wrapper">
+                <div class="ocat-end-offset">
+                    <div class="form-check">
+                        <input asp-for="SendNow" class="form-check-input" type="checkbox" />
+                        <label asp-for="SendNow" class="form-check-label">@T["Send the invitations now"]</label>
+                        <span class="hint dashed">@T["Otherwise they wait until you send them from the list."]</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-bar-bottom">
+        <button class="btn btn-primary" type="submit">@T["Invite"]</button>
+        <a class="btn btn-secondary cancel" role="button" asp-action="Index" asp-route-collectorId="@Model.CollectorId">@T["Cancel"]</a>
+    </div>
+</form>

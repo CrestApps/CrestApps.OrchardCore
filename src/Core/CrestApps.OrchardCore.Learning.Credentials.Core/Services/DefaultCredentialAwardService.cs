@@ -1,5 +1,5 @@
+using OrchardCore;
 using System.Security.Cryptography;
-using CrestApps.Core;
 using CrestApps.OrchardCore.Learning.Credentials.Core.OpenBadges;
 using CrestApps.OrchardCore.Learning.Credentials.Models;
 using CrestApps.OrchardCore.Learning.Credentials.Services;
@@ -143,7 +143,7 @@ public sealed class DefaultCredentialAwardService : ICredentialAwardService
 
             award = new CredentialAward
             {
-                ItemId = UniqueId.GenerateId(),
+                ItemId = IdGenerator.GenerateId(),
                 PublicId = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16)),
                 DefinitionId = definition.DefinitionId,
                 DefinitionVersionId = definition.VersionId,
@@ -156,7 +156,7 @@ public sealed class DefaultCredentialAwardService : ICredentialAwardService
                     Salt = salt,
                 },
                 RuleKind = request.RuleKind,
-                SourceId = string.IsNullOrEmpty(request.SourceId) ? UniqueId.GenerateId() : request.SourceId,
+                SourceId = string.IsNullOrEmpty(request.SourceId) ? IdGenerator.GenerateId() : request.SourceId,
                 AwardedBy = request.Actor,
                 AwardReason = string.IsNullOrWhiteSpace(request.Reason) ? null : request.Reason.Trim(),
                 IssuedUtc = now,

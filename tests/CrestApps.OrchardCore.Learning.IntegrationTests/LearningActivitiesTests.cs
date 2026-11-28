@@ -2,6 +2,8 @@ using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Coursework;
 using CrestApps.OrchardCore.Learning.Coursework.Models;
 using CrestApps.OrchardCore.Learning.Models;
@@ -11,7 +13,8 @@ using CrestApps.OrchardCore.Learning.Packages.Models;
 using CrestApps.OrchardCore.Learning.Services;
 using CrestApps.OrchardCore.Learning.Surveys;
 using CrestApps.OrchardCore.Learning.Surveys.Models;
-using CrestApps.OrchardCore.Learning.Surveys.Services;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using OrchardCore.ContentManagement;
@@ -27,7 +30,7 @@ namespace CrestApps.OrchardCore.Learning.IntegrationTests;
 /// coursework sign-off, the IMS content package, and the feedback survey and choice.
 /// </summary>
 [Collection(LearningSiteCollection.Name)]
-public sealed class LearningActivitiesTests
+public sealed partial class LearningActivitiesTests
 {
     private readonly LearningSiteFixture _fixture;
 
@@ -178,61 +181,59 @@ public sealed class LearningActivitiesTests
     }
 
     [Fact]
-    public async Task FeedbackSurvey_ALearnerAnswers_TheItemCompletes_AndStaffSeeTheTotals()
+    public async Task FeedbackSurvey_ALearnerAnswersOnTheSurveysRunner_TheItemCompletes_AndStaffSeeTheResponse()
     {
         // Arrange
+        string surveyId = null;
         var (courseId, itemIds) = await CreateCourseAsync(async (services, course) =>
         {
             var contentManager = services.GetRequiredService<IContentManager>();
-            var survey = await NewItemAsync(contentManager, course, SurveysConstants.ContentTypes.FeedbackSurvey, "Course feedback", CompletionModes.Submitted);
+            var item = await NewItemAsync(contentManager, course, LearningSurveysConstants.ContentTypes.FeedbackSurvey, "Course feedback", CompletionModes.Submitted);
 
-            survey.Alter<SurveyPart>(part => part.Questions =
-            [
-                new SurveyQuestion { Id = "clarity", Text = "How clear was the course?", Type = SurveyQuestionType.Rating, Required = true },
-                new SurveyQuestion { Id = "again", Text = "Would you take it again?", Type = SurveyQuestionType.SingleChoice, Options = ["Yes", "No"], Required = true },
-                new SurveyQuestion { Id = "change", Text = "What should change?", Type = SurveyQuestionType.Text },
-            ]);
-            await contentManager.CreateAsync(survey, VersionOptions.Published);
+            item.Alter<CourseSurveyPart>(_ => { });
+            await contentManager.CreateAsync(item, VersionOptions.Published);
 
-            return [survey.ContentItemId];
+            surveyId = LearningSurveyTestSupport.SurveyIdOf(item);
+            await LearningSurveyTestSupport.PublishAsync(services, surveyId, LearningSurveyTestSupport.Definition(
+                "Course feedback",
+                LearningSurveyTestSupport.SingleChoice("again", "Would you take it again?", ("yes", "Yes"), ("no", "No")),
+                new SurveyQuestion { Id = "change", Name = "change", ControlType = SurveyControlNames.LongText, Title = "What should change?" }));
+
+            return [item.ContentItemId];
         });
-        var surveyId = itemIds[0];
+        var itemId = itemIds[0];
         var comment = "More practice " + Guid.NewGuid().ToString("n")[..6];
 
         using var learner = await _fixture.CreateClientAsync("learner1");
-        var player = await learner.GetStringAsync($"learning/courses/{courseId}/play/{surveyId}", TestContext.Current.CancellationToken);
+        var player = await learner.GetStringAsync($"learning/courses/{courseId}/play/{itemId}", TestContext.Current.CancellationToken);
 
         // Act
-        var answer = await learner.PostAsync($"learning/surveys/{surveyId}/answer", new FormUrlEncodedContent(new Dictionary<string, string>
+        await LearningSurveyTestSupport.AnswerOverHttpAsync(learner, $"learning/surveys/{itemId}/start", player, new Dictionary<string, string>
         {
-            ["__RequestVerificationToken"] = LearningSiteFixture.Token(player),
-            ["q.clarity"] = "4",
-            ["q.again"] = "Yes",
+            ["q.again"] = "yes",
             ["q.change"] = comment,
-        }), TestContext.Current.CancellationToken);
-        var after = await learner.GetStringAsync($"learning/courses/{courseId}/play/{surveyId}", TestContext.Current.CancellationToken);
+        });
+        var after = await learner.GetStringAsync($"learning/courses/{courseId}/play/{itemId}", TestContext.Current.CancellationToken);
+        var enrollmentId = await EnrollmentIdAsync(courseId);
         var progress = await _fixture.InTenantAsync(async services =>
-            (await services.GetRequiredService<ILearnerProgressService>().GetAsync(await EnrollmentIdAsync(courseId)))?.Find(surveyId));
+            (await services.GetRequiredService<ILearnerProgressService>().GetAsync(enrollmentId))?.Find(itemId));
+        var responses = await _fixture.InTenantAsync(services =>
+            services.GetRequiredService<ILearningSurveyService>().ListEnrollmentResponsesAsync(surveyId, enrollmentId));
 
         using var admin = await _fixture.CreateClientAsync("admin");
-        var results = await admin.GetAsync($"Admin/learning/surveys/{surveyId}/results", TestContext.Current.CancellationToken);
-        var resultsPage = await results.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
-        var refused = await learner.GetAsync($"Admin/learning/surveys/{surveyId}/results", TestContext.Current.CancellationToken);
-        var editor = await admin.GetAsync($"Admin/Contents/ContentItems/{surveyId}/Edit", TestContext.Current.CancellationToken);
+        var staffList = await admin.GetAsync($"Admin/surveys/{surveyId}/responses", TestContext.Current.CancellationToken);
+        var refused = await learner.GetAsync($"Admin/surveys/{surveyId}/responses", TestContext.Current.CancellationToken);
 
         // Assert
         Assert.Contains("data-learning-survey", player);
-        Assert.Contains("name=\"q.clarity\"", player);
-        Assert.Equal(HttpStatusCode.Redirect, answer.StatusCode);
         Assert.Contains("You answered on", after);
         Assert.Equal(CourseItemState.Completed, progress?.State);
-        Assert.Equal(HttpStatusCode.OK, results.StatusCode);
-        Assert.Contains("1 learner answered.", resultsPage);
-        Assert.Contains(comment, resultsPage);
-        Assert.Contains("learner1", resultsPage);
+        var response = Assert.Single(responses);
+        Assert.Equal(SurveyResponseStatus.Completed, response.Status);
+        Assert.Equal(comment, Assert.Single(response.Answers["change"].Values));
+        Assert.Equal(HttpStatusCode.OK, staffList.StatusCode);
+        Assert.Contains(response.Number, await staffList.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
         Assert.NotEqual(HttpStatusCode.OK, refused.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, editor.StatusCode);
-        Assert.Contains("data-survey-questions", await editor.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
     }
 
     [Fact]
@@ -242,16 +243,18 @@ public sealed class LearningActivitiesTests
         var (courseId, itemIds) = await CreateCourseAsync(async (services, course) =>
         {
             var contentManager = services.GetRequiredService<IContentManager>();
-            var choice = await NewItemAsync(contentManager, course, SurveysConstants.ContentTypes.Choice, "Training day", CompletionModes.Submitted);
+            var item = await NewItemAsync(contentManager, course, LearningSurveysConstants.ContentTypes.Choice, "Training day", CompletionModes.Submitted);
 
-            choice.Alter<SurveyPart>(part =>
-            {
-                part.Questions = [new SurveyQuestion { Id = "day", Text = "Which day suits you?", Type = SurveyQuestionType.SingleChoice, Options = ["Monday", "Friday"], Required = true }];
-                part.ResultsVisibility = SurveyResultsVisibility.AfterAnswer;
-            });
-            await contentManager.CreateAsync(choice, VersionOptions.Published);
+            item.Alter<CourseSurveyPart>(_ => { });
+            await contentManager.CreateAsync(item, VersionOptions.Published);
 
-            return [choice.ContentItemId];
+            var definition = LearningSurveyTestSupport.Definition(
+                "Training day",
+                LearningSurveyTestSupport.SingleChoice("day", "Which day suits you?", ("mon", "Monday"), ("fri", "Friday")));
+            definition.Review.ResultsVisibility = ResultsVisibility.AfterAnswer;
+            await LearningSurveyTestSupport.PublishAsync(services, LearningSurveyTestSupport.SurveyIdOf(item), definition);
+
+            return [item.ContentItemId];
         });
         var choiceId = itemIds[0];
 
@@ -259,18 +262,18 @@ public sealed class LearningActivitiesTests
         var before = await learner.GetStringAsync($"learning/courses/{courseId}/play/{choiceId}", TestContext.Current.CancellationToken);
 
         // Act
-        await learner.PostAsync($"learning/surveys/{choiceId}/answer", new FormUrlEncodedContent(new Dictionary<string, string>
+        var done = await LearningSurveyTestSupport.AnswerOverHttpAsync(learner, $"learning/surveys/{choiceId}/start", before, new Dictionary<string, string>
         {
-            ["__RequestVerificationToken"] = LearningSiteFixture.Token(before),
-            ["q.day"] = "Friday",
-        }), TestContext.Current.CancellationToken);
-        var after = await learner.GetStringAsync($"learning/courses/{courseId}/play/{choiceId}", TestContext.Current.CancellationToken);
-        var stored = await _fixture.InTenantAsync(async services => await services.GetRequiredService<ISurveyResponseService>().FindAsync(await EnrollmentIdAsync(courseId), choiceId));
+            ["q.day"] = "fri",
+        });
+        var ending = await learner.GetStringAsync(done, TestContext.Current.CancellationToken);
+        var resultsPath = ResultsLinkPattern().Match(ending) is { Success: true } match ? match.Groups["path"].Value : null;
+        var results = resultsPath is null ? null : await learner.GetStringAsync(resultsPath, TestContext.Current.CancellationToken);
 
         // Assert
-        Assert.DoesNotContain("How Everyone Answered", before);
-        Assert.Contains("How Everyone Answered", after);
-        Assert.Equal(["Friday"], stored?.Answers["day"]);
+        Assert.NotNull(resultsPath);
+        Assert.Contains("Friday", results);
+        Assert.Contains("Monday", results);
     }
 
     private async Task<string> EnrollmentIdAsync(string courseId)
@@ -360,4 +363,7 @@ public sealed class LearningActivitiesTests
         using var writer = archive.CreateEntry(name).Open();
         writer.Write(Encoding.UTF8.GetBytes(content));
     }
+
+    [GeneratedRegex("href=\"(?<path>[^\"]*/s/(?:r/)?[^\"/]+/results)\"")]
+    private static partial Regex ResultsLinkPattern();
 }

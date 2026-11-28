@@ -88,8 +88,11 @@ The engine asks [`IConsentService`](../omnichannel/management.md#consent-may-we-
 run that names a `ConsentChannel`, just before it is sent, with the run's `ConsentContactKind` and the recipient's
 `ContactId`. A recipient any consent source reports as opted out (a STOP keyword, a do-not-text flag on any record that
 holds the number, an unsubscribe link, a customer who doesn't accept marketing) is counted as skipped. Because the
-question is asked at send time, an opt-out recorded after the run started still stops the message. A run without a
-`ConsentChannel` leaves consent to its sender, and no check is made while no feature registers the consent service.
+question is asked at send time, an opt-out recorded after the run started still stops the message. A source that
+can't tell right now (`ConsentStatus.IsUnknown`, such as the survey invitations source while its key can't be read) has
+no say: the other sources still decide, so one module's unreadable store neither fails the run nor skips every
+recipient. A run without a `ConsentChannel` leaves consent to its sender, and no check is made while no feature
+registers the consent service.
 
 ## The two built-in senders of runs
 

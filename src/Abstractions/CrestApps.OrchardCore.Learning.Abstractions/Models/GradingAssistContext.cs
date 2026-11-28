@@ -1,37 +1,27 @@
 namespace CrestApps.OrchardCore.Learning.Models;
 
 /// <summary>
-/// One piece of work on a grading page, as other modules see it to add their help next to the grade fields: a quiz
-/// essay answer or a coursework submission. A grading page renders it through
+/// One piece of work on a grading page, as other modules see it to add their help next to the grade fields: a
+/// coursework submission. A grading page renders it through
 /// <c>IDisplayManager&lt;GradingAssistContext&gt;</c>, so a module adds a panel with a display driver; with no driver it
 /// renders nothing. A panel may fill the page's fields, but only the grader's own save records a grade.
 /// </summary>
 public sealed class GradingAssistContext
 {
     /// <summary>
-    /// The kind of an essay answer in a quiz attempt.
-    /// </summary>
-    public const string AttemptItemKind = "AttemptItem";
-
-    /// <summary>
     /// The kind of a coursework submission.
     /// </summary>
     public const string SubmissionKind = "Submission";
 
     /// <summary>
-    /// Gets or sets the kind of work: <see cref="AttemptItemKind"/> or <see cref="SubmissionKind"/>.
+    /// Gets or sets the kind of work: <see cref="SubmissionKind"/>.
     /// </summary>
     public string Kind { get; set; }
 
     /// <summary>
-    /// Gets or sets the attempt or submission id.
+    /// Gets or sets the submission id.
     /// </summary>
     public string RecordId { get; set; }
-
-    /// <summary>
-    /// Gets or sets the index of the question in the attempt, for an essay answer.
-    /// </summary>
-    public int? ItemIndex { get; set; }
 
     /// <summary>
     /// Gets or sets the most points the work can get.

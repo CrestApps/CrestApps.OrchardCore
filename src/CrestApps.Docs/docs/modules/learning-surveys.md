@@ -1,63 +1,55 @@
 ---
 sidebar_label: Learning Surveys
 title: Learning Surveys
-description: "The feedback survey and choice course items of Learning: rating, choice and written questions, anonymous answers, a close date, totals for learners and staff, and the response records."
+description: "The feedback survey and choice course items of Learning, on the Surveys module: each item owns a survey, learners answer it through their enrollment, and the item completes when they answer."
 user_manual:
   - user-manual/learning/surveys
 ---
 
-**Learning Surveys** (`CrestApps.OrchardCore.Learning.Surveys`, with `Learning.Surveys.Abstractions` and `Learning.Surveys.Core`) adds two course items to [Learning](./learning): the **Feedback survey** and the **Choice**. They replace Moodle's Feedback and Choice activities when a Moodle course is moved.
+**Learning Surveys** (`CrestApps.OrchardCore.Learning.Surveys`, with `Learning.Surveys.Abstractions` and `Learning.Surveys.Core`) adds two course items to [Learning](./learning): the **Feedback survey** and the **Choice**. Their questions, answers, anonymity, close date and totals belong to the [Surveys](/docs/modules/surveys) module: each item owns a survey.
 
 | Feature | Id | Depends on |
 | --- | --- | --- |
-| Learning Surveys | `CrestApps.OrchardCore.Learning.Surveys` | Learning |
-
-## Why a course item and not Orchard Core Forms
-
-Orchard Core Forms posts a form to a workflow and keeps nothing, so it has no answer per learner, no totals, no completion and no personal data handling. Assessments questions live in banks and are scored. A survey's questions belong to the survey, are never scored, may be anonymous, and are counted, so they are a small record type of their own: `SurveyResponse`, one per learner and survey. The survey reports to the learner's progress through `ILearnerProgressService`, like every other course item.
+| Learning Surveys | `CrestApps.OrchardCore.Learning.Surveys` | Learning, Surveys |
 
 ## The survey items
 
-Both types are defined in code with `TitlePart`, `HtmlBodyPart` (the introduction), `SurveyPart` and `CourseItemPart`. Their course item kind is `Survey`; the kind supports the completion modes **Submitted** (the default: done when the learner answers), **Viewed** and **Marked done**, and produces no grade.
+Both types are defined in code with `TitlePart`, `HtmlBodyPart` (the introduction), `CourseSurveyPart` and `CourseItemPart`. Their course item kind is `Survey`; the kind supports the completion modes **Submitted** (the default: done when the learner answers), **Viewed** and **Marked done**, and produces no grade.
 
-| Type | Content type | `SurveyPartSettings.SingleQuestion` |
-| --- | --- | --- |
-| Feedback survey | `FeedbackSurvey` | `false`: up to 50 questions. |
-| Choice | `Choice` | `true`: one single or multiple choice question. |
+| Type | Content type | `CourseSurveyPartSettings.SingleQuestion` | Survey template |
+| --- | --- | --- | --- |
+| Feedback survey | `FeedbackSurvey` | `false` | **Course feedback** (kind `Survey`) |
+| Choice | `Choice` | `true` | **Poll** (kind `Poll`) |
 
-`SurveyPart` holds:
+The **Course feedback** template is a survey template record that this feature seeds from `Migrations/course-feedback-template.recipe.json` when it is first enabled (name `LearningSurveysConstants.CourseFeedbackTemplate`). Administrators change it under **Surveys** → **Templates**; if it is removed, new feedback survey items start blank.
 
-| Property | Meaning |
+`CourseSurveyPart` holds one property, `SurveyId`. `CourseSurveyPartHandler` creates the survey when the item is first saved, with the owner `Content:{item id}`, a signed-in audience and no public web link; a copied item gets a copy of the original's survey. The item's editor shows the survey's status, its question count and published version, and links to **Edit questions** (the Surveys designer), **Access and settings** and **Totals** (the Surveys results report for the survey). The designer of an owned survey links back to its course item (`LearningSurveyOwnerLinkProvider`). Learners can answer once the survey is published.
+
+What the earlier `SurveyPart` held is now a setting of the survey. On a site from that release, the feature's migration removes `SurveyPart` (now the name of the Surveys embed part) from the two types, moves each item to `CourseSurveyPart`, builds its survey from the old questions (single and multiple choice, rating and text become Single choice, Multiple choice, Rating and Long text; `LegacyCourseSurveyUpgrade`), carries anonymity and the close date, publishes the survey when the item is published, and drops the old `LearningSurveyResponses_SurveyResponseIndex` table. Old responses are not carried over. An item still holding its old questions (an upgrade that could not save them) gives them to its survey on its next save, unless course staff have changed or published that survey since: the old questions never replace a newer draft (`LegacySurveyContent.IsNewerThanLegacy`), and the old part is dropped.
+
+| Earlier | On the survey |
 | --- | --- |
-| `Questions` | The questions in order: `Id` (kept when the text changes, so earlier answers still belong to the question), `Text`, `Type` (`SingleChoice`, `MultipleChoice`, `Rating` from 1 to 5, or `Text`), `Options` (up to 50, for choice questions) and `Required`. |
-| `Anonymous` | The totals page lists written answers without names, and learners are told their answers are anonymous. |
-| `AllowChangeAnswer` | A learner may answer again until the survey closes; the new answers replace the earlier ones in the same record. |
-| `CloseUtc` | When the survey stops taking answers. The editor takes it in the editor's time zone (`ILocalClock`) and keeps it in UTC. |
-| `ResultsVisibility` | When learners see the totals: `Never`, `AfterAnswer`, `AfterClose` or `Always`. |
-
-The editor refuses a survey with no question, a choice question with fewer than two choices, more than 50 questions or choices, and a choice with more than one question.
+| Questions | The survey's pages and questions, with every Surveys question type, logic and validation. |
+| Anonymous | **Access and settings** > anonymity. An anonymous survey keeps the course, not the enrollment, as the context of its responses. |
+| Allow change answer | Navigation > **Respondents may change a finished response**. |
+| Close date | **Access and settings** > closes. |
+| Results visibility | Review > when respondents see the totals of all responses. |
 
 ## Answers
 
-`ISurveyResponseService.AnswerAsync` takes a learner's answers under their own active enrollment in the survey's course, within the enrollment's access dates, once the item's release rules open it and before `CloseUtc`, or under their completed enrollment while they may still review the course (it has a grant and its access has not ended; release rules do not apply then, as for reviewing). The survey panel (`SurveyPartLearnerDisplayDriver`) lets a completed enrollment answer the same way and, when the learner cannot answer, says why (`SurveyPanelViewModel.CannotAnswerReason`: closed, answered and not changeable, pending, suspended, access ended, not open yet). The answers are checked on the server (`SurveyRules.CheckAnswers`): a required question must be answered, a choice must be one of the question's choices (one for a single choice question), a rating is a whole number from 1 to 5, and a written answer is up to 4,000 characters. Answers to questions the survey does not have are dropped. The write runs under a lock per enrollment and survey, saves the response, then reports `Submitted` to the learner's progress.
+The survey panel of the course player (`CourseSurveyPartLearnerDisplayDriver`) shows whether the learner answered, why they cannot answer when that is the case, and a button that posts to `learning/surveys/{itemId}/start`. `ILearningSurveyService.StartAsync` (`Learning.Core`) starts or continues the learner's response with their enrollment (or, for an anonymous survey, the course) as its context and `CourseId`, `EnrollmentId` and `CourseItemId` in its properties; the learner answers on the Surveys runner (`/s/r/{response id}`), and the ending page links back to the course.
 
-Refusals are `SurveyErrors`: `NotSurvey`, `NotEnrolled`, `AccessEnded`, `NotAvailableYet`, `Closed`, `AlreadyAnswered`, `Required` and `InvalidAnswer` (with the question id), and `Busy`.
-
-The player posts to `learning/surveys/{surveyId}/answer` (route `LearningSurveyAnswer`), one form field per question named `q.` and the question id; it needs **Access learning**.
+- `LearningEnrollmentAccessRule` lets a learner start only while they may open the item (enrolled, item released, access not ended).
+- `LearningSurveyResultObserver` records the item as **Submitted** through `ILearnerProgressService` once a response is completed (`CourseSurveyResultProvider`). For an anonymous survey it records the completion only (no score or pass reaches the gradebook), and only for a completion the respondent caused in their own request (no actor, not a workflow): a grade, rescore, void or delete of an anonymous response comes from someone else's request and changes nobody's progress. The result carries `CourseItemResult.AnonymousDayUtc`, the start of the day in the site's time zone: the item's completion (and a course completion it causes) is recorded at that time, and the learner's last access and last activity do not move, so the progress never gives the time that would link the learner to their anonymous response. A response submitted without the learner's request (at its deadline, or when the survey closes) names nobody, so the observer can't find the learner; the survey panel records it on the learner's next visit to the item (`AnonymousCourseSurveyCompletions`), by the day only: the survey's participation record, kept under the same pseudonymous key the survey's limits count, says the learner completed a response. Participation records are kept 45 days (`SurveyParticipationService.RetentionDays`) unless the survey has a total limit, so a learner who returns later than that completes the item by answering again or with **Mark done**.
+- A course survey or poll takes one completed response per learner: a new survey of either kind gets a total limit of one completed response (`RespondentLimits.Total = 1`, counting completed responses) unless its access settings set another, so neither a second post of the start form nor, for an anonymous survey, the panel's button starts another (the panel asks `ILearningSurveyService.CheckStartAsync`).
+- A survey with a statement (`SurveyAccessSettings.Statement`, set on its **Access** page) shows it on the panel with an **I accept this statement** checkbox before a new response; the panel posts the answer as `acceptStatement` and `ILearningSurveyService.StartAsync` passes it to the Surveys start, which refuses a start without it. Continuing or changing a response does not ask again.
+- **Change your answers** shows when the version the learner answered allows changing a finished response; never from the unpublished draft. It reopens that response (`ISurveyResponseService.ReopenAsync`) instead of starting another.
+- Removing an item removes its survey: deleted when it has no responses, closed and archived when it has. It runs in a deferred task after the request that removed the item commits (`LearningOwnedSurveyContentHandler`), because deleting a survey purges its records a batch at a time, each committed in a scope of its own, which would wait on the request's own writes on SQLite; the task first checks that the item is still gone.
 
 ## Totals
 
-`SummarizeAsync` counts each choice in the question's order, each rating from 1 to 5 with the average, and lists the written answers. Answers to a choice the author removed since are not counted.
-
-The totals page is `/Admin/learning/surveys/{surveyId}/results` (route `LearningSurveyResults`), linked from the survey's editor as **Totals**. It opens to people with **Manage courses**, and to the course's staff who hold **Manage the courses you teach**. When the survey is not anonymous it names the learner of each written answer (the newest 1,000 responses). Learners see the same totals in the player when `ResultsVisibility` allows it.
+The totals are the Surveys reports filtered to the survey: **Survey Results** for counts, averages and written answers (with the minimum group size of anonymous surveys), **Survey Responses** for each response. They open to people who may view the survey's responses; course staff reach them through `LearningSurveyAccessProvider`. Learners see the totals on the runner when the survey's results visibility allows it.
 
 ## Data and personal data
 
-- **Records.** Responses are kept in the `LearningSurveyResponses` collection with `SurveyResponseIndex` (enrollment, learner, course, survey, date).
-- **Personal data.** The export lists a person's responses with every answer. Erasure deletes them: a survey answer is not evidence of training.
-
-## Not in this version
-
-- A recipe and deployment step for responses, a data source for reports, and workflow events. The survey items are content and move with the content steps; the responses stay on the site they were given on.
-- A per-learner list of responses for staff beyond the named written answers on the totals page.
-- Questions shared between surveys, branching, and pages of questions.
+Responses, their recipe and deployment steps, data sets, workflow events and personal data are those of Surveys; `LearningSurveyResponseFieldProvider` adds `CourseId`, `CourseTitle` and `EnrollmentId` to the `SurveyResponses` data set.

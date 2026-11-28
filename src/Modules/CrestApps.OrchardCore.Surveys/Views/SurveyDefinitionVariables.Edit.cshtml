@@ -1,0 +1,71 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@using OrchardCore.DataSources
+@model SurveyVariablesEditViewModel
+
+@{
+    var prefix = Html.NameFor(m => m.Variables).ToString();
+    var types = new[]
+    {
+        (DataFieldType.Text, T["Text"].Value),
+        (DataFieldType.Integer, T["Whole number"].Value),
+        (DataFieldType.Decimal, T["Number"].Value),
+        (DataFieldType.Boolean, T["Yes or no"].Value),
+        (DataFieldType.Date, T["Date"].Value),
+    };
+}
+
+<div data-repeater data-repeater-prefix="@prefix">
+    <p class="hint">@T["A hidden variable takes its value from the link, the collector or the default; a calculated one from a formula over the answers."]</p>
+    <div data-repeater-items>
+        @for (var i = 0; i < Model.Variables.Count; i++)
+        {
+            var variable = Model.Variables[i];
+
+            <div class="border rounded p-2 mb-2" data-repeater-item>
+                <div class="input-group mb-1">
+                    <input name="@(prefix)[@i].Name" value="@variable.Name" class="form-control" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+                    <select name="@(prefix)[@i].Kind" class="form-select flex-grow-0 w-auto" aria-label="@T["Kind"]">
+                        <option value="@VariableKind.Hidden" selected="@(variable.Kind == VariableKind.Hidden)">@T["Hidden"]</option>
+                        <option value="@VariableKind.Calculated" selected="@(variable.Kind == VariableKind.Calculated)">@T["Calculated"]</option>
+                    </select>
+                    <select name="@(prefix)[@i].DataType" class="form-select flex-grow-0 w-auto" aria-label="@T["Type"]">
+                        @foreach (var (type, text) in types)
+                        {
+                            <option value="@type" selected="@(variable.DataType == type)">@text</option>
+                        }
+                    </select>
+                    <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                </div>
+                <div class="input-group input-group-sm">
+                    <input name="@(prefix)[@i].Formula" value="@variable.Formula" class="form-control font-monospace" placeholder="@T["Formula (calculated)"]" aria-label="@T["Formula"]" />
+                    <input name="@(prefix)[@i].DefaultValue" value="@variable.DefaultValue" class="form-control" placeholder="@T["Default value"]" aria-label="@T["Default value"]" />
+                    <span class="input-group-text"><label class="form-check-label"><input type="checkbox" class="form-check-input me-1" name="@(prefix)[@i].AcceptFromUrl" value="true" checked="@variable.AcceptFromUrl" />@T["From the link"]</label></span>
+                </div>
+            </div>
+        }
+    </div>
+    <template data-repeater-template>
+        <div class="border rounded p-2 mb-2" data-repeater-item>
+            <div class="input-group mb-1">
+                <input name="@(prefix)[__index__].Name" class="form-control" placeholder="@T["Code"]" aria-label="@T["Code"]" />
+                <select name="@(prefix)[__index__].Kind" class="form-select flex-grow-0 w-auto" aria-label="@T["Kind"]">
+                    <option value="@VariableKind.Hidden">@T["Hidden"]</option>
+                    <option value="@VariableKind.Calculated">@T["Calculated"]</option>
+                </select>
+                <select name="@(prefix)[__index__].DataType" class="form-select flex-grow-0 w-auto" aria-label="@T["Type"]">
+                    @foreach (var (type, text) in types)
+                    {
+                        <option value="@type">@text</option>
+                    }
+                </select>
+                <button type="button" class="btn btn-outline-danger" data-repeater-remove aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+            </div>
+            <div class="input-group input-group-sm">
+                <input name="@(prefix)[__index__].Formula" class="form-control font-monospace" placeholder="@T["Formula (calculated)"]" aria-label="@T["Formula"]" />
+                <input name="@(prefix)[__index__].DefaultValue" class="form-control" placeholder="@T["Default value"]" aria-label="@T["Default value"]" />
+            </div>
+        </div>
+    </template>
+    <button type="button" class="btn btn-sm btn-secondary" data-repeater-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add Variable"]</button>
+    <span asp-validation-for="Variables" class="text-danger"></span>
+</div>

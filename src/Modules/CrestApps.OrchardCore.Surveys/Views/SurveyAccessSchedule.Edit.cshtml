@@ -1,0 +1,64 @@
+@using CrestApps.OrchardCore.Surveys.ViewModels
+@using System.Globalization
+@model SurveyAccessEditViewModel
+
+@{
+    var days = CultureInfo.CurrentCulture.DateTimeFormat.DayNames;
+}
+
+<div class="ocat-wrapper">
+    <label asp-for="Opens" class="ocat-label">@T["Opens"]</label>
+    <div class="ocat-end">
+        <input asp-for="Opens" type="datetime-local" class="form-control" />
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="Closes" class="ocat-label">@T["Closes"]</label>
+    <div class="ocat-end">
+        <input asp-for="Closes" type="datetime-local" class="form-control" />
+        <span asp-validation-for="Closes" class="text-danger"></span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="UseSchedule" class="ocat-label">@T["Weekly schedule"]</label>
+    <div class="ocat-end">
+        <div class="form-check">
+            <input asp-for="UseSchedule" type="checkbox" class="form-check-input" />
+            <label asp-for="UseSchedule" class="form-check-label">@T["Allow responses to start only on some days and hours"]</label>
+        </div>
+    </div>
+</div>
+@for (var i = 0; i < Model.Days.Count; i++)
+{
+    <div class="ocat-wrapper">
+        <label class="ocat-label" for="@Html.IdFor(m => m.Days[i].Mode)">@days[(int)Model.Days[i].Day]</label>
+        <div class="ocat-end">
+            <input type="hidden" asp-for="Days[i].Day" />
+            <div class="input-group">
+                <select asp-for="Days[i].Mode" class="form-select">
+                    <option value="@DayScheduleMode.AllowAll">@T["All day"]</option>
+                    <option value="@DayScheduleMode.PreventAll">@T["Closed"]</option>
+                    <option value="@DayScheduleMode.Between">@T["Between"]</option>
+                </select>
+                <input asp-for="Days[i].From" type="time" class="form-control" aria-label="@T["From"]" />
+                <input asp-for="Days[i].To" type="time" class="form-control" aria-label="@T["To"]" />
+            </div>
+        </div>
+    </div>
+}
+<div class="ocat-wrapper">
+    <div class="ocat-end-offset">
+        <span asp-validation-for="Days" class="text-danger"></span>
+        <span class="hint">@T["Times are in the site time zone."]</span>
+    </div>
+</div>
+<div class="ocat-wrapper">
+    <label asp-for="IncompleteExpiryHours" class="ocat-label">@T["Abandon after"]</label>
+    <div class="ocat-end">
+        <div class="input-group">
+            <input asp-for="IncompleteExpiryHours" type="number" min="1" class="form-control" />
+            <span class="input-group-text">@T["idle hours"]</span>
+        </div>
+        <span class="hint">@T["An unfinished response that nobody saves for this long is abandoned."]</span>
+    </div>
+</div>

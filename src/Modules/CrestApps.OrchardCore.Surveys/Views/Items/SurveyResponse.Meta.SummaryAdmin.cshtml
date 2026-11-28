@@ -1,0 +1,17 @@
+@model ShapeViewModel<SurveyResponse>
+@inject CrestApps.OrchardCore.Surveys.Core.Services.SurveyRespondentNames RespondentNames
+@inject CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymousDays AnonymousDays
+
+@{
+    var response = Model.Value;
+    var anonymous = await RespondentNames.IsAnonymousAsync(response);
+}
+
+@* An anonymous survey shows the day only (in the site's time zone, preformatted so it isn't converted again in the viewer's), never the time, a duration in whole minutes, and names nobody. *@
+<span class="badge ta-badge fw-normal" title="@T["Started"]"><i class="fa-regular fa-clock" aria-hidden="true"></i> @if (anonymous) { @await AnonymousDays.TextAsync(response.StartedUtc) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(response.StartedUtc, DateTimeKind.Utc), Format: "g")) }</span>
+@if (response.CompletedUtc is { } completed)
+{
+    var duration = CrestApps.OrchardCore.Surveys.Core.Access.SurveyAnonymity.ShownDuration(completed - response.StartedUtc, anonymous);
+    <span class="badge ta-badge fw-normal" title="@T["Duration"]"><i class="fa-solid fa-stopwatch" aria-hidden="true"></i> @CrestApps.OrchardCore.Surveys.Core.Results.SurveyDurations.Hours(duration, withSeconds: !anonymous)</span>
+}
+<span class="badge ta-badge fw-normal" title="@T["Respondent"]"><i class="fa-regular fa-user" aria-hidden="true"></i> @await RespondentNames.GetAsync(response)</span>

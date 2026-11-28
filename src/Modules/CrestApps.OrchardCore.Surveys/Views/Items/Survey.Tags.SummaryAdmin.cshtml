@@ -1,0 +1,38 @@
+@model ShapeViewModel<Survey>
+
+@{
+    var survey = Model.Value;
+    var (status, css) = survey.Status switch
+    {
+        SurveyStatus.Open => (T["Open"], "text-bg-success"),
+        SurveyStatus.Closed => (T["Closed"], "text-bg-secondary"),
+        SurveyStatus.Archived => (T["Archived"], "text-bg-light border"),
+        _ => (T["Draft"], "text-bg-light border"),
+    };
+    var kind = survey.Kind switch
+    {
+        SurveyKinds.Quiz => T["Quiz"],
+        SurveyKinds.Poll => T["Poll"],
+        SurveyKinds.Survey => T["Survey"],
+        _ => (Microsoft.AspNetCore.Html.IHtmlContent)new Microsoft.AspNetCore.Html.HtmlString(Html.Encode(survey.Kind ?? string.Empty)),
+    };
+}
+
+<span class="badge @css fw-normal" title="@T["Status"]">@status</span>
+<span class="badge ta-badge fw-normal" title="@T["Kind"]"><i class="fa-solid fa-tag" aria-hidden="true"></i> @kind</span>
+@if (survey.PublishedVersionNumber > 0)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Published version"]"><i class="fa-solid fa-code-branch" aria-hidden="true"></i> @T["Version {0}", survey.PublishedVersionNumber]</span>
+}
+@if (survey.HasUnpublishedChanges && survey.PublishedVersionNumber > 0)
+{
+    <span class="badge text-bg-warning fw-normal" title="@T["The draft has changes that are not published."]"><i class="fa-solid fa-pen" aria-hidden="true"></i> @T["Unpublished changes"]</span>
+}
+@if (survey.Access?.Anonymity == AnonymityMode.Anonymous)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Responses record nobody."]"><i class="fa-solid fa-user-secret" aria-hidden="true"></i> @T["Anonymous"]</span>
+}
+@if (survey.Owner is not null)
+{
+    <span class="badge ta-badge fw-normal" title="@T["Owned by another feature"]"><i class="fa-solid fa-link" aria-hidden="true"></i> @T["Owned"]</span>
+}

@@ -174,13 +174,34 @@ public static class ConditionalVisibility
     }
 
     /// <summary>
-    /// Gets the sources a rule reads.
+    /// Gets the sources a rule reads, in its conditions and in its nested groups.
     /// </summary>
     /// <param name="rule">The rule.</param>
     /// <returns>The distinct sources, in order.</returns>
     public static IEnumerable<string> Sources(ConditionRule rule)
-        => rule?.Conditions?
-            .Where(condition => !string.IsNullOrWhiteSpace(condition?.Source))
-            .Select(condition => condition.Source)
-            .Distinct(StringComparer.Ordinal) ?? [];
+        => AllSources(rule).Distinct(StringComparer.Ordinal);
+
+    private static IEnumerable<string> AllSources(ConditionRule rule)
+    {
+        if (rule is null)
+        {
+            yield break;
+        }
+
+        foreach (var condition in rule.Conditions ?? [])
+        {
+            if (!string.IsNullOrWhiteSpace(condition?.Source))
+            {
+                yield return condition.Source;
+            }
+        }
+
+        foreach (var group in rule.Groups ?? [])
+        {
+            foreach (var source in AllSources(group))
+            {
+                yield return source;
+            }
+        }
+    }
 }

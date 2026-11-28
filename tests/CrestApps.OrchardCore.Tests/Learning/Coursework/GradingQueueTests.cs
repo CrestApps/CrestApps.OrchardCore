@@ -1,10 +1,16 @@
 using CrestApps.OrchardCore.Learning.Assessments;
 using CrestApps.OrchardCore.Learning.Assessments.Core.Services;
-using CrestApps.OrchardCore.Learning.Assessments.Models;
 using CrestApps.OrchardCore.Learning.Assessments.Services;
+using CrestApps.OrchardCore.Learning.Core.Surveys;
 using CrestApps.OrchardCore.Learning.Coursework;
 using CrestApps.OrchardCore.Learning.Models;
+using CrestApps.OrchardCore.Records;
+using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Models;
+using CrestApps.OrchardCore.Surveys.Services;
+using CrestApps.OrchardCore.Tests.Learning.Assessments;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 
 namespace CrestApps.OrchardCore.Tests.Learning.Coursework;
 
@@ -54,33 +60,59 @@ public sealed class GradingQueueTests
     [Fact]
     public async Task TheRealSources_ListAnEssayAttemptAndACourseworkSubmissionTogether_OldestFirst()
     {
-        // Arrange: an essay attempt that needs a grader, then a coursework submission an hour later.
-        await using var h = await CourseworkTestHarness.CreateAsync();
+        // Arrange: a quiz attempt (a survey response) that waits for a grader, then a coursework submission an hour later.
+        // The course's quiz item owns the quiz's survey, as the survey manager answers for the course's items.
+        var surveyManager = new Mock<ISurveyManager>();
+        surveyManager
+            .Setup(manager => manager.ListByOwnersAsync(It.IsAny<IReadOnlyCollection<RecordRef>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<RecordRef> owners, CancellationToken _) => owners
+                .Where(owner => owner.Id == "quiz")
+                .Select(owner => new Survey { ItemId = "quiz-survey", Kind = SurveyKinds.Quiz, Owner = owner, Title = "Quiz" })
+                .ToArray());
+        await using var h = await CourseworkTestHarness.CreateAsync(services => services.AddSingleton(surveyManager.Object));
         h.Courses.AddCourse("course1");
-        h.Inner.Questions.AddEssay("essay", points: 4);
-        h.Inner.AddQuiz("course1", "quiz", quiz => quiz.QuestionIds = ["essay"], completionMode: CompletionModes.Graded);
+        h.Courses.AddItem("course1", "quiz", kind: AssessmentsConstants.QuizKind, completionMode: CompletionModes.Passed);
         h.AddCoursework("course1", "work1");
-        await h.EnrollAsync("ana", "course1");
-        var attempt = (await h.Inner.StartAsync("ana", "quiz")).Attempt;
-        await h.Inner.RunAsync(service => service.SaveResponseAsync(attempt.ItemId, "ana", 0, new AttemptResponse { Texts = ["Heat, fuel and oxygen."] }));
-        var submittedAttempt = await h.Inner.RunAsync(service => service.SubmitAsync(attempt.ItemId, "ana"));
+        var enrollment = await h.EnrollAsync("ana", "course1");
+        var attempt = await h.RunAsync(services =>
+        {
+            var response = new SurveyResponse
+            {
+                ItemId = "response1",
+                SurveyId = "quiz-survey",
+                UserId = "ana",
+                Status = SurveyResponseStatus.Completed,
+                Grading = GradingStatus.Pending,
+                Context = LearningSurveyContexts.Enrollment(enrollment.ItemId),
+                StartedUtc = LearningTestHarness.Now,
+                CompletedUtc = LearningTestHarness.Now,
+            };
+
+            response.Properties[LearningSurveyContexts.CourseIdProperty] = "course1";
+            response.Properties[LearningSurveyContexts.CourseItemIdProperty] = "quiz";
+            services.GetRequiredService<InMemorySurveyResponses>().Add(response);
+
+            return Task.FromResult(response);
+        });
         h.Clock.UtcNow = LearningTestHarness.Now.AddHours(1);
         var submission = (await h.SubmitAsync("ana", "work1", "My answer")).Submission;
 
         // Act
-        var page = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(null, 1, 10));
+        // The list of the course: the list of every course reads its quiz attempts through the Surveys results queries
+        // (SQL), which this harness's in-memory responses don't feed.
+        var page = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(["course1"], 1, 10));
         var otherCourse = await h.RunAsync(services => services.GetRequiredService<GradingQueue>().PageAsync(["course2"], 1, 10));
 
         // Assert
-        Assert.Equal(AttemptStatus.NeedsGrading, submittedAttempt.Attempt.Status);
         Assert.NotNull(submission);
         Assert.Equal(2, page.Count);
         Assert.Collection(
             page.Items,
             item =>
             {
-                Assert.Equal(AssessmentsConstants.AttemptGradingQueueKind, item.Kind);
+                Assert.Equal(AssessmentsConstants.QuizResponseGradingQueueKind, item.Kind);
                 Assert.Equal(attempt.ItemId, item.Id);
+                Assert.Equal("SurveyGrading", item.Controller);
             },
             item =>
             {

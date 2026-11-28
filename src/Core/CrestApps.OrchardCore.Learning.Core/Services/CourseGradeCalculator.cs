@@ -6,7 +6,9 @@ namespace CrestApps.OrchardCore.Learning.Core.Services;
 
 /// <summary>
 /// Computes the course grade and whether it meets the course pass mark. An item counts when it is gradable and its
-/// weight is more than zero; an item without a score counts as zero.
+/// weight is more than zero; an item without a score counts as zero. An item whose recorded result is its completion only
+/// (<see cref="CourseItemProgress.CompletionOnly"/>, as an anonymous quiz's is) never counts: the others are weighed
+/// without it, so it neither lowers nor raises the grade.
 /// <list type="bullet">
 /// <item>A course without gradebook categories: the grade is the weighted mean (item weights) of the items.</item>
 /// <item>A course with categories: the score of a category is the weighted mean (item weights) of its items after its
@@ -30,6 +32,39 @@ public static class CourseGradeCalculator
         => ComputeBreakdown(outline, progress).Grade;
 
     /// <summary>
+    /// Gets whether nothing in a course gives the learner a grade: the course is known, and no item of its outline counts
+    /// toward the grade with a weight above 0, or every one that does recorded the learner's completion only (an
+    /// anonymous quiz). A course grade that is <see langword="null"/> for this reason has nothing to check a minimum
+    /// against; a <see langword="null"/> grade for any other reason (an imported enrollment, a course that couldn't be
+    /// loaded) is no grade at all (R9-M3).
+    /// </summary>
+    /// <param name="outline">The outline.</param>
+    /// <param name="progress">The progress of the enrollment, or <see langword="null"/> when there is none.</param>
+    /// <returns><see langword="true"/> when nothing gives a grade.</returns>
+    public static bool HasNoGradeSource(CourseOutline outline, EnrollmentProgress progress)
+    {
+        ArgumentNullException.ThrowIfNull(outline);
+
+        if (outline.Course is null)
+        {
+            return false;
+        }
+
+        // An item in a gradebook category whose weight is 0 or less weighs nothing in the grade, as ComputeBreakdown
+        // leaves such a category out; an item with no category, or an unknown one, weighs in with its own weight.
+        var categoryWeights = (outline.Course.Get<CoursePart>(nameof(CoursePart))?.GradeCategories ?? [])
+            .Where(category => !string.IsNullOrEmpty(category?.Id))
+            .GroupBy(category => category.Id, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First().Weight, StringComparer.Ordinal);
+
+        return !outline.Entries.Any(entry => entry.Part?.Gradable == true
+            && entry.Part.Weight > 0
+            && !string.IsNullOrEmpty(entry.Item?.ContentItemId)
+            && progress?.Find(entry.Item.ContentItemId)?.CompletionOnly != true
+            && (string.IsNullOrEmpty(entry.Part.GradeCategoryId) || !categoryWeights.TryGetValue(entry.Part.GradeCategoryId, out var categoryWeight) || categoryWeight > 0));
+    }
+
+    /// <summary>
     /// Computes the course grade with the score of each gradebook category and the items each one left out.
     /// </summary>
     /// <param name="outline">The outline.</param>
@@ -39,7 +74,10 @@ public static class CourseGradeCalculator
     {
         ArgumentNullException.ThrowIfNull(outline);
 
-        var gradable = outline.Entries.Where(entry => entry.Part?.Gradable == true).ToList();
+        // A completion-only result (an anonymous survey) has no score to give: the item is left out, not counted as zero.
+        var gradable = outline.Entries
+            .Where(entry => entry.Part?.Gradable == true && progress?.Find(entry.Item.ContentItemId)?.CompletionOnly != true)
+            .ToList();
         var categories = (outline.Course?.Get<CoursePart>(nameof(CoursePart))?.GradeCategories ?? [])
             .Where(category => !string.IsNullOrEmpty(category?.Id))
             .ToList();
