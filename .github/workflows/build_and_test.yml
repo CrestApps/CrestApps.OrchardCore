@@ -115,6 +115,7 @@ jobs:
                 'tests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests/CrestApps.OrchardCore.TenantHierarchy.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
                 'tests/CrestApps.OrchardCore.Commerce.IntegrationTests/CrestApps.OrchardCore.Commerce.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
                 'tests/CrestApps.OrchardCore.Learning.IntegrationTests/CrestApps.OrchardCore.Learning.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
+                'tests/CrestApps.OrchardCore.Surveys.IntegrationTests/CrestApps.OrchardCore.Surveys.IntegrationTests.csproj -c Release /p:RunAnalyzers=false'
             }
         }
 
