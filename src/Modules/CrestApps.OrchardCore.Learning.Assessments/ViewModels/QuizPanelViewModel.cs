@@ -43,6 +43,11 @@ public class QuizPanelViewModel
     public SurveyResponse Open { get; set; }
 
     /// <summary>
+    /// Gets or sets whether the attempt in progress is past its deadline, so the button submits it and starts a new one.
+    /// </summary>
+    public bool OpenExpired { get; set; }
+
+    /// <summary>
     /// Gets or sets how many attempts are left, accommodations included and counted as the quiz's limit counts, or
     /// <see langword="null"/> for no limit.
     /// </summary>

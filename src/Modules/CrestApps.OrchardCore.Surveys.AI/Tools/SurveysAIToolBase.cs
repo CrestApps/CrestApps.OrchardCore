@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
+using CrestApps.OrchardCore.Surveys.Core.Access;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -32,7 +33,7 @@ public abstract class SurveysAIToolBase : AIFunction
         var services = arguments.Services;
         var user = services?.GetService<IHttpContextAccessor>()?.HttpContext?.User;
 
-        if (user?.Identity?.IsAuthenticated != true || string.IsNullOrEmpty(user.FindFirstValue(ClaimTypes.NameIdentifier)))
+        if (user?.Identity?.IsAuthenticated != true || string.IsNullOrEmpty(SurveyUserIds.Of(user)))
         {
             return "This tool works only for a signed-in person.";
         }

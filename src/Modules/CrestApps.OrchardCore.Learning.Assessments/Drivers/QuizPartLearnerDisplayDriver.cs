@@ -102,6 +102,10 @@ internal sealed class QuizPartLearnerDisplayDriver : ContentPartDisplayDriver<Qu
             var versions = new Dictionary<string, SurveyVersion>(StringComparer.Ordinal);
             var now = _clock.UtcNow;
 
+            // An open attempt past its deadline is submitted when the learner presses the button, and a new attempt starts,
+            // so the start form asks for what a new attempt needs.
+            model.OpenExpired = model.Open?.DeadlineUtc is { } deadline && now >= deadline;
+
             foreach (var attempt in model.Attempts)
             {
                 var versionId = attempt.SurveyVersionId ?? string.Empty;

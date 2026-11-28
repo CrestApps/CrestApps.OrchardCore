@@ -37,6 +37,16 @@
             <form method="post" action="@Url.Content("~/learning/surveys/" + Model.ItemId + "/start")">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="returnUrl" value="@returnUrl" />
+                @if (response is null && !string.IsNullOrEmpty(Model.Statement))
+                {
+                    <div class="mb-3">
+                        <p class="mb-2" id="course-survey-statement-@Model.ItemId">@Model.Statement</p>
+                        <div class="form-check">
+                            <input type="checkbox" id="course-survey-accept-statement-@Model.ItemId" name="acceptStatement" value="true" class="form-check-input" required aria-required="true" aria-describedby="course-survey-statement-@Model.ItemId" />
+                            <label for="course-survey-accept-statement-@Model.ItemId" class="form-check-label">@T["I accept this statement"]</label>
+                        </div>
+                    </div>
+                }
                 <button type="submit" class="btn btn-primary">
                     @(response is null ? T["Answer the Survey"] : response.Status == CrestApps.OrchardCore.Surveys.Models.SurveyResponseStatus.InProgress ? T["Continue"] : T["Change Your Answers"])
                 </button>

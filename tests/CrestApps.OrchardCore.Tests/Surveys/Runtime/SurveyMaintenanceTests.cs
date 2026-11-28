@@ -237,6 +237,39 @@ public sealed class SurveyMaintenanceTests
     }
 
     [Fact]
+    public async Task Run_AnonymizeRetention_ClearsWhenTheRespondentAcceptedTheStatement()
+    {
+        // Arrange: a completed response whose respondent accepted the survey's statement; the time they accepted it is
+        // theirs, as the time they started is.
+        await using var harness = await RuntimeTestHarness.CreateAsync();
+        var definition = RuntimeSurveys.Definition(RuntimeSurveys.Page("p1", RuntimeSurveys.Text("q1")));
+        var survey = await harness.PublishAsync(definition, item => item.Retention = new SurveyRetentionSettings { Days = 30, Action = RetentionAction.Anonymize });
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        await harness.PostAsync(response, new SurveyRespondentIdentity { UserId = "u1" }, SurveyPageDirection.Finish, ("q1", "a"));
+        await harness.RunAsync(async services =>
+        {
+            var store = services.GetRequiredService<SurveyResponseStore>();
+            var stored = await store.FindByIdAsync(response.ItemId);
+
+            stored.StatementAcceptedUtc = RuntimeTestHarness.Now;
+            await store.UpdateAsync(stored);
+
+            return true;
+        });
+
+        // Act
+        harness.Clock.UtcNow = RuntimeTestHarness.Now.AddDays(40);
+        await RunMaintenanceAsync(harness);
+
+        // Assert
+        var anonymized = await harness.FindAsync(response.ItemId);
+
+        Assert.NotNull(anonymized.AnonymizedUtc);
+        Assert.Null(anonymized.StatementAcceptedUtc);
+    }
+
+    [Fact]
     public async Task Run_ReadsOnlyTheSurveysItsStepsNeed_AndASurveyIndexedBeforeTheUpkeepColumnsStillGetsRetention()
     {
         // Arrange: a survey with retention; one indexed before the upkeep columns existed (empty retention days) whose

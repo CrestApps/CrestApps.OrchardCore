@@ -52,10 +52,11 @@ public sealed class CourseSurveyController : Controller
     /// </summary>
     /// <param name="itemId">The course item.</param>
     /// <param name="returnUrl">The page of the course item to come back to.</param>
+    /// <param name="acceptStatement">Whether the learner accepted the survey's statement.</param>
     /// <returns>A redirect to the survey, or back with a message.</returns>
     [HttpPost("learning/surveys/{itemId}/start")]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Start(string itemId, string returnUrl)
+    public async Task<IActionResult> Start(string itemId, string returnUrl, bool acceptStatement = false)
     {
         var item = string.IsNullOrEmpty(itemId) ? null : await _contentManager.GetAsync(itemId, VersionOptions.Published);
         var part = item is not null && item.TryGet<CourseSurveyPart>(out var found) ? found : null;
@@ -70,7 +71,7 @@ public sealed class CourseSurveyController : Controller
 
         try
         {
-            result = await _learningSurveys.StartAsync(User, item, part.SurveyId, back, HttpContext.RequestAborted);
+            result = await _learningSurveys.StartAsync(User, item, part.SurveyId, back, password: null, acceptStatement, HttpContext.RequestAborted);
         }
         catch (SurveyAnonymitySecretUnreadableException)
         {
@@ -82,9 +83,12 @@ public sealed class CourseSurveyController : Controller
 
         if (!result.Succeeded)
         {
-            await _notifier.WarningAsync(result.Error == SurveyErrorCode.LimitReached
-                ? H["You already answered this survey."]
-                : H["You cannot answer this survey now."]);
+            await _notifier.WarningAsync(result.Error switch
+            {
+                SurveyErrorCode.LimitReached => H["You already answered this survey."],
+                SurveyErrorCode.StatementNotAccepted => H["Accept the statement to answer the survey."],
+                _ => H["You cannot answer this survey now."],
+            });
 
             return LocalRedirect(back);
         }

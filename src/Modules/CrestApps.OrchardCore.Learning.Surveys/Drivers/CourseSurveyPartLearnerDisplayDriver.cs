@@ -115,7 +115,12 @@ internal sealed class CourseSurveyPartLearnerDisplayDriver : ContentPartDisplayD
             // nobody, so the start's own rules (one completed response per learner) decide.
             if (!model.CanAnswer && model.Response is null)
             {
-                model.CanAnswer = (await _learningSurveys.CheckStartAsync(user, part.ContentItem, model.Survey.ItemId)).CanStart;
+                var check = await _learningSurveys.CheckStartAsync(user, part.ContentItem, model.Survey.ItemId);
+
+                model.CanAnswer = check.CanStart;
+
+                // A new response must accept the survey's statement first; continuing or changing a response does not.
+                model.Statement = check.Statement;
             }
         }).Location("Detail", "Content:5");
 }

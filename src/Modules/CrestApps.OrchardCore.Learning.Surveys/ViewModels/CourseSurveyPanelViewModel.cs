@@ -41,4 +41,9 @@ public class CourseSurveyPanelViewModel
     /// Gets or sets whether the survey is anonymous.
     /// </summary>
     public bool Anonymous { get; set; }
+
+    /// <summary>
+    /// Gets or sets the statement the learner accepts before a new response starts, or <see langword="null"/>.
+    /// </summary>
+    public string Statement { get; set; }
 }

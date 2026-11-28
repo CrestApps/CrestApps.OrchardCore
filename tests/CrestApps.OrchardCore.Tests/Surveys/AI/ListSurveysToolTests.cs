@@ -61,6 +61,32 @@ public sealed class ListSurveysToolTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ListSurveys_ForAnOwnUserKnownBySubjectOnly_FindsTheirSurvey()
+    {
+        // Arrange: kim's survey is older than 200 surveys of other people, so only a list read by kim's owner id finds
+        // it; kim's principal carries the subject claim of a token and no name identifier, as an API caller's does.
+        await using (var write = _store.OpenSession())
+        {
+            await write.SaveAsync(NewSurvey("kims", "kim", _day.AddDays(-30)), false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+
+            for (var index = 0; index < 201; index++)
+            {
+                await write.SaveAsync(NewSurvey($"lees{index}", "lee", _day.AddMinutes(index)), false, SurveysConstants.CollectionName, TestContext.Current.CancellationToken);
+            }
+
+            await write.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var session = _store.OpenSession();
+
+        // Act
+        var result = await InvokeAsync(session, SurveyUserIds.SubjectClaimType);
+
+        // Assert
+        Assert.Contains("\"name\":\"kims\"", result, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task ListSurveys_OfAnAnonymousSurveyBelowItsMinimum_HidesTheResponseCount()
     {
         // Arrange: four completed responses and one in progress, under a minimum group size of five.
@@ -132,9 +158,9 @@ public sealed class ListSurveysToolTests : IAsyncLifetime
     }
 
     // kim has "manage own surveys" only: the survey authorization grants the surveys kim owns, nothing site-wide.
-    private static async Task<string> InvokeAsync(ISession session)
+    private static async Task<string> InvokeAsync(ISession session, string userIdClaimType = ClaimTypes.NameIdentifier)
     {
-        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "kim")], "Test"));
+        var user = new ClaimsPrincipal(new ClaimsIdentity([new Claim(userIdClaimType, "kim")], "Test"));
         var surveyStore = new SurveyStore(session);
         var authorizationService = new Mock<IAuthorizationService>();
         authorizationService
@@ -161,6 +187,6 @@ public sealed class ListSurveysToolTests : IAsyncLifetime
     private sealed class OwnerOnly : ISurveyAuthorizationService
     {
         public Task<bool> AuthorizeAsync(ClaimsPrincipal user, Survey survey, SurveyOperation operation, CancellationToken cancellationToken = default)
-            => Task.FromResult(operation == SurveyOperation.Manage && survey?.OwnerId == user.FindFirstValue(ClaimTypes.NameIdentifier));
+            => Task.FromResult(operation == SurveyOperation.Manage && survey?.OwnerId == SurveyUserIds.Of(user));
     }
 }

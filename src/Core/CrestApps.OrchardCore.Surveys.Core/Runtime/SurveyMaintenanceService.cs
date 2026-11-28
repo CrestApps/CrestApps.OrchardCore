@@ -231,6 +231,7 @@ public sealed class SurveyMaintenanceService
         response.InvitationId = null;
         response.InvitationSeal = null;
         response.ResumeTokenHash = null;
+        response.StatementAcceptedUtc = null;
 
         // The key the response is counted under names the person on an identified survey (u:{id} or i:{id}); left in
         // place, a later deadline completion would count it again and write their participation back.

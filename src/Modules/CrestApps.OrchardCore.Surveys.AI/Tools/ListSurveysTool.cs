@@ -53,7 +53,7 @@ public sealed class ListSurveysTool : SurveysAIToolBase
         {
             Search = Read(arguments, "search"),
             Status = Read(arguments, "status"),
-            OwnerId = seesAll ? null : user.FindFirstValue(ClaimTypes.NameIdentifier),
+            OwnerId = seesAll ? null : SurveyUserIds.Of(user),
         }, 0, 200, cancellationToken);
         var rows = new List<object>();
 
