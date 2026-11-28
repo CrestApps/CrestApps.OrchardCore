@@ -63,7 +63,7 @@ public sealed class EmailAdminControllerTests
 
         // Assert
         Assert.True(outcome.GetProperty("succeeded").GetBoolean());
-        harness.Tester.Verify(tester => tester.TestImapAsync(It.Is<EmailMailboxSettings>(mailbox => mailbox.Server.Password == "protected:typed"), It.IsAny<CancellationToken>()), Times.Once);
+        harness.Tester.Verify(tester => tester.TestImapAsync(It.Is<EmailMailboxSettings>(mailbox => mailbox.Server.Password.StartsWith("protected:", StringComparison.Ordinal) && mailbox.Server.Password.EndsWith("\0typed", StringComparison.Ordinal)), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     private sealed class Harness

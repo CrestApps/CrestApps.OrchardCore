@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
 using Microsoft.AspNetCore.Http;
@@ -150,12 +151,35 @@ public sealed class AmazonSesInboundEmailParser : IInboundEmailWebhookParser
             }
         }
 
-        // SES checks DMARC for the From domain itself and says so in the notification Amazon signed.
+        // SES checks DMARC for the From domain itself and says so in the notification Amazon signed. The verdict is only
+        // taken for the From address read here when SES read the same domain from it, since the receiver relies on it.
         email.IsFromDomainAuthenticated = receipt.ValueKind == JsonValueKind.Object &&
             receipt.TryGetProperty("dmarcVerdict", out var dmarcVerdict) &&
-            string.Equals(GetString(dmarcVerdict, "status"), "PASS", StringComparison.OrdinalIgnoreCase);
+            string.Equals(GetString(dmarcVerdict, "status"), "PASS", StringComparison.OrdinalIgnoreCase) &&
+            IsSameFromDomain(root, email.From?.Address);
 
         return InboundEmailWebhookResult.Of(email);
+    }
+
+    // Whether the From domain SES evaluated (mail.commonHeaders.from) is the domain of the From address parsed here.
+    internal static bool IsSameFromDomain(JsonElement notification, string parsedFrom)
+    {
+        if (!OmnichannelEmailAddress.IsValid(parsedFrom) ||
+            !notification.TryGetProperty("mail", out var mail) ||
+            !mail.TryGetProperty("commonHeaders", out var headers) ||
+            !headers.TryGetProperty("from", out var from) ||
+            from.ValueKind != JsonValueKind.Array ||
+            from.GetArrayLength() == 0 ||
+            from[0].ValueKind != JsonValueKind.String ||
+            !MimeKit.MailboxAddress.TryParse(from[0].GetString(), out var sesFrom))
+        {
+            return false;
+        }
+
+        var parsedDomain = parsedFrom[(parsedFrom.LastIndexOf('@') + 1)..];
+
+        return !string.IsNullOrEmpty(sesFrom.Domain) &&
+            string.Equals(sesFrom.Domain.Trim(), parsedDomain, StringComparison.OrdinalIgnoreCase);
     }
 
     private static string GetString(JsonElement element, string name)

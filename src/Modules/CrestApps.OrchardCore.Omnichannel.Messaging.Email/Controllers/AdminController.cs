@@ -90,7 +90,9 @@ public sealed class AdminController : Controller
 
         if (!string.IsNullOrEmpty(password))
         {
-            server.Password = _secretProtector.Protect(password);
+            server.Password = isImap
+                ? EmailServerConnection.ProtectPassword(_secretProtector, server, EmailServerConnection.ImapPort, EmailServerConnection.ImapImplicitTlsPort, password)
+                : EmailServerConnection.ProtectPassword(_secretProtector, server, EmailServerConnection.SmtpSubmissionPort, EmailServerConnection.SmtpImplicitTlsPort, password);
         }
         else if (server.IsConfigured && !string.IsNullOrWhiteSpace(server.UserName))
         {

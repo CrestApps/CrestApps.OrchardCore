@@ -109,20 +109,78 @@ public static class EmailServerConnection
     }
 
     /// <summary>
+    /// Protects a password for the one account it is typed for: the server's host, port, security and user name are
+    /// sealed in with it, and <see cref="ConnectAsync"/> only reads it back for that same account.
+    /// </summary>
+    /// <remarks>
+    /// The protected value is stored in the address's settings, which reach places the editor's own checks do not (the
+    /// channel endpoints API, a recipe, an import or a copy). Sealing the account in means a protected password copied
+    /// next to another server or user name, or with the security turned off, no longer reads back, so it is never sent
+    /// anywhere but where it was saved for.
+    /// </remarks>
+    /// <param name="secretProtector">The protector.</param>
+    /// <param name="server">The server settings the password is for.</param>
+    /// <param name="defaultPort">The protocol's default port.</param>
+    /// <param name="implicitTlsPort">The protocol's implicit-TLS port.</param>
+    /// <param name="password">The password as typed.</param>
+    /// <returns>The protected password, or <see langword="null"/> when <paramref name="password"/> is empty.</returns>
+    public static string ProtectPassword(IEmailSecretProtector secretProtector, EmailServerSettings server, int defaultPort, int implicitTlsPort, string password)
+    {
+        ArgumentNullException.ThrowIfNull(secretProtector);
+        ArgumentNullException.ThrowIfNull(server);
+
+        return string.IsNullOrEmpty(password)
+            ? null
+            : secretProtector.Protect(AccountKey(server, ResolvePort(server, defaultPort, implicitTlsPort)) + password);
+    }
+
+    // The password of the account the settings name, or null when the stored one was protected for another account (or
+    // before passwords were sealed to their account) and has to be typed again.
+    internal static string UnprotectPassword(IEmailSecretProtector secretProtector, EmailServerSettings server, int port)
+    {
+        var payload = secretProtector.Unprotect(server.Password);
+
+        if (string.IsNullOrEmpty(payload))
+        {
+            return null;
+        }
+
+        var account = AccountKey(server, port);
+
+        return payload.StartsWith(account, StringComparison.Ordinal)
+            ? payload.Substring(account.Length)
+            : null;
+    }
+
+    // Host, port, security and user name, compared the way IsSameAccount compares them, ended by a character no typed
+    // host or user name holds.
+    private static string AccountKey(EmailServerSettings server, int port)
+        => string.Join(
+            '\n',
+            server.Host?.Trim().ToLowerInvariant() ?? string.Empty,
+            port.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            ((int)server.Security).ToString(System.Globalization.CultureInfo.InvariantCulture),
+            server.UserName?.Trim().ToLowerInvariant() ?? string.Empty) + '\0';
+
+    /// <summary>
     /// Describes why connecting or signing in to a mail server failed, in words that are safe to show to whoever typed
     /// the settings.
     /// </summary>
     /// <remarks>
-    /// Only a refused sign-in is told apart. Every other failure gets the same words, because the exception's own message
-    /// (connection refused, no such host, an unexpected greeting) would tell whether a host and port answer, which would
-    /// turn the connection test into a probe of the site's own network. The exception belongs in the log.
+    /// Only a refused sign-in and a server that offered no encryption are told apart. Every other failure gets the same
+    /// words, because the exception's own message (connection refused, no such host, an unexpected greeting) would tell
+    /// whether a host and port answer, which would turn the connection test into a probe of the site's own network. The
+    /// exception belongs in the log.
     /// </remarks>
     /// <param name="exception">The failure.</param>
     /// <returns>The words to show.</returns>
     public static string DescribeFailure(Exception exception)
-        => exception is AuthenticationException
-            ? RefusedSignInMessage
-            : UnreachableMessage;
+        => exception switch
+        {
+            AuthenticationException => RefusedSignInMessage,
+            EmailConnectionNotSecureException notSecure => notSecure.Message,
+            _ => UnreachableMessage,
+        };
 
     /// <summary>
     /// Connects a client and signs it in when the server settings name a user.
@@ -145,9 +203,20 @@ public static class EmailServerConnection
 
         client.Timeout = TimeoutMilliseconds;
 
+        var signsIn = !string.IsNullOrWhiteSpace(server.UserName);
+
+        // A password protected for another account (moved next to another server or user name, or with the security
+        // turned off) does not read back, and the server is not even contacted.
+        var password = signsIn ? UnprotectPassword(secretProtector, server, port) : null;
+
+        if (signsIn && password is null)
+        {
+            throw new AuthenticationException("No password is stored for this server, port, security and user name.");
+        }
+
         await client.ConnectAsync(server.Host.Trim(), port, ToSocketOptions(server.Security), cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(server.UserName))
+        if (signsIn)
         {
             // "Auto" uses STARTTLS only when the server offers it, so someone in the network path could strip the offer
             // and read the password. The password is only sent in the clear when the admin chose no security.
@@ -155,10 +224,8 @@ public static class EmailServerConnection
             {
                 await client.DisconnectAsync(true, cancellationToken);
 
-                throw new InvalidOperationException($"The mail server at '{server.Host.Trim()}' did not offer an encrypted connection, so the password was not sent. Choose STARTTLS or SSL/TLS, or None to send it unencrypted.");
+                throw new EmailConnectionNotSecureException(server.Host.Trim());
             }
-
-            var password = secretProtector.Unprotect(server.Password) ?? string.Empty;
 
             await client.AuthenticateAsync(server.UserName.Trim(), password, cancellationToken);
         }

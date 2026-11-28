@@ -35,7 +35,10 @@ public interface IEmailDeliveryLog
     /// <param name="addressId">The address.</param>
     /// <param name="kind">The kind.</param>
     /// <param name="sinceUtc">The start of the window.</param>
-    /// <param name="recipientDomain">The receiving domain to count only, or <see langword="null"/> for all.</param>
+    /// <param name="recipientDomain">
+    /// The receiving domain to count only, or <see langword="null"/> for all. A count for one domain leaves out entries
+    /// marked <see cref="EmailDeliveryLogEntry.IsUnconfirmed"/>, because a domain is backed off on it.
+    /// </param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The count.</returns>
     Task<int> CountAsync(string addressId, EmailDeliveryEventKind kind, DateTime sinceUtc, string recipientDomain = null, CancellationToken cancellationToken = default);
@@ -43,7 +46,7 @@ public interface IEmailDeliveryLog
     /// <summary>
     /// Counts the emails to a recipient that had an entry of one kind since a time, across every address. Entries of one
     /// email count once, so a provider reporting each retry of an email counts as that one email; an entry that names no
-    /// email counts on its own.
+    /// email counts on its own. Entries marked <see cref="EmailDeliveryLogEntry.IsUnconfirmed"/> are left out.
     /// </summary>
     /// <param name="recipient">The recipient, normalized.</param>
     /// <param name="kind">The kind.</param>
@@ -158,10 +161,11 @@ public sealed class EmailDeliveryLog : IEmailDeliveryLog
     {
         var value = (int)kind;
 
+        // A domain is backed off on its count, so a report anyone could have written is left out of it.
         return recipientDomain is null
             ? _session.QueryIndex<EmailDeliveryLogIndex>(index => index.AddressId == addressId && index.Kind == value && index.OccurredUtc >= sinceUtc, collection: Collection)
                 .CountAsync(cancellationToken)
-            : _session.QueryIndex<EmailDeliveryLogIndex>(index => index.AddressId == addressId && index.Kind == value && index.RecipientDomain == recipientDomain && index.OccurredUtc >= sinceUtc, collection: Collection)
+            : _session.QueryIndex<EmailDeliveryLogIndex>(index => index.AddressId == addressId && index.Kind == value && index.RecipientDomain == recipientDomain && index.OccurredUtc >= sinceUtc && index.IsUnconfirmed == false, collection: Collection)
                 .CountAsync(cancellationToken);
     }
 
@@ -170,9 +174,12 @@ public sealed class EmailDeliveryLog : IEmailDeliveryLog
         var value = (int)kind;
         var key = EmailDeliveryLogIndexProvider.Truncate(recipient, EmailDeliveryLogIndex.RecipientLength);
 
-        // A recipient has a handful of such entries in a window, so the rows are read and told apart here.
+        // A recipient has a handful of such entries in a window, so the rows are read and told apart here. A report anyone
+        // could have written never counts toward suppressing the recipient.
         var rows = (await _session.QueryIndex<EmailDeliveryLogIndex>(index => index.Recipient == key && index.Kind == value && index.OccurredUtc >= sinceUtc, collection: Collection)
-            .ListAsync(cancellationToken)).ToArray();
+            .ListAsync(cancellationToken))
+            .Where(row => !row.IsUnconfirmed)
+            .ToArray();
 
         return rows.Where(row => !string.IsNullOrEmpty(row.MessageId)).Select(row => row.MessageId).Distinct(StringComparer.Ordinal).Count() +
             rows.Count(row => string.IsNullOrEmpty(row.MessageId));

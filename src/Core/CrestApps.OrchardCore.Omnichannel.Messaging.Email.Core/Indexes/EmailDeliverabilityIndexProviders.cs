@@ -28,6 +28,7 @@ public sealed class EmailDeliveryLogIndexProvider : IndexProvider<EmailDeliveryL
                 MessageId = Truncate(entry.MessageId, EmailDeliveryLogIndex.MessageIdLength),
                 EventId = Truncate(entry.EventId, EmailDeliveryLogIndex.EventIdLength),
                 IsBulk = entry.IsBulk,
+                IsUnconfirmed = entry.IsUnconfirmed,
                 OccurredUtc = entry.OccurredUtc,
             });
     }

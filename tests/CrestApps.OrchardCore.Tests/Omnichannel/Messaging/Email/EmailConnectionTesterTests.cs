@@ -85,6 +85,83 @@ public sealed class EmailConnectionTesterTests
         Assert.Equal(expected, isSame);
     }
 
+    [Fact]
+    public void DescribeFailure_ShowsWhyAPasswordWasNotSentOverAnUnencryptedConnection()
+    {
+        // Arrange
+        var failure = new EmailConnectionNotSecureException("smtp.contoso.com");
+
+        // Act
+        var description = EmailServerConnection.DescribeFailure(failure);
+
+        // Assert
+        Assert.Equal(failure.Message, description);
+        Assert.Contains("STARTTLS", description, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("smtp.contoso.com", 587, EmailConnectionSecurity.StartTls, "support@contoso.com", true)]
+    [InlineData("SMTP.Contoso.com ", 0, EmailConnectionSecurity.StartTls, "Support@Contoso.com", true)]
+    [InlineData("evil.example", 587, EmailConnectionSecurity.StartTls, "support@contoso.com", false)]
+    [InlineData("smtp.contoso.com", 2525, EmailConnectionSecurity.StartTls, "support@contoso.com", false)]
+    [InlineData("smtp.contoso.com", 587, EmailConnectionSecurity.None, "support@contoso.com", false)]
+    [InlineData("smtp.contoso.com", 587, EmailConnectionSecurity.StartTls, "sales@contoso.com", false)]
+    public async Task ConnectAsync_ReadsAProtectedPasswordOnlyForTheAccountItWasSavedFor(string host, int port, EmailConnectionSecurity security, string userName, bool expected)
+    {
+        // Arrange: the password protected for one account, then copied next to other settings, as the channel
+        // endpoints API, a recipe or an import can do without the editor's checks.
+        var protector = new ReversibleProtector();
+        var saved = new EmailServerSettings { Host = "smtp.contoso.com", Port = 587, Security = EmailConnectionSecurity.StartTls, UserName = "support@contoso.com" };
+        var moved = new EmailServerSettings
+        {
+            Host = host,
+            Port = port,
+            Security = security,
+            UserName = userName,
+            Password = EmailServerConnection.ProtectPassword(protector, saved, EmailServerConnection.SmtpSubmissionPort, EmailServerConnection.SmtpImplicitTlsPort, "s3cret"),
+        };
+
+        var client = new Mock<MailKit.IMailService>();
+        client.SetupGet(value => value.IsSecure).Returns(true);
+
+        // Act
+        var connecting = EmailServerConnection.ConnectAsync(
+            client.Object,
+            moved,
+            EmailServerConnection.ResolvePort(moved, EmailServerConnection.SmtpSubmissionPort, EmailServerConnection.SmtpImplicitTlsPort),
+            protector,
+            TestContext.Current.CancellationToken);
+
+        // Assert: the password goes only to the account it was saved for; any other server is not even contacted.
+        if (expected)
+        {
+            await connecting;
+            client.Verify(value => value.AuthenticateAsync(userName.Trim(), "s3cret", It.IsAny<CancellationToken>()), Times.Once);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<AuthenticationException>(() => connecting);
+            client.Verify(value => value.ConnectAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<SecureSocketOptions>(), It.IsAny<CancellationToken>()), Times.Never);
+            client.Verify(value => value.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        }
+    }
+
+    [Fact]
+    public async Task ConnectAsync_WhenTheServerOffersNoEncryption_ThrowsWithoutSendingThePassword()
+    {
+        // Arrange
+        var protector = new ReversibleProtector();
+        var server = new EmailServerSettings { Host = "relay.contoso.com", Port = 25, Security = EmailConnectionSecurity.Auto, UserName = "support@contoso.com" };
+        server.Password = EmailServerConnection.ProtectPassword(protector, server, EmailServerConnection.SmtpSubmissionPort, EmailServerConnection.SmtpImplicitTlsPort, "s3cret");
+
+        var client = new Mock<MailKit.IMailService>();
+        client.SetupGet(value => value.IsSecure).Returns(false);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<EmailConnectionNotSecureException>(() => EmailServerConnection.ConnectAsync(client.Object, server, 25, protector, TestContext.Current.CancellationToken));
+        client.Verify(value => value.AuthenticateAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static EmailServerSettings Settings(int port)
         => new()
         {
@@ -103,6 +180,17 @@ public sealed class EmailConnectionTesterTests
             NullLogger<ImapEmailMailboxReader>.Instance);
 
         return new EmailConnectionTester(Mock.Of<IEmailSecretProtector>(), reader, NullLogger<EmailConnectionTester>.Instance);
+    }
+
+    private sealed class ReversibleProtector : IEmailSecretProtector
+    {
+        public string Protect(string secret)
+            => secret is null ? null : "protected:" + secret;
+
+        public string Unprotect(string protectedSecret)
+            => protectedSecret is not null && protectedSecret.StartsWith("protected:", StringComparison.Ordinal)
+                ? protectedSecret["protected:".Length..]
+                : null;
     }
 
     // A server on the loopback address that greets whoever connects with a line that is not a mail server's, then

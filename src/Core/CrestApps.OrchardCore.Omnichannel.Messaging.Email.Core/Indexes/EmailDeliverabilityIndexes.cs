@@ -63,6 +63,11 @@ public sealed class EmailDeliveryLogIndex : MapIndex
     public bool IsBulk { get; set; }
 
     /// <summary>
+    /// Gets or sets a value indicating whether the entry records a report tied to its email only by the recipient.
+    /// </summary>
+    public bool IsUnconfirmed { get; set; }
+
+    /// <summary>
     /// Gets or sets when it happened.
     /// </summary>
     public DateTime OccurredUtc { get; set; }

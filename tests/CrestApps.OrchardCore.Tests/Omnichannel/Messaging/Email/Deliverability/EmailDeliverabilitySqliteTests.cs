@@ -280,6 +280,55 @@ public sealed class EmailDeliverabilitySqliteTests
     }
 
     [Fact]
+    public async Task Counts_LeaveUnconfirmedReportsOutOfSuppressionAndDomainBackoff()
+    {
+        await WithStoreAsync(async store =>
+        {
+            var cancellationToken = TestContext.Current.CancellationToken;
+            var now = new DateTime(2026, 10, 9, 12, 0, 0, DateTimeKind.Utc);
+
+            // One confirmed soft bounce and two that were tied to their email only by the recipient.
+            await using (var seed = store.CreateSession())
+            {
+                var seedLog = new EmailDeliveryLog(seed);
+
+                await seedLog.RecordAsync(Bounce("confirmed", "m-1", now.AddMinutes(-3), isUnconfirmed: false), cancellationToken);
+                await seedLog.RecordAsync(Bounce("forged-1", null, now.AddMinutes(-2), isUnconfirmed: true), cancellationToken);
+                await seedLog.RecordAsync(Bounce("forged-2", null, now.AddMinutes(-1), isUnconfirmed: true), cancellationToken);
+                await seed.SaveChangesAsync(cancellationToken);
+            }
+
+            // Act
+            await using var session = store.CreateSession();
+            var log = new EmailDeliveryLog(session);
+            var since = now.AddDays(-1);
+
+            var forRecipient = await log.CountMessagesForRecipientAsync("ann@example.com", EmailDeliveryEventKind.SoftBounce, since, cancellationToken);
+            var forDomain = await log.CountAsync("address-1", EmailDeliveryEventKind.SoftBounce, since, "example.com", cancellationToken);
+            var forAddress = await log.CountAsync("address-1", EmailDeliveryEventKind.SoftBounce, since, cancellationToken: cancellationToken);
+
+            // Assert: only the confirmed one counts toward suppressing Ann or backing off her domain, and all three show
+            // in the address's own counts.
+            Assert.Equal(1, forRecipient);
+            Assert.Equal(1, forDomain);
+            Assert.Equal(3, forAddress);
+        });
+
+        static EmailDeliveryLogEntry Bounce(string itemId, string messageId, DateTime occurredUtc, bool isUnconfirmed)
+            => new()
+            {
+                ItemId = itemId,
+                AddressId = "address-1",
+                Kind = EmailDeliveryEventKind.SoftBounce,
+                Recipient = "ann@example.com",
+                RecipientDomain = "example.com",
+                MessageId = messageId,
+                OccurredUtc = occurredUtc,
+                IsUnconfirmed = isUnconfirmed,
+            };
+    }
+
+    [Fact]
     public async Task RemoveAsync_TakesEveryRecordOfTheAddressOffTheList()
     {
         await WithStoreAsync(async store =>
@@ -391,7 +440,7 @@ public sealed class EmailDeliverabilitySqliteTests
                 var transaction = await session.BeginTransactionAsync(cancellationToken);
                 var schemaBuilder = new SchemaBuilder(store.Configuration, transaction);
 
-                Assert.Equal(3, await CreateMigration(store, schemaBuilder).CreateAsync());
+                Assert.Equal(4, await CreateMigration(store, schemaBuilder).CreateAsync());
 
                 if (!uniqueIndex)
                 {

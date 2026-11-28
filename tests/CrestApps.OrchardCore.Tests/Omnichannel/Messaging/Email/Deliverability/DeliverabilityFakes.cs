@@ -51,11 +51,11 @@ internal sealed class InMemoryEmailDeliveryLog : IEmailDeliveryLog
             entry.AddressId == addressId &&
             entry.Kind == kind &&
             entry.OccurredUtc >= sinceUtc &&
-            (recipientDomain is null || entry.RecipientDomain == recipientDomain)));
+            (recipientDomain is null || (entry.RecipientDomain == recipientDomain && !entry.IsUnconfirmed))));
 
     public Task<int> CountMessagesForRecipientAsync(string recipient, EmailDeliveryEventKind kind, DateTime sinceUtc, CancellationToken cancellationToken = default)
     {
-        var entries = Entries.Where(entry => entry.Recipient == recipient && entry.Kind == kind && entry.OccurredUtc >= sinceUtc).ToArray();
+        var entries = Entries.Where(entry => entry.Recipient == recipient && entry.Kind == kind && entry.OccurredUtc >= sinceUtc && !entry.IsUnconfirmed).ToArray();
 
         return Task.FromResult(
             entries.Where(entry => !string.IsNullOrEmpty(entry.MessageId)).Select(entry => entry.MessageId).Distinct(StringComparer.Ordinal).Count() +

@@ -12,6 +12,8 @@ public sealed class OmnichannelEmailAddressTests
     [InlineData("\"Ann Lee\" <Ann@Example.com>", "ann@example.com")]
     [InlineData("Ann Lee <ann@example.com>", "ann@example.com")]
     [InlineData("<ann@example.com>", "ann@example.com")]
+    [InlineData("<ann@example.com", "ann@example.com")]
+    [InlineData("ann@example.com>", "ann@example.com")]
     [InlineData("ann+orders@example.com", "ann+orders@example.com")]
     public void Normalize_EverySpellingOfOneAddress_MeetsInTheSameCanonicalForm(string address, string expected)
     {
@@ -33,6 +35,19 @@ public sealed class OmnichannelEmailAddressTests
         // Assert: the address is the attacker's own, never the one dressed up inside it.
         Assert.NotEqual("jane@bigcorp.com", normalized);
         Assert.EndsWith("@attacker.com", normalized);
+    }
+
+    [Theory]
+    [InlineData("\"jane@bigcorp.com\"", "\"jane@bigcorp.com\"")]
+    [InlineData("'jane@bigcorp.com'", "'jane@bigcorp.com'")]
+    [InlineData("\"a\"@\"b.com\"", "\"a\"@\"b.com\"")]
+    public void Normalize_QuotesAroundTheAddress_AreKept(string address, string expected)
+    {
+        // Act
+        var normalized = OmnichannelEmailAddress.Normalize(address);
+
+        // Assert: a quoted address is not the bare one to any mail system, so it never turns into it here.
+        Assert.Equal(expected, normalized);
     }
 
     [Theory]
@@ -72,6 +87,13 @@ public sealed class OmnichannelEmailAddressTests
     [InlineData("\"<jane@bigcorp.com>\"@attacker.com", false)]
     [InlineData("\"Jane\" <\"<jane@bigcorp.com>\"@attacker.com>", false)]
     [InlineData("\"ann\"@example.com", false)]
+    [InlineData("\"jane@bigcorp.com\"", false)]
+    [InlineData("'jane@bigcorp.com'", false)]
+    [InlineData("'jane@bigcorp.com", false)]
+    [InlineData("jane@bigcorp.com'", false)]
+    [InlineData("jane@big_corp.com", false)]
+    [InlineData("o'brien@example.com", true)]
+    [InlineData("ann@xn--bcher-kva.example", true)]
     [InlineData("", false)]
     public void IsValid_AcceptsAddressesAndRefusesEverythingElse(string address, bool expected)
     {

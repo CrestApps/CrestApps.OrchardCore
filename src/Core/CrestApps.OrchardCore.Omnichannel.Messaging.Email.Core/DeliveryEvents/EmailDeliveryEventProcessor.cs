@@ -137,6 +137,7 @@ public sealed class EmailDeliveryEventProcessor : IEmailDeliveryEventProcessor
                 OccurredUtc = ClampOccurredUtc(deliveryEvent.OccurredUtc, _clock.UtcNow),
                 Detail = detail,
                 EventId = eventId,
+                IsUnconfirmed = deliveryEvent.IsUnconfirmed,
             },
             cancellationToken);
 

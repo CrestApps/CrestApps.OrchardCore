@@ -58,7 +58,7 @@ The channel works with any email provider. Each address picks how it sends, and 
    - **Send through**:
      - **Orchard Core email service** uses the site's email settings (**Settings** → **Communication** → **Email**). Pick a provider, or leave it on the site's default. The provider must be allowed to send from this address (for SMTP, the mailbox's credentials; for Azure Communication Services, a verified sender domain). It cannot add the one-click unsubscribe header (`List-Unsubscribe`) that Gmail and Yahoo require of bulk senders, and the card warns about it, so an address that sends broadcasts or campaigns should use its own SMTP server.
      - **The address's own SMTP server** sends from the mailbox itself, for example `smtp.office365.com` on port 587 with STARTTLS, or `smtp.gmail.com`. Use **Test connection** to check the sign-in before saving. This transport sets the threading headers, so replies stay threaded in every mail client, and the one-click unsubscribe header on bulk mail. A sending service's SMTP relay (Amazon SES, SendGrid, Mailgun, Postmark) works here too.
-   - The SMTP and IMAP passwords are stored and never shown again; leave the box empty to keep the stored one. The stored password is used (by **Test connection** and on save) only while the host, port, security and user name are the ones it was saved with. Change any of them and type the password again.
+   - The SMTP and IMAP passwords are stored and never shown again; leave the box empty to keep the stored one. The stored password is used (by **Test connection**, on save, and when the site connects) only while the host, port, security and user name are the ones it was saved with. It is stored sealed to them, so a password copied next to other settings (through the API, a recipe or an import) is never sent. Change any of them and type the password again. With **Auto** security, a server that wants a sign-in but offers no encryption gets no password: choose STARTTLS or SSL/TLS, or **None** to send it unencrypted on purpose.
    - **Default subject**, used for a new email that is not a reply and was given none.
 3. Set how mail reaches the workspace in **Receive mail by** (see below), and save.
 4. Add the address to an **email entry point** (**Interaction Center** → **Management** → **Inbound Entry Points**, then **Create** → **Email**) to say who answers it: a queue, an agent or an AI agent.
@@ -132,7 +132,7 @@ A `From` line is just as easy to forge, so mail "from" one of the business's own
 | How the email arrives | What is read |
 |---|---|
 | Reading the mailbox (IMAP) | The topmost `Authentication-Results` header, which a mailbox host that checks DMARC adds above the sender's headers (Microsoft 365 and Google Workspace do). The server that wrote it is not checked, so on a host that adds none, the sender's own header is read. |
-| Amazon SES | The `dmarcVerdict` in the signed SNS notification. |
+| Amazon SES | The `dmarcVerdict` in the signed SNS notification, taken only when the From domain SES read is the one the site read. |
 | SendGrid | Its DKIM check (`dkim`): a passing signature by the business's domain. |
 | Mailgun, Postmark, raw MIME, JSON | Nothing these webhooks post is a check the provider made, so a form's relayed message is not taken from them. Send the form through a mailbox read over IMAP, Amazon SES or SendGrid. |
 

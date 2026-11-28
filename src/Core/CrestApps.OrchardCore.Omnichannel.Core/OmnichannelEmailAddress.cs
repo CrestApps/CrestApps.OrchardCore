@@ -53,26 +53,14 @@ public static class OmnichannelEmailAddress
             }
         }
 
-        value = StripEnclosingPairs(value.Trim());
+        // A stray angle bracket left at either end of a typed address (<ann@example.com) is repaired. Quotes are never
+        // removed: a sender can write "jane@bigcorp.com" or 'jane@bigcorp.com' as its whole address, which is not
+        // jane@bigcorp.com to any mail system, and stripping the quotes would make it so here. IsValid refuses them.
+        value = value.Trim().Trim('<', '>').Trim();
 
         return value.Length == 0
             ? null
             : value.ToLowerInvariant();
-    }
-
-    // Removes brackets or quotes that enclose the whole value (<ann@example.com>, "ann@example.com"), and only those:
-    // a quote that opens a quoted local part ("ann lee"@example.com) is part of the address.
-    private static string StripEnclosingPairs(string value)
-    {
-        while (value.Length >= 2 &&
-            ((value[0] == '<' && value[^1] == '>') ||
-            (value[0] == '"' && value[^1] == '"' && IndexOfUnquoted(value.Substring(1, value.Length - 2), '"') < 0) ||
-            (value[0] == '\'' && value[^1] == '\'')))
-        {
-            value = value.Substring(1, value.Length - 2).Trim();
-        }
-
-        return value;
     }
 
     // The index of the first occurrence of a character outside a quoted string, honoring backslash escapes in quotes.
@@ -125,9 +113,10 @@ public static class OmnichannelEmailAddress
 
     /// <summary>
     /// Determines whether a value is shaped like an email address: one <c>@</c> with a local part before it and a
-    /// dotted domain after it, and no whitespace, quotes or angle brackets. A quoted local part is legal but unused by
-    /// real mailboxes, and it is how a sender would dress one address up as another. The provider is the authority on
-    /// whether the mailbox exists.
+    /// dotted host name of letters, digits and hyphens after it, and no whitespace, double quotes or angle brackets. A
+    /// quoted local part is legal but unused by real mailboxes, and it is how a sender would dress one address up as
+    /// another; so is a single quote around the address, which leaves a domain with no DMARC policy of its own. The
+    /// provider is the authority on whether the mailbox exists.
     /// </summary>
     /// <param name="address">The address to check, in any form <see cref="Normalize"/> accepts.</param>
     /// <returns><see langword="true"/> when the address is usable.</returns>
@@ -149,9 +138,17 @@ public static class OmnichannelEmailAddress
             return false;
         }
 
+        var localPart = normalized.Substring(0, at);
         var domain = normalized.Substring(at + 1);
 
-        return domain.Contains('.') &&
+        // An apostrophe is legal inside a local part (o'brien@example.com), but not around it.
+        if (localPart[0] == '\'' || localPart[^1] == '\'')
+        {
+            return false;
+        }
+
+        return domain.All(character => char.IsLetterOrDigit(character) || character is '.' or '-') &&
+            domain.Contains('.') &&
             !domain.StartsWith('.') &&
             !domain.EndsWith('.') &&
             !domain.Contains("..", StringComparison.Ordinal);

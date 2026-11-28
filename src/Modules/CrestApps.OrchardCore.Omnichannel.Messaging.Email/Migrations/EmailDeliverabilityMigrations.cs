@@ -48,6 +48,7 @@ internal sealed class EmailDeliverabilityMigrations : DataMigration
             .Column<string>("MessageId", column => column.WithLength(EmailDeliveryLogIndex.MessageIdLength))
             .Column<string>("EventId", column => column.WithLength(EmailDeliveryLogIndex.EventIdLength))
             .Column<bool>("IsBulk")
+            .Column<bool>("IsUnconfirmed", column => column.NotNull().WithDefault(false))
             .Column<DateTime>("OccurredUtc", column => column.NotNull()),
             collection: Collection);
 
@@ -92,7 +93,7 @@ internal sealed class EmailDeliverabilityMigrations : DataMigration
         await CreateSendingStateUniqueIndexAsync();
         await CreateSuppressionUniqueIndexAsync();
 
-        return 3;
+        return 4;
     }
 
     /// <summary>
@@ -121,6 +122,20 @@ internal sealed class EmailDeliverabilityMigrations : DataMigration
         await CreateSuppressionUniqueIndexAsync();
 
         return 3;
+    }
+
+    /// <summary>
+    /// Marks the delivery log entries that record a report tied to its email only by the recipient, so they count toward
+    /// no suppression or domain backoff. Entries logged before are taken as confirmed.
+    /// </summary>
+    /// <returns>The migration version number.</returns>
+    public async Task<int> UpdateFrom3Async()
+    {
+        await SchemaBuilder.AlterIndexTableAsync<EmailDeliveryLogIndex>(table => table
+            .AddColumn<bool>("IsUnconfirmed", column => column.NotNull().WithDefault(false)),
+            collection: Collection);
+
+        return 4;
     }
 
     private async Task CreateSuppressionUniqueIndexAsync()

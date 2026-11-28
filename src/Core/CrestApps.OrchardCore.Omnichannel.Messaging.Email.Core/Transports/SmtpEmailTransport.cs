@@ -102,6 +102,14 @@ public sealed class SmtpEmailTransport : IEmailTransport
 
             return MessageDispatchResult.Failed(S["The mail server refused the sign-in. Check the user name and password on the address."]);
         }
+        catch (EmailConnectionNotSecureException ex)
+        {
+            // A setting to fix, not a send to throw: the email fails with the words that say which setting, and goes
+            // out on a later attempt once the security is fixed.
+            _logger.LogWarning("The SMTP server {Host} offered no encrypted connection, so the address's password was not sent.", server.Host.SanitizeLogValue());
+
+            return MessageDispatchResult.Failed(ex.Message);
+        }
         catch (SmtpCommandException ex)
         {
             // The server's code and words travel in the error, so the dispatcher can tell a throttle (421, 4.7.x) or a

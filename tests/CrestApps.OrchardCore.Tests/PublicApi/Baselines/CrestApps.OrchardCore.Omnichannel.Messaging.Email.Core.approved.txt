@@ -459,6 +459,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Indexes
         public string AddressId { get; set; }
         public string EventId { get; set; }
         public bool IsBulk { get; set; }
+        public bool IsUnconfirmed { get; set; }
         public int Kind { get; set; }
         public string MessageId { get; set; }
         public System.DateTime OccurredUtc { get; set; }
@@ -571,6 +572,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models
         public string Detail { get; set; }
         public string EventId { get; set; }
         public bool IsBulk { get; set; }
+        public bool IsUnconfirmed { get; set; }
         public string ItemId { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailDeliveryEventKind Kind { get; set; }
         public string MessageId { get; set; }
@@ -800,6 +802,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports
     {
         public static string Format(string address, string name) { }
     }
+    public sealed class EmailConnectionNotSecureException : System.Exception
+    {
+        public EmailConnectionNotSecureException(string host) { }
+    }
     public static class EmailMimeBuilder
     {
         public static MimeKit.MimeMessage Build(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports.EmailTransportMessage message) { }
@@ -814,6 +820,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Transports
         public static System.Threading.Tasks.Task ConnectAsync(MailKit.IMailService client, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int port, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, System.Threading.CancellationToken cancellationToken) { }
         public static string DescribeFailure(System.Exception exception) { }
         public static bool IsSameAccount(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings stored, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings candidate, int defaultPort, int implicitTlsPort) { }
+        public static string ProtectPassword(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Services.IEmailSecretProtector secretProtector, CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int defaultPort, int implicitTlsPort, string password) { }
         public static int ResolvePort(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailServerSettings server, int defaultPort, int implicitTlsPort) { }
         public static MailKit.Security.SecureSocketOptions ToSocketOptions(CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models.EmailConnectionSecurity security) { }
     }

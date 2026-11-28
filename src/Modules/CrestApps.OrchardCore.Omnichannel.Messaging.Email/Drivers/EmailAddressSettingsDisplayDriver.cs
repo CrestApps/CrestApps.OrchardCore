@@ -300,7 +300,7 @@ internal sealed class EmailAddressSettingsDisplayDriver : DisplayDriver<Omnichan
 
         if (!string.IsNullOrEmpty(password))
         {
-            server.Password = _secretProtector.Protect(password);
+            server.Password = EmailServerConnection.ProtectPassword(_secretProtector, server, defaultPort, implicitTlsPort, password);
         }
         else if (!string.IsNullOrEmpty(server.Password) && !EmailServerConnection.IsSameAccount(saved, server, defaultPort, implicitTlsPort))
         {
