@@ -6,7 +6,7 @@
     "easymde": "2.21.0",
     "flatpickr": "4.6.13",
     "highlight.js": "^11.12.0",
-    "marked": "^18.1.3"
+    "marked": "^18.2.0"
   },
   "dependencies": {
     "@crestapps/ai-chat-ui": "2.0.0-preview.258",
@@ -18,7 +18,7 @@
     "d3": "7.9.2",
     "d3-flextree": "2.1.2",
     "d3-org-chart": "3.1.1",
-    "fullcalendar": "7.1.4",
+    "fullcalendar": "7.1.5",
     "intl-tel-input": "^29.5.11",
     "leaflet": "1.9.4",
     "leaflet.markercluster": "1.5.3",
