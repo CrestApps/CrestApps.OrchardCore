@@ -275,6 +275,25 @@ public sealed class SurveyScoringEngineTests
         Assert.Equal(2m, response.MaxScore);
     }
 
+    [Fact]
+    public void R12L16_Score_DecidesThePassOnTheUnroundedPercent()
+    {
+        // Arrange: 139 of 200 is 69.5%, shown as 70% at 0 decimals; the pass mark is 70%.
+        var definition = ScoringDefinitions.Quiz(("q1", 200m));
+        definition.Scoring.RoundingDecimals = 0;
+        definition.Scoring.PassMarkPercent = 70;
+        definition.ScoreBands = [new ScoreBand { Id = "good", MinPercent = 70 }];
+        var response = ScoringDefinitions.Response(("q1", 139m));
+
+        // Act
+        Engine().Score(definition, response);
+
+        // Assert
+        Assert.Equal(70m, response.Percent);
+        Assert.False(response.Passed);
+        Assert.Null(response.ScoreBandId);
+    }
+
     private SurveyScoringEngine Engine()
         => new(new ScoringFakeRegistry(), new NullSurveyScoreFormulaEvaluator(), _hidden);
 }

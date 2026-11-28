@@ -8,7 +8,7 @@ user_manual:
 
 ## Draft and versions
 
-The designer edits only the draft. **Publish** (`ISurveyPublisher.PublishAsync`) makes a new `SurveyVersion`: numbered 1, 2, 3..., immutable, with the publisher, the time, notes and a SHA-256 of the definition. A version that a response uses is never deleted.
+The designer edits only the draft. **Publish** (`ISurveyPublisher.PublishAsync`) makes a new `SurveyVersion`: numbered 1, 2, 3..., immutable, with the publisher, the time, notes and a SHA-256 of the definition. The publish saves the survey with a concurrency check, so when two people publish the same survey at once, one commit fails (`ConcurrencyException`) and its version is rolled back: no two versions share a number. A version that a response uses is never deleted.
 
 A response keeps the version it started on, through every page, resume and reopen. Results join versions by stable question ids and name each column after the newest version.
 

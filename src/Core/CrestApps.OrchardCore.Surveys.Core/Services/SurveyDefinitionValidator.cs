@@ -3,7 +3,9 @@ using CrestApps.OrchardCore.Conditions;
 using CrestApps.OrchardCore.Surveys.Controls;
 using CrestApps.OrchardCore.Surveys.Core.Formulas;
 using CrestApps.OrchardCore.Surveys.Core.Indexes;
+using CrestApps.OrchardCore.Surveys.Core.Logic;
 using CrestApps.OrchardCore.Surveys.Core.Runtime;
+using CrestApps.OrchardCore.Surveys.Core.Translations;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using Microsoft.Extensions.Localization;
@@ -18,6 +20,10 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
 {
     private static readonly TimeSpan _regexTimeout = TimeSpan.FromMilliseconds(100);
     private static readonly Regex _piping = new(@"(?<!\{)\{([A-Za-z_][A-Za-z0-9_]*(?:[.:][A-Za-z0-9_]+)?)\}(?!\})", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+    private static readonly Regex _liquidMarkup = new(@"\{\{.*?\}\}|\{%.*?%\}", RegexOptions.Singleline | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+    private static readonly Regex _liquidScore = new(@"(?<![.\w""'])Score\b|\bResponse\s*(?:\.\s*|\[\s*['""])(?:Percent|Passed)\b", RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+    private static readonly Regex _formulaScore = new(@"\[\s*(?:score|percent)\s*(?:[:\]])|\bSCORE\s*\(", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
+    private static readonly Regex _formulaVariable = new(@"\[\s*var\s*:\s*([^\]]+?)\s*\]", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromSeconds(1));
 
     private readonly ISurveyControlRegistry _registry;
     private readonly IEnumerable<ISurveyDefinitionValidationContributor> _contributors;
@@ -495,6 +501,96 @@ public sealed class SurveyDefinitionValidator : ISurveyDefinitionValidator
         {
             context.AddError("edit-after-review", S["Respondents can't change a finished response while the review shows the score, the right answers or feedback before the survey closes. Turn off one of the two."]);
         }
+
+        if (definition.Scoring.Enabled && definition.Navigation?.AllowEditAfterSubmit == true && EndingReadsTheScore(definition))
+        {
+            // An ending that shows the score, or is chosen by it ("Passed" / "Try again"), gives the key away the same
+            // way: submit, read the ending, reopen, change one answer and submit again.
+            context.AddError("edit-after-score-ending", S["Respondents can change a finished response, so no ending may show the score, the percent or whether the response passed, or be chosen by the score. Turn off changing finished responses, or take the score out of the endings."]);
+        }
+    }
+
+    private static bool EndingReadsTheScore(SurveyDefinition definition)
+    {
+        var scoreVariables = ScoreVariables(definition);
+
+        bool TextReads(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+
+            if (_liquidMarkup.Matches(text).Any(match => _liquidScore.IsMatch(match.Value)))
+            {
+                return true;
+            }
+
+            return SurveyPipingRenderer.References(text).Any(name => SurveyPipingRenderer.IsScoreReference(name)
+                || (name.StartsWith(SurveyConditionSources.VariablePrefix, StringComparison.Ordinal) && scoreVariables.Contains(name.Substring(SurveyConditionSources.VariablePrefix.Length))));
+        }
+
+        bool RuleReads(ConditionRule rule)
+            => rule is not null
+                && ((rule.Conditions ?? []).Any(condition => IsScoreSource(condition?.Source, scoreVariables))
+                    || (rule.Groups ?? []).Any(RuleReads));
+
+        var endings = (definition.Endings ?? []).Where(ending => ending is not null).ToList();
+
+        if (endings.Any(ending => TextReads(ending.Message) || TextReads(ending.RedirectUrl)) || TextReads(definition.Presentation?.CompletedRedirectUrl))
+        {
+            return true;
+        }
+
+        var messageKeys = endings.Where(ending => !string.IsNullOrEmpty(ending.Id)).Select(ending => SurveyTextKeys.EndingMessage(ending.Id)).ToHashSet(StringComparer.Ordinal);
+
+        if ((definition.Translations ?? []).Values.Any(texts => texts is not null && texts.Any(text => messageKeys.Contains(text.Key) && TextReads(text.Value))))
+        {
+            return true;
+        }
+
+        return endings.Any(ending => !ending.IsDefault
+            && ending.Condition is { } condition
+            && condition.Mode != VisibilityMode.Always
+            && (RuleReads(condition.Rule) || FormulaReads(condition.Formula, scoreVariables)));
+    }
+
+    private static bool IsScoreSource(string source, HashSet<string> scoreVariables)
+        => !string.IsNullOrEmpty(source)
+            && (string.Equals(source, SurveyConditionSources.Score, StringComparison.Ordinal)
+                || source.StartsWith(SurveyConditionSources.ScorePrefix, StringComparison.Ordinal)
+                || (source.StartsWith(SurveyConditionSources.VariablePrefix, StringComparison.Ordinal) && scoreVariables.Contains(source.Substring(SurveyConditionSources.VariablePrefix.Length))));
+
+    private static bool FormulaReads(string formula, HashSet<string> scoreVariables)
+        => !string.IsNullOrWhiteSpace(formula)
+            && (_formulaScore.IsMatch(formula) || _formulaVariable.Matches(formula).Any(match => scoreVariables.Contains(match.Groups[1].Value)));
+
+    private static HashSet<string> ScoreVariables(SurveyDefinition definition)
+    {
+        // The calculated variables whose formula reads the score, directly or through another such variable.
+        var variables = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var calculated = (definition.Variables ?? [])
+            .Where(variable => variable is not null && variable.Kind == VariableKind.Calculated && !string.IsNullOrEmpty(variable.Name))
+            .ToList();
+
+        bool added;
+
+        do
+        {
+            added = false;
+
+            foreach (var variable in calculated)
+            {
+                if (!variables.Contains(variable.Name) && FormulaReads(variable.Formula, variables))
+                {
+                    variables.Add(variable.Name);
+                    added = true;
+                }
+            }
+        }
+        while (added);
+
+        return variables;
     }
 
     private void CheckPiping(SurveyDefinitionValidationContext context, DefinitionMap map)

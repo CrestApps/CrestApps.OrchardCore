@@ -16,6 +16,9 @@ public interface ISurveyEndingRenderer
     /// <param name="definition">The definition of the response's version.</param>
     /// <param name="response">The response.</param>
     /// <param name="ending">The ending.</param>
+    /// <param name="showScore">Whether the respondent may see the score now (see <see cref="Services.ISurveyReviewPolicy"/>):
+    /// when not, the score, the percent, the category scores and whether the response passed are left out of the model
+    /// and the piping.</param>
     /// <returns>The HTML.</returns>
-    Task<string> RenderAsync(Survey survey, SurveyDefinition definition, SurveyResponse response, SurveyEnding ending);
+    Task<string> RenderAsync(Survey survey, SurveyDefinition definition, SurveyResponse response, SurveyEnding ending, bool showScore);
 }

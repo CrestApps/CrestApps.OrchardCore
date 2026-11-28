@@ -235,7 +235,39 @@ public sealed class SurveyGradingServiceTests : IAsyncLifetime
         Assert.Equal(2m, response.Answers["q1"].Score);
     }
 
-    private async Task<T> RunAsync<T>(Func<SurveyGradingService, Task<T>> operation)
+    [Fact]
+    public async Task R12M10_RegradeVersions_WhosePageFailsToSave_NotifiesNoObserver()
+    {
+        // Arrange: the response is graded (6 of 6); version 2's key gives q1 1 point, so a regrade lowers the score to 5.
+        await RunAsync(service => service.GradeAsync("response1", new Dictionary<string, decimal> { ["essay"] = 4 }, null, null, "grader1"));
+        _versions.Versions["version2"] = new SurveyVersion { ItemId = "version2", SurveyId = "survey1", Number = 2, Definition = ScoringDefinitions.Quiz(("q1", 1m), ("essay", 4m)) };
+        _dispatcher.Events.Clear();
+
+        // Act: the page's save loses to a concurrent change.
+        var result = await RunAsync(service => service.RegradeVersionsAsync("survey1", ["version1"], "version2", "lead", "Key fix"), new FailingCommitter());
+
+        // Assert
+        Assert.Equal(0, result.Count);
+        Assert.Empty(_dispatcher.Events);
+    }
+
+    [Fact]
+    public async Task R12M10_RegradeVersions_NotifiesObservers_AfterThePageSaves()
+    {
+        // Arrange
+        await RunAsync(service => service.GradeAsync("response1", new Dictionary<string, decimal> { ["essay"] = 4 }, null, null, "grader1"));
+        _versions.Versions["version2"] = new SurveyVersion { ItemId = "version2", SurveyId = "survey1", Number = 2, Definition = ScoringDefinitions.Quiz(("q1", 1m), ("essay", 4m)) };
+        _dispatcher.Events.Clear();
+
+        // Act
+        var result = await RunAsync(service => service.RegradeVersionsAsync("survey1", ["version1"], "version2", "lead", "Key fix"));
+
+        // Assert
+        Assert.Equal(1, result.Count);
+        Assert.Equal(["ScoreChanged"], _dispatcher.Events);
+    }
+
+    private async Task<T> RunAsync<T>(Func<SurveyGradingService, Task<T>> operation, ISurveyResponseCommitter committer = null)
     {
         await using var session = _store.Store.CreateSession();
         var service = new SurveyGradingService(
@@ -244,7 +276,7 @@ public sealed class SurveyGradingServiceTests : IAsyncLifetime
             _versions,
             new SurveyScoringEngine(new ScoringFakeRegistry(), new NullSurveyScoreFormulaEvaluator(), new NullSurveyHiddenQuestionResolver()),
             new ScoringResponseQueries(session),
-            new YesSqlSurveyResponseCommitter(session),
+            committer ?? new YesSqlSurveyResponseCommitter(session),
             _dispatcher,
             _clock);
 
@@ -256,5 +288,11 @@ public sealed class SurveyGradingServiceTests : IAsyncLifetime
         await using var session = _store.Store.CreateSession();
 
         return await new SurveyResponseStore(session).FindByIdAsync("response1", TestContext.Current.CancellationToken);
+    }
+
+    private sealed class FailingCommitter : ISurveyResponseCommitter
+    {
+        public Task<bool> CommitAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(false);
     }
 }

@@ -8,6 +8,6 @@ namespace CrestApps.OrchardCore.Surveys.Core.Services;
 public sealed class NullSurveyScoreFormulaEvaluator : ISurveyScoreFormulaEvaluator
 {
     /// <inheritdoc />
-    public decimal? Evaluate(SurveyDefinition definition, IReadOnlyDictionary<string, decimal> categoryScores, decimal total)
+    public decimal? Evaluate(SurveyDefinition definition, SurveyResponse response)
         => null;
 }

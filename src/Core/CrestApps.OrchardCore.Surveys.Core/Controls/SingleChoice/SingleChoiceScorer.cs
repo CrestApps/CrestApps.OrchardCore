@@ -25,6 +25,12 @@ public sealed class SingleChoiceScorer : SurveyControlScorerBase
         {
             var points = chosen.Count == 1 && choicePoints.TryGetValue(chosen[0], out var value) ? value : 0;
 
+            // Negative choice points subtract only under negative marking, as they do for multiple choice.
+            if (context?.Settings?.NegativeMarking != true)
+            {
+                points = Math.Max(points, 0);
+            }
+
             return new SurveyScoreResult { Points = Math.Min(points, max), MaxPoints = max, Correct = max > 0 && points >= max };
         }
 

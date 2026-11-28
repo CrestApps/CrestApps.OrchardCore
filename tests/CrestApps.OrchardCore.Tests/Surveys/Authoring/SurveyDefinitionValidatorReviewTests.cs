@@ -61,6 +61,97 @@ public sealed class SurveyDefinitionValidatorReviewTests
         Assert.DoesNotContain("edit-after-review", codes);
     }
 
+    [Theory]
+    [InlineData("You scored {score}.", null)]
+    [InlineData("You got {percent}%.", null)]
+    [InlineData("Skills: {score:skill}.", null)]
+    [InlineData("You scored {{ Score }}.", null)]
+    [InlineData("{% if Response.Passed %}Well done{% endif %}", null)]
+    [InlineData("You got {{ Response.Percent }}%.", null)]
+    [InlineData(null, "/next?p={percent}")]
+    public async Task R12M1_ScoredEditAfterSubmit_RefusesTheScoreInAnEnding(string message, string redirectUrl)
+    {
+        // Arrange: the review shows the key only after close, so edit-after-review allows the survey.
+        var definition = KeyAfterCloseOnly();
+        definition.Endings[0].Message = message;
+        definition.Endings[0].RedirectUrl = redirectUrl;
+
+        // Act
+        var codes = await CodesAsync(definition);
+
+        // Assert
+        Assert.DoesNotContain("edit-after-review", codes);
+        Assert.Contains("edit-after-score-ending", codes);
+    }
+
+    [Fact]
+    public async Task R12M1_ScoredEditAfterSubmit_RefusesAnEndingChosenByTheScore()
+    {
+        // Arrange
+        var definition = KeyAfterCloseOnly();
+        definition.Endings.Add(new SurveyEnding
+        {
+            Id = "e2",
+            Name = "passed",
+            Condition = new SurveyVisibility
+            {
+                Mode = VisibilityMode.ShowWhen,
+                Rule = new CrestApps.OrchardCore.Conditions.ConditionRule { Conditions = [new CrestApps.OrchardCore.Conditions.Condition { Source = "score", Operator = CrestApps.OrchardCore.Conditions.ConditionOperator.GreaterThanOrEqual, Values = ["4"] }] },
+            },
+        });
+
+        // Act
+        var codes = await CodesAsync(definition);
+
+        // Assert
+        Assert.Contains("edit-after-score-ending", codes);
+    }
+
+    [Theory]
+    [InlineData("[percent] >= 50")]
+    [InlineData("SCORE('q1') > 0")]
+    [InlineData("[score:skill] > 1")]
+    [InlineData("[var:grade] > 1")]
+    public async Task R12M1_ScoredEditAfterSubmit_RefusesAnEndingWhoseFormulaReadsTheScore(string formula)
+    {
+        // Arrange: "grade" is a calculated variable over the score.
+        var definition = KeyAfterCloseOnly();
+        definition.Variables.Add(new SurveyVariable { Name = "grade", Kind = VariableKind.Calculated, Formula = "[score] * 2" });
+        definition.Endings.Add(new SurveyEnding { Id = "e2", Name = "passed", Condition = new SurveyVisibility { Mode = VisibilityMode.ShowWhen, Formula = formula } });
+
+        // Act
+        var codes = await CodesAsync(definition);
+
+        // Assert
+        Assert.Contains("edit-after-score-ending", codes);
+    }
+
+    [Fact]
+    public async Task R12M1_ScoreInAnEnding_IsAllowedWithoutEditAfterSubmit()
+    {
+        // Arrange
+        var definition = KeyAfterCloseOnly();
+        definition.Navigation.AllowEditAfterSubmit = false;
+        definition.Endings[0].Message = "You scored {score} ({{ Response.Percent }}%).";
+
+        // Act
+        var codes = await CodesAsync(definition);
+
+        // Assert
+        Assert.DoesNotContain("edit-after-score-ending", codes);
+    }
+
+    private static SurveyDefinition KeyAfterCloseOnly()
+    {
+        var definition = Scored();
+        definition.ScoreCategories.Add(new ScoreCategory { Id = "c1", Name = "skill" });
+        definition.Review.ImmediatelyAfter = ReviewShows.Responses;
+        definition.Review.LaterWhileOpen = ReviewShows.Responses;
+        definition.Review.AfterClose = ReviewShows.All;
+
+        return definition;
+    }
+
     private static SurveyDefinition Scored()
     {
         var definition = AuthoringDefinitions.TwoPages();

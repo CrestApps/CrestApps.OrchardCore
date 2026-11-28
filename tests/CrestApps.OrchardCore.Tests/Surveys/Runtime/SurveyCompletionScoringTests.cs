@@ -278,6 +278,73 @@ public sealed class SurveyCompletionScoringTests
         Assert.Equal("try", second.EndingId);
     }
 
+    [Fact]
+    public async Task Completion_WithAScoreFormula_ReadsTheCategoryScores_WithTheRealEngineAndEvaluator()
+    {
+        // Arrange: category "a" holds q1, category "b" holds q2 and q3 (2 points each, 6 in all). Pass at 60%.
+        await using var harness = await CreateHarnessAsync();
+        var definition = Quiz(RuntimeSurveys.Page("p1", Scored("q1", "c1"), Scored("q2", "c2"), Scored("q3", "c2")));
+        definition.ScoreCategories.Add(new ScoreCategory { Id = "c1", Name = "a" });
+        definition.ScoreCategories.Add(new ScoreCategory { Id = "c2", Name = "b" });
+        definition.Scoring.ScoreFormula = "[score:a] * 2 + [score:b]";
+        definition.Scoring.PassMarkPercent = 60;
+        definition.Scoring.RoundingDecimals = 2;
+
+        var survey = await harness.PublishAsync(definition);
+        var response = (await harness.StartAsync(survey, "u1")).Response;
+
+        // Act: q1 right (a = 2), q2 and q3 wrong (b = 0); the raw sum is 2 (33%), the formula makes it 2 * 2 + 0 = 4.
+        await harness.PostAsync(response, _identity, SurveyPageDirection.Finish, ("q1", "right"), ("q2", "wrong"), ("q3", "wrong"));
+        var stored = await harness.FindAsync(response.ItemId);
+        var regraded = await RegradeAsync(harness, definition, stored);
+
+        // Assert
+        Assert.Equal(SurveyResponseStatus.Completed, stored.Status);
+        Assert.Equal(2m, stored.CategoryScores["c1"]);
+        Assert.Equal(4m, stored.Score);
+        Assert.Equal(6m, stored.MaxScore);
+        Assert.Equal(66.67m, stored.Percent);
+        Assert.True(stored.Passed);
+        Assert.Equal(4m, regraded.Score);
+        Assert.True(regraded.Passed);
+    }
+
+    [Fact]
+    public async Task ScoreFormula_ReadsQuestionScores_AndTheRawScoreAndPercent_WithTheRealEngineAndEvaluator()
+    {
+        // Arrange: two 2-point questions; the formula reads SCORE('q1'), the raw [score] and the raw [percent].
+        var definition = Quiz(RuntimeSurveys.Page("p1", Scored("q1"), Scored("q2")));
+        definition.Scoring.ScoreFormula = "SCORE('q1') + [score] + [percent] / 25";
+        definition.Scoring.PassMarkPercent = 100;
+
+        var response = new SurveyResponse
+        {
+            Status = SurveyResponseStatus.Completed,
+            Answers =
+            {
+                ["q1"] = new SurveyAnswer { Values = ["right"] },
+                ["q2"] = new SurveyAnswer { Values = ["wrong"] },
+            },
+        };
+
+        // Act: SCORE('q1') = 2, the raw score is 2 and the raw percent 50, so the total is 2 + 2 + 2 = 6.
+        await using var harness = await CreateHarnessAsync();
+        var scored = await harness.RunAsync(async services =>
+        {
+            var engine = services.GetRequiredService<ISurveyScoringEngine>();
+            await engine.PrepareAsync();
+            engine.Score(definition, response);
+
+            return response;
+        });
+
+        // Assert
+        Assert.Equal(6m, scored.Score);
+        Assert.Equal(4m, scored.MaxScore);
+        Assert.Equal(150m, scored.Percent);
+        Assert.True(scored.Passed);
+    }
+
     private static Task<SurveyResponse> RegradeAsync(RuntimeTestHarness harness, SurveyDefinition definition, SurveyResponse stored)
         => harness.RunAsync(services =>
         {
@@ -326,10 +393,10 @@ public sealed class SurveyCompletionScoringTests
         return definition;
     }
 
-    private static SurveyQuestion Scored(string id)
+    private static SurveyQuestion Scored(string id, string categoryId = null)
     {
         var question = RuntimeSurveys.Choice(id, "right", "wrong");
-        question.Scoring = new SurveyQuestionScoring { Points = 2, CorrectChoiceIds = ["right"] };
+        question.Scoring = new SurveyQuestionScoring { Points = 2, CorrectChoiceIds = ["right"], CategoryId = categoryId };
 
         return question;
     }

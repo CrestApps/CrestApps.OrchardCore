@@ -57,7 +57,7 @@ public sealed partial class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
     }
 
     /// <inheritdoc />
-    public async Task<string> RenderAsync(Survey survey, SurveyDefinition definition, SurveyResponse response, SurveyEnding ending)
+    public async Task<string> RenderAsync(Survey survey, SurveyDefinition definition, SurveyResponse response, SurveyEnding ending, bool showScore)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(response);
@@ -91,9 +91,9 @@ public sealed partial class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
                 var rendered = await RestrictedLiquid.RenderAsync(message, new Dictionary<string, FluidValue>(StringComparer.Ordinal)
                 {
                     ["Survey"] = FluidValue.Create(new Dictionary<string, object> { ["Name"] = survey?.Name, ["Title"] = survey?.Title }, options),
-                    ["Response"] = FluidValue.Create(new Dictionary<string, object> { ["Number"] = response.Number, ["Status"] = response.Status.ToString(), ["Percent"] = response.Percent, ["Passed"] = response.Passed }, options),
+                    ["Response"] = FluidValue.Create(new Dictionary<string, object> { ["Number"] = response.Number, ["Status"] = response.Status.ToString(), ["Percent"] = showScore ? response.Percent : null, ["Passed"] = showScore ? response.Passed : null }, options),
                     ["Answers"] = FluidValue.Create(answers, options),
-                    ["Score"] = response.Score is { } score ? NumberValue.Create(score) : NilValue.Instance,
+                    ["Score"] = showScore && response.Score is { } score ? NumberValue.Create(score) : NilValue.Instance,
                 }, _encoder, await RestrictedLiquidContexts.CreateAsync(_localClock));
 
                 if (rendered is null)
@@ -116,7 +116,7 @@ public sealed partial class LiquidSurveyEndingRenderer : ISurveyEndingRenderer
         }
 
         // Piping last: the values are HTML-encoded and their braces encoded, and nothing is parsed afterwards.
-        message = _piping.Render(message, definition, response);
+        message = _piping.Render(message, definition, response, showScore: showScore);
 
         return _sanitizer.Sanitize(message);
     }

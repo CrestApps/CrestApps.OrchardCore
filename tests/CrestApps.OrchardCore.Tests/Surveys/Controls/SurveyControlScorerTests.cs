@@ -50,6 +50,19 @@ public sealed class SurveyControlScorerTests
         Assert.False(result.Correct);
     }
 
+    [Theory]
+    [InlineData(false, 0)]
+    [InlineData(true, -2)]
+    public void R12L16_SingleChoice_NegativeChoicePoints_SubtractOnlyUnderNegativeMarking(bool negativeMarking, double expected)
+    {
+        var question = Question(SurveyControlNames.SingleChoice, ("a", "A"), ("b", "B"));
+        question.Scoring = new SurveyQuestionScoring { ChoicePoints = new() { ["a"] = -2, ["b"] = 5 } };
+
+        var result = new SingleChoiceScorer().Score(question, new SurveyAnswer { Values = ["a"] }, ScoringContext(negativeMarking: negativeMarking));
+
+        Assert.Equal((decimal)expected, result.Points);
+    }
+
     [Fact]
     public void SingleChoice_Score_TakesThePenaltyUnderNegativeMarking()
     {
@@ -187,6 +200,22 @@ public sealed class SurveyControlScorerTests
         var result = new RankingScorer().Score(question, new SurveyAnswer { Values = order.ToList() }, ScoringContext());
 
         Assert.Equal((decimal)expected, result.Points);
+    }
+
+    [Theory]
+    [InlineData(new[] { "a", "b" }, false, 3)]
+    [InlineData(new[] { "b", "a" }, false, 0)]
+    [InlineData(new[] { "a", "c" }, true, 1.5)]
+    public void R12L14_Ranking_WithItemsToRank_AndNoKey_ScoresTheTopItemsOfTheDesignedOrder(string[] order, bool partial, double expected)
+    {
+        var question = Question(SurveyControlNames.Ranking, ("a", "A"), ("b", "B"), ("c", "C"));
+        question.SetSettings(new RankingSettings { MaxRanked = 2 });
+        question.Scoring = new SurveyQuestionScoring { Points = 3, PartialCredit = partial };
+
+        var result = new RankingScorer().Score(question, new SurveyAnswer { Values = order.ToList() }, ScoringContext());
+
+        Assert.Equal((decimal)expected, result.Points);
+        Assert.Equal(expected == 3, result.Correct);
     }
 
     [Fact]

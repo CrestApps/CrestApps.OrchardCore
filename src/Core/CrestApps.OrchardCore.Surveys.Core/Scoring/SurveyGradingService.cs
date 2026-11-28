@@ -278,6 +278,9 @@ public sealed class SurveyGradingService : ISurveyGradingService
                     break;
                 }
 
+                // The observers hear about a page only once it is saved: a page whose commit fails changed no score.
+                var notifications = new List<(SurveyResponse Response, GradingStatus WasGrading, decimal? Before, ScoreChange Change)>();
+
                 foreach (var item in page)
                 {
                     var response = await _responses.FindByIdAsync(item.ItemId, cancellationToken) ?? item;
@@ -305,7 +308,7 @@ public sealed class SurveyGradingService : ISurveyGradingService
                     response.ModifiedUtc = _clock.UtcNow;
 
                     await _responses.UpdateAsync(response, cancellationToken);
-                    Notify(survey, version, response, wasGrading, before, change, actorId);
+                    notifications.Add((response, wasGrading, before, change));
                     count++;
                 }
 
@@ -314,6 +317,11 @@ public sealed class SurveyGradingService : ISurveyGradingService
                     result.Count = count - page.Count;
 
                     return result;
+                }
+
+                foreach (var notification in notifications)
+                {
+                    Notify(survey, version, notification.Response, notification.WasGrading, notification.Before, notification.Change, actorId);
                 }
 
                 skip += page.Count;
@@ -357,7 +365,9 @@ public sealed class SurveyGradingService : ISurveyGradingService
         response.Score = Math.Round(score, decimals, MidpointRounding.AwayFromZero);
         response.Percent = max > 0 ? Math.Round(score / max * 100m, decimals, MidpointRounding.AwayFromZero) : null;
         response.Grading = GradingStatus.Graded;
-        SurveyScoringEngine.ApplyResult(definition, response);
+
+        // The pass is decided on the exact percent, as the scoring engine decides it.
+        SurveyScoringEngine.ApplyResult(definition, response, max > 0 ? score / max * 100m : null);
 
         var change = new ScoreChange
         {

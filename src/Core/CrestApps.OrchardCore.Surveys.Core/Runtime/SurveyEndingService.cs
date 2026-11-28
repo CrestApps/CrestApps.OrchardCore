@@ -1,7 +1,10 @@
 using CrestApps.OrchardCore.Surveys.Core.Logic;
+using CrestApps.OrchardCore.Surveys.Core.Scoring;
+using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Core.Translations;
 using CrestApps.OrchardCore.Surveys.Models;
 using OrchardCore.Entities;
+using OrchardCore.Modules;
 using OrchardCore.Settings;
 
 namespace CrestApps.OrchardCore.Surveys.Core.Runtime;
@@ -16,6 +19,8 @@ public sealed class SurveyEndingService
     private readonly IEnumerable<ISurveyEndingRenderer> _renderers;
     private readonly ISiteService _siteService;
     private readonly SurveyDefinitionLocalizer _localizer;
+    private readonly ISurveyReviewPolicy _reviewPolicy;
+    private readonly IClock _clock;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyEndingService"/> class.
@@ -25,13 +30,20 @@ public sealed class SurveyEndingService
     /// <param name="renderers">The ending renderer of the module, if any.</param>
     /// <param name="siteService">The site service.</param>
     /// <param name="localizer">The definition localizer, for translated texts.</param>
+    /// <param name="reviewPolicies">The review policy, which decides whether the score shows; the default policy when
+    /// scoring isn't registered.</param>
+    /// <param name="clock">The clock.</param>
     public SurveyEndingService(
         SurveyLogicEngine logic,
         SurveyPipingRenderer piping,
         IEnumerable<ISurveyEndingRenderer> renderers,
         ISiteService siteService,
-        SurveyDefinitionLocalizer localizer)
+        SurveyDefinitionLocalizer localizer,
+        IEnumerable<ISurveyReviewPolicy> reviewPolicies,
+        IClock clock)
     {
+        _reviewPolicy = reviewPolicies?.LastOrDefault() ?? new SurveyReviewPolicy();
+        _clock = clock;
         _localizer = localizer;
         _logic = logic;
         _piping = piping;
@@ -70,7 +82,8 @@ public sealed class SurveyEndingService
     }
 
     /// <summary>
-    /// Renders the ending of an ended response.
+    /// Renders the ending of an ended response. The score, the percent, the category scores and the pass show in it only
+    /// when the review shows the respondent the score at this moment, so an ending never gives away what the review hides.
     /// </summary>
     /// <param name="survey">The survey.</param>
     /// <param name="definition">The definition of its version.</param>
@@ -94,20 +107,22 @@ public sealed class SurveyEndingService
             ScreenedOut = response.Status == SurveyResponseStatus.ScreenedOut,
         };
 
+        var showScore = _reviewPolicy.GetAllowed(survey, definition, response, _clock.UtcNow).HasFlag(ReviewShows.Score);
+
         if (ending is not null)
         {
             var renderer = _renderers.LastOrDefault();
 
             view.MessageHtml = renderer is not null
-                ? await renderer.RenderAsync(survey, definition, response, ending)
-                : _piping.Render(ending.Message, definition, response);
+                ? await renderer.RenderAsync(survey, definition, response, ending, showScore)
+                : _piping.Render(ending.Message, definition, response, showScore: showScore);
         }
 
         var redirect = !string.IsNullOrWhiteSpace(ending?.RedirectUrl) ? ending.RedirectUrl : definition.Presentation?.CompletedRedirectUrl;
 
         if (!string.IsNullOrWhiteSpace(redirect))
         {
-            var url = _piping.Render(redirect.Trim(), definition, response, encode: false, urlEncode: true);
+            var url = _piping.Render(redirect.Trim(), definition, response, encode: false, urlEncode: true, showScore: showScore);
             (await _siteService.GetSiteSettingsAsync()).TryGet<SurveySettings>(out var settings);
 
             if (IsAllowedRedirect(url, requestHost, settings?.AllowedRedirectHosts))

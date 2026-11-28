@@ -20,6 +20,7 @@ public sealed class SurveyPublisher : ISurveyPublisher
     private readonly SurveyBankDrawResolver _bankDrawResolver;
     private readonly IEnumerable<ISurveyObserver> _observers;
     private readonly IClock _clock;
+    private readonly global::YesSql.ISession _session;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="SurveyPublisher"/> class.
@@ -33,6 +34,7 @@ public sealed class SurveyPublisher : ISurveyPublisher
     /// <param name="bankDrawResolver">The bank draw resolver.</param>
     /// <param name="observers">The survey observers.</param>
     /// <param name="clock">The clock.</param>
+    /// <param name="session">The YesSql session the survey is saved in.</param>
     public SurveyPublisher(
         ISurveyManager surveyManager,
         SurveyVersionStore versionStore,
@@ -42,7 +44,8 @@ public sealed class SurveyPublisher : ISurveyPublisher
         ISurveyDefinitionDiffer differ,
         SurveyBankDrawResolver bankDrawResolver,
         IEnumerable<ISurveyObserver> observers,
-        IClock clock)
+        IClock clock,
+        global::YesSql.ISession session)
     {
         _surveyManager = surveyManager;
         _versionStore = versionStore;
@@ -53,6 +56,7 @@ public sealed class SurveyPublisher : ISurveyPublisher
         _bankDrawResolver = bankDrawResolver;
         _observers = observers;
         _clock = clock;
+        _session = session;
     }
 
     /// <inheritdoc />
@@ -108,6 +112,11 @@ public sealed class SurveyPublisher : ISurveyPublisher
         };
 
         await _versionStore.CreateAsync(version, cancellationToken);
+
+        // The number is read before anything is written, so two publishes at once would both take it. Saving the survey
+        // with a concurrency check makes the second commit fail (and roll back its version) instead. A lock with a save
+        // here would not do: the upgrade steps publish in a loop, and a save mid-loop detaches documents read before it.
+        await _session.SaveAsync(survey, checkConcurrency: true, collection: SurveysConstants.CollectionName, cancellationToken: cancellationToken);
 
         survey.PublishedVersionId = version.ItemId;
         survey.PublishedVersionNumber = number;

@@ -50,7 +50,7 @@ Anyone who may edit a draft writes the message, so it never runs with Orchard Co
 
 ## Piping
 
-`{name}` in titles, descriptions, choice texts, ending messages and redirect URLs shows an earlier answer (through the type's `FormatAnswer`), HTML-encoded with `{` and `}` encoded too, so a piped answer never reads as a reference or as Liquid (URL-encoded in redirect URLs). Also `{name.row}`, `{var:name}`, `{score}`, `{score:category}` and `{percent}`. An unknown name shows nothing; publishing checks that names exist and come earlier.
+`{name}` in titles, descriptions, choice texts, ending messages and redirect URLs shows an earlier answer (through the type's `FormatAnswer`), HTML-encoded with `{` and `}` encoded too, so a piped answer never reads as a reference or as Liquid (URL-encoded in redirect URLs). Also `{name.row}`, `{var:name}`, `{score}`, `{score:category}` and `{percent}`; in an ending, the last three show only when the review at that moment shows the respondent the score ([Review policy](./scoring-and-grading.md#review-policy)). An unknown name shows nothing; publishing checks that names exist and come earlier.
 
 ## Formulas and variables
 

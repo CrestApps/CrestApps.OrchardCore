@@ -1,8 +1,10 @@
 using CrestApps.OrchardCore.Surveys;
+using CrestApps.OrchardCore.Surveys.Core.Indexes;
 using CrestApps.OrchardCore.Surveys.Core.Services;
 using CrestApps.OrchardCore.Surveys.Models;
 using CrestApps.OrchardCore.Surveys.Services;
 using CrestApps.OrchardCore.Tests.Surveys.TestSupport;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Surveys.Authoring;
 
@@ -44,6 +46,43 @@ public sealed class SurveyPublisherTests : IAsyncLifetime
         Assert.NotNull(link);
         Assert.Equal(22, link.Token.Length);
         Assert.Equal(SurveyCollectorKinds.WebLink, link.Kind);
+    }
+
+    [Fact]
+    public async Task R12L15_TwoConcurrentPublishes_NeverSaveTwoVersionsWithOneNumber()
+    {
+        // Arrange: a survey with a draft, committed.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        string surveyId;
+
+        await using (var setup = _harness.Store.CreateSession())
+        {
+            var created = await _harness.CreateServices(setup).Manager.CreateSurveyAsync(new SurveyCreateRequest { Title = "Pub", Definition = AuthoringDefinitions.TwoPages() }, cancellationToken);
+            created.NoDefaultWebLink = true;
+            await setup.SaveChangesAsync(cancellationToken);
+            surveyId = created.ItemId;
+        }
+
+        // Act: two requests publish at once; both read the version numbers before either commits.
+        await using var first = _harness.Store.CreateSession();
+        await using var second = _harness.Store.CreateSession();
+        var firstResult = await _harness.CreateServices(first).Publisher.PublishAsync(surveyId, "first", "a", cancellationToken);
+        var secondResult = await _harness.CreateServices(second).Publisher.PublishAsync(surveyId, "second", "b", cancellationToken);
+
+        await first.SaveChangesAsync(cancellationToken);
+        var secondSave = await Record.ExceptionAsync(() => second.SaveChangesAsync(cancellationToken));
+
+        // Assert: both computed version 1, but only one of them is saved; the other request's save fails.
+        Assert.True(firstResult.Succeeded);
+        Assert.True(secondResult.Succeeded);
+
+        await using var check = _harness.Store.CreateSession();
+        var numbers = await new SurveyVersionStore(check).ListNumbersAsync(surveyId, cancellationToken);
+        var versions = await check.Query<SurveyVersion, SurveyVersionIndex>(index => index.SurveyId == surveyId, SurveysConstants.CollectionName).ListAsync(cancellationToken);
+
+        Assert.Equal([1], numbers);
+        Assert.Single(versions);
+        Assert.IsType<global::YesSql.ConcurrencyException>(secondSave);
     }
 
     [Fact]

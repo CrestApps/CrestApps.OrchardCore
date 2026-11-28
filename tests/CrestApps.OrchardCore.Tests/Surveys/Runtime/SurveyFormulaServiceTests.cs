@@ -113,9 +113,14 @@ public sealed class SurveyFormulaServiceTests
         definition.ScoreCategories.Add(new ScoreCategory { Id = "c2", Name = "b" });
         definition.Scoring.ScoreFormula = "[score:a] * 2 + [score:b]";
 
+        // The scoring engine keeps the category scores by category id; the formula names the categories.
+        var response = new SurveyResponse { Score = 7 };
+        response.CategoryScores["c1"] = 3;
+        response.CategoryScores["c2"] = 4;
+
         // Act
         var total = await harness.RunAsync(services => Task.FromResult(services.GetRequiredService<ISurveyScoreFormulaEvaluator>()
-            .Evaluate(definition, new Dictionary<string, decimal> { ["c1"] = 3, ["c2"] = 4 }, 7)));
+            .Evaluate(definition, response)));
 
         // Assert
         Assert.Equal(10m, total);

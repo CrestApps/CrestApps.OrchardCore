@@ -136,30 +136,28 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
 
         if (!string.IsNullOrWhiteSpace(settings.ScoreFormula))
         {
-            var byName = new Dictionary<string, decimal>(StringComparer.OrdinalIgnoreCase);
+            // The formula reads this response: the question scores (SCORE), the category scores by id ([score:name]),
+            // and, as its score and percent, the sum of the points and its percent before the formula ([score],
+            // [percent]), unrounded.
+            response.Answers ??= [];
+            response.Score = total;
+            response.Percent = max > 0 ? total / max * 100m : null;
 
-            foreach (var category in definition.ScoreCategories ?? [])
-            {
-                if (!string.IsNullOrEmpty(category?.Name))
-                {
-                    byName[category.Name] = response.CategoryScores.GetValueOrDefault(category.Id);
-                }
-            }
-
-            if (_formulaEvaluator.Evaluate(definition, byName, total) is { } formulaTotal)
+            if (_formulaEvaluator.Evaluate(definition, response) is { } formulaTotal)
             {
                 total = formulaTotal;
             }
         }
 
+        // The pass and the band are decided on the exact percent: 69.5% doesn't pass a 70% mark because it shows as 70%.
+        var percent = max > 0 ? total / max * 100m : (decimal?)null;
+
         response.Score = Math.Round(total, decimals, MidpointRounding.AwayFromZero);
         response.MaxScore = Math.Round(max, decimals, MidpointRounding.AwayFromZero);
-        response.Percent = max > 0
-            ? Math.Round(total / max * 100m, decimals, MidpointRounding.AwayFromZero)
-            : null;
+        response.Percent = percent is { } exact ? Math.Round(exact, decimals, MidpointRounding.AwayFromZero) : null;
         response.Grading = pending ? GradingStatus.Pending : GradingStatus.Graded;
 
-        ApplyResult(definition, response);
+        ApplyResult(definition, response, percent);
     }
 
     /// <summary>
@@ -168,22 +166,32 @@ public sealed class SurveyScoringEngine : ISurveyScoringEngine
     /// <param name="definition">The definition.</param>
     /// <param name="response">The response.</param>
     public static void ApplyResult(SurveyDefinition definition, SurveyResponse response)
+        => ApplyResult(definition, response, response?.Percent);
+
+    /// <summary>
+    /// Sets whether a response passed and its score band from its exact (unrounded) percent, so a percent that only
+    /// rounds up to the pass mark or a band's minimum doesn't reach it. Nothing passes while grading is pending.
+    /// </summary>
+    /// <param name="definition">The definition.</param>
+    /// <param name="response">The response, whose <see cref="SurveyResponse.Percent"/> is the rounded percent.</param>
+    /// <param name="exactPercent">The unrounded percent, or <see langword="null"/> when there is none.</param>
+    public static void ApplyResult(SurveyDefinition definition, SurveyResponse response, decimal? exactPercent)
     {
         ArgumentNullException.ThrowIfNull(definition);
         ArgumentNullException.ThrowIfNull(response);
 
-        var band = SurveyPassRule.FindBand(definition, response.Percent);
+        var band = SurveyPassRule.FindBand(definition, exactPercent);
 
         response.ScoreBandId = band?.Id;
 
-        if (response.Grading != GradingStatus.Graded || response.Percent is null)
+        if (response.Grading != GradingStatus.Graded || exactPercent is null)
         {
             response.Passed = null;
 
             return;
         }
 
-        response.Passed = SurveyPassRule.Decide(definition, response.Percent);
+        response.Passed = SurveyPassRule.Decide(definition, exactPercent);
     }
 
     /// <summary>

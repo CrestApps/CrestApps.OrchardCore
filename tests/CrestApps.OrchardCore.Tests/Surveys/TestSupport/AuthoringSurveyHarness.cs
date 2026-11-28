@@ -173,7 +173,8 @@ internal sealed class AuthoringSurveyHarness : IAsyncDisposable
             new SurveyDefinitionDiffer(),
             new SurveyBankDrawResolver(bankQuestionStore, new AuthoringLocalizer<SurveyBankDrawResolver>()),
             [],
-            clock.Object);
+            clock.Object,
+            session);
 
         return new AuthoringServices
         {

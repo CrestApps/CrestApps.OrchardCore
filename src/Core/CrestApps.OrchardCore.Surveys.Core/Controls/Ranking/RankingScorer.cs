@@ -5,7 +5,8 @@ namespace CrestApps.OrchardCore.Surveys.Core.Controls.Ranking;
 
 /// <summary>
 /// Scores a ranking against the right order (the key's right choice ids, or the designed order of the items), with
-/// partial credit for items in their right place.
+/// partial credit for items in their right place. With "Items to rank" set, the first that many items of the right
+/// order are the key.
 /// </summary>
 public sealed class RankingScorer : SurveyControlScorerBase
 {
@@ -44,8 +45,16 @@ public sealed class RankingScorer : SurveyControlScorerBase
     protected override string RightAnswer(SurveyQuestion question)
         => ChoiceTexts(question, RightOrder(question));
 
+    // The right order of the items the respondent ranks: with "Items to rank" set, only its first items, since the
+    // respondent ranks no more than that many.
     private static List<string> RightOrder(SurveyQuestion question)
-        => question.Scoring?.CorrectChoiceIds is { Count: > 0 } key
+    {
+        var order = question.Scoring?.CorrectChoiceIds is { Count: > 0 } key
             ? key.ToList()
             : question.Choices.Where(choice => choice is not null && !choice.Retired).Select(choice => choice.Id).ToList();
+
+        return question.GetSettings<RankingSettings>().MaxRanked is int maxRanked and > 0 && order.Count > maxRanked
+            ? order.Take(maxRanked).ToList()
+            : order;
+    }
 }

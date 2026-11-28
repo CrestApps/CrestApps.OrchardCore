@@ -5,7 +5,8 @@ using CrestApps.OrchardCore.Surveys.Models;
 namespace CrestApps.OrchardCore.Surveys.Core.Formulas;
 
 /// <summary>
-/// Computes a survey's total score from its score formula over the category scores, with the survey formula service.
+/// Computes a survey's total score from its score formula, with the survey formula service, over the response being
+/// scored: its category scores, its question scores, and its sum of points and percent before the formula.
 /// </summary>
 public sealed class SurveyFormulaScoreEvaluator : ISurveyScoreFormulaEvaluator
 {
@@ -21,18 +22,11 @@ public sealed class SurveyFormulaScoreEvaluator : ISurveyScoreFormulaEvaluator
     }
 
     /// <inheritdoc />
-    public decimal? Evaluate(SurveyDefinition definition, IReadOnlyDictionary<string, decimal> categoryScores, decimal total)
+    public decimal? Evaluate(SurveyDefinition definition, SurveyResponse response)
     {
-        if (string.IsNullOrWhiteSpace(definition?.Scoring?.ScoreFormula))
+        if (string.IsNullOrWhiteSpace(definition?.Scoring?.ScoreFormula) || response is null)
         {
             return null;
-        }
-
-        var response = new SurveyResponse { Score = total };
-
-        foreach (var score in categoryScores ?? new Dictionary<string, decimal>())
-        {
-            response.CategoryScores[score.Key] = score.Value;
         }
 
         return _formulas.Evaluate(definition, response, definition.Scoring.ScoreFormula) switch

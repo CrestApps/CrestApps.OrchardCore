@@ -76,8 +76,10 @@ public sealed class SurveyPipingRenderer
     /// <param name="hiddenQuestionIds">The ids of hidden questions, which render empty, or <see langword="null"/>.</param>
     /// <param name="encode">Whether values are HTML-encoded (for HTML texts) or URL-encoded when <paramref name="urlEncode"/> is set.</param>
     /// <param name="urlEncode">Whether values are URL-encoded (for redirect URLs).</param>
+    /// <param name="showScore">Whether the score may show: when not, <c>{score}</c>, <c>{percent}</c> and
+    /// <c>{score:category}</c> render empty.</param>
     /// <returns>The rendered text.</returns>
-    public string Render(string text, SurveyDefinition definition, SurveyResponse response, ISet<string> hiddenQuestionIds = null, bool encode = true, bool urlEncode = false)
+    public string Render(string text, SurveyDefinition definition, SurveyResponse response, ISet<string> hiddenQuestionIds = null, bool encode = true, bool urlEncode = false, bool showScore = true)
     {
         if (!HasReferences(text) || definition is null || response is null)
         {
@@ -107,7 +109,7 @@ public sealed class SurveyPipingRenderer
                 if (name.Length is > 0 and <= 200 && !name.Contains('{', StringComparison.Ordinal) && !name.Contains(' ', StringComparison.Ordinal))
                 {
                     builder.Append(text, last, start - last);
-                    var value = Resolve(name, definition, response, hiddenQuestionIds, format) ?? string.Empty;
+                    var value = !showScore && IsScoreReference(name) ? string.Empty : Resolve(name, definition, response, hiddenQuestionIds, format) ?? string.Empty;
                     builder.Append(urlEncode ? Uri.EscapeDataString(value) : encode ? HtmlEncode(value) : value);
                     last = i + 1;
                 }
@@ -130,6 +132,16 @@ public sealed class SurveyPipingRenderer
         => WebUtility.HtmlEncode(value ?? string.Empty)
             .Replace("{", "&#123;", StringComparison.Ordinal)
             .Replace("}", "&#125;", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Gets whether a reference names the score: <c>score</c>, <c>percent</c> or <c>score:category</c>.
+    /// </summary>
+    /// <param name="name">The reference, without its braces.</param>
+    /// <returns><see langword="true"/> for a score reference.</returns>
+    public static bool IsScoreReference(string name)
+        => string.Equals(name, "score", StringComparison.Ordinal)
+            || string.Equals(name, "percent", StringComparison.Ordinal)
+            || (name?.StartsWith("score:", StringComparison.Ordinal) ?? false);
 
     private string Resolve(string name, SurveyDefinition definition, SurveyResponse response, ISet<string> hidden, SurveyFormatContext format)
     {

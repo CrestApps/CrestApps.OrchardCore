@@ -129,7 +129,7 @@ public sealed class LiquidSurveyEndingRendererTests
                 Mock.Of<global::OrchardCore.Modules.ILocalClock>(clock => clock.GetLocalTimeZoneAsync() == Task.FromResult<global::OrchardCore.Modules.ITimeZone>(null)),
                 NullLogger<LiquidSurveyEndingRenderer>.Instance);
 
-            return renderer.RenderAsync(new Survey { Name = "s", Title = "Survey" }, definition, response, ending);
+            return renderer.RenderAsync(new Survey { Name = "s", Title = "Survey" }, definition, response, ending, showScore: true);
         });
 
     private static int CountOf(string text, string value)
