@@ -35,6 +35,11 @@
                 <dt class="col-sm-3">@T["Completed"]</dt>
                 <dd class="col-sm-9">@if (anonymous) { @await AnonymousDays.TextAsync(completed) } else { @await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(completed, DateTimeKind.Utc), Format: "g")) } @(response.AutoSubmitted ? T["(at the deadline)"].Value : string.Empty)</dd>
             }
+            @if (!anonymous && response.StatementAcceptedUtc is { } accepted)
+            {
+                <dt class="col-sm-3">@T["Statement accepted"]</dt>
+                <dd class="col-sm-9" data-survey-statement-accepted>@await DisplayAsync(await New.DateTime(Utc: DateTime.SpecifyKind(accepted, DateTimeKind.Utc), Format: "g"))</dd>
+            }
             @if (response.Score is not null)
             {
                 <dt class="col-sm-3">@T["Score"]</dt>

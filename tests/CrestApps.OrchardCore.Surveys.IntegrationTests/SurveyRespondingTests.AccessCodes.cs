@@ -131,10 +131,15 @@ public sealed partial class SurveyRespondingTests
         var started = await PostStartWithAsync(respondent, token, password: null, acceptStatement: true);
         var response = await LatestResponseAsync(surveyId);
 
-        // Assert
+        using var admin = await _fixture.CreateClientAsync("admin");
+        var details = await admin.GetStringAsync($"Admin/surveys/responses/{response.ItemId}", TestContext.Current.CancellationToken);
+
+        // Assert: the response keeps when the statement was accepted, and its page shows it.
         Assert.Equal(HttpStatusCode.Redirect, started.StatusCode);
         Assert.StartsWith("/s/r/", started.Headers.Location?.OriginalString, StringComparison.Ordinal);
         Assert.NotNull(response.StatementAcceptedUtc);
+        Assert.Contains("data-survey-statement-accepted", details, StringComparison.Ordinal);
+        Assert.Contains("<dt class=\"col-sm-3\">Statement accepted</dt>", details, StringComparison.Ordinal);
     }
 
     private static async Task<HttpResponseMessage> PostStartWithAsync(HttpClient browser, string collectorToken, string password, bool acceptStatement)

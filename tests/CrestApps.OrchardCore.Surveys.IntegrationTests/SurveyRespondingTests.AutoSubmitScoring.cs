@@ -72,7 +72,46 @@ public sealed partial class SurveyRespondingTests
         Assert.DoesNotContain("Track B question one", review, StringComparison.Ordinal);
     }
 
-    private Task<(string SurveyId, string Token, Dictionary<string, string> Ids)> PublishTrackQuizAsync(string title)
+    [Fact]
+    public async Task Review_ShowsEachAnswersFeedbackOnce()
+    {
+        // Arrange: the review shows right answers and feedback; question two is answered wrong.
+        var (_, token, ids) = await PublishTrackQuizAsync("Track quiz feedback once", ReviewShows.Score | ReviewShows.Responses | ReviewShows.RightAnswers | ReviewShows.Feedback);
+        using var http = await _fixture.CreateClientAsync();
+        var cancellationToken = TestContext.Current.CancellationToken;
+        var (responsePath, page1) = await StartQuizAsync(http, token);
+        var antiforgery = SurveysSiteFixture.Token(page1);
+
+        await http.PostAsync(responsePath, Multipart(antiforgery, page1, "next", (ids["track"], ids["a"])), cancellationToken);
+        var trackA = await http.GetStringAsync(responsePath, cancellationToken);
+        await http.PostAsync(responsePath, Multipart(antiforgery, trackA, "finish", (ids["qa1"], ids["qa1a"]), (ids["qa2"], ids["qa2b"])), cancellationToken);
+
+        // Act
+        var review = await http.GetStringAsync($"{responsePath}/review", cancellationToken);
+
+        // Assert: the question's own review template shows the feedback; the question around it doesn't repeat it.
+        var start = review.IndexOf($"data-question-id=\"{ids["qa2"]}\"", StringComparison.Ordinal);
+        Assert.True(start >= 0, "The review lists question two.");
+        var end = review.IndexOf("data-question-id=", start + 1, StringComparison.Ordinal);
+        var question = end < 0 ? review[start..] : review[start..end];
+
+        Assert.Equal(1, CountOf(question, "class=\"survey-feedback"));
+        Assert.Equal(1, CountOf(question, "Incorrect"));
+    }
+
+    private static int CountOf(string text, string value)
+    {
+        var count = 0;
+
+        for (var index = text.IndexOf(value, StringComparison.Ordinal); index >= 0; index = text.IndexOf(value, index + value.Length, StringComparison.Ordinal))
+        {
+            count++;
+        }
+
+        return count;
+    }
+
+    private Task<(string SurveyId, string Token, Dictionary<string, string> Ids)> PublishTrackQuizAsync(string title, ReviewShows shows = ReviewShows.Score | ReviewShows.Responses)
         => _fixture.InTenantAsync(async services =>
         {
             static SurveyQuestion Choice(string id, string questionTitle)
@@ -111,8 +150,8 @@ public sealed partial class SurveyRespondingTests
 
             definition.Scoring.Enabled = true;
             definition.Scoring.PassMarkPercent = 60;
-            definition.Review.ImmediatelyAfter = ReviewShows.Score | ReviewShows.Responses;
-            definition.Review.AfterClose = ReviewShows.Score | ReviewShows.Responses;
+            definition.Review.ImmediatelyAfter = shows;
+            definition.Review.AfterClose = shows;
 
             var manager = services.GetRequiredService<ISurveyManager>();
             var survey = await manager.CreateSurveyAsync(new SurveyCreateRequest { Title = title, Kind = SurveyKinds.Quiz, Definition = definition });

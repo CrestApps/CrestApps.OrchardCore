@@ -37,31 +37,7 @@
         <div class="survey-lock-error text-danger small mt-1" data-survey-lock-error="@question.Id" hidden></div>
     }
 
-    @if (Model.Feedback is { } feedback)
-    {
-        <div class="survey-feedback mt-2 small">
-            @if (feedback.Correct is true)
-            {
-                <div class="text-success"><i class="fa-solid fa-check" aria-hidden="true"></i> @T["Correct"]</div>
-            }
-            else if (feedback.Correct is false)
-            {
-                <div class="text-danger"><i class="fa-solid fa-xmark" aria-hidden="true"></i> @T["Incorrect"]</div>
-            }
-            @if (!string.IsNullOrWhiteSpace(feedback.RightAnswer))
-            {
-                <div>@T["Right answer:"] @feedback.RightAnswer</div>
-            }
-            @if (!string.IsNullOrWhiteSpace(feedback.Feedback))
-            {
-                <div>@Html.Raw(HtmlSanitizer.Sanitize(feedback.Feedback))</div>
-            }
-            @if (!string.IsNullOrWhiteSpace(feedback.GeneralFeedback))
-            {
-                <div>@Html.Raw(HtmlSanitizer.Sanitize(feedback.GeneralFeedback))</div>
-            }
-        </div>
-    }
+    @* The control's own review template shows the answer's feedback (SurveyControl.Review and its alternates). *@
 
     @if (Model.CanCheck && Model.Answerable)
     {
