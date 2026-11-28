@@ -502,7 +502,7 @@ public sealed class StaffManagementToolTests
         // Assert
         Assert.True(added.GetProperty("created").GetBoolean());
         Assert.Equal(100, added.GetProperty("position").GetInt32());
-        Assert.StartsWith("Nothing was saved: The key can only have letters", badKey, StringComparison.Ordinal);
+        Assert.StartsWith("Nothing was saved: The technical name can only have letters", badKey, StringComparison.Ordinal);
         Assert.False(changed.GetProperty("enabled").GetBoolean());
         Assert.Equal("Dispatcher", changed.GetProperty("displayName").GetString());
 

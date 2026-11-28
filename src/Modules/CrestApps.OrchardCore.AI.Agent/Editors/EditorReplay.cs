@@ -870,6 +870,7 @@ internal static class EditorReplay
         }
         catch (JsonException)
         {
+            // Text that isn't valid JSON isn't a list written as JSON text; the caller reports it as the wrong form.
         }
 
         return false;
