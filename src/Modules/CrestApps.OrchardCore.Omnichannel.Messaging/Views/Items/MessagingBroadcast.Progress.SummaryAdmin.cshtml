@@ -1,20 +1,29 @@
-@model ShapeViewModel<MessagingBroadcast>
+@model BroadcastProgressViewModel
 
+@* A message the channel held back (the sending address is at its limit, or waiting for a retry) is queued, not sent,
+   until the outbox sends it. *@
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Recipients"]">
-    <i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@Model.Value.Recipients.Count
+    <i class="fa-solid fa-users text-secondary me-1" aria-hidden="true"></i>@Model.Broadcast.Recipients.Count
 </span>
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Sent"]">
-    <i class="fa-solid fa-check text-secondary me-1" aria-hidden="true"></i>@Model.Value.SentCount
+    <i class="fa-solid fa-check text-secondary me-1" aria-hidden="true"></i>@Model.SentCount
 </span>
+
+@if (Model.QueuedCount > 0)
+{
+    <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Queued: held back by the sending address's limits or waiting for a retry, and sent later"]">
+        <i class="fa-solid fa-hourglass-half text-secondary me-1" aria-hidden="true"></i>@Model.QueuedCount
+    </span>
+}
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Failed"]">
-    <i class="fa-solid fa-triangle-exclamation text-secondary me-1" aria-hidden="true"></i>@Model.Value.FailedCount
+    <i class="fa-solid fa-triangle-exclamation text-secondary me-1" aria-hidden="true"></i>@Model.FailedCount
 </span>
 
-@if (Model.Value.SkippedCount > 0)
+@if (Model.Broadcast.SkippedCount > 0)
 {
     <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Skipped: opted out of the channel"]">
-        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@Model.Value.SkippedCount
+        <i class="fa-solid fa-ban text-secondary me-1" aria-hidden="true"></i>@Model.Broadcast.SkippedCount
     </span>
 }

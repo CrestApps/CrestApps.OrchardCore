@@ -1,0 +1,7 @@
+@model ShapeViewModel<EmailSuppression>
+
+@* What the mail server or the provider said, or the note of an address added by hand. *@
+@if (!string.IsNullOrWhiteSpace(Model.Value.Detail))
+{
+    <div class="admin-list-secondary text-break">@Model.Value.Detail</div>
+}

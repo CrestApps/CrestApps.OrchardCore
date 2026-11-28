@@ -655,9 +655,16 @@ import {
     if (composerBody) {
         composerBody.addEventListener('input', updateCounter);
 
-        // Enter sends, Shift+Enter starts a new line, the way every chat surface behaves.
+        // Enter sends, Shift+Enter starts a new line, the way every chat surface behaves. A channel written like a
+        // letter (one with a subject line) keeps Enter for new lines, as a mail client does, and sends on Ctrl+Enter.
+        var enterSends = composerBody.getAttribute('data-enter-sends') !== 'false';
+
         composerBody.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+            var sends = enterSends
+                ? !event.shiftKey && !event.ctrlKey && !event.metaKey
+                : event.ctrlKey || event.metaKey;
+
+            if (event.key === 'Enter' && sends && !event.isComposing) {
                 event.preventDefault();
 
                 if (composerBody.value.trim() || pending.length > 0) {
@@ -792,8 +799,14 @@ import {
         var safeHref = sameOriginUrl(href, root.location.href);
 
         if (safeHref) {
+            // The link starts at this page's own origin and takes only its path, query and fragment from the page data,
+            // so it can never lead to another site or run script, whatever the data holds.
+            var target = new URL(safeHref, root.location.origin);
             var link = document.createElement('a');
-            link.href = safeHref;
+            link.href = root.location.origin;
+            link.pathname = target.pathname;
+            link.search = target.search;
+            link.hash = target.hash;
             link.className = 'd-block mt-2 fw-semibold';
             link.textContent = viewText;
             bodyElement.appendChild(link);

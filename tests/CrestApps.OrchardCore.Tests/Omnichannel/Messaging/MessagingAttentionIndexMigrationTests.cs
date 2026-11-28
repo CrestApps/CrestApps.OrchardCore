@@ -40,7 +40,7 @@ public sealed class MessagingAttentionIndexMigrationTests
         {
             var version = await CreateMigration(store, schemaBuilder).CreateAsync();
 
-            Assert.Equal(9, version);
+            Assert.Equal(10, version);
             Assert.Equal(_campaignColumns, await IndexColumnsAsync(schemaBuilder, CampaignIndexName));
             Assert.Equal("0", await ScalarAsync(schemaBuilder, $"SELECT COUNT(*) FROM {TemplateTableName(schemaBuilder)} WHERE Scope IS NOT NULL"));
             Assert.Equal(_agentAttentionColumns, await IndexColumnsAsync(schemaBuilder, MessagingMigrations.AgentAttentionIndexName));

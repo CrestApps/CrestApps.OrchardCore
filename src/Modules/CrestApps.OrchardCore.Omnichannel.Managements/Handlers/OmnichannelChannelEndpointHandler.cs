@@ -91,16 +91,28 @@ internal sealed class OmnichannelChannelEndpointHandler : AuditedCatalogEntryHan
         await base.UpdatingAsync(context, cancellationToken);
 
         Canonicalize(context.Model);
+
+        await PrepareAsync(context.Model, cancellationToken);
     }
 
     /// <inheritdoc/>
-    public override Task CreatingAsync(CreatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
+    public override async Task CreatingAsync(CreatingContext<OmnichannelChannelEndpoint> context, CancellationToken cancellationToken = default)
     {
         // An editor builds a new endpoint before it binds the form to it, so the value is still empty when the entry is
         // initialized and only the create raises after the form has been bound.
         Canonicalize(context.Model);
 
-        return Task.CompletedTask;
+        await PrepareAsync(context.Model, cancellationToken);
+    }
+
+    // The features that extend endpoints fill in what they derive from their own settings once the editor, a recipe or
+    // an import has set the endpoint, so every way of saving one gets the same result.
+    private async Task PrepareAsync(OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)
+    {
+        foreach (var rule in _rules)
+        {
+            await rule.PrepareAsync(endpoint, cancellationToken);
+        }
     }
 
     private void Canonicalize(OmnichannelChannelEndpoint endpoint)
@@ -129,6 +141,10 @@ internal sealed class OmnichannelChannelEndpointHandler : AuditedCatalogEntryHan
 
         if (endpoint.AddressType == OmnichannelAddressTypes.EmailAddress)
         {
+            // Inbound mail names the address in whatever case the sender typed, so it is stored in the one form it is
+            // matched in.
+            endpoint.Value = OmnichannelEmailAddress.Normalize(endpoint.Value) ?? endpoint.Value;
+
             return;
         }
 
@@ -230,6 +246,10 @@ internal sealed class OmnichannelChannelEndpointHandler : AuditedCatalogEntryHan
                 _phoneNumberService.TryParse(value, null, out var canonicalNumber))
             {
                 value = canonicalNumber.Value;
+            }
+            else if (context.Model.AddressType == OmnichannelAddressTypes.EmailAddress)
+            {
+                value = OmnichannelEmailAddress.Normalize(value) ?? value;
             }
 
             var addresses = await _store.GetAllAsync(cancellationToken);

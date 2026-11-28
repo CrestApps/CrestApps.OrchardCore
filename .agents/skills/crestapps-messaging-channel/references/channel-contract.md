@@ -1,23 +1,24 @@
 # The `IMessagingChannel` contract
 
 Namespace `CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels`
-(project `src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core`). Every member is required; there are no
-optional interfaces. The reference is `SmsMessagingChannel`.
+(project `src/Core/CrestApps.OrchardCore.Omnichannel.Messaging.Core`). Every member is required except `AccentColor`,
+which has a default; there are no optional interfaces. The reference is `SmsMessagingChannel`.
 
 | Member | What the workspace uses it for | SMS reference | Notes for a new channel |
 | --- | --- | --- | --- |
 | `string Name` | Stored on every conversation, message and endpoint; matched against `OmnichannelMessage.Channel` and `OmnichannelChannelEndpoint.Channel`. | `OmnichannelConstants.Channels.Sms` (`"SMS"`) | Permanent. Reuse `OmnichannelConstants.Channels.Email` for email. |
 | `LocalizedString DisplayName` | Tab tooltip, composer labels, validation messages, broadcasts list. | `S["SMS"]` | Localize through `IStringLocalizer<TChannel>`. |
 | `string IconCssClass` | The channel tab icon, the list row icon, the composer badge. | `fa-solid fa-comment-sms` | Font Awesome classes; brand icons are `fa-brands fa-whatsapp`, `fa-brands fa-facebook-messenger`, etc. Email: `fa-solid fa-envelope`. |
+| `string AccentColor` | The color of the channel's active tab, so channels differ by color as well as by icon. | `var(--bs-success)` (green) | Optional: a CSS color, usually a Bootstrap variable. Email uses `var(--bs-primary)` (blue). `null` uses the workspace's neutral color. Pick one no other channel uses. |
 | `int Order` | Tab order (lowest first). | `0` | Pick a gap (10, 20…) so channels can be slotted in. |
 | `MessagingChannelCapabilities Capabilities` | Composer adaptation and service rules. | Delivery receipts, broadcast, quiet hours. | See the table below. Return a static instance. |
 | `string NormalizeAddress(string)` | The conversation key; applied to inbound addresses, composer recipients, endpoint values (through the workspace's `IChannelEndpointAddressPolicy`) and delivery receipts. | Strips whitespace (endpoints are also canonicalized to E.164 by the phone service). | Must be idempotent and return `null` for empty input. Email: trim + lower-case + strip `mailto:`. WhatsApp: E.164 without `whatsapp:` prefix. Messenger: the page-scoped user id as-is. |
 | `string FormatAddress(string)` | Display everywhere an address is shown. | `PhoneDisplayFormatter.Format` | Return the input when there is nothing to format. |
 | `bool IsValidAddress(string)` | Composer and broadcast validation; endpoint validation for channels the Omnichannel endpoint handler does not already validate. | 7–15 digits, optional leading `+`. | Keep it permissive enough for real addresses; the provider is the authority on reachability. |
-| `Task<MessageDispatchResult> SendAsync(MessagingOutboundMessage, CancellationToken)` | Every outbound: agent replies, new conversations, broadcasts, auto-replies, outbox retries. | Routes through `ISmsDispatcher` to the provider pinned on the sending number. | **Never throw** for a provider refusal — return `MessageDispatchResult.Failed(...)`; the workspace schedules retries from it. Return `Success(providerMessageId)` so delivery receipts can match exactly. Honour `Subject` / `MediaUrls` only when the capability says so. |
+| `Task<MessageDispatchResult> SendAsync(MessagingOutboundMessage, CancellationToken)` | Every outbound: agent replies, new conversations, broadcasts, auto-replies, outbox retries. | Routes through `ISmsDispatcher` to the provider pinned on the sending number. | **Never throw** for a provider refusal — return `MessageDispatchResult.Failed(...)`; the workspace schedules retries from it. Return `Success(providerMessageId)` so delivery receipts can match exactly. Honour `Subject` / `MediaUrls` only when the capability says so. Use `ConversationId`, `ReplyTo` (the inbound message being answered, when known) and `Purpose` (`Reply`, `AutoReply`, `Broadcast`, `Automation`, `Outreach`) to thread replies and mark bulk or automatic sends (`ConversationId` is `null` when the contact has no conversation yet; bulk mail, `Broadcast` or `Outreach`, to such a contact opens none); a channel that embeds files reads `Attachments` instead of `MediaUrls`. |
 | `bool IsOptedOut(ContentItem contact)` | Refuses agent sends and suppresses automation. | `OmnichannelContactPart.DoNotSms`. | Read the flag that means "do not contact on this channel" (email: `OmnichannelContactPart.DoNotEmail`; update it with `SetDoNotEmail`). Must be side-effect free (`TryGet`, not `As`). |
 | `IReadOnlyList<string> GetContactAddresses(ContentItem contact)` | Channel tabs ("start a conversation on this channel"), composer contact search results. | Phone numbers from the contact's `ContactMethods` bag, cell first, normalized. | Return normalized addresses, preferred first; empty when none. |
-| `Task<IReadOnlyList<string>> FindContactIdsAsync(string address, …)` | Links a new conversation to its CRM contact; lists every contact sharing an address. | `OmnichannelContactIndex` normalized cell/home numbers. | Query an index, never load all contacts. `OmnichannelContactIndex.PrimaryEmailAddress` exists for email. |
+| `Task<IReadOnlyList<string>> FindContactIdsAsync(string address, …)` | Links a new conversation to its CRM contact; lists every contact sharing an address. | `OmnichannelContactIndex` normalized cell/home numbers. | Query an index, never load all contacts. Email reads `OmnichannelContactEmailAddressIndex`, one lower-cased row per email address of a contact or lead, so a contact is found by any of its addresses (`OmnichannelContactIndex.NormalizedPrimaryEmailAddress` holds only the first, for display and filters). |
 | `Task<IReadOnlyList<string>> SearchContactIdsByAddressAsync(string term, contactTypes, take, …)` | Composer contact search by address (name search is done by the workspace). | Digits "contains" match on the phone index, ≥ 3 digits. | Return `[]` for terms too short to be meaningful; always bound with `take`. |
 
 ## `MessagingChannelCapabilities`
@@ -25,7 +26,7 @@ optional interfaces. The reference is `SmsMessagingChannel`.
 | Capability | Effect in the workspace | Typical values |
 | --- | --- | --- |
 | `SupportsSubject` | Composer shows a subject line; `MessagingOutboundMessage.Subject` is filled. | Email: `true`. Chat apps: `false`. |
-| `SupportsMedia` | Reserved for attachments (`MediaUrls`). | WhatsApp/MMS: `true` only once the send path uploads media. |
+| `SupportsMedia` | Attachments, described by `Attachments` (formats, count, size). With `Attachments.DeliveredAsLinks = true` (the default) the channel gets signed public links in `MediaUrls`; with `false` (email) it gets the files in `Attachments` to embed. | WhatsApp/MMS: links. Email: embedded. |
 | `SupportsDeliveryReceipts` | Delivery ticks on outbound bubbles. | `true` when the provider posts status callbacks you wire to `ApplyDeliveryReceiptAsync`. |
 | `SupportsBroadcast` | Multi-recipient composer and the Broadcasts screen accept the channel. | `false` for channels that forbid unsolicited bulk sends (WhatsApp outside templates). |
 | `ObservesQuietHours` | Composer warns outside the queue's business hours in the contact's time zone. | SMS/WhatsApp: `true`. Email: `false`. |

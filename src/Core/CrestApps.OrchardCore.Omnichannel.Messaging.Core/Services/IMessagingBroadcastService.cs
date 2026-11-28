@@ -3,8 +3,8 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 
 /// <summary>
-/// Hands a queued <see cref="MessagingBroadcast"/> to the outreach engine, which fans it out to individual 1:1 threads,
-/// one message per recipient.
+/// Hands a queued <see cref="MessagingBroadcast"/> to the outreach engine, which sends one message to each recipient on
+/// their own. The messages open no conversation; one opens when a recipient replies.
 /// </summary>
 public interface IMessagingBroadcastService
 {

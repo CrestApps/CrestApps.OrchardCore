@@ -4,6 +4,7 @@ using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Telemetry;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
@@ -11,6 +12,7 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Notifications;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using OrchardCore.Documents;
 using OrchardCore.Entities;
 using OrchardCore.Modules;
 using YesSql;
@@ -21,14 +23,19 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
 /// <summary>
 /// The default <see cref="IMessagingOutbox"/>. It re-attempts queued outbound messages whose retry time has
 /// arrived, respecting a per-endpoint send budget so a backlog of retries cannot burst past what a carrier
-/// permits one number to send, and marks a message failed only once its backoff schedule is exhausted.
+/// permits one number to send, and marks a message failed only once its backoff schedule is exhausted. A broadcast's
+/// message that is sent, or fails for good, here is counted in <see cref="MessagingBroadcastQueueOutcomes"/>, which only
+/// the outbox writes, so the broadcast stops showing it as queued.
 /// </summary>
 public sealed class MessagingOutbox : IMessagingOutbox
 {
+    private const int _bringForwardPageSize = 200;
+
     private readonly IMessagingChannelResolver _channelResolver;
     private readonly IMessagingRealTimeNotifier _notifier;
     private readonly IMessagingConversationStore _conversationStore;
     private readonly IMessagingAttachmentUrlProvider _attachmentUrlProvider;
+    private readonly IDocumentManager<MessagingBroadcastQueueOutcomes> _queueOutcomes;
     private readonly MessagingWorkspaceOptions _options;
     private readonly ISession _session;
     private readonly IClock _clock;
@@ -41,6 +48,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
     /// <param name="notifier">The real-time notifier that moves the bubble's state in the open thread.</param>
     /// <param name="conversationStore">The conversation store used to address the notification.</param>
     /// <param name="attachmentUrlProvider">The provider of the links a picture message is re-sent with.</param>
+    /// <param name="queueOutcomes">The record of what became of broadcasts' queued messages, which only the outbox writes.</param>
     /// <param name="options">The workspace options carrying the batch size and per-endpoint budget.</param>
     /// <param name="session">The session the messages are read from and saved to.</param>
     /// <param name="clock">The clock.</param>
@@ -50,6 +58,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
         IMessagingRealTimeNotifier notifier,
         IMessagingConversationStore conversationStore,
         IMessagingAttachmentUrlProvider attachmentUrlProvider,
+        IDocumentManager<MessagingBroadcastQueueOutcomes> queueOutcomes,
         IOptions<MessagingWorkspaceOptions> options,
         ISession session,
         IClock clock,
@@ -59,6 +68,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
         _notifier = notifier;
         _conversationStore = conversationStore;
         _attachmentUrlProvider = attachmentUrlProvider;
+        _queueOutcomes = queueOutcomes;
         _options = options.Value;
         _session = session;
         _clock = clock;
@@ -78,10 +88,13 @@ public sealed class MessagingOutbox : IMessagingOutbox
             return 0;
         }
 
-        var candidates = await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
-                index => index.Channel.IsIn(channelNames) && !index.IsInbound,
+        // Read from the index of waiting messages, which holds nothing else. Taking the oldest outbound messages and
+        // filtering them afterwards (as an earlier revision did) stopped seeing any retry once a tenant had sent more
+        // messages than one batch holds.
+        var candidates = await _session.Query<OmnichannelMessage, MessagingOutboxIndex>(
+                index => index.Channel.IsIn(channelNames) && index.NextAttemptUtc <= now,
                 collection: OmnichannelConstants.CollectionName)
-            .OrderBy(index => index.CreatedUtc)
+            .OrderBy(index => index.NextAttemptUtc)
             .Take(Math.Max(1, _options.OutboxBatchSize))
             .ListAsync(cancellationToken);
 
@@ -103,6 +116,9 @@ public sealed class MessagingOutbox : IMessagingOutbox
         var accepted = 0;
         var attempted = 0;
 
+        // The broadcasts whose queued messages this pass settled, with how many were sent and how many failed for good.
+        var broadcastOutcomes = new Dictionary<string, (int Sent, int Failed)>(StringComparer.Ordinal);
+
         foreach (var (message, state) in due)
         {
             var channel = _channelResolver.Get(message.Channel);
@@ -121,12 +137,33 @@ public sealed class MessagingOutbox : IMessagingOutbox
                 continue;
             }
 
+            // An acknowledgement held back by the address's limits says "we got your message and will reply soon". Once the
+            // conversation has been answered, sending it would tell the contact a reply is coming after it came.
+            if (state.Purpose == MessagingOutboundPurpose.AutoReply && await IsAnsweredSinceAsync(message, cancellationToken))
+            {
+                state.NextAttemptUtc = null;
+                state.IsHeld = false;
+                state.LastError = "Not sent: the conversation was answered before the address had room for this acknowledgement.";
+
+                message.DeliveryStatus = MessageDeliveryStatus.Failed.ToString();
+                message.ErrorCode = state.LastError;
+                message.Put(state);
+
+                await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
+                await NotifyAsync(message, cancellationToken);
+
+                continue;
+            }
+
             perEndpointBudget[endpoint] = used + 1;
             attempted++;
+            state.IsHeld = false;
 
             // A picture message is re-sent with fresh links: the ones the first attempt carried may have expired.
-            var mediaUrls = await BuildMediaUrlsAsync(message, cancellationToken);
+            var mediaUrls = await BuildMediaUrlsAsync(channel, message, cancellationToken);
 
+            // The retry carries everything the first attempt did, the subject and the thread included, so the
+            // contact receives the same message rather than a stripped-down copy of it.
             var dispatch = mediaUrls is null
                 ? MessageDispatchResult.Failed("The site has no public address the provider could download the pictures from. Set the site's base URL.")
                 : await channel.SendAsync(
@@ -134,15 +171,26 @@ public sealed class MessagingOutbox : IMessagingOutbox
                     {
                         ServiceAddress = message.ServiceAddress,
                         ContactAddress = message.CustomerAddress,
+                        ConversationId = message.ConversationId,
+                        Purpose = state.Purpose,
+                        Subject = message.GetSubject(),
                         Body = message.Content,
                         MediaUrls = mediaUrls,
+                        Attachments = message.GetAttachments().ToList(),
                     },
                     cancellationToken);
 
-            state.Attempts += 1;
-
-            if (dispatch.Succeeded)
+            if (dispatch.IsDeferred)
             {
+                // Still held back: the message moves to its new turn and keeps its retries.
+                state.NextAttemptUtc = dispatch.RetryAfterUtc;
+                state.IsHeld = true;
+                state.LastError = dispatch.GetErrorText();
+                message.ErrorCode = state.LastError;
+            }
+            else if (dispatch.Succeeded)
+            {
+                state.Attempts += 1;
                 state.NextAttemptUtc = null;
                 state.LastError = null;
 
@@ -151,10 +199,12 @@ public sealed class MessagingOutbox : IMessagingOutbox
                 message.ErrorCode = null;
                 accepted++;
 
+                CountBroadcastOutcome(broadcastOutcomes, message, sent: true);
                 MessagingTelemetry.RecordOutboxRetry(channel.Name, MessagingTelemetry.OutboxResults.Sent);
             }
             else
             {
+                state.Attempts += 1;
                 state.LastError = dispatch.GetErrorText();
 
                 if (OutboundDeliveryState.CanRetry(state.Attempts, dispatch.ErrorCode))
@@ -173,6 +223,7 @@ public sealed class MessagingOutbox : IMessagingOutbox
                     state.NextAttemptUtc = null;
                     message.DeliveryStatus = MessageDeliveryStatus.Failed.ToString();
 
+                    CountBroadcastOutcome(broadcastOutcomes, message, sent: false);
                     MessagingTelemetry.RecordOutboxRetry(channel.Name, MessagingTelemetry.OutboxResults.Failed);
                     _logger.OutboxMessageFailed(channel.Name, message.Id.SanitizeLogValue(), state.Attempts, MessagingTelemetry.GetOutboxFailureReason(state.Attempts));
                 }
@@ -187,6 +238,8 @@ public sealed class MessagingOutbox : IMessagingOutbox
             await NotifyAsync(message, cancellationToken);
         }
 
+        await ApplyBroadcastOutcomesAsync(broadcastOutcomes, cancellationToken);
+
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
@@ -198,9 +251,124 @@ public sealed class MessagingOutbox : IMessagingOutbox
         return accepted;
     }
 
-    private async Task<IList<string>> BuildMediaUrlsAsync(OmnichannelMessage message, CancellationToken cancellationToken)
+    /// <inheritdoc/>
+    public async Task<int> BringForwardAsync(string channel, string serviceAddress, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(channel) || string.IsNullOrEmpty(serviceAddress))
+        {
+            return 0;
+        }
+
+        var now = _clock.UtcNow;
+
+        // Every held message comes due now, so the next pass asks the channel for its turn under the address's current
+        // limits. A message waiting out a retry after a failure keeps its wait. Those moved are no longer after now, so
+        // each page skips only the waiting retries it already read.
+        var moved = 0;
+        var kept = 0;
+
+        while (true)
+        {
+            var page = await _session.Query<OmnichannelMessage, MessagingOutboxIndex>(
+                    index => index.Channel == channel && index.ServiceAddress == serviceAddress && index.NextAttemptUtc > now,
+                    collection: OmnichannelConstants.CollectionName)
+                .OrderBy(index => index.NextAttemptUtc)
+                .ThenBy(index => index.Id)
+                .Skip(kept)
+                .Take(_bringForwardPageSize)
+                .ListAsync(cancellationToken);
+
+            var messages = page.ToList();
+
+            if (messages.Count == 0)
+            {
+                return moved;
+            }
+
+            foreach (var message in messages)
+            {
+                if (!message.TryGet<OutboundDeliveryState>(out var state) || !state.IsHeld)
+                {
+                    kept++;
+
+                    continue;
+                }
+
+                state.NextAttemptUtc = now;
+                message.Put(state);
+                moved++;
+
+                await _session.SaveAsync(message, collection: OmnichannelConstants.CollectionName, cancellationToken: cancellationToken);
+            }
+
+            await _session.SaveChangesAsync(cancellationToken);
+        }
+    }
+
+    // Whether the conversation got an answer after the message: an outbound message written after it that is neither a
+    // broadcast nor another acknowledgement.
+    private async Task<bool> IsAnsweredSinceAsync(OmnichannelMessage message, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(message.ConversationId))
+        {
+            return false;
+        }
+
+        var later = await _session.Query<OmnichannelMessage, OmnichannelMessageIndex>(
+                index => index.ConversationId == message.ConversationId && !index.IsInbound && index.CreatedUtc > message.CreatedUtc,
+                collection: OmnichannelConstants.CollectionName)
+            .ListAsync(cancellationToken);
+
+        return later.Any(reply =>
+            reply.Id != message.Id &&
+            !reply.TryGet<MessagingBroadcastLink>(out _) &&
+            !(reply.TryGet<OutboundDeliveryState>(out var replyState) && replyState.Purpose == MessagingOutboundPurpose.AutoReply));
+    }
+
+    private static void CountBroadcastOutcome(Dictionary<string, (int Sent, int Failed)> outcomes, OmnichannelMessage message, bool sent)
+    {
+        if (!message.TryGet<MessagingBroadcastLink>(out var link) || string.IsNullOrEmpty(link?.BroadcastId))
+        {
+            return;
+        }
+
+        outcomes.TryGetValue(link.BroadcastId, out var outcome);
+
+        outcomes[link.BroadcastId] = sent
+            ? (outcome.Sent + 1, outcome.Failed)
+            : (outcome.Sent, outcome.Failed + 1);
+    }
+
+    // Applied once, after the sends, to the outcomes document and never to the broadcast: the broadcast's run saves the
+    // broadcast at the same time, and either would overwrite the count the other just saved. Only the outbox, which runs
+    // one pass at a time, writes this document.
+    private async Task ApplyBroadcastOutcomesAsync(Dictionary<string, (int Sent, int Failed)> outcomes, CancellationToken cancellationToken)
+    {
+        if (outcomes.Count == 0)
+        {
+            return;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var document = await _queueOutcomes.GetOrCreateMutableAsync();
+
+        foreach (var (broadcastId, outcome) in outcomes)
+        {
+            document.RecordQueuedOutcome(broadcastId, outcome.Sent, outcome.Failed);
+        }
+
+        await _queueOutcomes.UpdateAsync(document);
+    }
+
+    private async Task<IList<string>> BuildMediaUrlsAsync(IMessagingChannel channel, OmnichannelMessage message, CancellationToken cancellationToken)
     {
         var urls = message.MediaReferences?.Where(url => !string.IsNullOrWhiteSpace(url)).ToList() ?? [];
+
+        if (!channel.Capabilities.Attachments.DeliveredAsLinks)
+        {
+            return urls;
+        }
 
         foreach (var attachment in message.GetAttachments())
         {

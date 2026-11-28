@@ -96,6 +96,9 @@ public sealed class SmsMessagingChannel : IMessagingChannel
     public string IconCssClass => "fa-solid fa-comment-sms";
 
     /// <inheritdoc/>
+    public string AccentColor => "var(--bs-success)";
+
+    /// <inheritdoc/>
     public int Order => 0;
 
     /// <inheritdoc/>

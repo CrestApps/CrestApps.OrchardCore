@@ -468,7 +468,7 @@ public class SmsInboundProcessorTests
                     .ReturnsAsync(contact);
             }
 
-            var session = new Mock<ISession>();
+            var session = new Mock<ISession> { DefaultValue = DefaultValue.Mock };
             session.Setup(s => s.SaveAsync(It.IsAny<OmnichannelMessage>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
                 .Returns(Task.CompletedTask);
 

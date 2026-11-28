@@ -1,4 +1,18 @@
+@using System.Text.Json
 @model BroadcastCreateViewModel
+
+@* A subject line belongs only to channels whose messages carry one, so it follows the "send from" pick: hidden, and
+   its input disabled so nothing is posted, for any other channel. *@
+<div class="ocat-wrapper d-none" asp-validation-class-for="Subject" data-messaging-subject-line
+     data-endpoint-select="#endpoint-select"
+     data-endpoint-channels="@JsonSerializer.Serialize(Model.EndpointChannels)"
+     data-subject-channels="@JsonSerializer.Serialize(Model.SubjectChannels)">
+    <label asp-for="Subject" class="ocat-label">@T["Subject"]</label>
+    <div class="ocat-end">
+        <input asp-for="Subject" class="form-control" maxlength="255" />
+        <span asp-validation-for="Subject" class="text-danger"></span>
+    </div>
+</div>
 
 <div class="ocat-wrapper" asp-validation-class-for="Body">
     <label asp-for="Body" class="ocat-label ocat-label-required">@T["Message"]</label>

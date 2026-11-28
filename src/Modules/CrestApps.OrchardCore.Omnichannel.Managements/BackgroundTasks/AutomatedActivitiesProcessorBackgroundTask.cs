@@ -260,6 +260,42 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
                         liveCalls++;
                     }
                 }
+                catch (OmnichannelActivityDeferredException ex)
+                {
+                    // Held back, not failed: the sending address is at its limit or paused. The activity waits for its
+                    // turn without spending an attempt, so a large campaign drains at the address's pace instead of
+                    // failing everything past the first hour's allowance.
+                    activity.ScheduledUtc = ex.RetryAtUtc > now ? ex.RetryAtUtc : now.AddMinutes(1);
+
+                    if (logger.IsEnabled(LogLevel.Debug))
+                    {
+                        logger.LogDebug(
+                            "Activity '{ActivityId}' was held back until {RetryAtUtc}: {Reason}",
+                            activity.ItemId.SanitizeLogValue(),
+                            activity.ScheduledUtc,
+                            ex.Message.SanitizeLogValue());
+                    }
+                }
+                catch (OmnichannelActivityRefusedException ex)
+                {
+                    // The provider refused the destination for good. Retrying would spend the remaining attempts mailing
+                    // or messaging an address that cannot answer, which is exactly what costs a sender its reputation.
+                    activity.Status = ActivityStatus.Cancelled;
+                    activity.CompletedUtc ??= now;
+                    activity.TerminalReasonCode = ex.TerminalReasonCode;
+                    activity.Notes = string.IsNullOrWhiteSpace(activity.Notes)
+                        ? ex.Message
+                        : activity.Notes + Environment.NewLine + ex.Message;
+
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation(
+                            "Activity '{ActivityId}' was cancelled on '{Channel}' because the destination was refused: {Reason}",
+                            activity.ItemId.SanitizeLogValue(),
+                            activity.Channel.SanitizeLogValue(),
+                            ex.Message.SanitizeLogValue());
+                    }
+                }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     logger.LogError(ex, "An error occurred while processing the activity with id '{ActivityId}'", activity.ItemId);
@@ -383,7 +419,7 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
 
                 if (string.IsNullOrWhiteSpace(activity.Notes))
                 {
-                    activity.Notes = "The automated SMS activity failed because the contact stopped responding.";
+                    activity.Notes = BuildNoResponseNote(activity.Channel);
                 }
 
                 if (logger.IsEnabled(LogLevel.Information))
@@ -396,6 +432,27 @@ public sealed class AutomatedActivitiesProcessorBackgroundTask : IBackgroundTask
         }
 
         return processedCount;
+    }
+
+    /// <summary>
+    /// Builds the note left on an automated activity the no-response timeout failed. The timeout fails automated
+    /// conversations on every channel, so the note names the activity's own channel rather than always saying SMS.
+    /// </summary>
+    /// <param name="channel">The activity's channel.</param>
+    /// <returns>The note.</returns>
+    internal static string BuildNoResponseNote(string channel)
+    {
+        if (string.IsNullOrWhiteSpace(channel))
+        {
+            return "The automated activity failed because the contact stopped responding.";
+        }
+
+        // SMS is an abbreviation and stays in capitals; other channel names read as ordinary words in the sentence.
+        var name = string.Equals(channel, OmnichannelConstants.Channels.Sms, StringComparison.OrdinalIgnoreCase)
+            ? OmnichannelConstants.Channels.Sms
+            : channel.Trim().ToLowerInvariant();
+
+        return $"The automated {name} activity failed because the contact stopped responding.";
     }
 
     /// <summary>

@@ -44,6 +44,7 @@ internal sealed class BroadcastCreateDisplayDriver : DisplayDriver<BroadcastCrea
             m => m.EndpointId,
             m => m.ContactAddresses,
             m => m.RecipientsText,
+            m => m.Subject,
             m => m.Body);
 
         return Edit(model, context);
@@ -60,6 +61,8 @@ internal sealed class BroadcastCreateDisplayDriver : DisplayDriver<BroadcastCrea
     {
         model.Name = source.Name;
         model.EndpointId = source.EndpointId;
+        model.Subject = source.Subject;
+        model.SubjectChannels = source.SubjectChannels;
         model.Body = source.Body;
         model.RecipientsText = source.RecipientsText;
         model.ContactAddresses = source.ContactAddresses;

@@ -29,7 +29,7 @@
              data-invalid-text="@T["Enter a valid number for the selected country."]">
             <partial name="_RecipientNumberEntry" />
         </div>
-        <span class="hint">@T["Type a name or address to search the contacts and leads reachable on the selected channel, then select recipients. Use Enter a number for someone who is not in either."]</span>
+        <span class="hint">@T["Type a name or address to search the contacts and leads reachable on the selected channel, then select recipients. Add someone who is in neither under Additional addresses, or, on a text message channel, with Enter a number."]</span>
     </div>
 </div>
 
@@ -37,7 +37,7 @@
     <label asp-for="RecipientsText" class="ocat-label">@T["Additional addresses"]</label>
     <div class="ocat-end">
         <textarea asp-for="RecipientsText" class="form-control" rows="4" placeholder="@T["One address per line, or comma-separated"]"></textarea>
-        <span class="hint">@T["Each recipient gets their own 1:1 thread; they cannot see each other."]</span>
+        <span class="hint">@T["Each recipient gets the message on their own and cannot see the others. A conversation opens when a recipient replies."]</span>
         <span asp-validation-for="RecipientsText" class="text-danger"></span>
     </div>
 </div>

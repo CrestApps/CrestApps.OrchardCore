@@ -116,6 +116,7 @@ internal sealed class MessagingBroadcastsStep : CatalogRecipeStepBase<MessagingB
         broadcast.SentCount = 0;
         broadcast.FailedCount = 0;
         broadcast.SkippedCount = 0;
+        broadcast.QueuedCount = 0;
 
         // The run belongs to the site that sent the broadcast; it never exists here.
         broadcast.OutreachRunId = null;

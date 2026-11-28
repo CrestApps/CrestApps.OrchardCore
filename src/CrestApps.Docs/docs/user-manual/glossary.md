@@ -28,7 +28,7 @@ The words this manual uses, in plain language. Each term links to the page that 
 ## B
 
 - **Barge**: a supervisor joins a live call, and both the agent and the customer hear them. See [Live dashboard](live-dashboard.md).
-- **Broadcast**: one text message sent to many people. Each recipient gets their own conversation, and replies come back to the inbox. See [Messaging workspace](messaging.md).
+- **Broadcast**: one text message sent to many people. Each recipient gets it on their own, and a reply opens a conversation in the inbox. See [Messaging workspace](messaging.md).
 - **Business hours**: a calendar of opening hours and holidays, used by queues, entry points, the dialer's calling window and automatic follow-ups. See [Business hours](business-hours.md).
 
 ## C

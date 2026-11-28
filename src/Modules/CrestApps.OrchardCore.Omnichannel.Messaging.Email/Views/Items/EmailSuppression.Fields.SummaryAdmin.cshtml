@@ -1,0 +1,4 @@
+@model ShapeViewModel<EmailSuppression>
+
+@* A suppression has no edit page, so the address is plain text. *@
+<span class="text-break">@Model.Value.Address</span>

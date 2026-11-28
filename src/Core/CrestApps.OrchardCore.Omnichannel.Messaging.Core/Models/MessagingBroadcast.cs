@@ -5,9 +5,10 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
 
 /// <summary>
-/// A one-composer, many-recipient send on one messaging channel. The <b>broadcast</b> flavor fans out to individual 1:1 threads
-/// (one conversation per recipient, no cross-visibility) — the compliant default. A durable background task
-/// works the recipient list so a large send survives a restart and never double-sends a processed recipient.
+/// A one-composer, many-recipient send on one messaging channel. Each recipient gets the message on their own (no
+/// cross-visibility), the compliant default. It opens no conversation: it joins one a recipient already has, and a
+/// conversation opens when a recipient replies. A durable background task works the recipient list so a large send
+/// survives a restart and never double-sends a processed recipient.
 /// </summary>
 public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModifiedUtcAwareModel
 {
@@ -27,6 +28,11 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
     public string ServiceAddress { get; set; }
 
     /// <summary>
+    /// Gets or sets the subject line sent to every recipient, on a channel that supports one.
+    /// </summary>
+    public string Subject { get; set; }
+
+    /// <summary>
     /// Gets or sets the message body sent to every recipient.
     /// </summary>
     public string Body { get; set; }
@@ -43,8 +49,7 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
     public IList<string> ProcessedRecipients { get; set; } = [];
 
     /// <summary>
-    /// Gets or sets the identifier of the agent who owns the broadcast; each fanned-out 1:1 thread is assigned
-    /// to them.
+    /// Gets or sets the identifier of the agent who owns the broadcast and sends its messages.
     /// </summary>
     public string OwnerAgentId { get; set; }
 
@@ -54,14 +59,25 @@ public sealed class MessagingBroadcast : CatalogItem, INameAwareModel, IModified
     public MessagingBroadcastStatus Status { get; set; } = MessagingBroadcastStatus.Draft;
 
     /// <summary>
-    /// Gets or sets the number of recipients sent successfully.
+    /// Gets or sets the number of recipients the outreach run counted as sent, which includes the messages the channel
+    /// held back. <see cref="MessagingBroadcastExtensions.GetSentCount(MessagingBroadcast, MessagingBroadcastQueueOutcome)"/>
+    /// leaves those out.
     /// </summary>
     public int SentCount { get; set; }
 
     /// <summary>
-    /// Gets or sets the number of recipients that failed to send.
+    /// Gets or sets the number of recipients the outreach run could not send to.
     /// </summary>
     public int FailedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets the number of messages the channel held back (the sending address was at its limit, or the provider
+    /// was briefly unreachable) for the outbox to send later. Only the broadcast's run writes it; what the outbox did
+    /// with them is in <see cref="MessagingBroadcastQueueOutcomes"/>, and
+    /// <see cref="MessagingBroadcastExtensions.GetQueuedCount(MessagingBroadcast, MessagingBroadcastQueueOutcome)"/>
+    /// gives how many still wait.
+    /// </summary>
+    public int QueuedCount { get; set; }
 
     /// <summary>
     /// Gets or sets the number of recipients that were not sent to because they opted out of the channel.

@@ -1,0 +1,191 @@
+using System.Text;
+using System.Text.Json;
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
+
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Webhooks;
+
+/// <summary>
+/// Reads Amazon SES receiving, delivered by an SES receipt rule's SNS action: the SNS message is verified as signed by
+/// Amazon SNS, a subscription confirmation is confirmed, and a notification's raw email (the action's <c>content</c>,
+/// which needs the action's encoding set to UTF-8 or Base64) is parsed. When the tenant lists SNS topics, only those
+/// topics are accepted.
+/// </summary>
+public sealed class AmazonSesInboundEmailParser : IInboundEmailWebhookParser
+{
+    private readonly AmazonSnsMessageVerifier _verifier;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="AmazonSesInboundEmailParser"/> class.
+    /// </summary>
+    /// <param name="verifier">The SNS signature verifier.</param>
+    /// <param name="logger">The logger.</param>
+    public AmazonSesInboundEmailParser(
+        AmazonSnsMessageVerifier verifier,
+        ILogger<AmazonSesInboundEmailParser> logger)
+    {
+        _verifier = verifier;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public string Name => EmailChannelConstants.Providers.AmazonSes;
+
+    /// <inheritdoc/>
+    public async Task<InboundEmailWebhookResult> ParseAsync(HttpRequest request, EmailInboundSettings settings, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        JsonDocument document;
+
+        try
+        {
+            // SNS posts JSON with a text/plain content type, so the body is read whatever the content type says.
+            document = await JsonDocument.ParseAsync(request.Body, cancellationToken: cancellationToken);
+        }
+        catch (JsonException)
+        {
+            return InboundEmailWebhookResult.Invalid("The Amazon SNS payload is not valid JSON.");
+        }
+
+        using (document)
+        {
+            var root = document.RootElement;
+            var topicArn = GetString(root, "TopicArn");
+
+            var allowedTopics = settings?.AmazonSnsTopicArns?.Where(topic => !string.IsNullOrWhiteSpace(topic)).ToArray() ?? [];
+
+            // A subscription to a topic that is not listed is refused here, before it can be confirmed.
+            if (allowedTopics.Length > 0 && !allowedTopics.Contains(topicArn, StringComparer.Ordinal))
+            {
+                return InboundEmailWebhookResult.Unauthorized("The Amazon SNS topic is not one the tenant allows.");
+            }
+
+            if (!await _verifier.VerifyAsync(root, cancellationToken))
+            {
+                return InboundEmailWebhookResult.Unauthorized("The Amazon SNS signature is missing or wrong.");
+            }
+
+            // The list is optional, but without it any topic signed by Amazon SNS is accepted (and its subscription
+            // confirmed), so every signed call says so until the topic is listed.
+            if (allowedTopics.Length == 0)
+            {
+                _logger.LogWarning(
+                    "The inbound email webhook accepted Amazon SNS topic {TopicArn} because no Amazon SNS topics are listed in the email settings. List the topic to refuse any other.",
+                    (topicArn ?? "(none)").SanitizeLogValue());
+            }
+
+            switch (GetString(root, "Type"))
+            {
+                case "SubscriptionConfirmation":
+                    var confirmed = await _verifier.ConfirmSubscriptionAsync(GetString(root, "SubscribeURL"), cancellationToken);
+
+                    if (_logger.IsEnabled(LogLevel.Information))
+                    {
+                        _logger.LogInformation("Amazon SNS asked to subscribe the inbound email webhook to topic {TopicArn}; confirmed: {Confirmed}.", topicArn.SanitizeLogValue(), confirmed);
+                    }
+
+                    return InboundEmailWebhookResult.Handled("The Amazon SNS subscription was confirmed.");
+
+                case "UnsubscribeConfirmation":
+                    return InboundEmailWebhookResult.Handled("Amazon SNS confirmed an unsubscription.");
+
+                case "Notification":
+                    return await ParseNotificationAsync(GetString(root, "Message"), cancellationToken);
+
+                default:
+                    return InboundEmailWebhookResult.Invalid("The Amazon SNS message type is not one the webhook handles.");
+            }
+        }
+    }
+
+    private static async Task<InboundEmailWebhookResult> ParseNotificationAsync(string message, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(message))
+        {
+            return InboundEmailWebhookResult.Invalid("The Amazon SNS notification carries no message.");
+        }
+
+        using var notification = JsonDocument.Parse(message);
+        var root = notification.RootElement;
+
+        if (GetString(root, "notificationType") != "Received")
+        {
+            return InboundEmailWebhookResult.Handled("The Amazon SES notification is not a received email.");
+        }
+
+        var content = GetString(root, "content");
+
+        if (string.IsNullOrEmpty(content))
+        {
+            return InboundEmailWebhookResult.Invalid("The Amazon SES notification has no email content. Set the SNS action's encoding to UTF-8 or Base64 so the email is included.");
+        }
+
+        var encoding = root.TryGetProperty("receipt", out var receipt) &&
+            receipt.TryGetProperty("action", out var action)
+            ? GetString(action, "encoding")
+            : null;
+
+        var bytes = string.Equals(encoding, "BASE64", StringComparison.OrdinalIgnoreCase)
+            ? Convert.FromBase64String(content)
+            : Encoding.UTF8.GetBytes(content);
+
+        using var stream = new MemoryStream(bytes);
+        var email = await MimeInboundEmailParser.ParseAsync(stream, cancellationToken);
+
+        if (receipt.ValueKind == JsonValueKind.Object &&
+            receipt.TryGetProperty("recipients", out var recipients) &&
+            recipients.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var recipient in recipients.EnumerateArray().Select(item => new InboundEmailAddress(item.GetString()).Address))
+            {
+                if (recipient is not null && !email.DeliveredTo.Contains(recipient, StringComparer.Ordinal))
+                {
+                    email.DeliveredTo.Add(recipient);
+                }
+            }
+        }
+
+        // SES checks DMARC for the From domain itself and says so in the notification Amazon signed. The verdict is only
+        // taken for the From address read here when SES read the same domain from it, since the receiver relies on it.
+        email.IsFromDomainAuthenticated = receipt.ValueKind == JsonValueKind.Object &&
+            receipt.TryGetProperty("dmarcVerdict", out var dmarcVerdict) &&
+            string.Equals(GetString(dmarcVerdict, "status"), "PASS", StringComparison.OrdinalIgnoreCase) &&
+            IsSameFromDomain(root, email.From?.Address);
+
+        return InboundEmailWebhookResult.Of(email);
+    }
+
+    // Whether the From domain SES evaluated (mail.commonHeaders.from) is the domain of the From address parsed here.
+    internal static bool IsSameFromDomain(JsonElement notification, string parsedFrom)
+    {
+        if (!OmnichannelEmailAddress.IsValid(parsedFrom) ||
+            !notification.TryGetProperty("mail", out var mail) ||
+            !mail.TryGetProperty("commonHeaders", out var headers) ||
+            !headers.TryGetProperty("from", out var from) ||
+            from.ValueKind != JsonValueKind.Array ||
+            from.GetArrayLength() == 0 ||
+            from[0].ValueKind != JsonValueKind.String ||
+            MimeInboundEmailParser.ParseSingleMailbox(from[0].GetString()) is not { } sesFrom)
+        {
+            return false;
+        }
+
+        var parsedDomain = parsedFrom[(parsedFrom.LastIndexOf('@') + 1)..];
+
+        return !string.IsNullOrEmpty(sesFrom.Domain) &&
+            string.Equals(sesFrom.Domain.Trim(), parsedDomain, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string GetString(JsonElement element, string name)
+        => element.ValueKind == JsonValueKind.Object &&
+            element.TryGetProperty(name, out var value) &&
+            value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+}

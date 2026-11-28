@@ -1,0 +1,520 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using CrestApps.Core;
+using CrestApps.Core.Support;
+using CrestApps.OrchardCore.Attachments.Models;
+using CrestApps.OrchardCore.Omnichannel.Core;
+using CrestApps.OrchardCore.Omnichannel.Core.Indexes;
+using CrestApps.OrchardCore.Omnichannel.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Deliverability;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.DeliveryEvents;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Email.Models;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
+using CrestApps.OrchardCore.Webhooks;
+using CrestApps.OrchardCore.Webhooks.Models;
+using Microsoft.Extensions.Logging;
+using OrchardCore.Entities;
+using OrchardCore.Modules;
+using YesSql;
+
+namespace CrestApps.OrchardCore.Omnichannel.Messaging.Email.Inbound;
+
+/// <summary>
+/// The default <see cref="IEmailInboundReceiver"/>.
+/// </summary>
+public sealed class EmailInboundReceiver : IEmailInboundReceiver
+{
+    /// <summary>
+    /// The provider name every inbound email is recorded under in the durable inbox, whichever source it came from, so
+    /// an email that reaches the business by two routes (its mailbox and a webhook) is still received once.
+    /// </summary>
+    public const string InboxProviderName = "email";
+
+    private const int MaxAttachments = 10;
+
+    // How far back a bounce report that names no email the site logged an id for may reach. A sending server gives up
+    // on an email within five days, so a real report about one of ours always falls inside it.
+    private static readonly TimeSpan _bounceReportWindow = TimeSpan.FromDays(7);
+
+    private readonly IOmnichannelChannelEndpointManager _endpointManager;
+    private readonly IMessagingAttachmentStore _attachmentStore;
+    private readonly IEnumerable<IProviderWebhookInbox> _inboxes;
+    private readonly IEnumerable<IProviderWebhookInboxHandler> _inboxHandlers;
+    private readonly IEmailDeliveryEventProcessor _deliveryEvents;
+    private readonly IEmailSentMessageFinder _sentMessages;
+    private readonly IEmailDeliveryLog _deliveryLog;
+    private readonly IClock _clock;
+    private readonly ILogger _logger;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="EmailInboundReceiver"/> class.
+    /// </summary>
+    /// <param name="endpointManager">The manager of the business's addresses.</param>
+    /// <param name="attachmentStore">The store received files are kept in.</param>
+    /// <param name="inboxes">The durable provider inbox, when the feature that provides it is enabled.</param>
+    /// <param name="inboxHandlers">The inbox handlers, used directly when there is no inbox.</param>
+    /// <param name="deliveryEvents">The processor bounce reports are handed to, which suppresses the address and marks the email failed.</param>
+    /// <param name="sentMessages">Finds a workspace message a bounce report names.</param>
+    /// <param name="deliveryLog">The log of every email the site sent, which a bounce report must match.</param>
+    /// <param name="clock">The clock.</param>
+    /// <param name="logger">The logger.</param>
+    public EmailInboundReceiver(
+        IOmnichannelChannelEndpointManager endpointManager,
+        IMessagingAttachmentStore attachmentStore,
+        IEnumerable<IProviderWebhookInbox> inboxes,
+        IEnumerable<IProviderWebhookInboxHandler> inboxHandlers,
+        IEmailDeliveryEventProcessor deliveryEvents,
+        IEmailSentMessageFinder sentMessages,
+        IEmailDeliveryLog deliveryLog,
+        IClock clock,
+        ILogger<EmailInboundReceiver> logger)
+    {
+        _endpointManager = endpointManager;
+        _attachmentStore = attachmentStore;
+        _inboxes = inboxes;
+        _inboxHandlers = inboxHandlers;
+        _deliveryEvents = deliveryEvents;
+        _sentMessages = sentMessages;
+        _deliveryLog = deliveryLog;
+        _clock = clock;
+        _logger = logger;
+    }
+
+    /// <inheritdoc/>
+    public async Task<EmailInboundResult> ReceiveAsync(InboundEmail email, string source, bool dispatch = true, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(email);
+
+        var messageId = ResolveMessageId(email);
+
+        using var logScope = _logger.BeginScope(new Dictionary<string, object>
+        {
+            ["EmailMessageId"] = messageId.SanitizeLogValue(),
+            ["EmailSource"] = source.SanitizeLogValue(),
+        });
+
+        // A report (a bounce, a read receipt) is about an email we sent, not a message from a customer. A bounce marks
+        // that email as failed, and nothing else: a report never opens a conversation and is never answered.
+        if (email.DeliveryReport is not null)
+        {
+            await ApplyBounceAsync(email.DeliveryReport, cancellationToken);
+
+            return EmailInboundResult.Of(EmailInboundStatus.Ignored, "The email is a report about an email sent, such as a bounce or a read receipt.");
+        }
+
+        await ResolveCustomerAsync(email, cancellationToken);
+
+        var from = email.From?.Address;
+
+        if (!OmnichannelEmailAddress.IsValid(from))
+        {
+            _logger.LogWarning("An inbound email from {Source} has no usable sender address and was not received.", source.SanitizeLogValue());
+
+            return EmailInboundResult.Of(EmailInboundStatus.Ignored, "The email has no sender address.");
+        }
+
+        var endpoint = await FindRecipientAddressAsync(email, cancellationToken);
+
+        if (endpoint is null)
+        {
+            _logger.LogWarning(
+                "An inbound email from {Source} was sent to {RecipientCount} address(es), none of which is one of the business's email addresses used for email.",
+                source.SanitizeLogValue(),
+                email.DeliveredTo.Count + email.To.Count + email.Cc.Count);
+
+            return EmailInboundResult.Of(EmailInboundStatus.UnknownAddress, "None of the recipients is one of the business's email addresses.");
+        }
+
+        // Mail from one of our own addresses is our own mail coming back (a copy, a loop between two of our mailboxes);
+        // receiving it would have the workspace, or worse the AI, answer itself.
+        if (await _endpointManager.GetByServiceAddressAsync(OmnichannelConstants.Channels.Email, from, cancellationToken) is not null)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation("An inbound email from {Source} was sent by one of the business's own addresses and was not received.", source.SanitizeLogValue());
+            }
+
+            return EmailInboundResult.Of(EmailInboundStatus.Ignored, "The email was sent by one of the business's own addresses.");
+        }
+
+        var message = await CreateMessageAsync(email, messageId, endpoint, cancellationToken);
+        var payload = JsonSerializer.Serialize(message);
+        var inbox = _inboxes.FirstOrDefault();
+
+        if (inbox is null)
+        {
+            // No durable inbox on this tenant: the email is handled inline, as it would be from storage.
+            await DispatchInlineAsync(payload, cancellationToken);
+
+            return new EmailInboundResult { Status = EmailInboundStatus.Accepted, AddressId = endpoint.ItemId };
+        }
+
+        var acceptance = await inbox.AcceptAsync(
+            new ProviderWebhookInboxDelivery
+            {
+                ProviderName = InboxProviderName,
+                DeliveryId = ToDeliveryId(messageId),
+                HandlerName = EmailChannelConstants.InboxHandlerName,
+                Payload = payload,
+            },
+            cancellationToken);
+
+        switch (acceptance.Status)
+        {
+            case ProviderWebhookInboxAcceptanceStatus.Duplicate:
+                if (_logger.IsEnabled(LogLevel.Information))
+                {
+                    _logger.LogInformation("An inbound email from {Source} was received before and was not recorded again.", source.SanitizeLogValue());
+                }
+
+                return new EmailInboundResult { Status = EmailInboundStatus.Duplicate, AddressId = endpoint.ItemId };
+
+            case ProviderWebhookInboxAcceptanceStatus.Busy:
+                return new EmailInboundResult { Status = EmailInboundStatus.Busy, AddressId = endpoint.ItemId, Reason = "The same email is being received by another call." };
+        }
+
+        if (dispatch)
+        {
+            try
+            {
+                await inbox.DispatchAsync(acceptance.MessageId, cancellationToken);
+            }
+            catch (ConcurrencyException)
+            {
+                // Another node claimed the same delivery. The inbox retries it from storage, so the email is not lost.
+            }
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Received an inbound email from {Source} on address '{AddressId}' ({AttachmentCount} attachment(s)).",
+                source.SanitizeLogValue(),
+                endpoint.ItemId.SanitizeLogValue(),
+                message.GetAttachments().Count);
+        }
+
+        return new EmailInboundResult { Status = EmailInboundStatus.Accepted, AddressId = endpoint.ItemId, InboxMessageId = acceptance.MessageId };
+    }
+
+    private async Task<OmnichannelChannelEndpoint> FindRecipientAddressAsync(InboundEmail email, CancellationToken cancellationToken)
+    {
+        // The delivery address names our mailbox even for a Bcc or a forwarding alias, so it is asked first.
+        var candidates = email.DeliveredTo
+            .Concat(email.To.Select(address => address.Address))
+            .Concat(email.Cc.Select(address => address.Address))
+            .Select(OmnichannelEmailAddress.Normalize)
+            .Where(address => !string.IsNullOrEmpty(address))
+            .Distinct(StringComparer.Ordinal);
+
+        foreach (var candidate in candidates)
+        {
+            var endpoint = await _endpointManager.GetByServiceAddressAsync(OmnichannelConstants.Channels.Email, candidate, cancellationToken);
+
+            if (endpoint is not null)
+            {
+                return endpoint;
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<OmnichannelMessage> CreateMessageAsync(InboundEmail email, string messageId, OmnichannelChannelEndpoint endpoint, CancellationToken cancellationToken)
+    {
+        var body = !string.IsNullOrWhiteSpace(email.TextBody)
+            ? email.TextBody
+            : EmailHtmlToText.Convert(email.HtmlBody);
+
+        var (reply, quoted) = EmailReplyText.Split(body);
+
+        // A provider that already separated the reply knows the sender's mail client better than a heuristic does.
+        if (!string.IsNullOrWhiteSpace(email.StrippedReply))
+        {
+            reply = email.StrippedReply.Trim();
+        }
+
+        var message = new OmnichannelMessage
+        {
+            Id = UniqueId.GenerateId(),
+            Channel = EmailChannelConstants.ChannelName,
+            CustomerAddress = email.From.Address,
+            ServiceAddress = endpoint.Value,
+            Content = Truncate(reply),
+            CreatedUtc = _clock.UtcNow,
+            IsInbound = true,
+            ProviderMessageId = messageId,
+        };
+
+        message.SetSubject(email.Subject);
+        message.SetQuotedText(Truncate(quoted));
+
+        message.Put(new EmailMessageMetadata
+        {
+            MessageId = messageId,
+            InReplyTo = email.InReplyTo,
+            References = email.References.Where(reference => !string.IsNullOrWhiteSpace(reference)).ToList(),
+            FromName = email.From.Name,
+            ReplyTo = email.ReplyTo?.Address,
+            Cc = email.To
+                .Concat(email.Cc)
+                .Select(address => address.Address)
+                .Where(address => !string.IsNullOrEmpty(address) && !string.Equals(address, endpoint.Value, StringComparison.OrdinalIgnoreCase))
+                .Distinct(StringComparer.Ordinal)
+                .ToList(),
+            IsAutoGenerated = EmailAutoGeneratedDetector.IsAutoGenerated(email),
+        });
+
+        // An out-of-office or other machine-sent email is shown as automatic in the thread, like an auto-reply we send.
+        message.SetAutomatic(message.IsAutoGeneratedEmail());
+
+        await StoreAttachmentsAsync(email, message, cancellationToken);
+
+        return message;
+    }
+
+    // The files are kept now, while the email is in hand: unlike a picture message, an email carries its files itself
+    // and nothing can download them later. An inline picture the HTML body shows (a logo in a signature) is left out.
+    private async Task StoreAttachmentsAsync(InboundEmail email, OmnichannelMessage message, CancellationToken cancellationToken)
+    {
+        var stored = new List<MessagingAttachment>();
+        var skipped = 0;
+        var totalBytes = 0L;
+        var index = 0;
+
+        foreach (var file in email.Attachments)
+        {
+            if (file?.Content is null || file.Content.Length == 0 || IsInlineImage(file, email.HtmlBody))
+            {
+                continue;
+            }
+
+            var format = FileFormats.Detect(file.Content, file.FileName, file.ContentType, FileFormats.All);
+
+            if (format is null || stored.Count >= MaxAttachments || totalBytes + file.Content.Length > EmailChannelConstants.MaxInboundEmailBytes)
+            {
+                skipped++;
+
+                continue;
+            }
+
+            var attachment = new MessagingAttachment
+            {
+                Id = CreateAttachmentId(message.ProviderMessageId, index++, file.Content),
+                ContentType = format.ContentType,
+                FileName = string.IsNullOrWhiteSpace(file.FileName) ? null : Path.GetFileName(file.FileName),
+                Length = file.Content.Length,
+            };
+
+            await _attachmentStore.StoreAsync(attachment.Id, file.Content, cancellationToken);
+
+            stored.Add(attachment);
+            totalBytes += file.Content.Length;
+        }
+
+        var part = message.GetOrCreate<MessagingMessageAttachments>();
+
+        part.Items = stored;
+        part.SkippedCount = skipped;
+
+        // The files are already kept, so the workspace's media ingestion has nothing to fetch.
+        part.Ingested = true;
+        message.Put(part);
+    }
+
+    private static bool IsInlineImage(InboundEmailAttachment file, string html)
+        => !string.IsNullOrEmpty(file.ContentId) &&
+            !string.IsNullOrEmpty(html) &&
+            html.Contains($"cid:{file.ContentId}", StringComparison.OrdinalIgnoreCase);
+
+    // The customer is who sent the email. A Reply-To that names somebody else takes over only when one of the
+    // business's own addresses sent the email, as a form on the business's own site relays a visitor's message;
+    // from anybody else it proves nothing about who wrote, so it is kept on the message for the record.
+    //
+    // A From line is easy to forge, so "one of our own addresses" is believed only when the system that received the
+    // email reports the From domain authenticated (DMARC passed). Otherwise anybody could open a conversation with any
+    // stranger, and have agents or the AI write to them, by sending mail "from" the business with a Reply-To of their
+    // choosing. Unauthenticated mail from our own addresses is left as it is, and is dropped below as our own mail
+    // coming back.
+    private async Task ResolveCustomerAsync(InboundEmail email, CancellationToken cancellationToken)
+    {
+        if (email.ReplyTo is null || !OmnichannelEmailAddress.IsValid(email.ReplyTo.Address) || email.From is null || !email.IsFromDomainAuthenticated)
+        {
+            return;
+        }
+
+        if (await _endpointManager.GetByServiceAddressAsync(OmnichannelConstants.Channels.Email, email.From.Address, cancellationToken) is not null)
+        {
+            email.From = string.IsNullOrWhiteSpace(email.ReplyTo.Name) ? new InboundEmailAddress(email.ReplyTo.Address, email.From.Name) : email.ReplyTo;
+            email.ReplyTo = null;
+        }
+    }
+
+    // A bounce report that comes back to the mailbox is a delivery event like any a provider posts: a permanent failure
+    // suppresses the address and marks the email failed, a delay or a temporary failure counts toward the address's
+    // soft bounces and the receiving domain's deferrals.
+    private async Task ApplyBounceAsync(InboundEmailDeliveryReport report, CancellationToken cancellationToken)
+    {
+        var kind = ToDeliveryEventKind(report);
+
+        if (kind is null)
+        {
+            if (_logger.IsEnabled(LogLevel.Information))
+            {
+                _logger.LogInformation(
+                    "A report of type '{ReportType}' with the action '{Action}' is not about a failed or delayed delivery and was ignored.",
+                    (report.ReportType ?? "none").SanitizeLogValue(),
+                    (report.Action ?? "none").SanitizeLogValue());
+            }
+
+            return;
+        }
+
+        if (string.IsNullOrEmpty(report.OriginalMessageId) || string.IsNullOrEmpty(report.Recipient))
+        {
+            _logger.LogWarning("A delivery report that names no original Message-ID or no recipient was ignored.");
+
+            return;
+        }
+
+        // Anybody can email a delivery report. One is believed only when it is about an email this site sent, to the
+        // address the report names: otherwise a forged report could suppress any address or pause the sender.
+        var (isAboutEmailSent, sentEntry) = await FindReportedSendAsync(report, cancellationToken);
+
+        if (!isAboutEmailSent)
+        {
+            _logger.LogWarning("A delivery report about an email this site did not send to that recipient was ignored.");
+
+            return;
+        }
+
+        await _deliveryEvents.ProcessAsync(
+            [
+                new EmailDeliveryEvent
+                {
+                    Kind = kind.Value,
+                    Recipient = report.Recipient,
+                    MessageId = report.OriginalMessageId,
+
+                    // A report tied to its email through the delivery log is counted once for that logged send. The
+                    // report's own Message-ID is the sender's to choose, so keying on it would let one forged report,
+                    // resent with new identifiers, count as many bounces.
+                    EventId = sentEntry is null
+                        ? $"{report.OriginalMessageId}:{report.Recipient}:{report.Action}"
+                        : $"{sentEntry.Key}:{report.Action}",
+
+                    // A report tied to its email only by the recipient could have been written by anyone who knows it.
+                    IsUnconfirmed = sentEntry?.IsByRecipientOnly == true,
+                    Status = report.Status,
+                    Reason = report.Diagnostic,
+                    OccurredUtc = _clock.UtcNow,
+                    Provider = "dsn",
+                },
+            ],
+            cancellationToken);
+
+        _logger.LogWarning("An email the business sent bounced ({Status}).", (report.Status ?? report.Action).SanitizeLogValue());
+    }
+
+    // Whether a report is about an email this site sent to the recipient it names. A workspace message stored under the
+    // reported id settles it. Otherwise the delivery log does, which holds every email sent, those of the AI and of a
+    // transport that cannot set the Message-ID included: the email logged under the id, or a recent one to the recipient
+    // logged without an id. The match names the logged send, when the log settled it.
+    private async Task<(bool IsAboutEmailSent, EmailSentEntryMatch SentEntry)> FindReportedSendAsync(InboundEmailDeliveryReport report, CancellationToken cancellationToken)
+    {
+        var messageId = MimeInboundEmailParser.TrimMessageId(report.OriginalMessageId);
+        var recipient = OmnichannelEmailAddress.Normalize(report.Recipient);
+
+        if (!string.IsNullOrEmpty(messageId) && await _sentMessages.FindAsync(messageId, cancellationToken) is { } original)
+        {
+            return (string.Equals(OmnichannelEmailAddress.Normalize(original.CustomerAddress), recipient, StringComparison.Ordinal), null);
+        }
+
+        var sentEntry = await _deliveryLog.FindSentEntryAsync(
+            EmailSendingGovernor.TrimMessageId(messageId),
+            recipient,
+            _clock.UtcNow.Subtract(_bounceReportWindow),
+            cancellationToken);
+
+        return (sentEntry is not null, sentEntry);
+    }
+
+    // Only a failure or a delay is a problem with the delivery. A report that the email was delivered, relayed or
+    // expanded (one the sender asked for, or a relay's notice on passing the email on) is good news and counts for
+    // nothing, and a read receipt or another kind of report is not about delivery at all. Counting them as soft bounces
+    // would pause a sender whose mail arrives perfectly well.
+    private static EmailDeliveryEventKind? ToDeliveryEventKind(InboundEmailDeliveryReport report)
+    {
+        if (!report.IsDeliveryStatus)
+        {
+            return null;
+        }
+
+        if (string.Equals(report.Action, "delayed", StringComparison.OrdinalIgnoreCase))
+        {
+            return EmailDeliveryEventKind.Deferred;
+        }
+
+        if (!string.Equals(report.Action, "failed", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        // A failure with a temporary (4.x.x) status is the sending server giving up on a problem that may pass, such as a
+        // full mailbox: a soft bounce, not a reason to stop writing to the address for good.
+        return report.IsPermanentFailure
+            ? EmailDeliveryEventKind.HardBounce
+            : EmailDeliveryEventKind.SoftBounce;
+    }
+
+    private async Task DispatchInlineAsync(string payload, CancellationToken cancellationToken)
+    {
+        var handler = _inboxHandlers.FirstOrDefault(candidate => candidate.TechnicalName == EmailChannelConstants.InboxHandlerName)
+            ?? throw new InvalidOperationException("The inbound email handler is not registered.");
+
+        await handler.HandleAsync(payload, cancellationToken);
+    }
+
+    // The email's own Message-ID identifies it across redeliveries and sources. An email without one (rare, and only
+    // from broken senders) is identified by what it says, so a redelivery of it is still recognised.
+    private static string ResolveMessageId(InboundEmail email)
+    {
+        if (!string.IsNullOrWhiteSpace(email.MessageId))
+        {
+            return email.MessageId;
+        }
+
+        var fingerprint = string.Join('\n', email.From?.Address, email.Subject, email.Date?.ToUnixTimeSeconds(), email.TextBody ?? email.HtmlBody);
+        var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(fingerprint)));
+
+        return $"{hash.Substring(0, 40)}@generated.invalid";
+    }
+
+    private static string ToDeliveryId(string messageId)
+        => messageId.Length <= 200
+            ? messageId
+            : $"sha256:{Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(messageId)))}";
+
+    // The file's own content is part of its identifier. The files are stored before the inbox tells a redelivery from a
+    // new email, and the store replaces whatever is kept under an identifier: built from the Message-ID alone, another
+    // email reusing that Message-ID (a resend, or a forgery) would replace the files of the email received first. A true
+    // redelivery carries the same files, so it still gets the same identifiers and only writes the same bytes again.
+    private static string CreateAttachmentId(string providerMessageId, int index, byte[] content)
+    {
+        var contentHash = Convert.ToHexStringLower(SHA256.HashData(content));
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{OmnichannelConstants.Channels.Email}|{providerMessageId}|{index}|{contentHash}"));
+
+        return $"in-{Convert.ToHexStringLower(hash).Substring(0, 40)}";
+    }
+
+    private static string Truncate(string text)
+        => string.IsNullOrEmpty(text) || text.Length <= EmailChannelConstants.MaxBodyLength
+            ? text
+            : text.Substring(0, EmailChannelConstants.MaxBodyLength);
+}

@@ -355,9 +355,10 @@
         border-bottom: 2px solid transparent;
     }
 
+    /* Each channel may set its own color (IMessagingChannel.AccentColor), so SMS and email tabs differ by color and icon. */
     .messaging-channel-tabs .nav-link.active {
-        color: var(--bs-success);
-        border-bottom-color: var(--bs-success);
+        color: var(--messaging-channel-color, var(--bs-emphasis-color));
+        border-bottom-color: var(--messaging-channel-color, var(--bs-emphasis-color));
         background: transparent;
     }
 

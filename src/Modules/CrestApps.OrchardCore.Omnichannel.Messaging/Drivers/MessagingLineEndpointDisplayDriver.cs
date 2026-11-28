@@ -48,11 +48,19 @@ internal sealed class MessagingLineEndpointDisplayDriver : DisplayDriver<Omnicha
             return null;
         }
 
+        // The card is the one the channel's capability groups its settings on ("Text Messages" for SMS, "Email" for
+        // email), so the agents sit beside the rest of that channel's settings for the address. A card is matched by the
+        // name it is placed on, which is the same text the channel's own drivers place their settings under.
+        var cardName = channels
+            .Select(channel => _addressOptions.Capabilities.TryGetValue(channel, out var capability) ? capability.CardName?.Value : null)
+            .FirstOrDefault(name => !string.IsNullOrEmpty(name)) ?? S["Text Messages"].Value;
+
         return Initialize<MessagingLineEndpointViewModel>("MessagingLineEndpoint_Edit", model =>
         {
             model.TextingUserIds = [.. MessagingLines.GetUserIds(endpoint)];
             model.ServedCapabilities = string.Join(",", channels);
-        }).Location(l => l.Zone("Content", "2").Card(S["Text Messages"], "3"));
+            model.ChannelNames = string.Join(", ", channels.Select(channel => _channelResolver.Get(channel)?.DisplayName.Value ?? channel));
+        }).Location(l => l.Zone("Content", "2").Card(cardName, "3"));
     }
 
     /// <inheritdoc/>

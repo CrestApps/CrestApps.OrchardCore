@@ -1,4 +1,5 @@
 using CrestApps.OrchardCore.AI.Core.Conversations;
+using CrestApps.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Core.Services;
@@ -30,6 +31,14 @@ public sealed class OmnichannelAIConversationStarting : IOmnichannelAIConversati
     {
         ArgumentNullException.ThrowIfNull(activity);
 
+        // The handlers run once for an activity. What they decided is kept on it, so a start held back by its sending
+        // address's limits, or retried after a failed attempt, goes ahead with that decision: running them on every
+        // try would repeat whatever else they do, and could reverse a decision already acted on.
+        if (activity.TryGet<OmnichannelAIConversationStartingState>(out var state) && state.Completed)
+        {
+            return new AIConversationStartingResult();
+        }
+
         var conversation = await _contextFactory.CreateAsync(activity, session: null, profile: null, cancellationToken);
         var result = await _startingService.StartingAsync(conversation, cancellationToken);
 
@@ -41,6 +50,15 @@ public sealed class OmnichannelAIConversationStarting : IOmnichannelAIConversati
         if (result.Variables.Count > 0)
         {
             activity.SetConversationVariables(result.Variables);
+        }
+
+        // Handlers that timed out decided nothing, so they get another chance on the next try.
+        if (!result.Declined && !result.TimedOut)
+        {
+            activity.Put(new OmnichannelAIConversationStartingState
+            {
+                Completed = true,
+            });
         }
 
         return result;

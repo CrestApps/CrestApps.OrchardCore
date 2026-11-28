@@ -31,7 +31,14 @@ public sealed class OmnichannelChannelEndpointStore : Catalog<OmnichannelChannel
         // The address answers on a channel when it has that capability. Capabilities are channel names matched
         // case-insensitively, so a record written when the constant was "Sms" still routes its inbound traffic. The
         // value is canonicalized to E.164 by the manager before this call, so it is matched exactly.
-        return document.Records.Values.FirstOrDefault(x => x.Value == serviceAddress && x.HasCapability(channel));
+        //
+        // An email address is compared without regard to case, so an address saved before addresses were stored in
+        // lower case still receives its mail.
+        var comparison = string.Equals(channel, OmnichannelConstants.Channels.Email, StringComparison.OrdinalIgnoreCase)
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+
+        return document.Records.Values.FirstOrDefault(x => string.Equals(x.Value, serviceAddress, comparison) && x.HasCapability(channel));
     }
 
     /// <inheritdoc/>

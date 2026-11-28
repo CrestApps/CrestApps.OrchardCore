@@ -42,8 +42,10 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
             model.RequireTimeZone = settings.RequireTimeZone;
             model.AutoDetectTimeZone = settings.AutoDetectTimeZone;
             model.UseDoNotCall = settings.UseDoNotCall;
-            model.UseDoNotSms = settings.UseDoNotSms;
-            model.UseDoNotEmail = settings.UseDoNotEmail;
+            // A flag set by the contact's own unsubscribe or STOP reply is shown even when the type doesn't offer it, so
+            // staff can see why the contact gets no messages and clear it when the person asks again.
+            model.UseDoNotSms = ShowsDoNotSms(settings, part);
+            model.UseDoNotEmail = ShowsDoNotEmail(settings, part);
             model.TimeZoneId = TimeZoneIds.Normalize(part.TimeZoneId);
             model.AvailableTimeZones = await GetTimeZoneOptionsAsync(model.TimeZoneId);
             model.DoNotCall = part.DoNotCall;
@@ -80,18 +82,24 @@ internal sealed class OmnichannelContactPartDisplayDriver : ContentPartDisplayDr
             part.SetDoNotCall(model.DoNotCall, utcNow);
         }
 
-        if (settings.UseDoNotSms)
+        if (ShowsDoNotSms(settings, part))
         {
             part.SetDoNotSms(model.DoNotSms, utcNow);
         }
 
-        if (settings.UseDoNotEmail)
+        if (ShowsDoNotEmail(settings, part))
         {
             part.SetDoNotEmail(model.DoNotEmail, utcNow);
         }
 
         return Edit(part, context);
     }
+
+    private static bool ShowsDoNotSms(OmnichannelContactPartSettings settings, OmnichannelContactPart part)
+        => settings.UseDoNotSms || part.DoNotSms;
+
+    private static bool ShowsDoNotEmail(OmnichannelContactPartSettings settings, OmnichannelContactPart part)
+        => settings.UseDoNotEmail || part.DoNotEmail;
 
     private async Task<IEnumerable<SelectListItem>> GetTimeZoneOptionsAsync(string selectedTimeZoneId)
     {

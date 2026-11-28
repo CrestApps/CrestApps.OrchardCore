@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments;
+using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services;
@@ -48,6 +49,56 @@ public sealed class MessagingSendRequest
     /// does not own. Null for a system-sent message such as an auto-reply.
     /// </summary>
     public ClaimsPrincipal Principal { get; set; }
+}
+
+/// <summary>
+/// A request to send a message to a contact address, in the contact's existing conversation on the channel or in a
+/// new one. Bulk mail (a <see cref="MessagingOutboundPurpose.Broadcast"/> or an
+/// <see cref="MessagingOutboundPurpose.Outreach"/> message) opens no conversation: it joins one the contact already has,
+/// and is otherwise kept against the contact's address until they reply.
+/// </summary>
+public sealed class MessagingDirectSendRequest
+{
+    /// <summary>
+    /// Gets or sets the technical name of the channel to send on.
+    /// </summary>
+    public string Channel { get; set; }
+
+    /// <summary>
+    /// Gets or sets our address the message leaves from.
+    /// </summary>
+    public string ServiceAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the contact's address.
+    /// </summary>
+    public string ContactAddress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the subject line, on a channel that supports one.
+    /// </summary>
+    public string Subject { get; set; }
+
+    /// <summary>
+    /// Gets or sets the message body.
+    /// </summary>
+    public string Body { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the agent sending the message. Null for a message automation sends.
+    /// </summary>
+    public string ActingAgentId { get; set; }
+
+    /// <summary>
+    /// Gets or sets why the message is being sent.
+    /// </summary>
+    public MessagingOutboundPurpose Purpose { get; set; }
+
+    /// <summary>
+    /// Gets or sets the identifier of the broadcast the message is sent for, when it is one of a broadcast's. The message
+    /// carries it, so a message the channel holds back is counted on the broadcast when it is sent, or fails, later.
+    /// </summary>
+    public string BroadcastId { get; set; }
 }
 
 /// <summary>

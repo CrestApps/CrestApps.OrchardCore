@@ -1,0 +1,75 @@
+@model EmailSuppressionsViewModel
+
+<zone Name="Title">
+    <breadcrumb name="EmailSuppressions" title="@T["Email Suppressions"]" />
+</zone>
+
+<p class="text-muted">@T["Nothing is sent to these addresses from any email address: they bounced for good, kept bouncing, or their owner reported the business's mail as spam. Bounces and complaints add addresses here by themselves, from the mail server's answers and the delivery events webhook."]</p>
+
+@* The form is necessary to generate an antiforgery token for the remove and bulk actions. *@
+<form asp-action="Index" asp-route-pageSize="@Context.Request.Query["pageSize"]" method="post" class="no-multisubmit" data-list-management data-selected-label="@T["selected"]" data-client-side-search="false">
+    <input type="submit" name="submit.Filter" id="submitFilter" class="visually-hidden" />
+    <input asp-for="Options.BulkAction" type="hidden" />
+    <input type="submit" name="submit.BulkAction" class="visually-hidden" />
+
+    <div class="card text-bg-theme mb-3 position-sticky action-bar">
+        <div class="card-body">
+            <div class="row gx-2">
+                <div class="col">
+                    <div class="input-group">
+                        <input id="search-box" asp-for="Options.Search" class="form-control" placeholder="@T["Search addresses"]" type="search" autofocus autocomplete="off" />
+                        <button type="submit" name="submit.Filter" class="btn btn-outline-secondary" title="@T["Search"]" aria-label="@T["Search"]"><i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i></button>
+                    </div>
+                </div>
+                <div class="col-auto">
+                    <button type="button" class="btn btn-secondary create" data-bs-toggle="modal" data-bs-target="#modalAddSuppression">@T["Add an Address"]</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* The rows, the toolbar and the pager are rendered by the AdminList shape, in the layout (List or Grid) the site or the user picked. *@
+    <admin-list name="EmailSuppressions" context="Model.List"
+                bulk-actions="Model.Options.BulkActions"
+                empty-message="@(string.IsNullOrWhiteSpace(Model.Options.Search) ? T["<strong>Nothing here!</strong> No address is suppressed."] : T["No suppressed address matches your search."])">
+        <admin-list-list item-css-class="list-group-item" />
+        <admin-list-grid>
+            <admin-list-column type="Select" />
+            <admin-list-column name="Address" position="20" title="@T["Address"]" />
+            <admin-list-column name="Reason" position="30" title="@T["Reason"]" width="auto" />
+            <admin-list-column name="Since" position="40" title="@T["Since"]" width="auto" />
+            <admin-list-column type="Actions" title="@T["Actions"]" />
+        </admin-list-grid>
+    </admin-list>
+</form>
+
+<div class="modal fade" id="modalAddSuppression" tabindex="-1" role="dialog" aria-labelledby="add-suppression-title" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <form asp-action="Add" method="post" class="no-multisubmit">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="add-suppression-title">@T["Add an Address"]</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="suppression-address" class="form-label">@T["Email address"]</label>
+                        <input id="suppression-address" name="address" type="email" class="form-control" required />
+                        <span class="hint">@T["Nothing is sent to this address from any email address until you take it off the list."]</span>
+                    </div>
+                    <div class="mb-3">
+                        <label for="suppression-note" class="form-label">@T["Note"]</label>
+                        <input id="suppression-note" name="note" class="form-control" maxlength="500" />
+                        <span class="hint">@T["Why it is suppressed, such as \"Asked by phone not to be emailed\"."]</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary">@T["Suppress"]</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">@T["Cancel"]</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script asp-name="list-management-ui" at="Foot"></script>

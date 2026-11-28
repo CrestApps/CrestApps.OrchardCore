@@ -22,8 +22,9 @@ using YesSql.Sql;
 namespace CrestApps.OrchardCore.Tests.Modules.Omnichannel.Managements;
 
 /// <summary>
-/// A SQLite store with the content item index, the contact index and the phone number index, built by the module's own
-/// providers and migration, so lookups by number run against the rows and schema a tenant actually has.
+/// A SQLite store with the content item index, the contact index, the phone number index and the email address index,
+/// built by the module's own providers and migration, so lookups by number or address run against the rows and schema a
+/// tenant actually has.
 /// </summary>
 internal static class ContactPhoneTestStore
 {
@@ -36,9 +37,11 @@ internal static class ContactPhoneTestStore
     /// <param name="connectionString">The SQLite connection string.</param>
     /// <param name="withPhoneNumberIndex">Whether the phone number index is written, as it is after the upgrade;
     /// <see langword="false"/> saves records the way they were saved before it.</param>
-    public static async Task<IStore> CreateAsync(string connectionString, bool withPhoneNumberIndex = true)
+    /// <param name="withEmailAddressIndex">Whether the email address index is written, as it is after the upgrade;
+    /// <see langword="false"/> saves records the way they were saved before it.</param>
+    public static async Task<IStore> CreateAsync(string connectionString, bool withPhoneNumberIndex = true, bool withEmailAddressIndex = true)
     {
-        var store = await OpenAsync(connectionString, withPhoneNumberIndex);
+        var store = await OpenAsync(connectionString, withPhoneNumberIndex, withEmailAddressIndex);
 
         await using var session = store.CreateSession();
         var transaction = await session.BeginTransactionAsync(TestContext.Current.CancellationToken);
@@ -59,6 +62,7 @@ internal static class ContactPhoneTestStore
 
         await OmnichannelContactsMigrations.CreateContactIndexTableAsync(schemaBuilder);
         await OmnichannelContactsMigrations.CreatePhoneNumberIndexTableAsync(schemaBuilder);
+        await OmnichannelContactsMigrations.CreateEmailAddressIndexTableAsync(schemaBuilder);
         await ContactAddressOptOutIndexMigrations.CreateIndexTableAsync(schemaBuilder);
 
         await transaction.CommitAsync(TestContext.Current.CancellationToken);
@@ -71,7 +75,8 @@ internal static class ContactPhoneTestStore
     /// </summary>
     /// <param name="connectionString">The SQLite connection string.</param>
     /// <param name="withPhoneNumberIndex">Whether the phone number index is written.</param>
-    public static async Task<IStore> OpenAsync(string connectionString, bool withPhoneNumberIndex = true)
+    /// <param name="withEmailAddressIndex">Whether the email address index is written.</param>
+    public static async Task<IStore> OpenAsync(string connectionString, bool withPhoneNumberIndex = true, bool withEmailAddressIndex = true)
     {
         var store = StoreFactory.Create(configuration => configuration.UseSqLite(connectionString));
 
@@ -87,6 +92,11 @@ internal static class ContactPhoneTestStore
             providers.Add(CreatePhoneNumberIndexProvider());
         }
 
+        if (withEmailAddressIndex)
+        {
+            providers.Add(CreateEmailAddressIndexProvider());
+        }
+
         store.RegisterIndexes(providers);
 
         await store.InitializeAsync(TestContext.Current.CancellationToken);
@@ -100,6 +110,12 @@ internal static class ContactPhoneTestStore
     /// </summary>
     public static IIndexProvider CreatePhoneNumberIndexProvider()
         => new OmnichannelContactPhoneNumberIndexProvider(new DefaultPhoneNumberService(), TestContactMethods.Accessor);
+
+    /// <summary>
+    /// Creates the email address index provider the module registers.
+    /// </summary>
+    public static IIndexProvider CreateEmailAddressIndexProvider()
+        => new OmnichannelContactEmailAddressIndexProvider(TestContactMethods.Accessor);
 
     /// <summary>
     /// Creates the lookup the module registers.

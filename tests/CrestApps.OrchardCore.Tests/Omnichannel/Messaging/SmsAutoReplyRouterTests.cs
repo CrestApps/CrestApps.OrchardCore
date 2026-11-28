@@ -1,4 +1,5 @@
 using CrestApps.Core;
+using CrestApps.OrchardCore.Omnichannel.Core;
 using CrestApps.OrchardCore.Omnichannel.Core.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models;
@@ -8,11 +9,14 @@ using CrestApps.OrchardCore.Omnichannel.Messaging.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Services;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Models;
 using CrestApps.OrchardCore.Omnichannel.Messaging.Sms.Services;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
 using Moq;
 using OrchardCore.ContentManagement;
+using OrchardCore.Entities;
 using OrchardCore.Modules;
 using OrchardCore.Sms;
+using YesSql;
 
 namespace CrestApps.OrchardCore.Tests.Omnichannel.Messaging;
 
@@ -215,6 +219,131 @@ public sealed class SmsAutoReplyRouterTests
             Times.Once);
     }
 
+    // Bug: the auto-reply reached the contact but never the thread, so an agent could not see the contact had already been
+    // answered and sent a second "we got your message".
+    [Fact]
+    public async Task KeepsTheAutoReply_OnTheThread_AsAnAutomaticOutboundMessage()
+    {
+        // Arrange
+        var harness = new Harness(autoReply: "Thanks, we got your message.");
+        var conversation = new MessagingConversation { Channel = "SMS", ItemId = "c1", ServiceAddress = "+16502530000", ContactAddress = "+16502530001" };
+
+        // Act
+        await harness.RouteAsync(conversation);
+
+        // Assert
+        var (message, collection) = Assert.Single(harness.Saved);
+        Assert.Equal(OmnichannelConstants.CollectionName, collection);
+        Assert.False(message.IsInbound);
+        Assert.Equal("c1", message.ConversationId);
+        Assert.Equal("Thanks, we got your message.", message.Content);
+        Assert.Equal("+16502530000", message.ServiceAddress);
+        Assert.Equal("+16502530001", message.CustomerAddress);
+        Assert.Equal(_now, message.CreatedUtc);
+        Assert.Null(message.SentByAgentId);
+        Assert.True(message.IsAutomatic());
+        Assert.Equal(MessageDeliveryStatus.Sent.ToString(), message.DeliveryStatus);
+        Assert.Equal("provider-1", message.ProviderMessageId);
+        Assert.True(message.TryGet<OutboundDeliveryState>(out var state));
+        Assert.Equal(MessagingOutboundPurpose.AutoReply, state.Purpose);
+        Assert.Null(state.NextAttemptUtc);
+    }
+
+    // The acknowledgement is not an answer: the contact still waits on a person, so the thread stays unread and its
+    // first-response clock keeps running.
+    [Fact]
+    public async Task KeepingTheAutoReply_LeavesTheThreadUnread_AndTheFirstResponseClockRunning()
+    {
+        // Arrange
+        var harness = new Harness(autoReply: "Thanks, we got your message.");
+        var dueUtc = _now.AddMinutes(30);
+        var conversation = new MessagingConversation
+        {
+            Channel = "SMS",
+            ItemId = "c1",
+            ServiceAddress = "+16502530000",
+            ContactAddress = "+16502530001",
+            UnreadCount = 2,
+            FirstResponseDueUtc = dueUtc,
+        };
+
+        // Act
+        await harness.RouteAsync(conversation);
+
+        // Assert
+        Assert.Single(harness.Saved);
+        Assert.False(conversation.IsRead);
+        Assert.Equal(2, conversation.UnreadCount);
+        Assert.Equal(dueUtc, conversation.FirstResponseDueUtc);
+        Assert.Null(conversation.FirstRespondedUtc);
+    }
+
+    [Fact]
+    public async Task KeepsNothingOnTheThread_WhenNoAutoReplyIsSent()
+    {
+        // Arrange
+        var harness = new Harness(autoReply: "Thanks, we got your message.");
+        var conversation = new MessagingConversation
+        {
+            Channel = "SMS",
+            ItemId = "c1",
+            ServiceAddress = "+16502530000",
+            ContactAddress = "+16502530001",
+            LastAutoReplyUtc = _now.AddHours(-2),
+        };
+
+        // Act
+        await harness.RouteAsync(conversation);
+
+        // Assert
+        Assert.Empty(harness.Saved);
+    }
+
+    // A refused acknowledgement is shown as failed rather than retried: arriving an hour later, after a person may have
+    // answered, it would only confuse the contact.
+    [Fact]
+    public async Task KeepsARefusedAutoReply_AsFailed_WithoutARetry()
+    {
+        // Arrange
+        var harness = new Harness(autoReply: "Thanks, we got your message.");
+        harness.Dispatcher
+            .Setup(dispatcher => dispatcher.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MessageDispatchResult.Failed("The provider is unreachable."));
+
+        // Act
+        await harness.RouteAsync(new MessagingConversation { Channel = "SMS", ItemId = "c1", ServiceAddress = "+16502530000", ContactAddress = "+16502530001" });
+
+        // Assert
+        var (message, _) = Assert.Single(harness.Saved);
+        Assert.Equal(MessageDeliveryStatus.Failed.ToString(), message.DeliveryStatus);
+        Assert.Equal("The provider is unreachable.", message.ErrorCode);
+        Assert.True(message.TryGet<OutboundDeliveryState>(out var state));
+        Assert.Null(state.NextAttemptUtc);
+    }
+
+    // Held back by the channel (the number is at its sending limit), the acknowledgement waits in the outbox for its turn.
+    [Fact]
+    public async Task KeepsADeferredAutoReply_Queued_ForTheOutbox()
+    {
+        // Arrange
+        var harness = new Harness(autoReply: "Thanks, we got your message.");
+        var retryAfterUtc = _now.AddMinutes(2);
+        harness.Dispatcher
+            .Setup(dispatcher => dispatcher.SendAsync(It.IsAny<SmsMessage>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(MessageDispatchResult.Deferred(retryAfterUtc, new LocalizedString("Limit", "The number is at its sending limit.")));
+
+        // Act
+        await harness.RouteAsync(new MessagingConversation { Channel = "SMS", ItemId = "c1", ServiceAddress = "+16502530000", ContactAddress = "+16502530001" });
+
+        // Assert
+        var (message, _) = Assert.Single(harness.Saved);
+        Assert.Equal(MessageDeliveryStatus.Queued.ToString(), message.DeliveryStatus);
+        Assert.True(message.TryGet<OutboundDeliveryState>(out var state));
+        Assert.Equal(retryAfterUtc, state.NextAttemptUtc);
+        Assert.Equal(0, state.Attempts);
+        Assert.Equal(MessagingOutboundPurpose.AutoReply, state.Purpose);
+    }
+
     private sealed class Harness
     {
         private readonly AutoReplyRouter _router;
@@ -227,6 +356,10 @@ public sealed class SmsAutoReplyRouterTests
         public Mock<ISmsDispatcher> Dispatcher { get; } = new();
 
         public Mock<IContentManager> ContentManager { get; } = new();
+
+        public Mock<ISession> Session { get; } = new();
+
+        public List<(OmnichannelMessage Message, string Collection)> Saved { get; } = [];
 
         public CrestApps.OrchardCore.Tests.Modules.Omnichannel.Sms.SharedNumberOptOutResolver OptOutResolver { get; } = new();
 
@@ -254,10 +387,15 @@ public sealed class SmsAutoReplyRouterTests
                 .Setup(manager => manager.GetAsync(It.IsAny<string>(), It.IsAny<VersionOptions>()))
                 .ReturnsAsync((string contentItemId, VersionOptions _) => _contacts.TryGetValue(contentItemId, out var contact) ? contact : null);
 
+            Session
+                .Setup(session => session.SaveAsync(It.IsAny<OmnichannelMessage>(), It.IsAny<bool>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+                .Callback<object, bool, string, CancellationToken>((entity, checkConcurrency, collection, cancellationToken) => Saved.Add(((OmnichannelMessage)entity, collection)))
+                .Returns(Task.CompletedTask);
+
             var clock = new Mock<IClock>();
             clock.SetupGet(value => value.UtcNow).Returns(_now);
 
-            _router = new AutoReplyRouter(ContentManager.Object, clock.Object);
+            _router = new AutoReplyRouter(ContentManager.Object, Session.Object, clock.Object);
             _channel = MessagingTestChannels.Sms(Dispatcher.Object, optOutResolver: OptOutResolver);
             _keywordHandler = new SmsKeywordInboundHandler(
                 Dispatcher.Object,

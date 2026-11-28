@@ -49,6 +49,11 @@ public class ChannelViewModel
     /// Gets or sets the CSS classes of the channel's icon.
     /// </summary>
     public string IconCssClass { get; set; }
+
+    /// <summary>
+    /// Gets or sets the CSS color that marks the channel, or <see langword="null"/> for the workspace's default.
+    /// </summary>
+    public string AccentColor { get; set; }
 }
 
 /// <summary>
@@ -92,6 +97,11 @@ public class ComposeViewModel
 
     public IList<string> ContactAddresses { get; set; } = [];
 
+    /// <summary>
+    /// Gets or sets the subject line, sent when the channel of the endpoint picked supports one.
+    /// </summary>
+    public string Subject { get; set; }
+
     public string Body { get; set; }
 
     /// <summary>
@@ -108,6 +118,13 @@ public class ComposeViewModel
     /// </summary>
     [BindNever]
     public IReadOnlyDictionary<string, string> EndpointChannels { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Gets or sets the channels whose messages carry a subject, so the composer shows the subject line only for an
+    /// endpoint of one of them.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyCollection<string> SubjectChannels { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the contacts already chosen in the To line, rendered as its selected options so they show by name.
@@ -362,6 +379,11 @@ public class ThreadViewModel
     /// Gets or sets a value indicating whether the composer shows a subject line.
     /// </summary>
     public bool SupportsSubject { get; set; }
+
+    /// <summary>
+    /// Gets or sets the subject the composer suggests for a reply: <c>Re:</c> and the thread's latest subject.
+    /// </summary>
+    public string ReplySubject { get; set; }
 
     /// <summary>
     /// Gets or sets the longest body the channel accepts, when it has a limit.

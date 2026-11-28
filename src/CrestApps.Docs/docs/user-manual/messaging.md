@@ -161,13 +161,13 @@ Your administrator can copy templates to another site through a deployment plan.
 
 <YouTube video="messaging-templates-broadcasts" title="Video of sending a broadcast" start={108} end={230} />
 
-A broadcast sends the same message to many people; each recipient gets their own one-to-one thread and cannot see the others, and replies come back to the inbox.
+A broadcast sends the same message to many people; each recipient gets it on their own and cannot see the others. A broadcast opens no conversations: when a recipient replies, a conversation opens in the inbox with the broadcast in it. A recipient who already has a conversation gets the message there, and the conversation stays as it was: it is not reopened, marked read or given to someone else.
 
 1. Open **Messaging** → **Broadcasts** and click **New broadcast**.
 2. Enter a **Name**, pick **Send from** (the address decides the channel), choose **Recipients** (search your contacts and leads by name or number; only people with an address on that channel are offered) and add **Additional addresses** for numbers that are not in your contacts (one per line or comma-separated, in international format such as `+12015550123`).
 3. Type the **Message** and click **Queue broadcast**.
 
-The list shows each broadcast's channel, sending address, status, recipients, and how many messages were sent and failed. A broadcast starts as **Queued**, because the messages are sent in the background, and becomes **Completed** when every recipient has been handled. **Failed** counts the messages the provider refused and the people who opted out. A queued broadcast cannot be cancelled, so read it twice before you queue it.
+The list shows each broadcast's channel, sending address, status, recipients, and how many messages were sent, queued, failed and skipped. A broadcast starts as **Queued**, because the messages are sent in the background, and becomes **Completed** when every recipient has been handled. A message held back to be sent later, for example because an email address reached its sending limit, is counted as queued rather than sent until it goes out, and the broadcast shows **Sending** until then. **Failed** counts the messages the provider refused; the people who opted out are counted as skipped. A queued broadcast cannot be cancelled, so read it twice before you queue it.
 
 A message the provider does not accept is tried again after 1, 5, 15 and 60 minutes before it counts as failed. A broadcast does not wait for the channel's quiet hours and does not check the do-not-call registry, so send it only to people who agreed to hear from you. A person who opted out of SMS never receives it.
 

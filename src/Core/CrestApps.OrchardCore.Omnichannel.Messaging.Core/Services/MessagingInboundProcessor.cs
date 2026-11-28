@@ -307,6 +307,10 @@ public sealed class MessagingInboundProcessor : IMessagingInboundProcessor
         if (isNew)
         {
             conversation = await CreateOrAdoptAsync(conversation, channel.Name, serviceAddress, contactAddress, cancellationToken);
+
+            // A broadcast sent to this customer before they wrote back was kept without a conversation; it joins the one
+            // their reply opens, so the agent sees what they are answering.
+            await MessagingConversationService.AdoptUnthreadedMessagesAsync(_session, conversation, cancellationToken);
         }
         else
         {

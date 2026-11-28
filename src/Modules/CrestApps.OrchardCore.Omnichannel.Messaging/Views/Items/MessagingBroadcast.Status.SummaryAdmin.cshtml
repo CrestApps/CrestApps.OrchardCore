@@ -1,5 +1,19 @@
-@model ShapeViewModel<MessagingBroadcast>
+@using CrestApps.OrchardCore.Omnichannel.Messaging.Models
+@model BroadcastProgressViewModel
+
+@{
+    // A broadcast whose recipients were all processed is still sending while some of its messages wait in the outbox.
+    var label = Model.Status switch
+    {
+        MessagingBroadcastStatus.Draft => T["Draft"],
+        MessagingBroadcastStatus.Queued => T["Queued"],
+        MessagingBroadcastStatus.Running => T["Sending"],
+        MessagingBroadcastStatus.Completed => T["Completed"],
+        MessagingBroadcastStatus.Failed => T["Failed"],
+        _ => T["Unknown"],
+    };
+}
 
 <span class="badge ta-badge fw-normal" data-bs-toggle="tooltip" title="@T["Status"]">
-    <i class="fa-solid fa-circle-info text-secondary me-1" aria-hidden="true"></i>@Model.Value.Status.ToString()
+    <i class="fa-solid fa-circle-info text-secondary me-1" aria-hidden="true"></i>@label
 </span>

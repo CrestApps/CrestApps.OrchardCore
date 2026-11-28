@@ -95,5 +95,5 @@ question is asked at send time, an opt-out recorded after the run started still 
 
 | Record | Source | Sender | Renderer | Policies |
 | --- | --- | --- | --- | --- |
-| Messaging broadcast | `MessagingBroadcastRecipients`: the broadcast's recipient list, by position | `Messaging`: each recipient in their own 1:1 thread, quiet hours where the channel observes them | `Text` | Consent on the broadcast's channel, as a CRM contact |
+| Messaging broadcast | `MessagingBroadcastRecipients`: the broadcast's recipient list, by position | `Messaging`: each recipient on their own, as bulk mail that opens no conversation until the recipient replies; quiet hours where the channel observes them; a message the channel holds back counts on the broadcast as queued until it is sent | `Text` | Consent on the broadcast's channel, as a CRM contact |
 | Marketing campaign | `MarketingSegment`: the segment's customers, by document id; customers who don't accept marketing are skipped | `Email` | `MarketingCampaign`: the campaign's Liquid and the customer's unsubscribe link | Consent on `Email`, as a commerce customer |

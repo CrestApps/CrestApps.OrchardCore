@@ -43,6 +43,12 @@ public interface IMessagingChannel
     string IconCssClass { get; }
 
     /// <summary>
+    /// Gets the CSS color that marks the channel in the workspace, such as <c>var(--bs-primary)</c>, so channels are told
+    /// apart by color as well as by icon. <see langword="null"/> uses the workspace's default color.
+    /// </summary>
+    string AccentColor => null;
+
+    /// <summary>
     /// Gets the order the channel is shown in, lowest first, wherever the workspace lists channels side by side.
     /// </summary>
     int Order { get; }

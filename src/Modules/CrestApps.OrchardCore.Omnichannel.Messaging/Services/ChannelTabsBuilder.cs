@@ -63,6 +63,7 @@ internal static class ChannelTabsBuilder
                 Name = channel.Name,
                 DisplayName = channel.DisplayName.Value,
                 IconCssClass = channel.IconCssClass,
+                AccentColor = channel.AccentColor,
                 IsActive = isActive,
                 HasConversation = target is not null,
                 UnreadCount = unread,

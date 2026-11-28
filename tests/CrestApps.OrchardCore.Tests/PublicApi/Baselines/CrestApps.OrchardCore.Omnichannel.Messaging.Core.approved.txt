@@ -53,6 +53,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
 {
     public interface IMessagingChannel
     {
+        string AccentColor { get; }
         CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingChannelCapabilities Capabilities { get; }
         Microsoft.Extensions.Localization.LocalizedString DisplayName { get; }
         string IconCssClass { get; }
@@ -82,6 +83,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
     public sealed class MessagingAttachmentCapabilities
     {
         public MessagingAttachmentCapabilities() { }
+        public bool DeliveredAsLinks { get; init; }
         public System.Collections.Generic.IReadOnlyList<CrestApps.OrchardCore.Attachments.Models.FileFormat> Formats { get; init; }
         public bool ImagesOnly { get; }
         public bool IsSupported { get; }
@@ -121,11 +123,32 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels
     public sealed class MessagingOutboundMessage
     {
         public MessagingOutboundMessage() { }
+        public System.Collections.Generic.IList<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.MessagingAttachment> Attachments { get; set; }
         public string Body { get; set; }
         public string ContactAddress { get; set; }
+        public string ConversationId { get; set; }
         public System.Collections.Generic.IList<string> MediaUrls { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingOutboundPurpose Purpose { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage ReplyTo { get; set; }
         public string ServiceAddress { get; set; }
         public string Subject { get; set; }
+    }
+    public enum MessagingOutboundPurpose
+    {
+        Reply = 0,
+        AutoReply = 1,
+        Broadcast = 2,
+        Automation = 3,
+        Outreach = 4,
+    }
+    public static class MessagingSubjects
+    {
+        public const int MaxLength = 255;
+        public static string Clean(string subject) { }
+        public static string ForReply(string subject) { }
+        public static string ForReplyTo(System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage> messages) { }
+        public static System.Collections.Generic.IReadOnlyCollection<string> GetChannelNames(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver) { }
+        public static bool IsReply(string subject) { }
     }
 }
 namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes
@@ -165,6 +188,13 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Indexes
         public string ServiceAddress { get; set; }
         public string Status { get; set; }
         public int UnreadCount { get; set; }
+    }
+    public sealed class MessagingOutboxIndex : YesSql.Indexes.MapIndex
+    {
+        public MessagingOutboxIndex() { }
+        public string Channel { get; set; }
+        public System.DateTime NextAttemptUtc { get; set; }
+        public string ServiceAddress { get; set; }
     }
     public sealed class MessagingRoutingRuleIndex : CrestApps.Core.Data.YesSql.Indexes.CatalogItemIndex
     {
@@ -247,11 +277,39 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public string OutreachRunId { get; set; }
         public string OwnerAgentId { get; set; }
         public System.Collections.Generic.IList<string> ProcessedRecipients { get; set; }
+        public int QueuedCount { get; set; }
         public System.Collections.Generic.IList<string> Recipients { get; set; }
         public int SentCount { get; set; }
         public string ServiceAddress { get; set; }
         public int SkippedCount { get; set; }
         public CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessagingBroadcastStatus Status { get; set; }
+        public string Subject { get; set; }
+    }
+    public static class MessagingBroadcastExtensions
+    {
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcastQueueOutcome Find(this CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcastQueueOutcomes outcomes, string broadcastId) { }
+        public static CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessagingBroadcastStatus GetDisplayStatus(this CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcast broadcast, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcastQueueOutcome outcome) { }
+        public static int GetFailedCount(this CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcast broadcast, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcastQueueOutcome outcome) { }
+        public static int GetQueuedCount(this CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcast broadcast, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcastQueueOutcome outcome) { }
+        public static int GetSentCount(this CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcast broadcast, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcastQueueOutcome outcome) { }
+        public static void RecordQueued(this CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcast broadcast) { }
+        public static void RecordQueuedOutcome(this CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcastQueueOutcomes outcomes, string broadcastId, int sent, int failed) { }
+    }
+    public sealed class MessagingBroadcastLink
+    {
+        public MessagingBroadcastLink() { }
+        public string BroadcastId { get; set; }
+    }
+    public sealed class MessagingBroadcastQueueOutcome
+    {
+        public MessagingBroadcastQueueOutcome() { }
+        public int Failed { get; set; }
+        public int Sent { get; set; }
+    }
+    public sealed class MessagingBroadcastQueueOutcomes : OrchardCore.Data.Documents.Document
+    {
+        public MessagingBroadcastQueueOutcomes() { }
+        public System.Collections.Generic.Dictionary<string, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcastQueueOutcome> Broadcasts { get; set; }
     }
     public sealed class MessagingConversation : CrestApps.Core.Models.CatalogItem, CrestApps.Core.IModifiedUtcAwareModel
     {
@@ -366,6 +424,29 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public int Take { get; set; }
         public bool UnreadOnly { get; set; }
     }
+    public sealed class MessagingMessageDetails
+    {
+        public MessagingMessageDetails() { }
+        public string QuotedText { get; set; }
+        public string Subject { get; set; }
+    }
+    public static class MessagingMessageExtensions
+    {
+        public static string GetQuotedText(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message) { }
+        public static string GetSubject(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message) { }
+        public static void SetQuotedText(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, string quotedText) { }
+        public static void SetSubject(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, string subject) { }
+    }
+    public sealed class MessagingMessageOrigin
+    {
+        public MessagingMessageOrigin() { }
+        public bool IsAutomatic { get; set; }
+    }
+    public static class MessagingMessageOriginExtensions
+    {
+        public static bool IsAutomatic(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message) { }
+        public static void SetAutomatic(this CrestApps.OrchardCore.Omnichannel.Core.Models.OmnichannelMessage message, bool isAutomatic) { }
+    }
     public readonly struct MessagingQueuePolicy : System.IEquatable<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingQueuePolicy>
     {
         public MessagingQueuePolicy(bool Exists, int FirstResponseTargetSeconds, string BusinessHoursCalendarId) { }
@@ -448,8 +529,10 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models
         public static readonly System.Collections.Immutable.ImmutableArray<int> RetryDelayMinutes;
         public OutboundDeliveryState() { }
         public int Attempts { get; set; }
+        public bool IsHeld { get; set; }
         public string LastError { get; set; }
         public System.DateTime? NextAttemptUtc { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingOutboundPurpose Purpose { get; set; }
         public static int MaxAttempts { get; }
         public static bool CanRetry(int attempts) { }
         public static bool CanRetry(int attempts, string errorCode) { }
@@ -478,7 +561,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Outreach
     }
     public sealed class MessagingOutreachChannelSender : CrestApps.OrchardCore.Outreach.IOutreachChannelSender
     {
-        public MessagingOutreachChannelSender(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationService conversationService, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver) { }
+        public MessagingOutreachChannelSender(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationService conversationService, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingBroadcastStore broadcastStore) { }
         public string Name { get; }
         public bool ObservesQuietHours(CrestApps.OrchardCore.Outreach.Models.OutreachRun run) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Outreach.Models.OutreachSendResult> SendAsync(CrestApps.OrchardCore.Outreach.Models.OutreachRun run, CrestApps.OrchardCore.Outreach.Models.OutreachRecipient recipient, CrestApps.OrchardCore.Outreach.Models.OutreachContent content, System.Threading.CancellationToken cancellationToken = default) { }
@@ -556,6 +639,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> AssignAsync(string conversationId, string targetAgentId, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> ClaimAsync(string conversationId, string actingAgentId, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> SendAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendRequest request, System.Threading.CancellationToken cancellationToken = default);
+        System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> SendDirectAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingDirectSendRequest request, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> SendDirectAsync(string channel, string serviceAddress, string contactAddress, string body, string actingAgentId, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> SetStatusAsync(string conversationId, CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationStatus status, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default);
     }
@@ -608,6 +692,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     }
     public interface IMessagingOutbox
     {
+        System.Threading.Tasks.Task<int> BringForwardAsync(string channel, string serviceAddress, System.Threading.CancellationToken cancellationToken = default);
         System.Threading.Tasks.Task<int> DispatchDueAsync(System.Threading.CancellationToken cancellationToken = default);
     }
     public interface IMessagingPresenceTracker
@@ -706,6 +791,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> AssignAsync(string conversationId, string targetAgentId, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> ClaimAsync(string conversationId, string actingAgentId, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> SendAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+        public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> SendDirectAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingDirectSendRequest request, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> SendDirectAsync(string channel, string serviceAddress, string contactAddress, string body, string actingAgentId, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingSendResult> SetStatusAsync(string conversationId, CrestApps.OrchardCore.Omnichannel.Messaging.Models.ConversationStatus status, System.Security.Claims.ClaimsPrincipal principal = null, System.Threading.CancellationToken cancellationToken = default) { }
     }
@@ -734,6 +820,18 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
         public const int MaxNoteLength = 500;
         public MessagingConversationTransferService(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore conversationStore, Microsoft.AspNetCore.Authorization.IAuthorizationService authorizationService, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentProfileManager agentProfileManager, System.Collections.Generic.IEnumerable<CrestApps.OrchardCore.ContactCenter.Core.Services.IActivityQueueManager> queueManagers, CrestApps.OrchardCore.ContactCenter.Core.Services.IAgentEntitlementPolicy entitlementPolicy, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingAgentNameProvider agentNames, CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.IMessagingRealTimeNotifier notifier, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingConversationTransferService> logger) { }
         public System.Threading.Tasks.Task<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingTransferResult> TransferAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingTransferRequest request, System.Threading.CancellationToken cancellationToken = default) { }
+    }
+    public sealed class MessagingDirectSendRequest
+    {
+        public MessagingDirectSendRequest() { }
+        public string ActingAgentId { get; set; }
+        public string Body { get; set; }
+        public string BroadcastId { get; set; }
+        public string Channel { get; set; }
+        public string ContactAddress { get; set; }
+        public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.MessagingOutboundPurpose Purpose { get; set; }
+        public string ServiceAddress { get; set; }
+        public string Subject { get; set; }
     }
     public sealed class MessagingFavoritesService : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingFavoritesService
     {
@@ -783,7 +881,8 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services
     }
     public sealed class MessagingOutbox : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingOutbox
     {
-        public MessagingOutbox(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.IMessagingRealTimeNotifier notifier, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentUrlProvider attachmentUrlProvider, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingWorkspaceOptions> options, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingOutbox> logger) { }
+        public MessagingOutbox(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Channels.IMessagingChannelResolver channelResolver, CrestApps.OrchardCore.Omnichannel.Messaging.Notifications.IMessagingRealTimeNotifier notifier, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingConversationStore conversationStore, CrestApps.OrchardCore.Omnichannel.Messaging.Core.Attachments.IMessagingAttachmentUrlProvider attachmentUrlProvider, OrchardCore.Documents.IDocumentManager<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcastQueueOutcomes> queueOutcomes, Microsoft.Extensions.Options.IOptions<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingWorkspaceOptions> options, YesSql.ISession session, OrchardCore.Modules.IClock clock, Microsoft.Extensions.Logging.ILogger<CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingOutbox> logger) { }
+        public System.Threading.Tasks.Task<int> BringForwardAsync(string channel, string serviceAddress, System.Threading.CancellationToken cancellationToken = default) { }
         public System.Threading.Tasks.Task<int> DispatchDueAsync(System.Threading.CancellationToken cancellationToken = default) { }
     }
     public sealed class MessagingQuietHoursGuard
@@ -881,7 +980,7 @@ namespace CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.Routers
 {
     public sealed class AutoReplyRouter : CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.IMessagingInboundRouter
     {
-        public AutoReplyRouter(OrchardCore.ContentManagement.IContentManager contentManager, OrchardCore.Modules.IClock clock) { }
+        public AutoReplyRouter(OrchardCore.ContentManagement.IContentManager contentManager, YesSql.ISession session, OrchardCore.Modules.IClock clock) { }
         public int Order { get; }
         public System.Threading.Tasks.Task<bool> TryRouteAsync(CrestApps.OrchardCore.Omnichannel.Messaging.Core.Services.MessagingRoutingContext context, System.Threading.CancellationToken cancellationToken = default) { }
     }

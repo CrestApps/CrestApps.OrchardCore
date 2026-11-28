@@ -21,6 +21,11 @@ public class BroadcastCreateViewModel
     public string EndpointId { get; set; }
 
     /// <summary>
+    /// Gets or sets the subject line, sent when the channel of the endpoint picked supports one.
+    /// </summary>
+    public string Subject { get; set; }
+
+    /// <summary>
     /// Gets or sets the message body.
     /// </summary>
     public string Body { get; set; }
@@ -48,6 +53,12 @@ public class BroadcastCreateViewModel
     public IReadOnlyDictionary<string, string> EndpointChannels { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
+    /// Gets or sets the channels whose messages carry a subject.
+    /// </summary>
+    [BindNever]
+    public IReadOnlyCollection<string> SubjectChannels { get; set; } = [];
+
+    /// <summary>
     /// Gets or sets the editor shape, built by the display drivers of this view model, which groups the fields in cards.
     /// </summary>
     [BindNever]
@@ -64,4 +75,36 @@ public class BroadcastListViewModel
     /// </summary>
     [BindNever]
     public AdminListContext List { get; set; }
+}
+
+/// <summary>
+/// A broadcast's progress as a row of the admin list shows it: the run's counts with what the outbox did with the
+/// messages the channel held back.
+/// </summary>
+public class BroadcastProgressViewModel
+{
+    /// <summary>
+    /// Gets or sets the broadcast.
+    /// </summary>
+    public CrestApps.OrchardCore.Omnichannel.Messaging.Core.Models.MessagingBroadcast Broadcast { get; set; }
+
+    /// <summary>
+    /// Gets or sets the status shown: a completed broadcast with messages still queued is still sending.
+    /// </summary>
+    public CrestApps.OrchardCore.Omnichannel.Messaging.Models.MessagingBroadcastStatus Status { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many recipients the message was actually sent to.
+    /// </summary>
+    public int SentCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many held-back messages still wait in the outbox.
+    /// </summary>
+    public int QueuedCount { get; set; }
+
+    /// <summary>
+    /// Gets or sets how many recipients the message could not be sent to.
+    /// </summary>
+    public int FailedCount { get; set; }
 }

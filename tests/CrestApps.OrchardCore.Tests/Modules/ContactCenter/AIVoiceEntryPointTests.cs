@@ -120,7 +120,7 @@ public sealed class AIVoiceEntryPointTests
         // Assert
         var error = Assert.Single(context.Result.Errors);
         Assert.Contains(nameof(ContactCenterEntryPoint.TargetAIProfileId), error.MemberNames);
-        Assert.Equal("Select the AI agent that answers this entry point's texts.", error.ErrorMessage);
+        Assert.Equal("Select the AI agent that answers this entry point's messages.", error.ErrorMessage);
     }
 
     [Fact]
