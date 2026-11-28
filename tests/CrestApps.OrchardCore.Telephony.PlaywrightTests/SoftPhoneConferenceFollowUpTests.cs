@@ -120,7 +120,7 @@ public sealed class SoftPhoneConferenceFollowUpTests : SoftPhoneBrowserTest
         var (page, first, second) = await MergeTwoCallsAsync();
         var primary = (await LastMergeAsync(page)).GetProperty("callIds")[0].GetString();
         var endAll = page.Locator("[data-telephony-hangup-all]");
-        Assert.Equal("End for all", await endAll.GetAttributeAsync("aria-label"));
+        Assert.Equal("End for All", await endAll.GetAttributeAsync("aria-label"));
 
         // Act - asked, and kept.
         await endAll.ClickAsync();
