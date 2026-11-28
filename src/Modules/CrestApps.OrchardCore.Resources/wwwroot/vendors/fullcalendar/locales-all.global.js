@@ -1,5 +1,5 @@
 /*!
-FullCalendar (Vanilla JS) v7.1.4
+FullCalendar (Vanilla JS) v7.1.5
 Docs & License: https://fullcalendar.io
 (c) 2026 Adam Shaw
 */
