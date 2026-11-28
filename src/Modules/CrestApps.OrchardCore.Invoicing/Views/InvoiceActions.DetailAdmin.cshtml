@@ -17,8 +17,8 @@
             <form asp-action="Approve" asp-controller="InvoicesAdmin" method="post" class="mb-3">
                 <input type="hidden" name="itemId" value="@invoice.ItemId" />
                 <button type="submit" class="btn btn-primary"
-                        data-url-af="RemoveUrl" data-title="@T["Approve invoice"]" data-message="@T["Approve and issue the invoice? It gets its number and what it totals is owed."]" data-ok-text="@T["Approve"]" data-cancel-text="@T["Cancel"]">
-                    @T["Approve and issue"]
+                        data-url-af="RemoveUrl" data-title="@T["Approve Invoice"]" data-message="@T["Approve and issue the invoice? It gets its number and what it totals is owed."]" data-ok-text="@T["Approve"]" data-cancel-text="@T["Cancel"]">
+                    @T["Approve and Issue"]
                 </button>
             </form>
             <form asp-action="Reject" asp-controller="InvoicesAdmin" method="post">
@@ -41,7 +41,7 @@
             <p class="text-muted">@T["Drafts a copy of {0} to change. Issuing the revision voids {0} and links the two.", number]</p>
             <form asp-action="Revise" asp-controller="InvoicesAdmin" method="post">
                 <input type="hidden" name="itemId" value="@invoice.ItemId" />
-                <button type="submit" class="btn btn-secondary">@T["Draft a revision"]</button>
+                <button type="submit" class="btn btn-secondary">@T["Draft a Revision"]</button>
             </form>
         </div>
     </div>
@@ -64,14 +64,14 @@
             <div class="d-flex flex-wrap gap-2">
                 @if (Model.CanEdit)
                 {
-                    <a asp-action="Edit" asp-controller="InvoicesAdmin" asp-route-itemId="@invoice.ItemId" class="btn btn-secondary">@T["Edit draft"]</a>
+                    <a asp-action="Edit" asp-controller="InvoicesAdmin" asp-route-itemId="@invoice.ItemId" class="btn btn-secondary">@T["Edit Draft"]</a>
                 }
                 @if (Model.CanIssue)
                 {
                     <form asp-action="Issue" asp-controller="InvoicesAdmin" method="post">
                         <input type="hidden" name="itemId" value="@invoice.ItemId" />
                         <button type="submit" class="btn btn-primary"
-                                data-url-af="RemoveUrl" data-title="@T["Issue invoice"]" data-message="@T["Issue the invoice? It gets its number, what it totals is owed, and it can't be changed after."]" data-ok-text="@T["Issue"]" data-cancel-text="@T["Cancel"]">
+                                data-url-af="RemoveUrl" data-title="@T["Issue Invoice"]" data-message="@T["Issue the invoice? It gets its number, what it totals is owed, and it can't be changed after."]" data-ok-text="@T["Issue"]" data-cancel-text="@T["Cancel"]">
                             @T["Issue"]
                         </button>
                     </form>
@@ -80,7 +80,7 @@
                 {
                     <form asp-action="Submit" asp-controller="InvoicesAdmin" method="post">
                         <input type="hidden" name="itemId" value="@invoice.ItemId" />
-                        <button type="submit" class="btn btn-primary">@T["Submit for approval"]</button>
+                        <button type="submit" class="btn btn-primary">@T["Submit for Approval"]</button>
                     </form>
                 }
                 @if (Model.CanDelete)
@@ -88,8 +88,8 @@
                     <form asp-action="Delete" asp-controller="InvoicesAdmin" method="post">
                         <input type="hidden" name="itemId" value="@invoice.ItemId" />
                         <button type="submit" class="btn btn-outline-danger"
-                                data-url-af="RemoveUrl" data-title="@T["Delete draft"]" data-message="@T["Delete this draft? This can't be undone."]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]">
-                            @T["Delete draft"]
+                                data-url-af="RemoveUrl" data-title="@T["Delete Draft"]" data-message="@T["Delete this draft? This can't be undone."]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]">
+                            @T["Delete Draft"]
                         </button>
                     </form>
                 }
@@ -110,7 +110,7 @@
                     <label class="form-label" for="write-off-reason">@T["Reason"]</label>
                     <input id="write-off-reason" name="reason" class="form-control" required maxlength="500" />
                 </div>
-                <button type="submit" class="btn btn-warning">@T["Write off"]</button>
+                <button type="submit" class="btn btn-warning">@T["Write Off"]</button>
             </form>
         </div>
     </div>
@@ -147,7 +147,7 @@
                     <input id="void-reason" name="reason" class="form-control" required maxlength="500" />
                 </div>
                 <button type="submit" class="btn btn-outline-danger"
-                        data-url-af="RemoveUrl" data-title="@T["Void invoice"]" data-message="@T["Void {0}? This can't be undone.", number]" data-ok-text="@T["Void"]" data-cancel-text="@T["Cancel"]">
+                        data-url-af="RemoveUrl" data-title="@T["Void Invoice"]" data-message="@T["Void {0}? This can't be undone.", number]" data-ok-text="@T["Void"]" data-cancel-text="@T["Cancel"]">
                     @T["Void"]
                 </button>
             </form>

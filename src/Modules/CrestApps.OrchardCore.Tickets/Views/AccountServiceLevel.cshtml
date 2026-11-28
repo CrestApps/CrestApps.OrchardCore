@@ -3,7 +3,7 @@
 <div class="card mb-3">
     <div class="card-body">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-            <h2 class="h6 mb-0 me-auto"><i class="fa-solid fa-stopwatch me-1" aria-hidden="true"></i>@T["Service level"]</h2>
+            <h2 class="h6 mb-0 me-auto"><i class="fa-solid fa-stopwatch me-1" aria-hidden="true"></i>@T["Service Level"]</h2>
             @if (Model.CanChange)
             {
                 <a class="btn btn-sm btn-secondary" asp-area="OrchardCore.Contents" asp-controller="Admin" asp-action="Edit" asp-route-contentItemId="@Model.AccountId" asp-route-returnUrl="@(Context.Request.PathBase + Context.Request.Path + Context.Request.QueryString)">@T["Change"]</a>

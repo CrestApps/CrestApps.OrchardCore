@@ -2,12 +2,12 @@
 
 @* Sends a punchout buyer's cart back to their procurement system: OCI fields posted to its HOOK_URL. *@
 
-<h1 class="h4 mb-3">@T["Transfer to your procurement system"]</h1>
+<h1 class="h4 mb-3">@T["Transfer to Your Procurement System"]</h1>
 
 @if (Model.Fields.Count == 0)
 {
     <p>@T["Your cart is empty, or nothing in it can be bought as it is."]</p>
-    <a href="@Url.RouteUrl("Cart")" class="btn btn-secondary">@T["Back to the cart"]</a>
+    <a href="@Url.RouteUrl("Cart")" class="btn btn-secondary">@T["Back to the Cart"]</a>
 }
 else
 {
@@ -18,8 +18,8 @@ else
         {
             <input type="hidden" name="@field.Key" value="@field.Value" />
         }
-        <button type="submit" class="btn btn-primary">@T["Transfer now"]</button>
-        <a href="@Url.RouteUrl("Cart")" class="btn btn-link">@T["Back to the cart"]</a>
+        <button type="submit" class="btn btn-primary">@T["Transfer Now"]</button>
+        <a href="@Url.RouteUrl("Cart")" class="btn btn-link">@T["Back to the Cart"]</a>
     </form>
 
     <script at="Foot">

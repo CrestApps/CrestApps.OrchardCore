@@ -2,11 +2,12 @@ using CrestApps.OrchardCore.Payroll.Core.Services;
 using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Services;
 using CrestApps.OrchardCore.Staff.Services;
+using Microsoft.Extensions.Localization;
 
 namespace CrestApps.OrchardCore.Payroll.Services;
 
 /// <summary>
-/// The names payroll pages show, read once per request: staff members, employers and pay schedules.
+/// The names payroll pages show, read once per request: staff members, employers, pay schedules and pay runs.
 /// </summary>
 public sealed class PayrollNames
 {
@@ -17,18 +18,30 @@ public sealed class PayrollNames
     private Dictionary<string, string> _scheduleNames;
     private readonly Dictionary<string, string> _staffNames = new(StringComparer.Ordinal);
 
+    internal readonly IStringLocalizer S;
+
     /// <summary>
     /// Initializes a new instance of the <see cref="PayrollNames"/> class.
     /// </summary>
     /// <param name="staff">The staff directory.</param>
     /// <param name="employers">The employers.</param>
     /// <param name="schedules">The pay schedules.</param>
-    public PayrollNames(IStaffDirectory staff, EmployerStore employers, IPayScheduleManager schedules)
+    /// <param name="stringLocalizer">The string localizer.</param>
+    public PayrollNames(IStaffDirectory staff, EmployerStore employers, IPayScheduleManager schedules, IStringLocalizer<PayrollNames> stringLocalizer)
     {
         _staff = staff;
         _employers = employers;
         _schedules = schedules;
+        S = stringLocalizer;
     }
+
+    /// <summary>
+    /// Gets the name of a pay run: its title, or "Pay run" and its number for a run added before runs had titles.
+    /// </summary>
+    /// <param name="run">The run.</param>
+    /// <returns>The name.</returns>
+    public string Run(PayRun run)
+        => PayRunTitles.Name(run, S);
 
     /// <summary>
     /// Gets a staff member's name.

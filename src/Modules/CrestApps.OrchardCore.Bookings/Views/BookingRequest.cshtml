@@ -2,7 +2,7 @@
 
 @* A signed-in buyer's form to send their cart as a request the store confirms. *@
 
-<h1 class="h3 mb-3">@T["Request to book"]</h1>
+<h1 class="h3 mb-3">@T["Request to Book"]</h1>
 <p class="text-body-secondary">@T["The store confirms these bookings before you pay. We'll hold your dates and email you when your booking is confirmed, with a link to pay. Your cart is emptied; the request shows under your orders."]</p>
 
 @if (Model.Problems.Count > 0)
@@ -26,6 +26,6 @@
         <span class="hint">@T["Optional. Such as who's coming, or anything the store should know."]</span>
     </div>
 
-    <button type="submit" class="btn btn-primary">@T["Send the request"]</button>
-    <a href="@Url.RouteUrl("Cart")" class="btn btn-link">@T["Back to the cart"]</a>
+    <button type="submit" class="btn btn-primary">@T["Send the Request"]</button>
+    <a href="@Url.RouteUrl("Cart")" class="btn btn-link">@T["Back to the Cart"]</a>
 </form>

@@ -1,8 +1,8 @@
 @model PurchaseOrderEditViewModel
 
 <zone Name="Title">
-    <breadcrumb name="PurchaseOrdersCreate" title="@T["Add purchase order"]">
-        <breadcrumb-item id="PurchaseOrdersIndex" action="Index" controller="PurchaseOrdersAdmin" area="CrestApps.OrchardCore.Inventory" permission="@InventoryPermissions.ViewInventory.Name">@T["Purchase orders"]</breadcrumb-item>
+    <breadcrumb name="PurchaseOrdersCreate" title="@T["Add Purchase Order"]">
+        <breadcrumb-item id="PurchaseOrdersIndex" action="Index" controller="PurchaseOrdersAdmin" area="CrestApps.OrchardCore.Inventory" permission="@InventoryPermissions.ViewInventory.Name">@T["Purchase Orders"]</breadcrumb-item>
     </breadcrumb>
 </zone>
 
@@ -12,7 +12,7 @@
     @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
-        <button type="submit" class="btn btn-primary">@T["Start the order"]</button>
+        <button type="submit" class="btn btn-primary">@T["Start the Order"]</button>
         <a asp-action="Index" class="btn btn-secondary">@T["Cancel"]</a>
     </div>
 </form>

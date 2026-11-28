@@ -113,7 +113,7 @@
                             @if (Model.CanLaunch)
                             {
                                 <button type="button" class="btn btn-primary btn-sm" data-cmi5-au="@index">
-                                    <i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Review ? T["Review"] : auState is null ? T["Launch"] : T["Launch again"])
+                                    <i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Review ? T["Review"] : auState is null ? T["Launch"] : T["Launch Again"])
                                 </button>
                             }
                         </li>
@@ -127,7 +127,7 @@
             else if (Model.CanLaunch)
             {
                 <button type="button" class="btn btn-primary" data-package-launch>
-                    <i class="fa-solid @(opensWindow ? "fa-up-right-from-square" : "fa-play") me-1" aria-hidden="true"></i>@(Model.Review || Model.AttemptsUsedUp ? T["Review"] : Model.Resumes ? T["Resume"] : state is null ? T["Launch"] : T["Launch again"])
+                    <i class="fa-solid @(opensWindow ? "fa-up-right-from-square" : "fa-play") me-1" aria-hidden="true"></i>@(Model.Review || Model.AttemptsUsedUp ? T["Review"] : Model.Resumes ? T["Resume"] : state is null ? T["Launch"] : T["Launch Again"])
                 </button>
                 @if (opensWindow)
                 {

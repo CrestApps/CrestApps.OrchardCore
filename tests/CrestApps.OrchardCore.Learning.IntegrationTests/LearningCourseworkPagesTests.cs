@@ -132,7 +132,7 @@ public sealed class LearningCourseworkPagesTests
         // Assert
         Assert.Equal(HttpStatusCode.OK, page.StatusCode);
         Assert.Contains("Graded already", html);
-        Assert.DoesNotContain("Grade again", html);
+        Assert.DoesNotContain("Grade Again", html);
     }
 
     [Fact]

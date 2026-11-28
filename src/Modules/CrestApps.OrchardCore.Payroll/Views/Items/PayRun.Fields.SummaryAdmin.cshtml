@@ -1,3 +1,4 @@
 @model ShapeViewModel<PayRun>
+@inject CrestApps.OrchardCore.Payroll.Services.PayrollNames Names
 
-<a asp-action="Details" asp-controller="PayRuns" asp-route-id="@Model.Value.ItemId">@T["Run {0}", Model.Value.Number]</a>
+<a asp-action="Details" asp-controller="PayRuns" asp-route-id="@Model.Value.ItemId">@Names.Run(Model.Value)</a>

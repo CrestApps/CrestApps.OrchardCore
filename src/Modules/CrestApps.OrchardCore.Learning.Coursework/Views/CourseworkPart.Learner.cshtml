@@ -104,7 +104,7 @@
 
             @if (!string.IsNullOrWhiteSpace(latest.Text) || latest.Files.Count > 0)
             {
-                <h2 class="h6">@T["What you handed in"]</h2>
+                <h2 class="h6">@T["What You Handed In"]</h2>
                 @if (!string.IsNullOrWhiteSpace(latest.Text))
                 {
                     <div class="border rounded p-2 mb-2 text-break" style="white-space: pre-wrap">@latest.Text</div>
@@ -149,7 +149,7 @@
                         <input id="coursework-files-@Model.CourseworkId" type="file" name="files" class="form-control" multiple="@(part.MaxFiles > 1)" accept="@(string.IsNullOrEmpty(accept) ? null : accept)" />
                     </div>
                 }
-                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(latest is null ? T["Hand in"] : T["Hand in again"])</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-1" aria-hidden="true"></i>@(latest is null ? T["Hand In"] : T["Hand In Again"])</button>
             </form>
         }
     </div>

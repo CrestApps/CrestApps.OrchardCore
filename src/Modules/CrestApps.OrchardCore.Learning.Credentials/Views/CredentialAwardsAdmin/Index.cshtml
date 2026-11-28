@@ -1,7 +1,7 @@
 @model CredentialAwardListViewModel
 
 <zone Name="Title">
-    <breadcrumb name="LearningCredentialAwards" title="@T["Credential awards"]" />
+    <breadcrumb name="LearningCredentialAwards" title="@T["Credential Awards"]" />
 </zone>
 
 @* One GET form for the search and the filters: the filters render in the list's toolbar, inside it. *@
@@ -22,7 +22,7 @@
                 @if (Model.CanAward)
                 {
                     <div class="col-auto">
-                        <a href="@Url.RouteUrl("LearningCredentialAwardsNew")" class="btn btn-secondary create">@T["Award a credential"]</a>
+                        <a href="@Url.RouteUrl("LearningCredentialAwardsNew")" class="btn btn-secondary create">@T["Award a Credential"]</a>
                     </div>
                 }
             </div>

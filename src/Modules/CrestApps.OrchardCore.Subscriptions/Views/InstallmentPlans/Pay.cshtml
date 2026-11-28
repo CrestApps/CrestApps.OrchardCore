@@ -25,7 +25,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="SubscriptionsInstallmentPlansPay" title="@T["Take the down payment"]">
+    <breadcrumb name="SubscriptionsInstallmentPlansPay" title="@T["Take the Down Payment"]">
         <breadcrumb-item id="SubscriptionsInstallmentPlans" action="Index" controller="InstallmentPlans" area="CrestApps.OrchardCore.Subscriptions" permission="@SubscriptionPermissions.ManageInstallmentPlans.Name">@T["Installment Plans"]</breadcrumb-item>
         <breadcrumb-item id="SubscriptionsInstallmentPlansDetail" action="Detail" controller="InstallmentPlans" area="CrestApps.OrchardCore.Subscriptions" route-itemId="@plan.ItemId" permission="@SubscriptionPermissions.ManageInstallmentPlans.Name">@(new HtmlContentString(plan.Title ?? string.Empty))</breadcrumb-item>
     </breadcrumb>

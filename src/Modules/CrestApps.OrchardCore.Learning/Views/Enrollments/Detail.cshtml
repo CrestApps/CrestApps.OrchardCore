@@ -94,7 +94,7 @@
                     <label class="form-label" for="review-note">@T["What you decided"]</label>
                     <div class="input-group">
                         <input id="review-note" name="note" class="form-control" required maxlength="500" placeholder="@T["Such as: retake booked, completion kept"]" />
-                        <button type="submit" class="btn btn-warning">@T["Clear the review"]</button>
+                        <button type="submit" class="btn btn-warning">@T["Clear the Review"]</button>
                     </div>
                     <span class="hint">@T["The enrollment stays completed. Clearing the review records your decision."]</span>
                 </form>
@@ -159,14 +159,14 @@
                         <span class="input-group-text">@T["Due"]</span>
                         <input name="due" type="datetime-local" class="form-control" aria-label="@T["Due"]" />
                         <input name="reason" class="form-control" placeholder="@T["Reason"]" aria-label="@T["Reason"]" required maxlength="500" />
-                        <button type="submit" class="btn btn-secondary">@T["Save dates"]</button>
+                        <button type="submit" class="btn btn-secondary">@T["Save Dates"]</button>
                     </div>
                 </form>
             }
             @if (Model.NeedsStaffApproval && Model.CanApproveCompletion)
             {
                 <form asp-action="ApproveCompletion" asp-route-id="@enrollment.ItemId" method="post">
-                    <button type="submit" class="btn btn-outline-success">@T["Approve the completion"]</button>
+                    <button type="submit" class="btn btn-outline-success">@T["Approve the Completion"]</button>
                     <span class="hint">@T["The course needs a member of its staff to approve each completion."]</span>
                 </form>
             }
@@ -238,7 +238,7 @@
                                             <form asp-action="CompleteItem" asp-route-id="@enrollment.ItemId" method="post" class="d-flex gap-1">
                                                 <input type="hidden" name="itemId" value="@item.Id" />
                                                 <input name="reason" class="form-control form-control-sm" placeholder="@T["Reason"]" aria-label="@T["Reason to mark {0} complete", item.Title]" required maxlength="500" />
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">@T["Mark complete"]</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary text-nowrap">@T["Mark Complete"]</button>
                                             </form>
                                         }
                                     </td>
@@ -309,5 +309,5 @@
 </div>
 
 <div class="action-bar-bottom">
-    <a class="btn btn-secondary" role="button" asp-action="Index">@T["Back to enrollments"]</a>
+    <a class="btn btn-secondary" role="button" asp-action="Index">@T["Back to Enrollments"]</a>
 </div>

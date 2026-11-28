@@ -2,7 +2,7 @@
 @using Microsoft.AspNetCore.Html
 
 @{
-    ViewData["Title"] = T["My competencies"];
+    ViewData["Title"] = T["My Competencies"];
 
     string Level(int proficiency) => proficiency switch
     {
@@ -60,8 +60,8 @@
 @if (accountUrl is not null)
 {
     <zone Name="Title">
-        <breadcrumb name="LearningMyCompetencies" title="@T["My competencies"]">
-            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        <breadcrumb name="LearningMyCompetencies" title="@T["My Competencies"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your Account"]</breadcrumb-item>
         </breadcrumb>
     </zone>
 
@@ -71,11 +71,11 @@ else
 {
     <div class="container my-4">
         <div class="product-breadcrumb">
-            <breadcrumb name="LearningMyCompetencies" title="@T["My competencies"]">
+            <breadcrumb name="LearningMyCompetencies" title="@T["My Competencies"]">
                 <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
             </breadcrumb>
         </div>
-        <h1 class="h3 mb-3">@T["My competencies"]</h1>
+        <h1 class="h3 mb-3">@T["My Competencies"]</h1>
         @content(null)
     </div>
 }

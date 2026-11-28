@@ -35,18 +35,21 @@
                     <input type="hidden" name="kind" value="@kind" />
                     <input type="hidden" name="latitude" />
                     <input type="hidden" name="longitude" />
+                    @* The browser writes coordinates with a dot: read them the same in every culture. *@
+                    <input type="hidden" name="__Invariant" value="latitude" />
+                    <input type="hidden" name="__Invariant" value="longitude" />
                     <input type="hidden" name="key" />
                     <input type="hidden" name="source" value="Web" />
                     <input type="hidden" name="returnUrl" value="@returnUrl" />
                     <button type="submit" class="btn btn-lg @(kind is TimePunchKind.In or TimePunchKind.MealEnd or TimePunchKind.BreakEnd ? "btn-success" : kind == TimePunchKind.Out ? "btn-danger" : "btn-outline-secondary")">
                         @(kind switch
                         {
-                            TimePunchKind.In => T["Clock in"],
-                            TimePunchKind.MealStart => T["Start meal"],
-                            TimePunchKind.MealEnd => T["End meal"],
-                            TimePunchKind.BreakStart => T["Start break"],
-                            TimePunchKind.BreakEnd => T["End break"],
-                            _ => T["Clock out"],
+                            TimePunchKind.In => T["Clock In"],
+                            TimePunchKind.MealStart => T["Start Meal"],
+                            TimePunchKind.MealEnd => T["End Meal"],
+                            TimePunchKind.BreakStart => T["Start Break"],
+                            TimePunchKind.BreakEnd => T["End Break"],
+                            _ => T["Clock Out"],
                         })
                     </button>
                 </form>

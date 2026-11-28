@@ -69,6 +69,8 @@ public sealed class Startup : StartupBase
         services.AddContentPart<ProductPricePart>()
             .UseDisplayDriver<ProductPricePartDisplayDriver>();
 
+        services.AddTransient<IConfigureOptions<ResourceManagementOptions>, ProductResourceManagementOptionsConfiguration>();
+
         services.AddContentPart<ProductVariantsPart>()
             .UseDisplayDriver<ProductVariantsPartDisplayDriver>();
 

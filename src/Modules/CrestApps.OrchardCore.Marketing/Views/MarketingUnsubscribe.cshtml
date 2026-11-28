@@ -4,12 +4,12 @@
 
 @if (!Model.IsValid)
 {
-    <h1 class="h4">@T["This link doesn't work any more"]</h1>
+    <h1 class="h4">@T["This Link Doesn't Work Any More"]</h1>
     <p>@T["Unsubscribe from the link in a newer email, or change your preferences in your account."]</p>
 }
 else if (Model.IsUnsubscribed)
 {
-    <h1 class="h4">@T["You're unsubscribed"]</h1>
+    <h1 class="h4">@T["You're Unsubscribed"]</h1>
     <p>@T["{0} won't get our news and offers any more. Emails about your orders still come.", Model.Email]</p>
 }
 else

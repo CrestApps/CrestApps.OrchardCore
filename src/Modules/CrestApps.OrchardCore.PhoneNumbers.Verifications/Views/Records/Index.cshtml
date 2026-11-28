@@ -78,7 +78,7 @@
                     <div class="col-auto">
                         <button type="submit" class="btn btn-warning" formaction="@Url.Action("RetryAllFailed", "Records")"
                                 title="@T["Re-queues every failed or needs-attention record across all pages that matches the current search."]">
-                            <i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Retry all failed"]
+                            <i class="fa-solid fa-list-check me-1" aria-hidden="true"></i>@T["Retry All Failed"]
                         </button>
                     </div>
                 }
@@ -95,7 +95,7 @@
             {
                 <admin-list-column type="Select" />
             }
-            <admin-list-column name="Name" position="20" title="@T["Phone number"]" />
+            <admin-list-column name="Name" position="20" title="@T["Phone Number"]" />
             <admin-list-column name="Status" position="30" title="@T["Status"]" width="auto" />
             <admin-list-column name="Provider" position="40" title="@T["Provider"]" width="auto" />
             <admin-list-column name="Attempts" position="50" title="@T["Attempts"]" width="auto" />

@@ -28,7 +28,7 @@
             <div class="alert alert-info">
                 <p class="mb-2">@T["Confirm your e-mail address before you accept: open the link in the confirmation e-mail we sent you."]</p>
                 <form method="post" asp-area="OrchardCore.Users" asp-controller="EmailConfirmation" asp-action="SendVerificationEmail" asp-route-returnUrl="@Context.Request.Path">
-                    <button type="submit" class="btn btn-sm btn-outline-primary">@T["Send the confirmation e-mail again"]</button>
+                    <button type="submit" class="btn btn-sm btn-outline-primary">@T["Send the Confirmation E-mail Again"]</button>
                 </form>
             </div>
         }
@@ -36,12 +36,12 @@
         {
             <form method="post" action="~/account/invitations/@Uri.EscapeDataString(Model.Token)">
                 @Html.AntiForgeryToken()
-                <button type="submit" class="btn btn-primary">@T["Accept the invitation"]</button>
+                <button type="submit" class="btn btn-primary">@T["Accept the Invitation"]</button>
             </form>
         }
         else
         {
-            <a class="btn btn-primary" href="~/Login?returnUrl=@Uri.EscapeDataString(Context.Request.Path)">@T["Sign in to accept"]</a>
+            <a class="btn btn-primary" href="~/Login?returnUrl=@Uri.EscapeDataString(Context.Request.Path)">@T["Sign In to Accept"]</a>
         }
     }
 </div>

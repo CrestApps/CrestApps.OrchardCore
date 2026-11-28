@@ -1,7 +1,7 @@
 @model PayRunsIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="PayrollPayRuns" title="@T["Pay runs"]" />
+    <breadcrumb name="PayrollPayRuns" title="@T["Pay Runs"]" />
 </zone>
 
 <form asp-action="Index" method="get" id="payroll-runs-filter" class="no-multisubmit" data-list-management data-client-side-search="true">
@@ -18,7 +18,7 @@
                 @if (Model.CanAdd)
                 {
                     <div class="col-auto">
-                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add pay run"]</a>
+                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Pay Run"]</a>
                     </div>
                 }
             </div>

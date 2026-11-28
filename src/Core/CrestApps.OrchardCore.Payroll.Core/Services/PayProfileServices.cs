@@ -256,7 +256,7 @@ public sealed class PayProfileHandler : CatalogEntryHandlerBase<EmployeePayProfi
 
         if (string.IsNullOrEmpty(item.EmployerId) || await _employers.FindByIdAsync(item.EmployerId, cancellationToken) is null)
         {
-            context.Result.Fail(new ValidationResult(S["Choose the employer."], [nameof(EmployeePayProfile.EmployerId)]));
+            context.Result.Fail(new ValidationResult(S["Choose the employer, or set up your company under Payroll > Management > Company first."], [nameof(EmployeePayProfile.EmployerId)]));
         }
         else if (await _store.FindAsync(item.StaffMemberId, item.EmployerId, cancellationToken) is { } other && other.ItemId != item.ItemId)
         {

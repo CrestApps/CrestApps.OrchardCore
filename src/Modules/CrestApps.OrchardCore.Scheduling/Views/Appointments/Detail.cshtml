@@ -1,7 +1,7 @@
 @model AppointmentDetailViewModel
 
 <zone Name="Title">
-    <breadcrumb name="SchedulingAppointmentsDetail" title="@T["Appointment with {0}", Model.Appointment.CustomerName]">
+    <breadcrumb name="SchedulingAppointmentsDetail" title="@T["Appointment With {0}", Model.Appointment.CustomerName]">
         <breadcrumb-item id="SchedulingAppointments" action="Index" controller="Appointments" area="CrestApps.OrchardCore.Scheduling">@T["Appointments"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -21,13 +21,13 @@
         }
         @if (Model.Appointment.Status is AppointmentStatus.Confirmed or AppointmentStatus.Requested)
         {
-            <button type="submit" name="operation" value="Complete" class="btn btn-primary">@T["Took place"]</button>
-            <button type="submit" name="operation" value="NoShow" class="btn btn-outline-secondary">@T["No-show"]</button>
+            <button type="submit" name="operation" value="Complete" class="btn btn-primary">@T["Took Place"]</button>
+            <button type="submit" name="operation" value="NoShow" class="btn btn-outline-secondary">@T["No-Show"]</button>
         }
         @if (Model.Appointment.Status is AppointmentStatus.Held or AppointmentStatus.Requested or AppointmentStatus.Confirmed)
         {
             <input type="text" name="reason" class="form-control" style="max-width: 18rem" placeholder="@T["Reason (optional)"]" />
-            <button type="submit" name="operation" value="Cancel" class="btn btn-danger">@T["Cancel appointment"]</button>
+            <button type="submit" name="operation" value="Cancel" class="btn btn-danger">@T["Cancel Appointment"]</button>
         }
     </div>
     <partial name="_RescheduleChoices" model="Model" />

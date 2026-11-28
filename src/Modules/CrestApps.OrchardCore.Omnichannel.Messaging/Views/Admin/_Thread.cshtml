@@ -34,7 +34,7 @@
         @* Customer header: who this is, and what can be done with the conversation. *@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 py-2 border-bottom flex-shrink-0">
             <div class="d-flex align-items-center flex-wrap column-gap-2 row-gap-1" style="min-width: 0;">
-                <a class="btn btn-sm btn-link px-1 d-md-none" asp-route-action="Index" title="@T["Back to the list"]" aria-label="@T["Back to the list"]">
+                <a class="btn btn-sm btn-link px-1 d-md-none" asp-route-action="Index" title="@T["Back to the List"]" aria-label="@T["Back to the List"]">
                     <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
                 </a>
                 <span class="messaging-avatar rounded-circle @AvatarPalette.For(Model.CustomerKey) d-inline-flex align-items-center justify-content-center flex-shrink-0 fw-semibold" aria-hidden="true">
@@ -112,7 +112,7 @@
                         <button type="submit" class="btn btn-sm @(Model.IsFavorite ? "btn-warning" : "btn-outline-warning")"
                                 title="@(Model.IsFavorite ? T["Remove this customer from your favorites"] : T["Add this customer to your favorites, so they are one click away above your list"])"
                                 aria-pressed="@(Model.IsFavorite ? "true" : "false")">
-                            <i class="@(Model.IsFavorite ? "fa-solid" : "fa-regular") fa-star me-1" aria-hidden="true"></i>@(Model.IsFavorite ? T["Favorite"] : T["Add to favorites"])
+                            <i class="@(Model.IsFavorite ? "fa-solid" : "fa-regular") fa-star me-1" aria-hidden="true"></i>@(Model.IsFavorite ? T["Favorite"] : T["Add to Favorites"])
                         </button>
                     </form>
                 }
@@ -138,7 +138,7 @@
                     </form>
                     <form asp-route-action="SetStatus" asp-route-id="@conversation.ItemId" method="post" class="d-inline">
                         <input type="hidden" name="status" value="@nameof(ConversationStatus.Spam)" />
-                        <button type="submit" class="btn btn-sm btn-outline-danger">@T["Mark spam"]</button>
+                        <button type="submit" class="btn btn-sm btn-outline-danger">@T["Mark Spam"]</button>
                     </form>
                 }
                 else if (Model.CanChangeStatus)
@@ -185,7 +185,7 @@
             @if (Model.HasEarlierMessages)
             {
                 <div class="text-center mb-3">
-                    <a class="btn btn-sm btn-outline-secondary" asp-route-action="Conversation" asp-route-id="@conversation.ItemId" asp-route-beforeTicks="@Model.EarliestMessageTicks">@T["Load earlier messages"]</a>
+                    <a class="btn btn-sm btn-outline-secondary" asp-route-action="Conversation" asp-route-id="@conversation.ItemId" asp-route-beforeTicks="@Model.EarliestMessageTicks">@T["Load Earlier Messages"]</a>
                 </div>
             }
             @if (Model.Messages.Count == 0)
@@ -274,7 +274,7 @@
                                 {
                                     <button type="button" class="btn btn-sm btn-link text-secondary px-1" data-composer-attach
                                             title="@T["Attach {0} (or drag and drop, or paste). {1} accepts: {2}.", imagesOnly ? T["pictures"] : T["files"], channelName, formatNames]"
-                                            aria-label="@(imagesOnly ? T["Attach pictures"] : T["Attach files"])">
+                                            aria-label="@(imagesOnly ? T["Attach Pictures"] : T["Attach files"])">
                                         <i class="@(imagesOnly ? "fa-regular fa-image" : "fa-solid fa-paperclip")" aria-hidden="true"></i>
                                     </button>
                                 }
@@ -359,7 +359,7 @@
                             <input type="hidden" name="favorite" value="@(Model.IsFavorite ? "false" : "true")" />
                             <input type="hidden" name="name" value="@contactLabel" />
                             <button type="submit" class="btn btn-sm btn-link text-nowrap p-0 @(Model.IsFavorite ? "text-warning" : string.Empty)">
-                                <i class="@(Model.IsFavorite ? "fa-solid" : "fa-regular") fa-star me-1" aria-hidden="true"></i>@(Model.IsFavorite ? T["Remove from favorites"] : T["Add to favorites"])
+                                <i class="@(Model.IsFavorite ? "fa-solid" : "fa-regular") fa-star me-1" aria-hidden="true"></i>@(Model.IsFavorite ? T["Remove From Favorites"] : T["Add to Favorites"])
                             </button>
                         </form>
                     }
@@ -396,7 +396,7 @@
                                    asp-area="OrchardCore.Contents"
                                    asp-route-contentItemId="@contact.ContentItemId"
                                    title="@(contact.IsLead ? T["Open this lead."] : T["Open this contact's account."])">
-                                    @(contact.IsLead ? T["View lead"] : T["View account"])
+                                    @(contact.IsLead ? T["View Lead"] : T["View Account"])
                                 </a>
                             </li>
                         }
@@ -425,9 +425,9 @@
                     {
                         <div class="btn-group w-100 mb-3" role="group" aria-label="@T["Transfer to"]">
                             <input type="radio" class="btn-check" name="targetType" id="messaging-transfer-to-agent" value="@nameof(ConversationRouteTargetType.Agent)" autocomplete="off" checked data-transfer-type />
-                            <label class="btn btn-outline-primary" for="messaging-transfer-to-agent"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>@T["A person"]</label>
+                            <label class="btn btn-outline-primary" for="messaging-transfer-to-agent"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>@T["A Person"]</label>
                             <input type="radio" class="btn-check" name="targetType" id="messaging-transfer-to-queue" value="@nameof(ConversationRouteTargetType.Queue)" autocomplete="off" data-transfer-type />
-                            <label class="btn btn-outline-primary" for="messaging-transfer-to-queue"><i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Back to a queue"]</label>
+                            <label class="btn btn-outline-primary" for="messaging-transfer-to-queue"><i class="fa-solid fa-users me-1" aria-hidden="true"></i>@T["Back to a Queue"]</label>
                         </div>
                     }
                     else

@@ -3,11 +3,11 @@
 <div class="card mb-3">
     <div class="card-body">
         <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-            <h2 class="h6 mb-0 me-auto">@T["Work orders"] <span class="badge text-bg-secondary fw-normal">@Model.Count</span></h2>
+            <h2 class="h6 mb-0 me-auto">@T["Work Orders"] <span class="badge text-bg-secondary fw-normal">@Model.Count</span></h2>
             @if (Model.Types.Count > 0)
             {
                 <div class="dropdown">
-                    <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["New work order"]</button>
+                    <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">@T["New Work Order"]</button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         @foreach (var type in Model.Types)
                         {

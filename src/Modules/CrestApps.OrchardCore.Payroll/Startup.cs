@@ -16,6 +16,7 @@ using CrestApps.OrchardCore.Payroll.Models;
 using CrestApps.OrchardCore.Payroll.Navigation;
 using CrestApps.OrchardCore.Payroll.Recipes;
 using CrestApps.OrchardCore.Payroll.Services;
+using CrestApps.OrchardCore.Payroll.ViewModels;
 using CrestApps.OrchardCore.Taxation.Models;
 using CrestApps.OrchardCore.Recipes.Core;
 using CrestApps.OrchardCore.Recipes.Core.Schemas.SiteSettings;
@@ -141,7 +142,7 @@ public sealed class PaySetupDataPipelinesStartup : StartupBase
 }
 
 /// <summary>
-/// Registers the Payroll feature: employers, per-employer permissions, the payroll scope, settings and menu.
+/// Registers the Payroll feature: the company, the payroll scope, settings and menu.
 /// </summary>
 [Feature(PayrollConstants.Features.Payroll)]
 public sealed class PayrollStartup : StartupBase
@@ -153,6 +154,7 @@ public sealed class PayrollStartup : StartupBase
         services.AddPayrollFilingsCore();
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<Employer>, EmployerHandler>());
         services.TryAddEnumerable(ServiceDescriptor.Scoped<ICatalogEntryHandler<TaxDeposit>, TaxDepositHandler>());
+        services.AddDataMigration<PayrollMultipleEmployersMigrations>();
         services.AddDataMigration<PayrollMigrations>()
             .AddIndexProvider<PayrollFilingIndexProvider>()
             .AddIndexProvider<PayrollFilingRecordIndexProvider>()
@@ -190,6 +192,25 @@ public sealed class PayrollStartup : StartupBase
         services.AddSiteDisplayDriver<PayrollJournalSettingsDisplayDriver>();
         services.AddSiteSettingsPermission(PayrollConstants.SettingsGroupId, PayrollPermissions.ManagePayrollSettings);
         services.AddPartySource<EmployerPartySource>();
+    }
+}
+
+/// <summary>
+/// Registers Multiple Employers: the employers list, the employer of pay runs and pay profiles, the employer filter of
+/// the payroll pages, the defaults of a new employer and the permissions per employer.
+/// </summary>
+[Feature(PayrollConstants.Features.MultipleEmployers)]
+public sealed class PayrollMultipleEmployersStartup : StartupBase
+{
+    /// <inheritdoc />
+    public override void ConfigureServices(IServiceCollection services)
+    {
+        services.Configure<PayrollEmployerOptions>(options => options.MultipleEmployers = true);
+        services.AddDisplayDriver<PayRun, PayRunEmployerDisplayDriver>();
+        services.AddDisplayDriver<EmployeePayProfile, PayProfileEmployerDisplayDriver>();
+        services.AddDisplayDriver<PayrollEmployerFilter, PayrollEmployerFilterDisplayDriver>();
+        services.AddSiteDisplayDriver<PayrollNewEmployerSettingsDisplayDriver>();
+        services.AddPermissionProvider<PayrollEmployerPermissionProvider>();
     }
 }
 

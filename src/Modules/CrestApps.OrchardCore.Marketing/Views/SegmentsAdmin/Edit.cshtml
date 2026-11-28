@@ -1,7 +1,7 @@
 @model SegmentEditViewModel
 
 <zone Name="Title">
-    <breadcrumb name="SegmentEdit" title="@(Model.IsNew ? T["Add segment"] : T["Edit segment"])">
+    <breadcrumb name="SegmentEdit" title="@(Model.IsNew ? T["Add Segment"] : T["Edit Segment"])">
         <breadcrumb-item id="Segments" action="Index" controller="SegmentsAdmin" area="@MarketingConstants.Feature" permission="@MarketingPermissions.ManageMarketing.Name">@T["Segments"]</breadcrumb-item>
     </breadcrumb>
 </zone>

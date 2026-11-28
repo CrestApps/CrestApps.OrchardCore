@@ -48,7 +48,7 @@
 }
 @if (Model.VisibleRequirements < Model.Requirements.Count)
 {
-    <div class="ocat-wrapper"><div class="ocat-end-offset"><button type="button" class="btn btn-sm btn-secondary" data-add-requirement><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a group"]</button></div></div>
+    <div class="ocat-wrapper"><div class="ocat-end-offset"><button type="button" class="btn btn-sm btn-secondary" data-add-requirement><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add a Group"]</button></div></div>
 }
 <div class="ocat-wrapper"><label asp-for="Capacity" class="ocat-label">@T["Places per appointment"]</label><div class="ocat-end"><input asp-for="Capacity" type="number" min="1" class="form-control" style="max-width: 10rem" /><span class="hint">@T["More than 1 makes it a class or group session that several customers book."]</span></div></div>
 

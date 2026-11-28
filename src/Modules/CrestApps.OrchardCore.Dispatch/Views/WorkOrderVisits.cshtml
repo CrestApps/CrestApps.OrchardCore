@@ -11,7 +11,7 @@
         @if (Model.CanManage && workOrderOpen && open.Count == 0)
         {
             <form asp-area="@DispatchConstants.Features.Dispatch" asp-controller="Visits" asp-action="Create" asp-route-workOrderId="@Model.WorkOrder.ItemId" method="post" class="ms-auto">
-                <button type="submit" class="btn btn-sm btn-primary">@T["Add a visit"]</button>
+                <button type="submit" class="btn btn-sm btn-primary">@T["Add a Visit"]</button>
             </form>
         }
     </div>
@@ -34,7 +34,7 @@
                     }
                     else if (Model.CanManage && VisitStatusRules.IsOpen(visit.Status))
                     {
-                        <a asp-area="@DispatchConstants.Features.Dispatch" asp-controller="Visits" asp-action="Details" asp-route-id="@visit.ItemId" class="btn btn-sm btn-secondary">@T["Schedule it"]</a>
+                        <a asp-area="@DispatchConstants.Features.Dispatch" asp-controller="Visits" asp-action="Details" asp-route-id="@visit.ItemId" class="btn btn-sm btn-secondary">@T["Schedule It"]</a>
                     }
                 </li>
             }

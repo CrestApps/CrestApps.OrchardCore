@@ -17,7 +17,7 @@
     @if (Model.CanPayOut)
     {
         <form asp-action="PayOut" asp-route-itemId="@vendor.ItemId" method="post">
-            <button type="submit" class="btn btn-primary btn-sm">@T["Pay out what's ready"]</button>
+            <button type="submit" class="btn btn-primary btn-sm">@T["Pay Out What's Ready"]</button>
         </form>
     }
 </div>
@@ -47,7 +47,7 @@
         @foreach (var (orderId, orderNumber) in heldOrders)
         {
             <form asp-action="Release" asp-route-itemId="@vendor.ItemId" asp-route-orderId="@orderId" method="post">
-                <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Release order {0}", orderNumber]</button>
+                <button type="submit" class="btn btn-outline-secondary btn-sm">@T["Release Order {0}", orderNumber]</button>
             </form>
         }
     </div>

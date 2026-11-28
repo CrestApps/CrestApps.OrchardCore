@@ -8,12 +8,12 @@
        asp-area="@FulfillmentConstants.Features.Fulfillment"
        asp-route-requestId="@Model.Value.ItemId"
        class="btn btn-secondary btn-sm"
-       data-title="@T["Send again"]"
+       data-title="@T["Send Again"]"
        data-message="@T["The partner may already have this order. Check its dashboard first, or the order may be made twice. Send again?"]"
-       data-ok-text="@T["Send again"]"
+       data-ok-text="@T["Send Again"]"
        data-ok-class="btn-primary"
        data-cancel-text="@T["Cancel"]"
-       data-url-af="RemoveUrl UnsafeUrl">@T["Send again"]</a>
+       data-url-af="RemoveUrl UnsafeUrl">@T["Send Again"]</a>
 }
 else
 {
@@ -22,5 +22,5 @@ else
        asp-area="@FulfillmentConstants.Features.Fulfillment"
        asp-route-requestId="@Model.Value.ItemId"
        class="btn btn-secondary btn-sm"
-       data-url-af="UnsafeUrl">@T["Send again"]</a>
+       data-url-af="UnsafeUrl">@T["Send Again"]</a>
 }

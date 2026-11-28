@@ -1,7 +1,7 @@
 @model InvoiceDocumentPageViewModel
 
 <zone Name="Title">
-    <breadcrumb name="InvoicingView" title="@(Model.Source is Invoice { Kind: InvoiceKind.DebitNote } ? T["Debit note {0}", Model.Source.Number] : Model.Source is Invoice { Kind: InvoiceKind.Prepayment } ? T["Deposit invoice {0}", Model.Source.Number] : T["Invoice {0}", Model.Source.Number])" />
+    <breadcrumb name="InvoicingView" title="@(Model.Source is Invoice { Kind: InvoiceKind.DebitNote } ? T["Debit Note {0}", Model.Source.Number] : Model.Source is Invoice { Kind: InvoiceKind.Prepayment } ? T["Deposit Invoice {0}", Model.Source.Number] : T["Invoice {0}", Model.Source.Number])" />
 </zone>
 
 <style>
@@ -32,7 +32,7 @@
     <div class="d-flex flex-wrap gap-2 mb-3 no-print">
         @if (!string.IsNullOrEmpty(Model.PayUrl))
         {
-            <a class="btn btn-success" href="@Model.PayUrl">@T["Pay this invoice"]</a>
+            <a class="btn btn-success" href="@Model.PayUrl">@T["Pay This Invoice"]</a>
         }
         <a class="btn btn-outline-secondary" href="@Model.PdfUrl">@T["Download PDF"]</a>
         <button type="button" class="btn btn-outline-secondary" onclick="window.print();">@T["Print"]</button>

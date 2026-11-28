@@ -115,7 +115,7 @@ public sealed class SoftPhoneMergeSelectionTests : SoftPhoneBrowserTest
         await Checkbox(page, second).CheckAsync();
         await Checkbox(page, third).CheckAsync();
         var add = page.Locator("[data-telephony-merge-calls]");
-        Assert.Contains("Add to conference", await add.InnerTextAsync());
+        Assert.Contains("Add to Conference", await add.InnerTextAsync());
         await CaptureAsync(page, "merge-add-to-conference");
         await add.ClickAsync();
 

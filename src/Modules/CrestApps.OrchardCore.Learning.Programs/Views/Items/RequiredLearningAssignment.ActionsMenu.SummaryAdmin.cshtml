@@ -4,7 +4,7 @@
 {
     if (Model.Assignment.State == RequiredLearningState.Exempt)
     {
-        <a asp-controller="RequiredLearning" asp-action="RemoveExemption" asp-route-id="@Model.Assignment.ItemId" class="dropdown-item" data-title="@T["Take the exemption back"]" data-message="@T["Take the exemption back? The person is required to complete it again."]" data-url-af="UnsafeUrl">@T["Take the exemption back"]</a>
+        <a asp-controller="RequiredLearning" asp-action="RemoveExemption" asp-route-id="@Model.Assignment.ItemId" class="dropdown-item" data-title="@T["Take the Exemption Back"]" data-message="@T["Take the exemption back? The person is required to complete it again."]" data-url-af="UnsafeUrl">@T["Take the Exemption Back"]</a>
     }
     else if (Model.Assignment.IsOpen)
     {

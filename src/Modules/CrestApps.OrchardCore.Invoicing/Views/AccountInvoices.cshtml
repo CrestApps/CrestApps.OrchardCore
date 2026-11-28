@@ -6,7 +6,7 @@
         <span>@T["Invoices"]</span>
         @if (Model.CanCreate)
         {
-            <a asp-area="@InvoicingConstants.Features.Area" asp-controller="InvoicesAdmin" asp-action="Create" asp-route-billTo="@Model.BillTo" class="btn btn-sm btn-secondary">@T["New invoice"]</a>
+            <a asp-area="@InvoicingConstants.Features.Area" asp-controller="InvoicesAdmin" asp-action="Create" asp-route-billTo="@Model.BillTo" class="btn btn-sm btn-secondary">@T["New Invoice"]</a>
         }
     </div>
     @if (Model.Totals.Count > 0)

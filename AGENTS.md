@@ -114,9 +114,17 @@ dotnet build -c Release -warnaserror /p:TreatWarningsAsErrors=true /p:RunAnalyze
 
 #### Unit Tests (Requires Successful Build)
 ```bash
-# Run unit tests - TAKES 2-5 MINUTES, NEVER CANCEL
-dotnet test -c Release --no-build ./tests/CrestApps.OrchardCore.Tests/CrestApps.OrchardCore.Tests.csproj
+# Run the whole unit suite, one test process per core (what CI runs) - NEVER CANCEL
+pwsh ./tests/run-unit-tests.ps1
+
+# Iterate on one area: namespaces under CrestApps.OrchardCore.Tests, or parts of class names
+pwsh ./tests/run-unit-tests.ps1 -Namespace Checkout, Modules.Telephony
+pwsh ./tests/run-unit-tests.ps1 -Class CheckoutEngineTests
 ```
+
+The unit test assembly runs one test at a time (`TestParallelizationBehavior.cs`), so `dotnet test` on the project uses
+a single core. The script runs the test classes in several processes at once, each still one test at a time, checks
+that every test method ran, and prints the slowest classes. Pass `-Build` to build the test project first.
 
 ### Running the Application
 
@@ -189,6 +197,16 @@ dotnet run
 #### Time Abstraction
 
 * Avoid `DateTime.UtcNow`; always use an injected `IClock`.
+
+#### Text Casing (Title Case for titles, menus and buttons)
+
+The UI follows Orchard Core's casing, so a CrestApps page never looks different from an Orchard Core one ("Edit Content Type", "Add Role", "Save & Continue", "Content Definition").
+
+* **Title Case**: page titles (the `title` of `<breadcrumb>` and `ViewData["Title"]`), breadcrumb items, admin menu labels, user menu labels, list column headers (`<admin-list-column title>`), card, tab and column names (`.Card(S["..."])`, `.Tab(...)`), headings that name a page or a section (`<h1>` to `<h3>`), and every button label (`<button>`, an `<a>` with `btn`, a row action `dropdown-item`, a submit input, and the `data-title`, `data-ok-text` and `data-cancel-text` of a confirmation dialog; its `data-message` is a sentence): "Add Price List", "Back to Queue", "Remove From List", "Sign In With GitHub", "Save & Continue".
+* **Sentence case**: field labels, hints, placeholders, validation and status messages, notices, empty-state text, descriptions, tooltips and any other full sentence. A tooltip that names an action in a few words ("Move Up") is a button label and takes Title Case; a tooltip that explains ("Remove it from your menu") is a sentence.
+* **How to write Title Case**: capitalize every word except these when they are not the first or last word, or the word after a colon: a, an, the, and, but, or, nor, for, as, at, by, in, of, on, to, up, via, per, vs. Capitalize the particle of a phrasal verb in a short label ("Sign In", "Sign In to Accept", "Log Out", "Move Up") but not a preposition ("Pay in Full", "Cash on Delivery", "Open in Calendar"), and both halves of a hyphenated word ("No-Show"). Keep acronyms and brand names as they are written ("AI", "MCP", "GitHub"). A placeholder (`{0}`) is not a word.
+* The casing is part of the localization key (`S["Add Price List"]`), so change the literal and every test that asserts it together.
+* `tests/js/lint/ui-titles-and-buttons-use-title-case.test.js` fails for a breadcrumb title, a breadcrumb item, a button label, a confirmation dialog title or button, a list column header or a card, tab or column name in a view or driver that is not in Title Case. It skips sentences (text ending in `.`, `?` or `!`), anything with a comma, semicolon or colon (apart from `Name: {0}`), and labels longer than six words.
 
 #### Showing Dates and Times (never UTC)
 
@@ -570,7 +588,7 @@ If CloudSmith is inaccessible, only asset builds and code analysis are possible.
 - **Localization extraction**: When using `ILocalizer`, the property/variable must be named `S`, and localized strings must use the literal pattern `S["This is a localized string"]`. Do not use variables inside the brackets because extraction tooling looks specifically for `S["..."]`.
 - **LocalizationSource is never serialized**: Mark every instance property of type `LocalizationSource` with `[JsonIgnore]` (`[property: JsonIgnore]` on a positional record parameter), including interface members, implementations and overrides: System.Text.Json doesn't inherit the attribute. A source is a static declaration owned by code; its type can't be serialized or safely read back from a document. Static properties don't need it. `LocalizationSourceJsonIgnoreArchitectureTests` fails when one is missing.
 - **Select lists from enums**: Do not build Orchard `SelectListItem` collections by iterating enums with `Enum.GetValues(...)` and piping `ToString()` into the text. Define each item explicitly so the title uses `S["..."]` for extraction and multi-word labels can use the correct spacing.
-- **Settings UI casing**: Use sentence case for settings labels, hints, and warning headings. Keep placement tab/card/column names and admin menu labels in title case.
+- **UI text casing**: Use sentence case for settings labels, hints, and warning text. Use Title Case for page titles, breadcrumb items, admin menu labels, placement tab/card/column names and every button label. See "Text Casing" under Code Guidelines.
 - **Catalog entry handlers**: When a feature must react to create, update, or delete operations for catalog-backed models, prefer `CatalogEntryHandlerBase<T>` registered as `ICatalogEntryHandler<T>` and route write operations through the matching catalog manager so the handler events actually run. Do not rely on raw store writes alone when handler lifecycle behavior is required.
 - **Deferred third-party work**: When a catalog handler must call indexing systems, external APIs, or other third-party/background-style services, follow the deferred task pattern used by `ChatInteractionHandler` and `AIMemoryEntryHandler`: capture the affected models/IDs in the scoped handler and schedule the work with `ShellScope.AddDeferredTask(...)` so the external work runs later instead of inline during the catalog event.
 - **One type per file**: Every public type must live in its own file. The file name must always match the type name (e.g., `MyService.cs` for `class MyService`)
@@ -699,10 +717,24 @@ The Docusaurus documentation site is located at `src/CrestApps.Docs`; its [`READ
 Before committing:
 1. Run `npm run rebuild` - asset build must complete cleanly
 2. Run `dotnet build -warnaserror` (if network allows) - the build must produce **zero warnings**; fix every warning across the entire project, not only in files you changed, before running with `-warnaserror`
-3. Run `dotnet test` (if build succeeds) - all tests must pass
+3. Run `pwsh ./tests/run-unit-tests.ps1` (if build succeeds) - all tests must pass
 4. Verify no uncommitted asset changes with `git status`
 
-The CI pipeline validates builds on both Ubuntu and Windows, so test locally on similar environments when possible.
+CI runs in two lanes so a push gets feedback fast without dropping any suite, and nothing reaches `main` before every
+suite has passed:
+
+| Workflow | When | What |
+| --- | --- | --- |
+| PR - CI | Every push to a pull request (not documentation-only changes) | Linux: build with warnings as errors, unit, feature activation, integration and JavaScript suites |
+| Full - CI | Every merge queue group; a pull request labelled `full-ci` (and every push while the label is on); an approved review; a manual run | Windows and Linux: the same jobs. Plus the Telephony browser tests and the Contact Center distributed tests (Redis and PostgreSQL) |
+| Main - CI | Every push to `main` or `release/**` | Everything above, on both operating systems |
+
+Pull requests into `main` merge through the merge queue ("Merge when ready", or `gh pr merge --squash --auto`), set up
+by the "Merge queue for main" ruleset. GitHub does not allow a merge queue on wildcard branches, so `release/**` keeps
+its plain pull request rule and Release - CI runs every suite before publishing. The queue runs
+Full - CI on the pull request combined with the latest `main`, and merges only when its required `Merge gate` check
+and `Test building assets` pass, which takes about 20 minutes. Add the `full-ci` label to find Windows or long-suite
+failures before queueing instead of in the queue.
 
 ---
 

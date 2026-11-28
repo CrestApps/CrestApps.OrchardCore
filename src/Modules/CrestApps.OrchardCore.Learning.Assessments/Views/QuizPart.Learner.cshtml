@@ -36,7 +36,7 @@
         }
         else if (Model.Open is not null)
         {
-            <a class="btn btn-primary" href="@Url.RouteUrl("LearningAttempt", new { attemptId = Model.Open.ItemId })"><i class="fa-solid fa-play me-1" aria-hidden="true"></i>@T["Continue the attempt"]</a>
+            <a class="btn btn-primary" href="@Url.RouteUrl("LearningAttempt", new { attemptId = Model.Open.ItemId })"><i class="fa-solid fa-play me-1" aria-hidden="true"></i>@T["Continue the Attempt"]</a>
         }
         else if (Model.AttemptsLeft is 0)
         {
@@ -60,7 +60,7 @@
                         <label class="form-check-label" for="quiz-honor-@Model.QuizId">@quiz.HonorStatement</label>
                     </div>
                 }
-                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Attempts.Count == 0 ? T["Start the quiz"] : T["Start another attempt"])</button>
+                <button type="submit" class="btn btn-primary"><i class="fa-solid fa-play me-1" aria-hidden="true"></i>@(Model.Attempts.Count == 0 ? T["Start the Quiz"] : T["Start Another Attempt"])</button>
                 @if (quiz.TimeLimitMinutes is { } limit)
                 {
                     <span class="hint ms-2">@T["The time starts when you select Start and keeps running if you leave the page."]</span>
@@ -70,7 +70,7 @@
 
         @if (Model.Attempts.Count > 0)
         {
-            <h2 class="h6 mt-4">@T["Your attempts"]</h2>
+            <h2 class="h6 mt-4">@T["Your Attempts"]</h2>
             <ul class="list-group">
                 @foreach (var attempt in Model.Attempts)
                 {

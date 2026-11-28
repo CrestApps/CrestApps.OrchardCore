@@ -8,7 +8,7 @@
             <div class="col">
                 <p class="mb-0 text-muted small">@T["Which agent states each scheduled activity allows, the grace at its start and end, the shortest slip that counts, and when to alert. A team uses its own rule set or its parent team's; a team without one uses the default rules."]</p>
             </div>
-            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add rule set"]</a></div>
+            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add Rule Set"]</a></div>
         </div>
     </div>
 </div>
@@ -16,7 +16,7 @@
 <admin-list name="WorkforceAdherenceRuleSets" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Every team uses the default rules."]">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
-        <admin-list-column name="Name" position="20" title="@T["Rule set"]" />
+        <admin-list-column name="Name" position="20" title="@T["Rule Set"]" />
         <admin-list-column name="Details" position="30" title="@T["Teams"]" width="auto" />
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>

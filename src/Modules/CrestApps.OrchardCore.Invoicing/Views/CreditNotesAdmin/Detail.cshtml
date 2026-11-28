@@ -115,22 +115,22 @@
                     <div class="d-flex flex-wrap gap-2">
                         @if (Model.CanEdit)
                         {
-                            <a asp-action="Edit" asp-route-itemId="@creditNote.ItemId" class="btn btn-secondary">@T["Edit draft"]</a>
+                            <a asp-action="Edit" asp-route-itemId="@creditNote.ItemId" class="btn btn-secondary">@T["Edit Draft"]</a>
                         }
                         @if (Model.CanIssue)
                         {
                             <form asp-action="Issue" method="post">
                                 <input type="hidden" name="itemId" value="@creditNote.ItemId" />
                                 <button type="submit" class="btn btn-primary"
-                                        data-url-af="RemoveUrl" data-title="@T["Issue credit note"]" data-message="@T["Issue the credit note for {0}? It gets its number and the credit is given; it can't be changed after.", Money(creditNote.Totals?.Total ?? 0m)]" data-ok-text="@T["Issue"]" data-cancel-text="@T["Cancel"]">
+                                        data-url-af="RemoveUrl" data-title="@T["Issue Credit Note"]" data-message="@T["Issue the credit note for {0}? It gets its number and the credit is given; it can't be changed after.", Money(creditNote.Totals?.Total ?? 0m)]" data-ok-text="@T["Issue"]" data-cancel-text="@T["Cancel"]">
                                     @T["Issue"]
                                 </button>
                             </form>
                             <form asp-action="Delete" method="post">
                                 <input type="hidden" name="itemId" value="@creditNote.ItemId" />
                                 <button type="submit" class="btn btn-outline-danger"
-                                        data-url-af="RemoveUrl" data-title="@T["Delete draft"]" data-message="@T["Delete this draft credit note? This can't be undone."]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]">
-                                    @T["Delete draft"]
+                                        data-url-af="RemoveUrl" data-title="@T["Delete Draft"]" data-message="@T["Delete this draft credit note? This can't be undone."]" data-ok-text="@T["Delete"]" data-cancel-text="@T["Cancel"]">
+                                    @T["Delete Draft"]
                                 </button>
                             </form>
                         }
@@ -141,4 +141,4 @@
     </div>
 </div>
 
-<a class="btn btn-link" asp-action="Detail" asp-controller="InvoicesAdmin" asp-route-itemId="@creditNote.InvoiceId">@T["Back to invoice {0}", creditNote.InvoiceNumber]</a>
+<a class="btn btn-link" asp-action="Detail" asp-controller="InvoicesAdmin" asp-route-itemId="@creditNote.InvoiceId">@T["Back to Invoice {0}", creditNote.InvoiceNumber]</a>

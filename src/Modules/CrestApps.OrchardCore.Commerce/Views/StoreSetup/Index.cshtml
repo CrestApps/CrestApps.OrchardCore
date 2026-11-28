@@ -14,7 +14,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="CommerceSetup" title="@T["Set up your store"]" />
+    <breadcrumb name="CommerceSetup" title="@T["Set Up Your Store"]" />
 </zone>
 
 <p class="text-body-secondary">@T["The steps from a new site to your first sale. Do the quick ones here, or open each step's page to do it in full. Skip what you don't need."]</p>
@@ -126,7 +126,7 @@
                         @if (!step.IsDone)
                         {
                             <form method="post" asp-action="Skip" asp-route-name="@step.Name" asp-route-undo="@step.IsSkipped">
-                                <button type="submit" class="btn btn-link btn-sm">@(step.IsSkipped ? T["Do this step after all"] : T["Skip this step"])</button>
+                                <button type="submit" class="btn btn-link btn-sm">@(step.IsSkipped ? T["Do This Step After All"] : T["Skip This Step"])</button>
                             </form>
                         }
                     </div>

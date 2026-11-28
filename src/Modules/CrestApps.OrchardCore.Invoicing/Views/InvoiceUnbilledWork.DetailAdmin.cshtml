@@ -31,7 +31,7 @@
                             </li>
                         }
                     </ul>
-                    <button type="submit" class="btn btn-sm btn-primary">@T["Add the charges chosen"]</button>
+                    <button type="submit" class="btn btn-sm btn-primary">@T["Add the Charges Chosen"]</button>
                 </form>
             }
 
@@ -66,7 +66,7 @@
                         <input id="time-rate" name="timeRate" type="number" step="any" min="0" class="form-control" value="@Model.TimeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="col-6 col-md-2">
-                        <button type="submit" class="btn btn-secondary w-100">@T["Find time"]</button>
+                        <button type="submit" class="btn btn-secondary w-100">@T["Find Time"]</button>
                     </div>
                 </form>
 
@@ -83,6 +83,8 @@
                             <input type="hidden" name="timeFrom" value="@Model.TimeFrom?.ToString("yyyy-MM-dd")" />
                             <input type="hidden" name="timeThrough" value="@Model.TimeThrough?.ToString("yyyy-MM-dd")" />
                             <input type="hidden" name="timeRate" value="@Model.TimeRate?.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                            @* A hidden field isn't a number input, so the page script doesn't name it: read the rate invariantly. *@
+                            <input type="hidden" name="__Invariant" value="timeRate" />
                             <ul class="list-group mb-2">
                                 @foreach (var entry in time)
                                 {
@@ -94,7 +96,7 @@
                                     </li>
                                 }
                             </ul>
-                            <button type="submit" class="btn btn-sm btn-primary">@T["Add the time chosen"]</button>
+                            <button type="submit" class="btn btn-sm btn-primary">@T["Add the Time Chosen"]</button>
                         </form>
                     }
                 }

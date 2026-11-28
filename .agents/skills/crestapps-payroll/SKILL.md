@@ -22,7 +22,7 @@ Implement `IPayInputSource` (`SourceKind`, `GetInputsAsync(PayInputQuery)`, `Mar
 
 ## Employers and access per employer
 
-`IEmployerManager`; the `Employer` party kind; every payroll permission has a per-employer form (`PayrollPermissionTemplates.For(permission, employerId)`). Ask `IPayrollScopeService.GetScopeAsync(user, permission)` for the employers a user may act on (`PayrollScope.All` or `EmployerIds`) and filter your queries with it; a clerk of one employer never sees another's people.
+`IEmployerManager`; the `Employer` party kind. The Payroll feature is the company's own payroll: `IPayrollCompanyService.GetCompanyAsync()` is the site's company, and a new pay run or pay profile with no `EmployerId` gets it, so never ask for an employer in a base-feature page. The **Multiple Employers** feature (`PayrollConstants.Features.MultipleEmployers`) adds the employer UI with drivers and shapes only (`PayRunEmployerDisplayDriver`, `PayProfileEmployerDisplayDriver`, `PayrollEmployerFilter` built with `IDisplayManager<PayrollEmployerFilter>`), and sets `PayrollEmployerOptions.MultipleEmployers` for views that name an employer: add a new page's employer picker the same way. Every payroll permission has a per-employer form (`PayrollPermissionTemplates.For(permission, employerId)`), listed in the role editor with Multiple Employers on. Ask `IPayrollScopeService.GetScopeAsync(user, permission)` for the employers a user may act on (`PayrollScope.All` or `EmployerIds`) and filter your queries with it; a clerk of one employer never sees another's people.
 
 ## Pay profiles
 
@@ -36,7 +36,7 @@ Add a calculation step with `IPayCalculationStep` (orders in `PayCalculationOrde
 
 ## Pay runs and statements
 
-`IPayRunService`: `OpenAsync`, `CalculateAsync`, `SubmitAsync` (to Approvals), `ProcessAsync`, `VoidStatementAsync`, `ReissuePaymentAsync`, `ListStatementsAsync`. Statements never change once final; a void is a reversing statement. Hear steps with `IPayRunObserver` (Opened, Calculated, Submitted, Approved, Rejected, Paid, PartiallyPaid, Failed, Canceled) and statements with `IPayStatementObserver` (Issued, Voided). Approvals, Disbursements and the pay input sources commit the session: re-read a record by id after calling them before saving it.
+A `PayRun` has a `Title` (made by `PayRunTitles` when added without one; show `PayrollNames.Run(run)`, never the bare number) and pays everyone on its schedule or only its `StaffMemberIds`, each needing a pay profile with the run's employer. `IPayRunService`: `OpenAsync`, `CalculateAsync`, `SubmitAsync` (to Approvals), `ProcessAsync`, `VoidStatementAsync`, `ReissuePaymentAsync`, `ListStatementsAsync`. Statements never change once final; a void is a reversing statement. Hear steps with `IPayRunObserver` (Opened, Calculated, Submitted, Approved, Rejected, Paid, PartiallyPaid, Failed, Canceled) and statements with `IPayStatementObserver` (Issued, Voided). Approvals, Disbursements and the pay input sources commit the session: re-read a record by id after calling them before saving it.
 
 ## Liabilities and filings
 

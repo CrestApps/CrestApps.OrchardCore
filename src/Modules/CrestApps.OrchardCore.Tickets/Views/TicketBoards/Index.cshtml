@@ -1,7 +1,7 @@
 @model TicketBoardsIndexViewModel
 
 <zone Name="Title">
-    <breadcrumb name="TicketBoardsIndex" title="@T["Ticket boards"]" />
+    <breadcrumb name="TicketBoardsIndex" title="@T["Ticket Boards"]" />
 </zone>
 
 <form method="get" class="no-multisubmit" data-list-management data-client-side-search="true">
@@ -17,7 +17,7 @@
                 @if (Model.CanCreate)
                 {
                     <div class="col-auto">
-                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add board"]</a>
+                        <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Board"]</a>
                     </div>
                 }
             </div>
@@ -30,7 +30,7 @@
         <admin-list-list item-css-class="list-group-item" />
         <admin-list-grid>
             <admin-list-column name="Name" position="20" title="@T["Name"]" />
-            <admin-list-column name="Shared" position="30" title="@T["Shared with"]" width="auto" />
+            <admin-list-column name="Shared" position="30" title="@T["Shared With"]" width="auto" />
             <admin-list-column name="Columns" position="40" title="@T["Columns"]" width="auto" />
             <admin-list-column type="Actions" title="@T["Actions"]" />
         </admin-list-grid>

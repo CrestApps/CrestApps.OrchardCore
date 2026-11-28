@@ -24,8 +24,8 @@
                 <input type="hidden" name="@(name).AcceptsReportedAmounts" value="@(field.AcceptsReportedAmounts ? "true" : "false")" data-field-value="AcceptsReportedAmounts" />
                 <input type="hidden" name="@(name).Print" value="@(field.Print ?? "Never")" data-field-value="Print" />
                 <button type="button" class="btn btn-sm btn-primary" data-field-edit>@T["Edit"]</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="up" title="@T["Move up"]" aria-label="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="down" title="@T["Move down"]" aria-label="@T["Move down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="up" title="@T["Move Up"]" aria-label="@T["Move Up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-move="down" title="@T["Move Down"]" aria-label="@T["Move Down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
                 <button type="button" class="btn btn-sm btn-outline-danger" data-remove-row title="@T["Remove"]" aria-label="@T["Remove"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
             </td>
         </tr>
@@ -77,7 +77,7 @@
             </table>
         </div>
         <p class="text-muted small mb-1" data-field-empty="@level" hidden>@empty</p>
-        <button type="button" class="btn btn-sm btn-secondary mb-3" data-add-field="@level"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add field"]</button>
+        <button type="button" class="btn btn-sm btn-secondary mb-3" data-add-field="@level"><i class="fa-solid fa-plus me-1" aria-hidden="true"></i>@T["Add Field"]</button>
     }
 
     <template data-field-template>

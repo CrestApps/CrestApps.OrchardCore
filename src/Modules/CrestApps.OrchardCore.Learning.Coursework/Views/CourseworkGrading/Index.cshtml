@@ -27,7 +27,7 @@
                         <select id="sign-off-enrollment" name="enrollmentId" asp-items="Model.SignOffLearners" class="selectpicker" data-live-search="true" data-width="100%" data-live-search-placeholder="@T["Search learners"]" title="@T["Choose a learner"]" required></select>
                     </div>
                     <div class="col-md-auto">
-                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-user-check me-1" aria-hidden="true"></i>@T["Sign off"]</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-user-check me-1" aria-hidden="true"></i>@T["Sign Off"]</button>
                     </div>
                     <div class="col-12">
                         <span class="hint">@T["Learners hand nothing in for this coursework. Choose a learner to grade their work; a learner already started opens again."]</span>
@@ -42,7 +42,7 @@
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
         <admin-list-column name="Learner" position="20" title="@T["Learner"]" />
-        <admin-list-column name="Submitted" position="30" title="@T["Handed in"]" width="auto" />
+        <admin-list-column name="Submitted" position="30" title="@T["Handed In"]" width="auto" />
         <admin-list-column name="Status" position="40" title="@T["Status"]" width="auto" />
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>

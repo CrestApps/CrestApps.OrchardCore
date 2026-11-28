@@ -60,7 +60,7 @@ public sealed class LocalizationSourceJsonIgnoreArchitectureTests
         var sourceFiles = _sourceFolders
             .Select(folder => Path.Combine(repositoryRoot, "src", folder))
             .Where(Directory.Exists)
-            .SelectMany(folder => Directory.EnumerateFiles(folder, "*.cs", SearchOption.AllDirectories));
+            .SelectMany(folder => SourceTreeFiles.Enumerate(folder, "*.cs", directory => SourceTreeFiles.IsBuildOutputDirectory(directory) || Path.GetFileName(directory) == "node_modules"));
 
         foreach (var fullPath in sourceFiles)
         {

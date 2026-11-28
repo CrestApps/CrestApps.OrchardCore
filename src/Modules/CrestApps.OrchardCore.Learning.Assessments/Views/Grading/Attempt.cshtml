@@ -161,12 +161,12 @@
     <div class="action-bar-bottom">
         @if (canEdit)
         {
-            <button type="submit" class="btn btn-primary">@T["Save the scores"]</button>
+            <button type="submit" class="btn btn-primary">@T["Save the Scores"]</button>
         }
-        <a class="btn btn-secondary action-bar-secondary" asp-action="Index">@T["Back to grading"]</a>
+        <a class="btn btn-secondary action-bar-secondary" asp-action="Index">@T["Back to Grading"]</a>
         @if (Model.CanManageOverrides)
         {
-            <a class="btn btn-secondary action-bar-secondary" asp-action="Overrides" asp-route-quizId="@attempt.QuizId">@T["Overrides of this quiz"]</a>
+            <a class="btn btn-secondary action-bar-secondary" asp-action="Overrides" asp-route-quizId="@attempt.QuizId">@T["Overrides of This Quiz"]</a>
         }
     </div>
 </form>
@@ -182,7 +182,7 @@
                     <label class="form-label" for="regrade-reason">@T["Score again from its answers, because"]</label>
                     <input class="form-control" id="regrade-reason" name="reason" required maxlength="500" />
                 </div>
-                <div class="col-sm-4"><button type="submit" class="btn btn-secondary">@T["Score again"]</button></div>
+                <div class="col-sm-4"><button type="submit" class="btn btn-secondary">@T["Score Again"]</button></div>
             </form>
             <form method="post" action="@Url.Action("Void", "Grading", new { area = "CrestApps.OrchardCore.Learning.Assessments", id = attempt.ItemId })" class="row g-2 align-items-end">
                 @Html.AntiForgeryToken()
@@ -190,7 +190,7 @@
                     <label class="form-label" for="void-reason">@T["Cancel the attempt so it does not count, because"]</label>
                     <input class="form-control" id="void-reason" name="reason" required maxlength="500" />
                 </div>
-                <div class="col-sm-4"><button type="submit" class="btn btn-danger">@T["Cancel the attempt"]</button></div>
+                <div class="col-sm-4"><button type="submit" class="btn btn-danger">@T["Cancel the Attempt"]</button></div>
             </form>
         </div>
     </div>

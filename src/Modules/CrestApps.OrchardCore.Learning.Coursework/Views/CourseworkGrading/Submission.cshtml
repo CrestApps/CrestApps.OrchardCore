@@ -8,7 +8,7 @@
 }
 
 <zone Name="Title">
-    <breadcrumb name="LearningCourseworkGradeSubmission" title="@T["{0}, attempt {1}", Model.LearnerName, submission.Attempt]">
+    <breadcrumb name="LearningCourseworkGradeSubmission" title="@T["{0}, Attempt {1}", Model.LearnerName, submission.Attempt]">
         <breadcrumb-item id="LearningGrading" action="Index" controller="Grading" area="CrestApps.OrchardCore.Learning.Assessments">@T["Grading"]</breadcrumb-item>
         <breadcrumb-item id="LearningCourseworkSubmissions" url="@Url.RouteUrl("LearningCourseworkSubmissions", new { courseworkId = submission.CourseworkId })">@(Model.Coursework?.DisplayText ?? submission.CourseworkTitle)</breadcrumb-item>
     </breadcrumb>
@@ -116,10 +116,10 @@
     <div class="action-bar-bottom">
         @if (Model.CanGrade)
         {
-            <button class="btn btn-primary" type="submit">@(regrade ? T["Grade again"] : T["Grade"])</button>
+            <button class="btn btn-primary" type="submit">@(regrade ? T["Grade Again"] : T["Grade"])</button>
             @if (!submission.SignOff)
             {
-                <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.RouteUrl("LearningCourseworkReturn", new { id = submission.ItemId })">@T["Return for resubmission"]</button>
+                <button class="btn btn-secondary action-bar-secondary" type="submit" formaction="@Url.RouteUrl("LearningCourseworkReturn", new { id = submission.ItemId })">@T["Return for Resubmission"]</button>
             }
         }
         <a class="btn btn-secondary cancel" role="button" href="@Url.RouteUrl("LearningCourseworkSubmissions", new { courseworkId = submission.CourseworkId })">@T["Back"]</a>

@@ -13,14 +13,14 @@
     {
         <form method="post" action="@Url.RouteUrl("WishlistRemove", new { contentItemId = Model.ContentItemId })" class="d-inline no-multisubmit" asp-antiforgery="true">
             <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-            <button type="submit" class="btn btn-link btn-sm px-0" aria-pressed="true"><i class="fa-solid fa-heart text-danger me-1" aria-hidden="true"></i>@T["Saved to your wishlist"]</button>
+            <button type="submit" class="btn btn-link btn-sm px-0" aria-pressed="true"><i class="fa-solid fa-heart text-danger me-1" aria-hidden="true"></i>@T["Saved to Your Wishlist"]</button>
         </form>
     }
     else
     {
         <form method="post" action="@Url.RouteUrl("WishlistAdd", new { contentItemId = Model.ContentItemId })" class="d-inline no-multisubmit" asp-antiforgery="true">
             <input type="hidden" name="returnUrl" value="@Model.ReturnUrl" />
-            <button type="submit" class="btn btn-link btn-sm px-0" aria-pressed="false"><i class="fa-regular fa-heart me-1" aria-hidden="true"></i>@T["Save to wishlist"]</button>
+            <button type="submit" class="btn btn-link btn-sm px-0" aria-pressed="false"><i class="fa-regular fa-heart me-1" aria-hidden="true"></i>@T["Save to Wishlist"]</button>
         </form>
     }
 </div>

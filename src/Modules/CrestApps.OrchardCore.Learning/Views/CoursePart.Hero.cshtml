@@ -59,13 +59,13 @@
                         @if (Model.IsStaff)
                         {
                             <p class="mb-2">@T["You teach or author this course."]</p>
-                            <a class="btn btn-primary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Open the player"]</a>
+                            <a class="btn btn-primary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Open the Player"]</a>
                         }
                         else if (enrollment is null)
                         {
                             if (!Model.SignedIn)
                             {
-                                <a class="btn btn-primary btn-lg" href="@Url.Content("~/Login")?ReturnUrl=@Uri.EscapeDataString(Context.Request.Path + Context.Request.QueryString)">@T["Sign in to enroll"]</a>
+                                <a class="btn btn-primary btn-lg" href="@Url.Content("~/Login")?ReturnUrl=@Uri.EscapeDataString(Context.Request.Path + Context.Request.QueryString)">@T["Sign In to Enroll"]</a>
                             }
                             else if (Model.CanSelfEnroll)
                             {
@@ -79,7 +79,7 @@
                                         </div>
                                     }
                                     <div class="col-auto">
-                                        <button type="submit" class="btn btn-primary btn-lg">@(part.EnrollmentMode == EnrollmentMode.Approval ? T["Ask to enroll"] : T["Enroll"])</button>
+                                        <button type="submit" class="btn btn-primary btn-lg">@(part.EnrollmentMode == EnrollmentMode.Approval ? T["Ask to Enroll"] : T["Enroll"])</button>
                                     </div>
                                 </form>
                                 @if (part.EnrollmentMode == EnrollmentMode.Approval)
@@ -111,11 +111,11 @@
                             }
                             @if (enrollment.StartedUtc is null)
                             {
-                                <a class="btn btn-primary btn-lg" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Start the course"]</a>
+                                <a class="btn btn-primary btn-lg" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId })">@T["Start the Course"]</a>
                             }
                             else
                             {
-                                <a class="btn btn-primary btn-lg" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = Model.NextItem?.Item.ContentItemId })">@T["Continue where you left off"]</a>
+                                <a class="btn btn-primary btn-lg" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = Model.NextItem?.Item.ContentItemId })">@T["Continue Where You Left Off"]</a>
                                 @if (Model.NextItem is not null)
                                 {
                                     <p class="small text-body-secondary mt-2 mb-0">@T["Next: {0}", Model.NextItem.Item.DisplayText]</p>

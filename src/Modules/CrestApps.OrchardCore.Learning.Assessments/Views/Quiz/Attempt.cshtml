@@ -10,7 +10,7 @@
     <div class="product-breadcrumb">
         <breadcrumb name="LearningAttempt" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(attempt.QuizTitle))">
             <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
-            <breadcrumb-item id="LearningMyLearning" url="@Url.Content("~/learning")">@T["My learning"]</breadcrumb-item>
+            <breadcrumb-item id="LearningMyLearning" url="@Url.Content("~/learning")">@T["My Learning"]</breadcrumb-item>
         </breadcrumb>
     </div>
 
@@ -46,7 +46,7 @@
         <div class="d-flex flex-wrap gap-2 align-items-center">
             @if (Model.Sequential && !lastPage)
             {
-                <button type="submit" name="next" value="@(Model.Page + 1)" class="btn btn-primary">@T["Save and continue"]</button>
+                <button type="submit" name="next" value="@(Model.Page + 1)" class="btn btn-primary">@T["Save and Continue"]</button>
                 <span class="hint">@T["You cannot come back to these questions once you continue."]</span>
             }
             else
@@ -55,7 +55,7 @@
                 {
                     @if (Model.Page > 0)
                     {
-                        <button type="submit" name="next" value="@(Model.Page - 1)" class="btn btn-outline-secondary">@T["Previous page"]</button>
+                        <button type="submit" name="next" value="@(Model.Page - 1)" class="btn btn-outline-secondary">@T["Previous Page"]</button>
                     }
                     <nav aria-label="@T["Pages"]">
                         <ul class="pagination pagination-sm mb-0">
@@ -69,7 +69,7 @@
                     </nav>
                     @if (!lastPage)
                     {
-                        <button type="submit" name="next" value="@(Model.Page + 1)" class="btn btn-primary">@T["Next page"]</button>
+                        <button type="submit" name="next" value="@(Model.Page + 1)" class="btn btn-primary">@T["Next Page"]</button>
                     }
                 }
                 @if (lastPage)
@@ -98,7 +98,7 @@
                     <p class="mb-0">@T["You cannot change your answers after you submit them."]</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@T["Keep answering"]</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">@T["Keep Answering"]</button>
                     <button type="button" class="btn btn-success" data-learning-submit-confirmed>@T["Submit"]</button>
                 </div>
             </div>

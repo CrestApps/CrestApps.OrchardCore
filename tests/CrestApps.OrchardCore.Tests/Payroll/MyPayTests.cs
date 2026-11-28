@@ -226,6 +226,7 @@ public sealed class MyPayTests
         var menu = new CrestApps.OrchardCore.Payroll.Navigation.PayrollAdminMenu(
             new HttpContextAccessor { HttpContext = new DefaultHttpContext { User = user } },
             services.GetRequiredService<IPayrollScopeService>(),
+            Microsoft.Extensions.Options.Options.Create(new PayrollEmployerOptions { MultipleEmployers = true }),
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CrestApps.OrchardCore.Payroll.Navigation.PayrollAdminMenu>());
         var builder = new global::OrchardCore.Navigation.NavigationBuilder();
 

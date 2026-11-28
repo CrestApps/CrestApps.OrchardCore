@@ -40,8 +40,11 @@
 {
 <div class="ocat-wrapper">
     <div class="ocat-end-offset">
-        <input type="hidden" asp-for="Latitude" />
-        <input type="hidden" asp-for="Longitude" />
+        @* The map writes the pin with a dot: write and read the coordinates the same in every culture. *@
+        <input type="hidden" asp-for="Latitude" value="@Model.Latitude?.ToString(CultureInfo.InvariantCulture)" />
+        <input type="hidden" name="__Invariant" value="@Html.NameFor(model => model.Latitude)" />
+        <input type="hidden" asp-for="Longitude" value="@Model.Longitude?.ToString(CultureInfo.InvariantCulture)" />
+        <input type="hidden" name="__Invariant" value="@Html.NameFor(model => model.Longitude)" />
         <style asp-name="leaflet"></style>
         <script asp-name="crestapps-map" at="Foot"></script>
         <div id="work-order-map" class="border rounded" style="height: 16rem; z-index: 0;"

@@ -1,7 +1,7 @@
 @model LearningPathPeopleViewModel
 
 <zone Name="Title">
-    <breadcrumb name="LearningPathPeople" title="@T["People on the '{0}' path", Model.PathTitle ?? string.Empty]">
+    <breadcrumb name="LearningPathPeople" title="@T["People on the '{0}' Path", Model.PathTitle ?? string.Empty]">
         <breadcrumb-item id="LearningPaths" href="@Url.Action("List", "Admin", new { area = "OrchardCore.Contents", contentTypeId = ProgramsConstants.LearningPathContentType })">@T["Learning Paths"]</breadcrumb-item>
     </breadcrumb>
 </zone>
@@ -21,7 +21,7 @@
             <div class="col-auto">
                 <form method="post" asp-action="Start" asp-route-id="@Model.PathId" class="d-flex gap-2">
                     <input name="userName" class="form-control" placeholder="@T["User name"]" aria-label="@T["User name"]" required />
-                    <button type="submit" class="btn btn-secondary text-nowrap">@T["Start on the path"]</button>
+                    <button type="submit" class="btn btn-secondary text-nowrap">@T["Start on the Path"]</button>
                 </form>
             </div>
         </div>

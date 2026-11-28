@@ -91,7 +91,7 @@
                                name="@(prefix)ModelParameters[@i].Minimum"
                                type="number" step="any"
                                class="form-control"
-                               value="@Model.Minimum" />
+                               value="@Convert.ToString(Model.Minimum, System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small" for="ModelParameters_@(Model.ElementId)_Maximum">@T["Maximum"]</label>
@@ -99,7 +99,7 @@
                                name="@(prefix)ModelParameters[@i].Maximum"
                                type="number" step="any"
                                class="form-control"
-                               value="@Model.Maximum" />
+                               value="@Convert.ToString(Model.Maximum, System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                     <div class="col-md-3">
                         <label class="form-label small" for="ModelParameters_@(Model.ElementId)_Step">@T["Step"]</label>
@@ -107,7 +107,7 @@
                                name="@(prefix)ModelParameters[@i].Step"
                                type="number" step="any"
                                class="form-control"
-                               value="@Model.Step" />
+                               value="@Convert.ToString(Model.Step, System.Globalization.CultureInfo.InvariantCulture)" />
                     </div>
                 }
             </div>

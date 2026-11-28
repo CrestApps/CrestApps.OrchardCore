@@ -24,7 +24,7 @@ using OrchardCore.Modules.Manifest;
 [assembly: Feature(
     Id = PayrollConstants.Features.Payroll,
     Name = "Payroll",
-    Description = "Employers with their registrations and the bank account they pay from, permissions per employer, ledger codes and work site jurisdictions on teams, and Payroll's settings; pay profiles, pay runs and statements build on it.",
+    Description = "Payroll for the company's own staff: the company with its registrations and the bank account it pays from (Payroll > Management > Company), pay profiles, pay runs and statements, ledger codes and work site jurisdictions on teams, and Payroll's settings. Turn on Multiple Employers to run payroll for other employers too.",
     Category = "Payroll",
     Dependencies =
     [
@@ -35,6 +35,17 @@ using OrchardCore.Modules.Manifest;
         AddressConstants.Feature.ModuleId,
         TaxationConstants.Feature.IncomeTax,
         TaxationConstants.Feature.TaxForms,
+    ]
+)]
+
+[assembly: Feature(
+    Id = PayrollConstants.Features.MultipleEmployers,
+    Name = "Multiple Employers",
+    Description = "Payroll for more than one employer, such as the companies of a group or the clients of a payroll service: Payroll > Management > Employers, an employer on each pay run and pay profile (a person may have one pay profile with each employer), employer filters on the payroll pages, and permissions per employer.",
+    Category = "Payroll",
+    Dependencies =
+    [
+        PayrollConstants.Features.Payroll,
     ]
 )]
 

@@ -140,7 +140,7 @@
                                 }
                             </select>
                         }
-                        <button type="submit" class="btn btn-primary btn-sm mt-3">@T["Mark received"]</button>
+                        <button type="submit" class="btn btn-primary btn-sm mt-3">@T["Mark Received"]</button>
                     </form>
                 </div>
             </div>
@@ -155,7 +155,7 @@
                         <label class="form-label small ocat-label-required" for="refund-amount">@T["Amount"]</label>
                         <input id="refund-amount" name="amount" type="number" min="0.01" step="0.01" max="@Model.Refundable.ToString(CultureInfo.InvariantCulture)" value="@Model.SuggestedRefund.ToString(CultureInfo.InvariantCulture)" class="form-control w-auto mb-1" />
                         <span class="hint d-block mb-2">@T["What the items were paid, before tax and shipping. Up to {0} can still be refunded on the order.", ProductPriceFormatter.Format(Model.Refundable, orderReturn.Currency)]</span>
-                        <button type="submit" class="btn btn-success btn-sm" data-title="@T["Refund"]" data-message="@T["Refund the buyer now? The money goes back the way they paid."]" data-ok-text="@T["Refund"]" data-ok-class="btn-primary" data-url-af="RemoveUrl">@T["Refund and close"]</button>
+                        <button type="submit" class="btn btn-success btn-sm" data-title="@T["Refund"]" data-message="@T["Refund the buyer now? The money goes back the way they paid."]" data-ok-text="@T["Refund"]" data-ok-class="btn-primary" data-url-af="RemoveUrl">@T["Refund and Close"]</button>
                     </form>
                 </div>
             </div>
@@ -170,7 +170,7 @@
                         <p class="small mb-2">@T["Send them {0}, then close the return here.", orderReturn.ExchangeFor]</p>
                         <label class="form-label small" for="exchange-message">@T["Message for the buyer (optional)"]</label>
                         <textarea id="exchange-message" name="message" rows="2" maxlength="2000" class="form-control mb-2" placeholder="@T["Such as the tracking number"]"></textarea>
-                        <button type="submit" class="btn btn-success btn-sm">@T["The replacement is on its way"]</button>
+                        <button type="submit" class="btn btn-success btn-sm">@T["The Replacement Is on Its Way"]</button>
                     </form>
                 </div>
             </div>
@@ -184,7 +184,7 @@
                     <form asp-action="Reject" asp-route-returnId="@orderReturn.ItemId" method="post" class="no-multisubmit">
                         <label class="form-label small ocat-label-required" for="reject-message">@T["Why (the buyer is told)"]</label>
                         <textarea id="reject-message" name="message" rows="2" maxlength="2000" class="form-control mb-2" required></textarea>
-                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline the return"]</button>
+                        <button type="submit" class="btn btn-outline-danger btn-sm">@T["Decline the Return"]</button>
                     </form>
                 </div>
             </div>

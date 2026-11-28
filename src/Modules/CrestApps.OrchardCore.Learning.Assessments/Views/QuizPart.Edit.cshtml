@@ -31,8 +31,8 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center gap-2 py-1">
                         <span data-question-order-title></span>
                         <span class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary" data-question-order-up title="@T["Move up"]" aria-label="@T["Move up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
-                            <button type="button" class="btn btn-outline-secondary" data-question-order-down title="@T["Move down"]" aria-label="@T["Move down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" data-question-order-up title="@T["Move Up"]" aria-label="@T["Move Up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-outline-secondary" data-question-order-down title="@T["Move Down"]" aria-label="@T["Move Down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
                         </span>
                     </li>
                 </template>
@@ -104,7 +104,7 @@
                         </div>
                         <div class="col-md-1 text-md-end">
                             <span class="form-label small d-block mb-1 d-none d-md-block">&nbsp;</span>
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-draw-remove title="@T["Remove the rule"]" aria-label="@T["Remove the rule"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-draw-remove title="@T["Remove the Rule"]" aria-label="@T["Remove the Rule"]"><i class="fa-solid fa-trash" aria-hidden="true"></i></button>
                         </div>
                     </div>
                 </div>
@@ -120,7 +120,7 @@
         <template data-draw-rule-template>
             @{ await DrawRule("__index__", new DrawRuleRowViewModel()); }
         </template>
-        <button type="button" class="btn btn-sm btn-outline-secondary" data-draw-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add rule"]</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-draw-add><i class="fa-solid fa-plus" aria-hidden="true"></i> @T["Add Rule"]</button>
     </div>
 </div>
 

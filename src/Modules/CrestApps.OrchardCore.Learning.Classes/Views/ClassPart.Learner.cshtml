@@ -66,14 +66,14 @@
                 {
                     <form method="post" action="@Url.RouteUrl("LearningClassAcceptOffer", new { classItemId = Model.ClassItemId })">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Accept the place"]</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Accept the Place"]</button>
                     </form>
                 }
                 @if (canGiveUp)
                 {
                     <form method="post" action="@Url.RouteUrl("LearningClassCancel", new { classItemId = Model.ClassItemId })">
                         @Html.AntiForgeryToken()
-                        <button type="submit" class="btn btn-outline-danger">@(registration.IsWaiting ? T["Leave the waitlist"] : registration.IsOffered ? T["Decline the place"] : T["Give up my place"])</button>
+                        <button type="submit" class="btn btn-outline-danger">@(registration.IsWaiting ? T["Leave the Waitlist"] : registration.IsOffered ? T["Decline the Place"] : T["Give Up My Place"])</button>
                     </form>
                 }
             </div>
@@ -140,7 +140,7 @@
                                 <form method="post" action="@Url.RouteUrl("LearningClassRegister", new { classItemId = Model.ClassItemId })">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="sessionId" value="@session.ItemId" />
-                                    <button type="submit" class="btn @(entry.PlacesLeft > 0 ? "btn-primary" : "btn-outline-primary")">@(entry.PlacesLeft > 0 ? T["Register"] : T["Join the waitlist"])</button>
+                                    <button type="submit" class="btn @(entry.PlacesLeft > 0 ? "btn-primary" : "btn-outline-primary")">@(entry.PlacesLeft > 0 ? T["Register"] : T["Join the Waitlist"])</button>
                                 </form>
                             }
                         </div>

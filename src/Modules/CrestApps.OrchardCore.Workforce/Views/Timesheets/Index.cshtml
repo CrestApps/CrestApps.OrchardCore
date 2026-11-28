@@ -17,7 +17,7 @@
                         <input type="hidden" name="calendarId" value="@Model.CalendarId" />
                         <input type="hidden" name="periodStart" value="@Model.PeriodStart.Value.ToString("yyyy-MM-dd")" />
                         <input type="hidden" name="teamId" value="@Model.TeamId" />
-                        <button type="submit" class="btn btn-secondary">@T["Make this period's timesheets"]</button>
+                        <button type="submit" class="btn btn-secondary">@T["Make This Period's Timesheets"]</button>
                     </form>
                 </div>
                 @if (Model.ApprovedInPeriod > 0 && !Model.PeriodEnded)
@@ -35,7 +35,7 @@
                     </div>
                 }
                 <div class="col-auto ms-sm-auto">
-                    <a asp-area="OrchardCore.DataPipelines" asp-controller="Admin" asp-action="Index" class="btn btn-link" title="@T["Locked timesheets are exported by a data pipeline over the Pay inputs data set."]"><i class="fa-solid fa-file-export me-1" aria-hidden="true"></i>@T["Export to payroll"]</a>
+                    <a asp-area="OrchardCore.DataPipelines" asp-controller="Admin" asp-action="Index" class="btn btn-link" title="@T["Locked timesheets are exported by a data pipeline over the Pay inputs data set."]"><i class="fa-solid fa-file-export me-1" aria-hidden="true"></i>@T["Export to Payroll"]</a>
                 </div>
             }
         </div>

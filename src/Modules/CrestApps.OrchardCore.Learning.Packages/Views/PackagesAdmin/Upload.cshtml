@@ -1,7 +1,7 @@
 @model PackageUploadViewModel
 
 <zone Name="Title">
-    <breadcrumb name="LearningPackageUpload" title="@T["Import a package"]">
+    <breadcrumb name="LearningPackageUpload" title="@T["Import a Package"]">
         <breadcrumb-item id="LearningPackageItem" url="@Url.Action("Edit", "Admin", new { area = "OrchardCore.Contents", contentItemId = Model.ContentItemId })">@Model.Title</breadcrumb-item>
     </breadcrumb>
 </zone>

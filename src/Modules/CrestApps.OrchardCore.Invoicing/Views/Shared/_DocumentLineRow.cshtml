@@ -17,8 +17,8 @@
         <span class="document-line-position" data-line-position>@Model.Position</span>
         @if (editor.CanAddLines)
         {
-            <button type="button" class="btn btn-link btn-sm" data-line-move="-1" title="@T["Move up"]" aria-label="@T["Move the line up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
-            <button type="button" class="btn btn-link btn-sm" data-line-move="1" title="@T["Move down"]" aria-label="@T["Move the line down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-link btn-sm" data-line-move="-1" title="@T["Move Up"]" aria-label="@T["Move the Line Up"]"><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button>
+            <button type="button" class="btn btn-link btn-sm" data-line-move="1" title="@T["Move Down"]" aria-label="@T["Move the Line Down"]"><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button>
         }
     </td>
     <td data-label="@T["Kind"]">
@@ -39,7 +39,7 @@
                 <input name="Lines[@i].Name" value="@line.Name" class="form-control" maxlength="255" data-line-field="name" placeholder="@T["What it is"]" aria-label="@T["Description"]" />
                 @if (Model.CanPickProduct)
                 {
-                    <button type="button" class="btn btn-outline-secondary" data-line-product title="@T["Pick a product"]" aria-label="@T["Pick a product"]"><i class="fa-solid fa-box" aria-hidden="true"></i></button>
+                    <button type="button" class="btn btn-outline-secondary" data-line-product title="@T["Pick a Product"]" aria-label="@T["Pick a Product"]"><i class="fa-solid fa-box" aria-hidden="true"></i></button>
                 }
                 <button type="button" class="btn btn-outline-secondary" data-line-details aria-expanded="@(hasDetails ? "true" : "false")" title="@T["Details"]" aria-label="@T["Show or hide the details"]"><i class="fa-solid fa-align-left" aria-hidden="true"></i></button>
             </div>
@@ -105,6 +105,6 @@
         <span class="document-line-tax" data-line-tax></span>
     </td>
     <td class="text-end document-line-remove">
-        <button type="button" class="btn btn-link btn-sm text-danger" data-line-remove title="@T["Remove"]" aria-label="@T["Remove the line"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+        <button type="button" class="btn btn-link btn-sm text-danger" data-line-remove title="@T["Remove"]" aria-label="@T["Remove the Line"]"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
     </td>
 </tr>

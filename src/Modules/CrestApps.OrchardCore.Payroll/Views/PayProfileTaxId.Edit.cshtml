@@ -12,7 +12,7 @@
             <span class="form-control-plaintext font-monospace">@Model.TaxIdHint</span>
             @if (Model.CanRevealTaxId)
             {
-                <button type="submit" class="btn btn-sm btn-outline-secondary" formaction="@Url.Action("TaxId", "PayProfiles", new { area = "CrestApps.OrchardCore.Payroll", id = Model.ProfileId })" formnovalidate>@T["Show the full number"]</button>
+                <button type="submit" class="btn btn-sm btn-outline-secondary" formaction="@Url.Action("TaxId", "PayProfiles", new { area = "CrestApps.OrchardCore.Payroll", id = Model.ProfileId })" formnovalidate>@T["Show the Full Number"]</button>
             }
         }
     </div>

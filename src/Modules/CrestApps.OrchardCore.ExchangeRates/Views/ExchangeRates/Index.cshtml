@@ -2,7 +2,7 @@
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<ExchangeRate>>
 
 <zone Name="Title">
-    <breadcrumb name="ExchangeRatesIndex" title="@T["Exchange rates"]" />
+    <breadcrumb name="ExchangeRatesIndex" title="@T["Exchange Rates"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for delete actions. *@
@@ -19,7 +19,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add exchange rate"]</a>
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Exchange Rate"]</a>
                 </div>
             </div>
         </div>

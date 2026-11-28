@@ -1,11 +1,11 @@
 @model StaffPayrollCardViewModel
 
-<div class="card mb-3">
+<div class="card text-bg-theme mb-3">
     <div class="card-header d-flex align-items-center">
         <span class="me-auto">@T["Payroll"]</span>
         @if (Model.CanAdd)
         {
-            <a class="btn btn-sm btn-secondary" asp-area="CrestApps.OrchardCore.Payroll" asp-controller="PayProfiles" asp-action="Create" asp-route-staffMemberId="@Model.StaffMemberId">@T["Add pay profile"]</a>
+            <a class="btn btn-sm btn-secondary" asp-area="CrestApps.OrchardCore.Payroll" asp-controller="PayProfiles" asp-action="Create" asp-route-staffMemberId="@Model.StaffMemberId">@T["Add Pay Profile"]</a>
         }
     </div>
     <div class="card-body">
@@ -17,7 +17,7 @@
         {
             <div class="border rounded p-2 mb-2">
                 <div class="d-flex flex-wrap align-items-center gap-2">
-                    <strong>@row.EmployerName</strong>
+                    <strong>@(Model.ShowEmployer ? row.EmployerName : T["Pay profile"])</strong>
                     @if (!string.IsNullOrEmpty(row.ScheduleName))
                     {
                         <span class="badge ta-badge fw-normal">@row.ScheduleName</span>

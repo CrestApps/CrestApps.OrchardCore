@@ -25,13 +25,13 @@
             @if (ShellDescriptor.Features.Any(feature => feature.Id == "CrestApps.OrchardCore.WorkOrders"))
             {
                 <div class="col-auto">
-                    <a href="@Url.Action("Index", "WorkOrders", new { area = "CrestApps.OrchardCore.WorkOrders", assetId = asset.ItemId, status = "all" })" class="btn btn-secondary">@T["Work orders"]</a>
+                    <a href="@Url.Action("Index", "WorkOrders", new { area = "CrestApps.OrchardCore.WorkOrders", assetId = asset.ItemId, status = "all" })" class="btn btn-secondary">@T["Work Orders"]</a>
                 </div>
             }
             @if (Model.CanManage)
             {
                 <div class="col-auto">
-                    <a asp-action="Edit" asp-route-assetTypeId="" asp-route-parentAssetId="@asset.ItemId" class="btn btn-secondary">@T["Add a part"]</a>
+                    <a asp-action="Edit" asp-route-assetTypeId="" asp-route-parentAssetId="@asset.ItemId" class="btn btn-secondary">@T["Add a Part"]</a>
                     <a asp-action="Edit" asp-route-id="@asset.ItemId" class="btn btn-primary">@T["Edit"]</a>
                 </div>
             }
@@ -86,10 +86,15 @@
     </div>
 </div>
 
+@if (Model.Sections is not null)
+{
+    @await DisplayAsync(Model.Sections)
+}
+
 @if (Model.Children.Count > 0)
 {
     <div class="card mb-3"><div class="card-body">
-        <h2 class="h6">@T["Parts and assets inside it"]</h2>
+        <h2 class="h6">@T["Parts and Assets Inside It"]</h2>
         <ul class="list-unstyled mb-0">
             @foreach (var child in Model.Children)
             {
@@ -100,7 +105,7 @@
 }
 
 <div class="card mb-3"><div class="card-body">
-    <h2 class="h6">@T["Meter readings"]</h2>
+    <h2 class="h6">@T["Meter Readings"]</h2>
     @if (Model.Type?.Meters.Count > 0)
     {
         @if (Model.CanManage)

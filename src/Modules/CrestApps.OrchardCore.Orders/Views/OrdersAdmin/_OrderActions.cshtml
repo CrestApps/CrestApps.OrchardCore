@@ -72,14 +72,14 @@
                             <label class="form-check-label" for="cancel-restock">@T["Put the items back in stock"]</label>
                         </div>
                     }
-                    <button type="submit" class="btn btn-outline-danger">@T["Cancel order"]</button>
+                    <button type="submit" class="btn btn-outline-danger">@T["Cancel Order"]</button>
                 </form>
             }
 
             @if (Model.CanResendConfirmation)
             {
                 <form asp-action="ResendConfirmation" asp-route-orderId="@order.ItemId" method="post">
-                    <button type="submit" class="btn btn-outline-secondary">@T["Send the confirmation again"]</button>
+                    <button type="submit" class="btn btn-outline-secondary">@T["Send the Confirmation Again"]</button>
                     <span class="hint d-block">@T["To {0}.", order.CustomerEmail]</span>
                 </form>
             }

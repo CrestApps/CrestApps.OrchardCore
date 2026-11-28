@@ -24,7 +24,11 @@ public sealed class AgreementsAdminMenu : AdminNavigationProvider
     {
         // Agreements are records about accounts that several modules use (tickets, field service), so they sit under
         // Content, like Teams, rather than at the top of the menu or under one of the modules that read them.
-        builder.Add(S["Content"], content => content
+        // The id and position are Orchard's Contents menu's, so the items merge with it; without the Contents feature, this
+        // module's NavigationItemText-content.Id view gives the menu Orchard's icon.
+        builder.Add(S["Content"], NavigationConstants.AdminMenuContentPosition, content => content
+            .AddClass("content")
+            .Id("content")
             .Add(S["Agreements"], S["Agreements"].PrefixPosition(), agreements => agreements
                 .Id("agreements")
                 .Action("Index", "Agreements", AgreementsConstants.Features.Agreements)

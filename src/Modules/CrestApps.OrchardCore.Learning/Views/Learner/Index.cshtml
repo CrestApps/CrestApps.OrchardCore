@@ -19,7 +19,7 @@
         [LearnerCourseStates.Completed] = T["Completed"],
     };
 
-    Func<object, IHtmlContent> actions = @<div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningCatalog")"><i class="fa-solid fa-magnifying-glass me-1" aria-hidden="true"></i>@T["Course catalog"]</a> <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningTranscript")">@T["My transcript"]</a></div>;
+    Func<object, IHtmlContent> actions = @<div class="d-flex flex-wrap gap-2"><a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningCatalog")"><i class="fa-solid fa-magnifying-glass me-1" aria-hidden="true"></i>@T["Course Catalog"]</a> <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl("LearningTranscript")">@T["My Transcript"]</a></div>;
 
     Func<LearnerCourseViewModel, IHtmlContent> stateBadges = @<text>
         @{
@@ -61,7 +61,7 @@
         {
             if (row.CourseRouteValues is not null)
             {
-                <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl(row.CourseRouteValues)">@T["View the course"]</a>
+                <a class="btn btn-outline-secondary btn-sm" href="@Url.RouteUrl(row.CourseRouteValues)">@T["View the Course"]</a>
             }
         }
         else if (enrollment.Status == EnrollmentStatus.Completed)
@@ -218,8 +218,8 @@
 @if (accountUrl is not null)
 {
     <zone Name="Title">
-        <breadcrumb name="LearningMyLearning" title="@T["My learning"]">
-            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your account"]</breadcrumb-item>
+        <breadcrumb name="LearningMyLearning" title="@T["My Learning"]">
+            <breadcrumb-item id="CommerceAccount" url="@accountUrl">@T["Your Account"]</breadcrumb-item>
         </breadcrumb>
     </zone>
 
@@ -229,12 +229,12 @@ else
 {
     <div class="container my-4">
         <div class="product-breadcrumb">
-            <breadcrumb name="LearningMyLearning" title="@T["My learning"]">
+            <breadcrumb name="LearningMyLearning" title="@T["My Learning"]">
                 <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
             </breadcrumb>
         </div>
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
-            <h1 class="h3 mb-0">@T["My learning"]</h1>
+            <h1 class="h3 mb-0">@T["My Learning"]</h1>
             @actions(null)
         </div>
         @content(null)

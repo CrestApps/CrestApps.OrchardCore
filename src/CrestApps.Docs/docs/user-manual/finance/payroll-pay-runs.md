@@ -6,7 +6,7 @@ technical_manual:
   - modules/payroll
 ---
 
-A **pay run** pays the people of one employer for one period. Payroll works out each person's statement from the hours the time clock locked, their salary and pay items, and the hours and amounts entered for the run; someone other than the person who prepared it approves it.
+A **pay run** pays your staff for one period: everyone on one pay schedule, or the people you choose. Payroll works out each person's statement from the hours the time clock locked, their salary and pay items, and the hours and amounts entered for the run; someone other than the person who prepared it approves it.
 
 | | |
 | --- | --- |
@@ -20,20 +20,23 @@ A **pay run** pays the people of one employer for one period. Payroll works out 
 
 To try a pay run without setting everything up, run the **Payroll sample** recipe under **Configuration** → **Recipes**. It turns on Payroll and Banking, adds the 2026 federal income tax rules and Texas unemployment, and sets up the employer Contoso (with its bank account, a check layout and a pay schedule every two weeks) and four staff members with pay profiles: two on a salary paid by deposit, one paid by the hour, and one paid by check. One of them saves in a 401(k) and has a child support order. Every tax id and account number in it is made up.
 
-Then add a pay run for Contoso and leave the period empty to take the current one. Jordan Smith is paid by the hour, so enter Jordan's hours as inputs of the run, such as 80 hours of **REG** and 4 of **OT**, and choose **Calculate**.
+Then add a pay run and leave the period empty to take the current one. Jordan Smith is paid by the hour, so enter Jordan's hours as inputs of the run, such as 80 hours of **REG** and 4 of **OT**, and choose **Calculate**.
 
 ## Add a pay run
 
 1. Open **Payroll** → **Pay Runs** and choose **Add pay run**.
-2. Choose the **Employer** and the **Pay schedule**: everyone of the employer with an active pay profile on the schedule is paid.
-3. Choose the **Type**: a regular run pays salaries, hours, pay items and inputs; a supplemental or off-cycle run pays only the inputs you enter, such as bonuses, so only the people with inputs get a statement. Choose how bonuses are withheld.
-4. Leave the period and pay date empty to take the schedule's current period, or enter them, and choose **Add**.
+2. Leave the **Name** empty for a name made from the dates, the schedule and who is paid, such as **Pay for Nov 16 – Nov 29, 2026 (Weekly)** or **Final pay for Jane Doe, paid Dec 5, 2026**, or type your own. The run's number is shown next to its name, such as **#700**.
+3. Choose the **Pay schedule**. People are paid on the schedule of their pay profile, so a company that pays some people weekly and others monthly adds a weekly run for the weekly people and a monthly run for the monthly ones. The schedule also gives the period and the pay date.
+4. Under **Who is paid**, keep **All staff on the pay schedule**, or choose **Only the staff members I choose** and pick them, such as for a bonus for a few people or the final pay of someone who left. People you choose are paid whatever their schedule, and each needs a pay profile.
+5. With Multiple Employers on, choose the **Employer** (see [Your company and payroll access](./payroll-employers.md)).
+6. Choose the **Type**: a regular run pays salaries, hours, pay items and inputs; a supplemental or off-cycle run pays only the inputs you enter, such as bonuses, so only the people with inputs get a statement. Choose how bonuses are withheld.
+7. Leave the period and pay date empty to take the schedule's current period, or enter them, and choose **Add**.
 
 ## Enter hours and amounts
 
 Under **Inputs of this run**, choose the person and the pay code and enter hours or an amount, such as a bonus. Hours locked in the time clock are read when the run is calculated, so they need no input. You can't enter your own pay.
 
-To enter many at once, such as a file of bonuses, use a data pipeline: read the file with **Read a media file**, rename its columns to EmployeeNumber, PayCode and Amount (or Hours) with **Select fields** if needed, add a PayRun column with the run's number, and connect **Save pay inputs**. Rows that can't be saved, such as an unknown employee number or a row of your own pay, go to its **Rejected** output with the reason: write them to a file to fix them. Running the pipeline again doesn't add a row twice: a row with the same values, or with the same value in a **Key** column, updates the input it made.
+To enter many at once, such as a file of bonuses, use a data pipeline: read the file with **Read a media file**, rename its columns to EmployeeNumber, PayCode and Amount (or Hours) with **Select fields** if needed, add a PayRun column with the run's number (the **#** number shown next to its name), and connect **Save pay inputs**. Rows that can't be saved, such as an unknown employee number or a row of your own pay, go to its **Rejected** output with the reason: write them to a file to fix them. Running the pipeline again doesn't add a row twice: a row with the same values, or with the same value in a **Key** column, updates the input it made.
 
 ## Calculate and review
 

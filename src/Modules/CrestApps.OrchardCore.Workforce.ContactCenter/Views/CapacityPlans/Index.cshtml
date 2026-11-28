@@ -8,7 +8,7 @@
             <div class="col">
                 <p class="mb-0 text-muted small">@T["The agents a planning group needs week by week against the agents you expect to have, with attrition and hiring classes."]</p>
             </div>
-            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add capacity plan"]</a></div>
+            <div class="col-auto"><a asp-action="Edit" class="btn btn-secondary create">@T["Add Capacity Plan"]</a></div>
         </div>
     </div>
 </div>
@@ -16,7 +16,7 @@
 <admin-list name="WorkforceCapacityPlans" context="Model.List" show-select-all="false" empty-message="@T["<strong>Nothing here!</strong> Add a capacity plan to see when you'll need to hire."]">
     <admin-list-list item-css-class="list-group-item" />
     <admin-list-grid>
-        <admin-list-column name="Name" position="20" title="@T["Capacity plan"]" />
+        <admin-list-column name="Name" position="20" title="@T["Capacity Plan"]" />
         <admin-list-column name="Details" position="30" title="@T["Details"]" width="auto" />
         <admin-list-column type="Actions" title="@T["Actions"]" />
     </admin-list-grid>

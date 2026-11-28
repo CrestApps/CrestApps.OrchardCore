@@ -39,7 +39,7 @@
                     }
                     @if (parent.Children.Count == 0)
                     {
-                        <a class="btn btn-secondary btn-sm" asp-action="Unmake" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make ordinary"]" data-message="@T["Make {0} an ordinary tenant again?", parent.DisplayName]">@T["Make ordinary"]</a>
+                        <a class="btn btn-secondary btn-sm" asp-action="Unmake" asp-route-id="@settings.Name" data-url-af="RemoveUrl UnsafeUrl" data-title="@T["Make Ordinary"]" data-message="@T["Make {0} an ordinary tenant again?", parent.DisplayName]">@T["Make Ordinary"]</a>
                     }
                 </div>
             </div>
@@ -139,7 +139,7 @@
         {
             <form asp-action="Remove" asp-route-id="@settings.Name" method="post" class="d-flex flex-wrap gap-2 align-items-center">
                 <input name="confirmName" class="form-control w-auto" placeholder="@T["Type {0} to confirm", settings.Name]" autocomplete="off" aria-label="@T["Type the tenant name to confirm"]" />
-                <button type="submit" class="btn btn-danger">@T["Remove everything"]</button>
+                <button type="submit" class="btn btn-danger">@T["Remove Everything"]</button>
                 <span class="small text-muted">@T["Type {0} to confirm. This cannot be undone.", settings.Name]</span>
             </form>
         }

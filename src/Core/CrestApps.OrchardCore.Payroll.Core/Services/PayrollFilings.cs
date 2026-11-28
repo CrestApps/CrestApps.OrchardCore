@@ -818,7 +818,7 @@ public sealed class PayrollFilingService : IPayrollFilingService
         {
             if (run.Status is not (PayRunStatus.Paid or PayRunStatus.Canceled))
             {
-                blockers.Add(S["Pay run {0} (paid {1}) is {2}: process or cancel it.", run.Number, run.PayDate.ToString("d", System.Globalization.CultureInfo.CurrentCulture), run.Status.ToString()]);
+                blockers.Add(S["{0} (paid {1}) is {2}: process or cancel it.", PayRunTitles.Name(run, S), run.PayDate.ToString("d", System.Globalization.CultureInfo.CurrentCulture), run.Status.ToString()]);
             }
         }
 

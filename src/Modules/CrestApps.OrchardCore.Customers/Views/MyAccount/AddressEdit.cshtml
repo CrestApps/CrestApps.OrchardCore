@@ -1,7 +1,7 @@
 @model CustomerAddressViewModel
 
 <zone Name="Title">
-    <breadcrumb name="@(Model.IsNew ? "MyAccountAddressCreate" : "MyAccountAddressEdit")" title="@(Model.IsNew ? T["Add address"] : T["Edit address"])">
+    <breadcrumb name="@(Model.IsNew ? "MyAccountAddressCreate" : "MyAccountAddressEdit")" title="@(Model.IsNew ? T["Add Address"] : T["Edit Address"])">
         <breadcrumb-item id="MyAccount" action="Index" controller="MyAccount" area="CrestApps.OrchardCore.Customers">@T["My Account"]</breadcrumb-item>
     </breadcrumb>
 </zone>

@@ -1,7 +1,7 @@
 @model ListCatalogEntryViewModel<CatalogEntryViewModel<BusinessDocumentTemplate>>
 
 <zone Name="Title">
-    <breadcrumb name="BusinessDocumentTemplates" title="@T["Document templates"]" />
+    <breadcrumb name="BusinessDocumentTemplates" title="@T["Document Templates"]" />
 </zone>
 
 @* The form is necessary to generate an antiforgery token for delete actions. *@
@@ -18,7 +18,7 @@
                     </div>
                 </div>
                 <div class="col-auto">
-                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add template"]</a>
+                    <a class="btn btn-secondary create" role="button" asp-action="Create">@T["Add Template"]</a>
                 </div>
             </div>
         </div>
@@ -30,8 +30,8 @@
         <admin-list-list item-css-class="list-group-item" />
         <admin-list-grid>
             <admin-list-column name="Name" position="20" title="@T["Name"]" />
-            <admin-list-column name="Kinds" position="30" title="@T["Used for"]" width="auto" />
-            <admin-list-column name="Modified" position="90" title="@T["Last modified"]" width="auto" />
+            <admin-list-column name="Kinds" position="30" title="@T["Used For"]" width="auto" />
+            <admin-list-column name="Modified" position="90" title="@T["Last Modified"]" width="auto" />
             <admin-list-column type="Actions" title="@T["Actions"]" />
         </admin-list-grid>
     </admin-list>

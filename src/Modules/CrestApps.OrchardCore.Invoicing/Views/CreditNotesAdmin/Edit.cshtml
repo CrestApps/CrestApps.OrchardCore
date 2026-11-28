@@ -1,7 +1,7 @@
 @model CreditNoteEditViewModel
 
 <zone Name="Title">
-    <breadcrumb name="CreditNotesEdit" title="@T["Draft credit note for invoice {0}", Model.InvoiceNumber]">
+    <breadcrumb name="CreditNotesEdit" title="@T["Draft Credit Note for Invoice {0}", Model.InvoiceNumber]">
         <breadcrumb-item id="InvoicesIndex" action="Index" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Invoices"]</breadcrumb-item>
         <breadcrumb-item id="InvoicesDetail" action="Detail" controller="InvoicesAdmin" area="@InvoicingConstants.Features.Area" route-itemId="@Model.InvoiceId" permission="@InvoicingPermissions.ViewInvoices.Name">@T["Invoice {0}", Model.InvoiceNumber]</breadcrumb-item>
     </breadcrumb>
@@ -13,11 +13,11 @@
     @await DisplayAsync(Model.Editor)
 
     <div class="action-bar-bottom">
-        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save draft"]</button>
+        <button type="submit" name="submit" value="save" class="btn btn-primary">@T["Save Draft"]</button>
         <button type="submit" name="submit" value="update" class="btn btn-secondary">@T["Update"]</button>
         @if (Model.CanIssue)
         {
-            <button type="submit" name="submit" value="issue" class="btn btn-success action-bar-secondary">@T["Save and issue"]</button>
+            <button type="submit" name="submit" value="issue" class="btn btn-success action-bar-secondary">@T["Save and Issue"]</button>
         }
         <a class="btn btn-secondary cancel" role="button" href="@Url.Action("Detail", "CreditNotesAdmin", new { itemId = Model.ItemId })">@T["Cancel"]</a>
     </div>

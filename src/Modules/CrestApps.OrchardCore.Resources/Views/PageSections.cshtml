@@ -69,10 +69,12 @@
 
 @if (sections.Count > 0)
 {
-    @* The admin theme frames a tab pane for its own tab strips; here each section's cards are the frame. *@
+    @* The admin theme frames a tab pane for its own tab strips (a border, padding, a white background and a top margin);
+       here each section's cards are the frame, flush with the top of the list beside them. *@
     @* Below the large breakpoint the list is one row across the top that scrolls sideways (Bootstrap's horizontal list group). *@
     <style at="Head">
-        [data-page-sections] .page-sections-content > .tab-pane { border: 0; padding: 0; border-radius: 0; }
+        [data-page-sections] .page-sections-content > .tab-pane { border: 0; padding: 0; border-radius: 0; margin: 0; background-color: transparent; }
+        [data-page-sections] .page-sections-content > .tab-pane:focus:not(:focus-visible) { outline: 0; }
         @@media (max-width: 991.98px) {
             [data-page-sections] .page-sections-nav { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: thin; }
             [data-page-sections] .page-sections-nav > .list-group-item { flex: 0 0 auto; width: auto; white-space: nowrap; }

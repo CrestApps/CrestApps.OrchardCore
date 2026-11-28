@@ -1,23 +1,16 @@
 @model PayrollFilingsIndexViewModel
+@inject Microsoft.Extensions.Options.IOptions<PayrollEmployerOptions> EmployerOptions
 
 <zone Name="Title">
     <breadcrumb name="PayrollFilings" title="@T["Filings"]" />
 </zone>
 
-<form method="get" class="card text-bg-theme mb-3 position-sticky action-bar">
-    <div class="card-body">
-        <div class="row gx-2 align-items-end">
-            <div class="col-12 col-md-5">
-                <label for="employerId" class="form-label">@T["Employer"]</label>
-                <select id="employerId" name="employerId" asp-items="Model.Employers" class="form-select"><option value="">@T["Choose…"]</option></select>
-            </div>
-            
-            <div class="col-auto">
-                <button type="submit" class="btn btn-secondary">@T["Show"]</button>
-            </div>
-        </div>
-    </div>
-</form>
+@await DisplayAsync(Model.EmployerFilter)
+
+@if (string.IsNullOrEmpty(Model.EmployerId) && !EmployerOptions.Value.MultipleEmployers)
+{
+    <div class="alert alert-info">@T["Set up your company under Payroll > Management > Company first."]</div>
+}
 
 @if (!string.IsNullOrEmpty(Model.EmployerId))
 {

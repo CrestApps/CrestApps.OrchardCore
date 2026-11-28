@@ -19,7 +19,7 @@
     <div class="product-breadcrumb">
         <breadcrumb name="LearningPlayer" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(current?.Item.DisplayText ?? course.DisplayText))">
             <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
-            <breadcrumb-item id="LearningMyLearning" url="@Url.RouteUrl("LearningMyLearning")">@T["My learning"]</breadcrumb-item>
+            <breadcrumb-item id="LearningMyLearning" url="@Url.RouteUrl("LearningMyLearning")">@T["My Learning"]</breadcrumb-item>
         </breadcrumb>
     </div>
 
@@ -47,8 +47,8 @@
             @if (Model.Outline.Entries.Count > 0)
             {
                 <div class="d-flex justify-content-between align-items-center mt-3 mb-2">
-                    <h2 class="h6 text-uppercase text-body-secondary mb-0">@T["Course outline"]</h2>
-                    <button type="button" class="btn btn-link btn-sm p-0" data-learning-toggle-sections data-collapse-text="@T["Collapse all"]" data-expand-text="@T["Expand all"]" aria-controls="learning-player-outline">@T["Collapse all"]</button>
+                    <h2 class="h6 text-uppercase text-body-secondary mb-0">@T["Course Outline"]</h2>
+                    <button type="button" class="btn btn-link btn-sm p-0" data-learning-toggle-sections data-collapse-text="@T["Collapse all"]" data-expand-text="@T["Expand all"]" aria-controls="learning-player-outline">@T["Collapse All"]</button>
                 </div>
                 <div id="learning-player-outline" data-learning-refresh="outline">
                     <partial name="_LearnerOutline" model="new LearnerOutlineViewModel { Outline = Model.Outline, Progress = Model.Progress, KindIcons = Model.KindIcons, CurrentItemId = itemId, CanOpen = canOpen, LockedItems = Model.LockedItems, Navigation = true }" />
@@ -133,7 +133,7 @@
                         {
                             <form method="post" action="@Url.RouteUrl("LearningDone", new { enrollmentId = enrollment.ItemId, itemId })" class="my-3">
                                 @Html.AntiForgeryToken()
-                                <button type="submit" class="btn btn-success"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Mark as done"]</button>
+                                <button type="submit" class="btn btn-success"><i class="fa-solid fa-check me-1" aria-hidden="true"></i>@T["Mark as Done"]</button>
                             </form>
                         }
                         else if (mode == CompletionModes.Acknowledged)
@@ -166,7 +166,7 @@
                     <p class="small text-success my-3 d-none" data-learning-completed role="status"><i class="fa-solid fa-circle-check me-1" aria-hidden="true"></i>@T["You completed this item."]</p>
                     <div class="alert alert-success d-flex flex-wrap align-items-center justify-content-between gap-2 d-none" data-learning-course-done role="status">
                         <span><i class="fa-solid fa-trophy me-1" aria-hidden="true"></i>@T["You completed the course."]</span>
-                        <a class="btn btn-success btn-sm" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId })">@T["See your completion"]</a>
+                        <a class="btn btn-success btn-sm" href="@Url.RouteUrl("LearningCourseCompleted", new { courseId })">@T["See Your Completion"]</a>
                     </div>
                 }
                 else

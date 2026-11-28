@@ -13,7 +13,7 @@
     var scale = Model.Weeks.Count > 0 ? Model.Weeks.Max(week => Math.Max(week.RequiredFte, week.AvailableFte)) : 1;
 }
 
-<zone Name="Title"><breadcrumb name="WorkforceCapacityPlansView" title="@T["Capacity plan {0}", plan.Name]" /></zone>
+<zone Name="Title"><breadcrumb name="WorkforceCapacityPlansView" title="@T["Capacity Plan {0}", plan.Name]" /></zone>
 
 <div class="card text-bg-theme mb-3 position-sticky action-bar">
     <div class="card-body">
@@ -23,7 +23,7 @@
             </div>
             <div class="col-auto">
                 <a asp-action="Edit" asp-route-id="@plan.ItemId" class="btn btn-primary">@T["Edit"]</a>
-                <a asp-action="Index" class="btn btn-secondary">@T["All plans"]</a>
+                <a asp-action="Index" class="btn btn-secondary">@T["All Plans"]</a>
             </div>
         </div>
     </div>

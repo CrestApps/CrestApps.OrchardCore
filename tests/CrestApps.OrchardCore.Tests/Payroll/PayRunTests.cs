@@ -558,10 +558,10 @@ public sealed class PayRunTests
 
     internal static CrestApps.OrchardCore.Payroll.Controllers.PayRunsController Controller(IServiceProvider services, ClaimsPrincipal user)
     {
-        var shapes = new Moq.Mock<global::OrchardCore.DisplayManagement.IShapeFactory>();
+        var filters = new Moq.Mock<global::OrchardCore.DisplayManagement.IDisplayManager<CrestApps.OrchardCore.Payroll.ViewModels.PayrollEmployerFilter>>();
 
-        shapes
-            .Setup(factory => factory.CreateAsync(Moq.It.IsAny<string>(), Moq.It.IsAny<Func<ValueTask<global::OrchardCore.DisplayManagement.IShape>>>(), Moq.It.IsAny<Action<global::OrchardCore.DisplayManagement.Implementation.ShapeCreatingContext>>(), Moq.It.IsAny<Action<global::OrchardCore.DisplayManagement.Implementation.ShapeCreatedContext>>()))
+        filters
+            .Setup(manager => manager.BuildDisplayAsync(Moq.It.IsAny<CrestApps.OrchardCore.Payroll.ViewModels.PayrollEmployerFilter>(), Moq.It.IsAny<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModel>(), Moq.It.IsAny<string>(), Moq.It.IsAny<string>()))
             .ReturnsAsync(Moq.Mock.Of<global::OrchardCore.DisplayManagement.IShape>());
 
         var controller = new CrestApps.OrchardCore.Payroll.Controllers.PayRunsController(
@@ -577,7 +577,7 @@ public sealed class PayRunTests
             services.GetRequiredService<CrestApps.OrchardCore.Payroll.Services.PayrollNames>(),
             Moq.Mock.Of<global::OrchardCore.DisplayManagement.ModelBinding.IUpdateModelAccessor>(),
             Moq.Mock.Of<global::OrchardCore.DisplayManagement.IDisplayManager<PayRun>>(),
-            shapes.Object,
+            filters.Object,
             Moq.Mock.Of<global::OrchardCore.DisplayManagement.Notify.INotifier>(),
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughHtmlLocalizer<CrestApps.OrchardCore.Payroll.Controllers.PayRunsController>(),
             new CrestApps.OrchardCore.Tests.Telephony.Doubles.PassThroughStringLocalizer<CrestApps.OrchardCore.Payroll.Controllers.PayRunsController>());

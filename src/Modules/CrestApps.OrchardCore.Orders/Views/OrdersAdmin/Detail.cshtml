@@ -107,7 +107,7 @@
                     <a class="btn btn-sm btn-secondary" asp-controller="DraftOrdersAdmin" asp-action="Edit" asp-route-orderId="@order.ItemId">@T["Edit"]</a>
                 }
                 <form asp-controller="DraftOrdersAdmin" asp-action="SendInvoice" asp-route-orderId="@order.ItemId" method="post" class="no-multisubmit">
-                    <button type="submit" class="btn btn-sm btn-primary">@(order.Invoice.SentUtc is null ? (order.Quote is null ? T["Send invoice"] : T["Send quote"]) : T["Send again"])</button>
+                    <button type="submit" class="btn btn-sm btn-primary">@(order.Invoice.SentUtc is null ? (order.Quote is null ? T["Send Invoice"] : T["Send Quote"]) : T["Send Again"])</button>
                 </form>
             </span>
         }
@@ -118,14 +118,14 @@
     @if (Model.CanManage && order.Status == OrderStatus.Paid)
     {
         <a class="btn btn-outline-secondary btn-sm" asp-controller="DraftOrdersAdmin" asp-action="Create" asp-route-addsToOrderId="@order.ItemId">
-            <i class="fa-solid fa-cart-plus" aria-hidden="true"></i> @T["Add items"]
+            <i class="fa-solid fa-cart-plus" aria-hidden="true"></i> @T["Add Items"]
         </a>
     }
     <a class="btn btn-outline-secondary btn-sm" asp-action="Invoice" asp-route-orderId="@order.ItemId">
         <i class="fa-solid fa-file-invoice" aria-hidden="true"></i> @T["Invoice"]
     </a>
     <a class="btn btn-outline-secondary btn-sm" asp-action="PackingSlip" asp-route-orderId="@order.ItemId">
-        <i class="fa-solid fa-box" aria-hidden="true"></i> @T["Packing slip"]
+        <i class="fa-solid fa-box" aria-hidden="true"></i> @T["Packing Slip"]
     </a>
 </div>
 

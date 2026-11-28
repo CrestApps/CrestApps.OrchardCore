@@ -14,7 +14,7 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   export code. Modules keep settings in `Properties`, such as Workforce's shift differential window.
 - `IPayScheduleManager`, `IPayCodeManager`, and `IPaySetupUsage` (`AddPaySetupUsage<T>()`) so a schedule or code a module
   uses is not deleted.
-- Admin: **Payroll > Setup > Pay Schedules** and **Pay Codes** under `ManagePaySetup`.
+- Admin: **Payroll > Management > Pay Schedules** and **Pay Codes** under `ManagePaySetup`.
 - Recipe and deployment steps `PaySchedules` and `PayCodes`.
 
 ## Pay inputs
@@ -26,12 +26,18 @@ owns pay schedules and pay codes; Workforce's time clock depends on it and Payro
   **Mark pay inputs exported** step (marks once the run succeeds), and the recipe **Payroll: export pay inputs to a CSV
   file**, a draft pipeline to publish.
 
-## Payroll (employers and access)
+## Payroll (the company, and Multiple Employers)
 
-- `Employer` (`IEmployerManager`, `IEmployerUsage`), a party kind; **Payroll > Setup > Employers**; the `PayrollEmployers`
-  recipe and deployment steps.
-- Per-employer permissions (`PayrollPermissionTemplates.For`) listed per employer in the role editor, and
-  `IPayrollScopeService` for pages, data sets and exports. `IPayrollEmployeeDirectory` maps employers to staff.
+- The Payroll feature is the company's own payroll: `IPayrollCompanyService` finds the company (the employer
+  `PayrollSettings.CompanyEmployerId` names, or the oldest), **Payroll > Management > Company** edits it, and a new pay
+  run or pay profile belongs to it, so no page asks for an employer.
+- `Employer` (`IEmployerManager`, `IEmployerUsage`), a party kind; the `PayrollEmployers` recipe and deployment steps.
+- The **Multiple Employers** feature (`CrestApps.OrchardCore.Payroll.MultipleEmployers`) adds the employers UI through
+  drivers and shapes only: **Payroll > Management > Employers**, the employer picker on pay runs and pay profiles, the
+  employer filter of the payroll pages (`IDisplayManager<PayrollEmployerFilter>`), the defaults of a new employer, and
+  the per-employer permissions (`PayrollPermissionTemplates.For`) in the role editor. `PayrollEmployerOptions` tells
+  views whether to name employers.
+- `IPayrollScopeService` for pages, data sets and exports. `IPayrollEmployeeDirectory` maps employers to staff.
 - A **Payroll** card on teams (`PayrollTeamSettings`: ledger code, jurisdictions) and **Settings > Payroll**
   (`PayrollSettings`).
 - The recipe **Payroll: sample roles**, and the **Payroll sample** recipe (`payroll-sample.recipe.json`): the employer

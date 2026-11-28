@@ -151,9 +151,9 @@ else if (Model.IsReadOnly)
                         {
                             <div class="btn-group mb-2" role="group" aria-label="@T["Who sees it"]">
                                 <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-public" value="false" checked="@(!Model.DraftIsInternal)" autocomplete="off" />
-                                <label class="btn btn-sm btn-outline-primary" for="ticket-reply-public"><i class="fa-solid fa-reply me-1" aria-hidden="true"></i>@T["Reply to the requester"]</label>
+                                <label class="btn btn-sm btn-outline-primary" for="ticket-reply-public"><i class="fa-solid fa-reply me-1" aria-hidden="true"></i>@T["Reply to the Requester"]</label>
                                 <input type="radio" class="btn-check" name="isInternal" id="ticket-reply-note" value="true" checked="@Model.DraftIsInternal" autocomplete="off" />
-                                <label class="btn btn-sm btn-outline-warning" for="ticket-reply-note"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Internal note"]</label>
+                                <label class="btn btn-sm btn-outline-warning" for="ticket-reply-note"><i class="fa-solid fa-lock me-1" aria-hidden="true"></i>@T["Internal Note"]</label>
                             </div>
                         }
                         else
@@ -255,7 +255,7 @@ else if (Model.IsReadOnly)
         <div class="modal-dialog">
             <form asp-action="Merge" asp-route-id="@ticketId" method="post" class="modal-content">
                 <div class="modal-header">
-                    <h2 class="modal-title h5" id="ticket-merge-title">@T["Merge into another ticket"]</h2>
+                    <h2 class="modal-title h5" id="ticket-merge-title">@T["Merge Into Another Ticket"]</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="@T["Close"]"></button>
                 </div>
                 <div class="modal-body">

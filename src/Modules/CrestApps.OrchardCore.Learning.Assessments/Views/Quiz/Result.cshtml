@@ -8,7 +8,7 @@
     <div class="product-breadcrumb">
         <breadcrumb name="LearningAttempt" title="@(new Microsoft.AspNetCore.Html.HtmlContentBuilder().Append(attempt.QuizTitle))">
             <breadcrumb-item id="Home" url="@Url.Content("~/")">@T["Home"]</breadcrumb-item>
-            <breadcrumb-item id="LearningMyLearning" url="@Url.Content("~/learning")">@T["My learning"]</breadcrumb-item>
+            <breadcrumb-item id="LearningMyLearning" url="@Url.Content("~/learning")">@T["My Learning"]</breadcrumb-item>
         </breadcrumb>
     </div>
 
@@ -99,7 +99,7 @@
             {
                 <a class="btn btn-primary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = Model.NextItemId })" data-learning-continue title="@Model.NextItemTitle">@T["Continue"]<i class="fa-solid fa-arrow-right ms-1" aria-hidden="true"></i></a>
             }
-            <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = attempt.QuizId })">@T["Back to the course"]</a>
+            <a class="btn btn-outline-secondary" href="@Url.RouteUrl("LearningPlayer", new { courseId = Model.CourseId, itemId = attempt.QuizId })">@T["Back to the Course"]</a>
         </div>
     }
 </div>
